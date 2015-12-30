@@ -1,0 +1,38 @@
+/* 
+ * This file is a part of IPO, a C++ library for investigating
+ * polyhedra by oracles.
+ *
+ * Copyright (C) 2015-2016
+ * Matthias Walter
+ *
+ * Permission to use, modify and distribute this software is granted
+ * provided that this copyright notice appears in all copies. For
+ * precise terms see the accompanying LICENSE file.
+ *
+ * This software is provided "AS IS" with no warranty of any kind,
+ * express or implied, and with no claim as to its suitability for any
+ * purpose.
+ */
+
+/**
+\mainpage @PACKAGE_NAME@ @PACKAGE_VERSION@ Documentation
+
+\section intro Introduction
+
+<b>IPO</b> stands for <i><b>I</b>nvestigating <b>P</b>olyhedra by <b>O</b>racles.
+It is a software library for certain problems in polyhedral combinatorics
+such as computing the affine hull, checking adjacency, or computing facets.
+In contrast to other tools, it only requires the polyhedra to be given
+implicitly by means of so-called optimization oracles. 
+
+<b>
+IPO is an open source project.
+You are free to use it in your commercial or
+non-commercial applications under very permissive
+\ref license "license terms".
+</b>
+
+The project is maintained by Matthias Walter.
+
+
+*/
