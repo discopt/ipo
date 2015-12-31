@@ -13,13 +13,21 @@ namespace ipo {
   /**
    * \brief Defines a face of a polyhedron by a set of inequalities.
    * 
-   * Defines a face \f$ F \f$ of a polyhedron \f$ P \f$ by a set of inequalities.
-   * 
+   * Defines a face \f$F\f$ of a polyhedron \f$P\f$ by a set of inequalities.
+   * It is used to create an optimization oracle for \f$F\f$.
+   * If the optimization oracle class for \f$P\f$ inherits from
+   * \ref FaceOptimizationOracleBase, the face can be controlled directly.
+   * In any case one can construct an instance of \ref \FaceOptimizationOracle
+   * that calls the optimization oracle for \f$P\f$ (maybe multiple times per call).
    **/
 
   class Face
   {
   public:
+    /**
+     * Creates a face
+     **/
+
     Face(std::size_t numVariables);
     Face(std::size_t numVariables, const soplex::LPRowRational& inequality);
     Face(std::size_t numVariables, const soplex::LPRowSetRational& inequalities);
