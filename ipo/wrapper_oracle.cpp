@@ -75,7 +75,7 @@ namespace ipo {
       result.setInfeasible();
     else if (status == "unbounded")
     {
-      result.rays.push_back(parseSolution(output));
+      result.directions.push_back(parseSolution(output));
       result.setUnbounded();
     }
     else if (status == "optimal")

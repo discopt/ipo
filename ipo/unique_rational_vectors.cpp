@@ -351,4 +351,4 @@ namespace ipo {
 //    return stream;
 //  }
 
-} /* namespace polycomb */
+} /* namespace ipo */

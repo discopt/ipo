@@ -55,8 +55,8 @@ namespace ipo {
       NULL)
   {
     if (!SCIPisTransformed(originalSCIP))
-      throw std:: runtime_error("Initialization of SCIPOptimizationOracle requires transformed problem!");
-    
+      throw std::runtime_error("Initialization of SCIPOptimizationOracle requires transformed problem!");
+
     std::size_t n = SCIPgetNOrigVars(originalSCIP);
     SCIP_VAR** origVars = SCIPgetOrigVars(originalSCIP);
 
@@ -305,8 +305,8 @@ namespace ipo {
       {
         /// TODO: Implement SCIP functionality to return exact unbounded rays.
 
-        result.rays.push_back(new DSVectorRational);
-        DSVectorRational& ray = *result.rays.back();
+        result.directions.push_back(new DSVectorRational);
+        DSVectorRational& ray = *result.directions.back();
         for (std::size_t v = 0; v < n; ++v)
         {
           double apxCoeff = SCIPgetPrimalRayVal(_scip, _variables[v]);
@@ -356,7 +356,7 @@ namespace ipo {
 
   ExactSCIPOptimizationOracle::~ExactSCIPOptimizationOracle()
   {
-
+    deleteTempDirectory();
   }
 
   void ExactSCIPOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,

@@ -10,6 +10,38 @@
 
 namespace ipo {
 
+  /**
+   * \brief Computation of the smallest face containing a given point.
+   *
+   * This namespace contains classes that allow to compute the smallest face
+   * that contains a given point.
+   * Use it as follows:
+   *
+   * \code
+   * // ..
+   * // Create an oracle and a point.
+   * // ...
+   *
+   * UniqueRationalVectors points(oracle->numVariables());
+   * UniqueRationalVectors rays(oracle->numVariables());
+   *
+   * SmallestFace::ProgressOutput smallestFaceOutput;
+   * SmallestFace::Result smallestFace(points, rays, oracle);
+   *
+   * smallestFace.run(point, smallestFaceOutput);
+   * std::cout << "Dimension of smallest face: " << smallestFace.dimension() << std::endl;
+   *
+   * \endcode
+   *
+   * There are different output classes, namely
+   * \li
+   *   \ref QuietOutput
+   * \li
+   *   \ref ProgressOutput
+   * \li
+   *   \ref DebugOutput
+   */
+
   namespace SmallestFace {
 
     class Implementation;
@@ -73,6 +105,10 @@ namespace ipo {
       friend class Implementation;
     };
 
+    /**
+     * \brief Quiet output class for smallest-face computation.
+     */
+
     class QuietOutput: public OutputBase
     {
     public:
@@ -84,6 +120,10 @@ namespace ipo {
 
       AffineHull::QuietOutput _normalConeHullOutput;
     };
+
+    /**
+     * \brief Very verbose output class for smallest-face computation.
+     */
 
     class DebugOutput: public OutputBase
     {
@@ -111,6 +151,10 @@ namespace ipo {
 
       AffineHull::DebugOutput _normalConeHullOutput;
     };
+
+    /**
+     * \brief Pretty output class for smallest-face computation.
+     */
 
     class ProgressOutput: public OutputBase
     {
@@ -197,6 +241,10 @@ namespace ipo {
       std::size_t _numVerifications;
     };
 
+    /**
+     * \brief Actual results of a smallest-face computation.
+     */
+
     class Result: public InformationBase
     {
     public:
@@ -226,8 +274,8 @@ namespace ipo {
       friend class Implementation;
     };
 
-  }
+  } /* namespace SmallestFace */
 
-}
+} /* namespace ipo */
 
 #endif /* IPO_SMALLEST_FACE_H_ */

@@ -9,6 +9,6 @@ namespace ipo {
   void scaleRowIntegral(soplex::LPRowRational& row);
   void scaleRowsIntegral(soplex::LPRowSetRational& rows);
 
-} /* namespace polycomb */
+} /* namespace ipo */
 
 #endif /* IPO_ROWS_H_ */

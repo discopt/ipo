@@ -405,15 +405,15 @@ namespace ipo {
       /// Unbounded case.
 
       bool filterDuplicates = false;
-      for (std::size_t r = 0; r < result.rays.size(); ++r)
+      for (std::size_t r = 0; r < result.directions.size(); ++r)
       {
-        DSVectorRational* ray = correctRay(result.rays[r], objective);
+        DSVectorRational* ray = correctRay(result.directions[r], objective);
         if (ray == NULL)
           correctedOptimal = false;
         else
         {
-          delete result.rays[r];
-          result.rays[r] = ray;
+          delete result.directions[r];
+          result.directions[r] = ray;
           filterDuplicates = true;
         }
       }
@@ -464,4 +464,4 @@ namespace ipo {
     _mip.faceDisabled(face);
   }
 
-} /* namespace polycomb */
+} /* namespace ipo */

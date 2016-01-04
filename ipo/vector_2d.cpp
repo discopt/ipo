@@ -264,4 +264,4 @@ namespace ipo {
     return left.x * right.y - left.y * right.x;
   }
 
-} /* namespace polycomb */
+} /* namespace ipo */

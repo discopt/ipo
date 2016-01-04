@@ -14,6 +14,9 @@
  * purpose.
  */
 
+namespace ipo
+{
+
 /**
 \mainpage IPO - Investigating Polyhedra by Oracles
 
@@ -46,18 +49,24 @@ in particular its ability to compute solutions in exact arithmetic.
 Given an optimization oracle defining a polyhedron <em>P</em>,
 <span style="color: #007bff; font-weight: bold;">I</span><span style="font-weight: bold;">P</span><span style="color: #ff0000; font-weight: bold;">O</span></span>
 can...
-\li compute the <b>affine hull</b> of <em>P</em><br/>
+\li compute the <b>affine hull</b> of <em>P</em>
     in the sense that it returns <em>(d+1)</em> many affinely independent points in <em>P</em> and
     <em>(n-d)</em> many linearly independent equations valid for <em>P</em>, where <em>d</em> is <em>P</em> 's dimension.
+    See AffineHull for details.
 \li compute a <b>facet-defining inequality</b> that is <b>violated</b> by a given point.<br/>
-\li compute <b>facets that are "helpful"</b> when maximizing a specified objective vector <em>c</em>.<br/>
+    See Separation for details.
+\li compute <b>facets that are "helpful"</b> when maximizing a specified objective vector <em>c</em>.
     More precisely, it iteratively solves LPs whose inequalities correspond to some of <em>P</em> 's facets,
     until the current optimum is in <em>P</em>.
     As long as this is not the case, the procedure returns violated facet-defining inequalities and adds them to the LP.
 \li <b>check</b> whether two given vertices of <em>P</em> are <b>adjacent</b>.<br/>
-\li compute the <b>smallest face</b> of <em>P</em> <b>containing a given point</b><br/>
-    by means of an inequality defining this face.
+    See SmallestFace for details.
+\li compute the <b>smallest face</b> of <em>P</em> <b>containing a given point</b>
+    by means of an inequality defining this face.<br/>
+    See SmallestFace for details.
 \li <b>check</b> whether a given point is a <b>vertex</b> of <em>P</em></b>.<br/>
+    See SmallestFace for details.
+
 
 \section oracles Oracles
 
@@ -80,28 +89,36 @@ It depends on the LP solver
 In order to implement an optimization oracle,
 there are some base classes from which one must inherit:
 
-\li <span style="font-size: 1.2em; font-family: monospace;">OptimizationOracleBase</span>: 
-    The most general base class.
-\li <span style="font-size: 1.2em; font-family: monospace;">FaceOptimizationOracleBase</span>: 
-    Inherit from this class if your oracle directly supports optimization over any face given by an inducing inequality.
+\li 
+  OptimizationOracleBase: 
+  The most general base class.
+\li 
+  FaceOptimizationOracleBase: 
+  Inherit from this class if your oracle directly supports optimization over any face given by an inducing inequality.
 
 For mixed-integer programs, several oracles are already implemented:
-\li <span style="font-size: 1.2em; font-family: monospace;">SCIPOptimizationOracle</span>:
-    This oracle is built from a 
-    <a href="http://scip.zib.de/">SCIP</a>
-    instance which is used for optimization.
-    The returned floating-point solutions are turned into rational ones using rational-reconstruction techniques.
-\li <span style="font-size: 1.2em; font-family: monospace;">MixedIntegerProgramCorrectorOracle</span>:
-    This oracle is built from a <em>MixedIntegerProgram</em> instance which explicitly represents a MIP and
-    another oracle which is supposed to solve the MIP, allowing approximate solutions.
-    It takes the returned solutions and checks/restores feasibility and optimality w.r.t. the continuous variables.
-    Use this on top of an oracle which simply reconstructs floating-point solutions.
-\li <span style="font-size: 1.2em; font-family: monospace;">ExactSCIPOptimizationOracle</span>:
-    This oracle is built from a <em>MixedIntegerProgram</em> instances which explicitly represents a MIP and optionally
-    another oracle which may act as a heuristic.
-    If non-optimality is permitted, it runs the heuristic oracle,
-    and otherwise
-    <a href="http://scip.zib.de/#exact">SCIP-ex</a>.
+\li 
+  SCIPOptimizationOracle:
+  This oracle is built from a 
+  <a href="http://scip.zib.de/">SCIP</a>
+  instance which is used for optimization.
+  The returned floating-point solutions are turned into rational ones using rational-reconstruction techniques.
+\li
+  MixedIntegerProgramCorrectorOracle:
+  This oracle is built from a MixedIntegerProgram instance which explicitly represents a MIP and
+  another oracle which is supposed to solve the MIP, allowing approximate solutions.
+  It takes the returned solutions and checks/restores feasibility and optimality w.r.t. the continuous variables.
+  Use this on top of an oracle which simply reconstructs floating-point solutions.
+\li
+  ExactSCIPOptimizationOracle:
+  This oracle is built from a MixedIntegerProgram instances which explicitly represents a MIP and optionally
+  another oracle which may act as a heuristic.
+  If non-optimality is permitted, it runs the heuristic oracle,
+  and otherwise
+  <a href="http://scip.zib.de/#exact">SCIP-ex</a>.
+\li
+  WrapperOptimizationOracle:
+  This oracle uses an external program using a defined interface.
 
 \section about Usage
 
@@ -111,6 +128,20 @@ You are free to use it in your commercial or
 non-commercial applications under very permissive
 \ref license "license terms".
 
+Any publication of results to which using 
+<span style="color: #007bff; font-weight: bold;">I</span><span style="font-weight: bold;">P</span><span style="color: #ff0000; font-weight: bold;">O</span></span>
+contributed must cite this project.
+
+\code
+@MISC{Walter16,
+  author = {Walter, Matthias},
+  title = {\emph{IPO -- Investigating Polyhedra by Oracles}, \\ \url{http://polyhedra-oracles.bitbucket.org/}},
+  year = {2016},
+}
+\endcode
+
 The project is maintained by Matthias Walter.
 
 */
+
+}

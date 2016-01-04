@@ -887,13 +887,13 @@ namespace ipo {
 
           _output->onBeforeOracleMaximize(!heuristicOracle);
           oracleCall(!heuristicOracle);
-          _output->onAfterOracleMaximize(_result.points.size(), _result.rays.size());
+          _output->onAfterOracleMaximize(_result.points.size(), _result.directions.size());
 
           if (_result.isUnbounded())
           {
             std::size_t idx = std::numeric_limits<std::size_t>::max();
-            for (std::size_t i = 0; i < _result.rays.size(); ++i)
-              idx = _rays->insertFree(_result.rays[i]);
+            for (std::size_t i = 0; i < _result.directions.size(); ++i)
+              idx = _rays->insertFree(_result.directions[i]);
             assert(idx != std::numeric_limits<std::size_t>::max());
 
             _output->onBeforeRay();
@@ -982,13 +982,13 @@ namespace ipo {
 
           _output->onBeforeOracleMinimize(!heuristicOracle);
           oracleCall(!heuristicOracle);
-          _output->onAfterOracleMinimize(_result.points.size(), _result.rays.size());
+          _output->onAfterOracleMinimize(_result.points.size(), _result.directions.size());
 
           if (_result.isUnbounded())
           {
             std::size_t idx = std::numeric_limits<std::size_t>::max();
-            for (std::size_t i = 0; i < _result.rays.size(); ++i)
-              idx = _rays->insertFree(_result.rays[i]);
+            for (std::size_t i = 0; i < _result.directions.size(); ++i)
+              idx = _rays->insertFree(_result.directions[i]);
 
             _output->onBeforeRay();
             addRay(idx, _directionColumn, true);
@@ -1033,7 +1033,7 @@ namespace ipo {
             _output->onBeforeOracleVerify(0);
             _oracle->maximize(_result, _sparseDirectionVector, true);
             ++_numOracleCalls;
-            _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
+            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
 
             if (!_result.isFeasible() || _result.bestValue != _commonValue)
               failure = true;
@@ -1045,7 +1045,7 @@ namespace ipo {
               _output->onBeforeOracleVerify(1);
               _oracle->maximize(_result, _sparseDirectionVector, true);
               ++_numOracleCalls;
-              _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
+              _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
 
               if (!_result.isFeasible() || _result.bestValue != _commonValue)
                 failure = true;
@@ -1162,7 +1162,7 @@ namespace ipo {
             _output->onBeforeOracleVerify(i);
             _oracle->maximize(_result, objective, true);
             ++_numOracleCalls;
-            _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
+            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
 
             if (_result.isFeasible())
             {
@@ -1178,8 +1178,8 @@ namespace ipo {
             }
             else
             {
-              for (std::size_t j = 0; j < _result.rays.size(); ++j)
-                _rays->insertFree(_result.rays[j]);
+              for (std::size_t j = 0; j < _result.directions.size(); ++j)
+                _rays->insertFree(_result.directions[j]);
               failure = true;
               break;
             }
@@ -1190,12 +1190,12 @@ namespace ipo {
             _output->onBeforeOracleVerify(_potentialEquations.size());
             _oracle->maximize(_result, objectiveSum, true);
             ++_numOracleCalls;
-            _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
+            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
 
             for (std::size_t j = 0; j < _result.points.size(); ++j)
               _points->insertFree(_result.points[j]);
-            for (std::size_t j = 0; j < _result.rays.size(); ++j)
-              _rays->insertFree(_result.rays[j]);
+            for (std::size_t j = 0; j < _result.directions.size(); ++j)
+              _rays->insertFree(_result.directions[j]);
 
             failure = !_result.isFeasible() || _result.bestValue != rhsSum;
           }

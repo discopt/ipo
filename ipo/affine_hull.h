@@ -8,6 +8,37 @@
 
 namespace ipo {
 
+  /**
+   * \brief Computation of the affine hull of a polyhedron.
+   *
+   * This namespace contains classes that allow to compute the affine hull of a polyhedron.
+   * Use it as follows:
+   *
+   * \code
+   * // ..
+   * // Create an oracle.
+   * // ...
+   *
+   * UniqueRationalVectors points(oracle->numVariables());
+   * UniqueRationalVectors rays(oracle->numVariables());
+   * soplex::LPRowSetRational equations;
+   * AffineHull::ProgressOutput hullOutput;
+   * AffineHull::Result hull;
+   * hull.run(points, rays, equations, oracle, hullOutput);
+   *
+   * std::cout << "Dimension: " << hull.dimension() << std::endl;
+   *
+   * \endcode
+   *
+   * There are different output classes, namely
+   * \li
+   *   \ref QuietOutput
+   * \li
+   *   \ref ProgressOutput
+   * \li
+   *   \ref DebugOutput
+   */
+
   namespace AffineHull {
 
     class Implementation;
@@ -112,12 +143,20 @@ namespace ipo {
       friend class Implementation;
     };
 
+    /**
+     * \brief Quiet output class for affine hull computation.
+     */
+
     class QuietOutput: public OutputBase
     {
     public:
       QuietOutput();
       virtual ~QuietOutput();
     };
+
+    /**
+     * \brief Pretty output class for affine hull computation.
+     */
 
     class ProgressOutput: public OutputBase
     {
@@ -171,6 +210,10 @@ namespace ipo {
       double _timeFactorization;
     };
 
+    /**
+     * \brief Very verbose output class for affine hull computation.
+     */
+
     class DebugOutput: public OutputBase
     {
     public:
@@ -216,6 +259,10 @@ namespace ipo {
       CPUTimer _timer;
     };
 
+    /**
+     * \brief Actual results of an affine hull computation.
+     */
+
     class Result: public InformationBase
     {
     public:
@@ -235,8 +282,8 @@ namespace ipo {
         OptimizationOracleBase* oracle, OutputBase& output,
         int options = REDUNDANT_EQUATIONS_KEEP | CACHE_USE | ORACLE_DELAYED);
 
-  }
+  } /* namespace AffineHull */
 
-}
+} /* namespace ipo */
 
 #endif /* IPO_AFFINE_HULL_H_ */

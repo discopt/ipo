@@ -869,9 +869,9 @@ namespace ipo {
     if (_result.isUnbounded())
     {
       std::size_t oldSize = _rays.size();
-      for (std::size_t i = 0; i < _result.rays.size(); ++i)
+      for (std::size_t i = 0; i < _result.directions.size(); ++i)
       {
-        std::size_t index = _rays.insertFree(_result.rays[i]);
+        std::size_t index = _rays.insertFree(_result.directions[i]);
         if (index >= oldSize)
         {
           assert(_result.objectives[i] > 0);

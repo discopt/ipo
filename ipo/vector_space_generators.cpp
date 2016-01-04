@@ -144,4 +144,4 @@ namespace ipo {
     return false;
   }
 
-} /* namespace polycomb */
+} /* namespace ipo */

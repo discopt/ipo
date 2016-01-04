@@ -4,6 +4,7 @@
 #include "spx_gmp.h"
 
 namespace ipo {
+
   bool manhattanNormShortestCombination(std::size_t n, soplex::DSVectorRational& newTarget,
       const soplex::SVectorRational& target, const soplex::SVectorRational& source, soplex::Rational& targetMultiplier,
       soplex::Rational& sourceMultiplier, soplex::Rational& norm);
@@ -17,6 +18,6 @@ namespace ipo {
   void manhattanNormImproveInequality(std::size_t n, soplex::LPRowRational& inequality,
       const soplex::LPRowSetRational& equations);
 
-} /* namespace polycomb */
+} /* namespace ipo */
 
 #endif /* IPO_MIN_NORM_2D_H_ */

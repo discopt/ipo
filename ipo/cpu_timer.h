@@ -95,4 +95,5 @@ namespace ipo {
   void addTimeToActiveTimers(double time);
 
 } // namespace soplex
+
 #endif // CPU_TIMER_H_

@@ -12,6 +12,8 @@
 
 namespace ipo {
 
+  /// Class for solving polar LPs using lazy separation, cut aging and stabilization.
+
   class PolarLP
   {
   public:

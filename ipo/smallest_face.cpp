@@ -62,7 +62,7 @@ namespace ipo {
         result.setFeasible(objective);
         if (result.bestValue > 0)
         {
-          result.rays.push_back(result.points.front());
+          result.directions.push_back(result.points.front());
           result.points.pop_back();
           result.setUnbounded();
         }
@@ -146,8 +146,8 @@ namespace ipo {
         _originalOracle->maximize(result, objective, true);
         for (std::size_t i = 0; i < result.points.size(); ++i)
           _originalPoints.insertFree(result.points[i]);
-        for (std::size_t i = 0; i < result.rays.size(); ++i)
-          _originalRays.insertFree(result.rays[i]);
+        for (std::size_t i = 0; i < result.directions.size(); ++i)
+          _originalRays.insertFree(result.directions[i]);
         if (result.isFeasible() && result.bestValue == product)
           return true;
         else
@@ -195,7 +195,7 @@ namespace ipo {
           {
             _output->onBeforeOracleVerifyElement(i);
             bool verified = verifyNormalConeElements(verifyResult, element, denseTarget);
-            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.rays.size(), verified);
+            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.directions.size(), verified);
             if (!verified)
               continue;
           }

@@ -151,7 +151,7 @@ namespace ipo {
     bestIndex = std::numeric_limits<std::size_t>::max();
     bestValue = -infinity;
     points.clear();
-    rays.clear();
+    directions.clear();
     objectives.clear();
   }
 
@@ -198,7 +198,7 @@ namespace ipo {
   void OptimizationResult::filterDuplicates()
   {
     filterDuplicates(points);
-    filterDuplicates(rays);
+    filterDuplicates(directions);
   }
 
   void OptimizationResult::filterDuplicates(std::vector<soplex::DSVectorRational*>& vectors)
@@ -222,7 +222,7 @@ namespace ipo {
   {
     if (points.size() != objectives.size())
       throw std::runtime_error("Numbers of points and objectives do not match!");
-    if (!rays.empty() && bestValue < soplex::infinity)
+    if (!directions.empty() && bestValue < soplex::infinity)
       throw std::runtime_error("Not unbounded, but unbounded ray exists!");
     if (!points.empty() && (bestValue == soplex::infinity || bestValue == -soplex::infinity))
       throw std::runtime_error("Infeasible or unbounded, but point exists!");
@@ -230,7 +230,7 @@ namespace ipo {
 
   bool OptimizationResult::hasDuplicates() const
   {
-    const std::vector<DSVectorRational*>* vectors = points.empty() ? &rays : &points;
+    const std::vector<DSVectorRational*>* vectors = points.empty() ? &directions : &points;
     if (vectors->size() < 2)
       return false;
 
@@ -490,9 +490,9 @@ namespace ipo {
     for (std::size_t i = 0; i < result.points.size(); ++i)
       delete result.points[i];
     result.points.clear();
-    for (std::size_t i = 0; i < result.rays.size(); ++i)
-      delete result.rays[i];
-    result.rays.clear();
+    for (std::size_t i = 0; i < result.directions.size(); ++i)
+      delete result.directions[i];
+    result.directions.clear();
 
     _second->maximize(result, objective, forceOptimal);
   }
