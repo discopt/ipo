@@ -120,7 +120,21 @@ For mixed-integer programs, several oracles are already implemented:
   WrapperOptimizationOracle:
   This oracle uses an external program using a defined interface.
 
-\section about Usage
+\section tools Command Line Tools
+
+<span style="color: #007bff; font-weight: bold;">I</span><span style="font-weight: bold;">P</span><span style="color: #ff0000; font-weight: bold;">O</span></span>
+comes with tools that use
+<a href="http://scip.zib.de/">SCIP</a>
+as an oracle.
+It can handle all polyhedra that SCIP understands, e.g., mixed-integer hulls of ZIMPL models:
+\li
+  \c ipo-dimension: Computes the affine hull.
+\li
+  \c ipo-facets: Computes facets based on the objective function present in the instance.
+\li
+  \c ipo-smallest-face: Computes the dimension of the smallest face containing a given point.
+
+\section about About
 
 <span style="color: #007bff; font-weight: bold;">I</span><span style="font-weight: bold;">P</span><span style="color: #ff0000; font-weight: bold;">O</span></span>
 is an open source project.
@@ -141,6 +155,15 @@ contributed must cite this project.
 \endcode
 
 The project is maintained by Matthias Walter.
+
+\section getting Getting it to work
+
+Either pull from the <a href="http://bitbucket.org/polyhedra-oracles/ipo/">git repository</a>
+or download a release:
+\li
+  <a href="ipo-1.0.tar.gz">ipo-1.0.tar.gz</a>
+
+After unpacking the tarball simply follow the instructions in the INSTALL file.
 
 */
 
