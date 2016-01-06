@@ -611,7 +611,7 @@ namespace ipo {
       if (!_spx.getDualRational(dualSolution))
         throw std::runtime_error("Optimization: No dual solution available.");
 
-      double obj = _spx.objValueRational();
+      double obj = double(_spx.objValueRational());
       if (obj < _lastMainObjective)
         numLastCacheRounds = 0;
       _lastMainObjective = obj;

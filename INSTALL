@@ -4,49 +4,95 @@ Installation Instructions
 This file contains instructions for building and installing IPO from
 source on Linux. The process on Windows is similar.
 
+
+Dependency: scipoptsuite >= 3.2.0
+=================================
+
+1. Install ZIMPL, SOPLEX, SCIP into /usr/local/
+
+  After unpacking the SCIP tarball, unpack its subprojects:
+
+  $ cd scipoptsuite-*/
+  $ make
+
+  Compile ZIMPL,
+
+  $ cd zimpl-*/
+  $ make OPT=dbg
+  $ make OPT=opt
+  $ sudo cp lib/* /usr/local/lib/
+  $ cd ..
+
+  SoPlex,
+
+  $ cd soplex-*/
+  $ make INSTALLDIR=/usr/local/ OPT=dbg
+  $ sudo make INSTALLDIR=/usr/local/ OPT=dbg install
+  $ make INSTALLDIR=/usr/local/ OPT=opt
+  $ sudo make INSTALLDIR=/usr/local/ OPT=opt install
+  $ cd src/
+  $ sudo cp timerfactory.h notimer.h usertimer.h wallclocktimer.h /usr/local/include/
+  $ sudo chmod a+r /usr/local/include/*timer*.h
+  $ cd ../..
+
+  and finally SCIP.
+
+  $ cd scip-*/
+  $ make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg
+  $ sudo make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg install
+  $ cd src/scip
+  $ sudo cp implics.h history.h set.h message.h tree.h misc.h var.h event.h /usr/local/include/scip/
+  $ sudo chmod a+r -R /usr/local/include/scip/
+
+  If you already have SCIP installed, note that IPO needs certain header files
+  (see `cp` command above).
+
+Installing IPO
+==============
+
 In order to install IPO from the extracted source tarball you have to
 issue the following commands:
 
-   1. Step into the root of the source directory.
+1. Step into the root of the source directory.
 
-      $ cd ipo-x.y.z
+  $ cd ipo-x.y.z
 
-   2. Create a build subdirectory and step into it.
+2. Create a build subdirectory and step into it.
 
-      $ mkdir build
-      $ cd build
+  $ mkdir build
+  $ cd build
 
-   3. Perform system checks and create the makefiles.
+3. Perform system checks and create the makefiles.
 
-      $ cmake ..
+  $ cmake ..
 
-   4. Build IPO.
+4. Build IPO.
 
-      $ make 
+  $ make 
 
-      This command compiles the library into a libipo.a file.
-      It also compiles the programs in the 'tools' directory.
+  This command compiles the library into a libipo.a file.
+  It also compiles the programs in the 'tools' directory.
 
-   5. [Optional] Generate the user documentation.
+5. [Optional] Generate the user documentation.
 
-      $ make html
+  $ make html
 
-      The release tarballs already include the documentation.
+  The release tarballs already include the documentation.
 
-      Note that for this step you need to have the following tools
-      installed: Python, Doxygen, Graphviz, Ghostscript, LaTeX.
+  Note that for this step you need to have the following tools
+  installed: Python, Doxygen, Graphviz, Ghostscript, LaTeX.
 
-   6. [Optional] Install IPO
+6. [Optional] Install IPO
 
-      $ make install
+  $ make install
 
-      This command installs IPO under /usr/local (you will need root
-      privileges to be able to do that). If you want to install it to
-      some other location, then pass the
-      -DCMAKE_INSTALL_PREFIX=DIRECTORY flag to cmake in Step 3.
-      For example:
+  This command installs IPO under /usr/local (you will need root
+  privileges to be able to do that). If you want to install it to
+  some other location, then pass the
+  -DCMAKE_INSTALL_PREFIX=DIRECTORY flag to cmake in Step 3.
+  For example:
       
-      $ cmake -DCMAKE_INSTALL_PREFIX=/home/username/ipo'
+  $ cmake -DCMAKE_INSTALL_PREFIX=/home/username/ipo'
 
 Configure Options and Variables
 ===============================
@@ -88,3 +134,4 @@ make VERBOSE=1
 
    This results in a more verbose output by showing the full
    compiler and linker commands.
+

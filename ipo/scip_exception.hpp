@@ -5,7 +5,7 @@
 #include <string>
 
 #include <scip/scip.h>
-#include <scip/misc.h>
+#include <scip/pub_misc.h>
 
 #define SCIP_MSG_MAX 256
 
