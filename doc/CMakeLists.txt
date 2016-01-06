@@ -17,6 +17,12 @@ CONFIGURE_FILE(
   @ONLY
 )
 
+CONFIGURE_FILE(
+  ${PROJECT_SOURCE_DIR}/doc/footer.html.in
+  ${PROJECT_BINARY_DIR}/doc/footer.html
+  @ONLY
+)
+
 # Copy doc from source (if exists)
 IF(EXISTS ${CMAKE_CURRENT_SOURCE_DIR}/html AND 
     NOT EXISTS ${CMAKE_CURRENT_BINARY_DIR}/html/index.html)
