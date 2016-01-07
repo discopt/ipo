@@ -56,7 +56,7 @@ int main(int argc, char** argv)
         scipOracle);
     ExactSCIPOptimizationOracle* exactOracle = new ExactSCIPOptimizationOracle(name + "-exact",
         "/home/xammy/software/exact-scip/scip-3.0.0-ex/bin/scip", mip, correctorOracle, 3600.0);
-    OptimizationOracleBase* oracle = exactOracle;
+    OptimizationOracleBase* oracle = correctorOracle;
     std::size_t n = oracle->numVariables();
 
     /// Compute affine hull.

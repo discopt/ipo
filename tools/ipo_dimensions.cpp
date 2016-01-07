@@ -136,7 +136,8 @@ int main(int argc, char** argv)
       scipOracle);
   ExactSCIPOptimizationOracle* exactOracle = new ExactSCIPOptimizationOracle(name + "-exact",
       "/home/xammy/software/exact-scip/scip-3.0.0-ex/bin/scip", mip, correctorOracle, 3600.0);
-  std::size_t n = exactOracle->numVariables();
+  FaceOptimizationOracleBase* oracle = correctorOracle;
+  std::size_t n = oracle->numVariables();
 
   int options = (enableCache ? AffineHull::CACHE_USE : AffineHull::CACHE_SKIP) | AffineHull::REDUNDANT_EQUATIONS_REMOVE;
   if (exactDelayed)
@@ -154,7 +155,7 @@ int main(int argc, char** argv)
     getSCIPObjective(scip, objective, true);
 
     OptimizationResult result;
-    exactOracle->maximize(result, objective);
+    oracle->maximize(result, objective);
 
     if (result.isInfeasible())
     {
@@ -170,7 +171,7 @@ int main(int argc, char** argv)
       faceNormal = objective;
       Face* face = new Face(n, soplex::LPRowRational(result.bestValue, faceNormal, result.bestValue));
 
-      exactOracle->setFace(face);
+      oracle->setFace(face);
 
       std::cout << "Computing affine hull of optimal face in " << n << "-dimensional space." << std::endl;
 
@@ -180,11 +181,11 @@ int main(int argc, char** argv)
 
       AffineHull::Result hull;
       AffineHull::ProgressOutput hullOutput;
-      hull.run(points, rays, equations, exactOracle, hullOutput, options);
+      hull.run(points, rays, equations, oracle, hullOutput, options);
 
       std::cout << "Its dimension is " << hull.dimension() << "." << std::endl;
 
-      exactOracle->setFace(NULL);
+      oracle->setFace(NULL);
       delete face;
     }
   }
@@ -200,7 +201,7 @@ int main(int argc, char** argv)
 
     AffineHull::Result hull;
     AffineHull::ProgressOutput mainOutput(2);
-    hull.run(points, rays, equations, exactOracle, mainOutput, options);
+    hull.run(points, rays, equations, oracle, mainOutput, options);
 
     std::cout << "Its dimension is " << hull.dimension() << "." << std::endl;
 
@@ -210,7 +211,7 @@ int main(int argc, char** argv)
     if (showEquations)
     {
       std::cout << "\nList of equations:\n";
-      exactOracle->printRows(std::cout, equations);
+      oracle->printRows(std::cout, equations);
       std::cout << std::endl;
     }
 
@@ -234,7 +235,7 @@ int main(int argc, char** argv)
 
         Face* face = new Face(n,
             soplex::LPRowRational(inequalities.rhs(i), inequalities.rowVector(i), inequalities.rhs(i)));
-        exactOracle->setFace(face);
+        oracle->setFace(face);
 
         /// Filter points and rays.
 
@@ -262,7 +263,7 @@ int main(int argc, char** argv)
 
         faceEquations = equations;
         faceEquations.add(face->rhs(), face->normal(), face->rhs());
-        faceHull.run(filteredPoints, filteredRays, faceEquations, exactOracle, faceOutput, options);
+        faceHull.run(filteredPoints, filteredRays, faceEquations, oracle, faceOutput, options);
 
         std::cout << "  The dimension of face " << names[i] << " (" << (i + 1) << "/" << inequalities.num() << ") is "
             << faceHull.dimension() << "." << std::endl;
@@ -273,7 +274,7 @@ int main(int argc, char** argv)
         else
           iter->second++;
 
-        exactOracle->setFace(NULL);
+        oracle->setFace(NULL);
         delete face;
       }
       std::cout << "Finished computation of constraint faces." << std::endl;
