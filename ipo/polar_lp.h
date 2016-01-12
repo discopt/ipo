@@ -5,8 +5,9 @@
 #include <set>
 #include <map>
 
-#include "oracles.h"
+#include "ipo.h"
 #include "unique_rational_vectors.h"
+#include "oracles.h"
 
 #define IPO_POLAR_STABIL_HIST_SIZE 2
 

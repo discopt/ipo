@@ -5,6 +5,8 @@
 #include <spxdefines.h>
 #include <timer.h>
 
+#include "ipo.h"
+
 namespace ipo {
 
   class CPUTimer: public soplex::Timer

@@ -402,7 +402,7 @@ namespace ipo {
 
       void removePotentialEquations()
       {
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
         int lastIrredundant = -1;
         for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
         {

@@ -7,8 +7,8 @@
 #include <scip/scipdefplugins.h>
 #include <scip/cons_linear.h>
 #include "scip_exception.hpp"
-#include "reconstruct.h"
 
+#include "reconstruct.h"
 #include "cpu_timer.h"
 
 using namespace soplex;
@@ -78,8 +78,6 @@ namespace ipo {
     if (!validSCIP)
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
-    SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
-    SCIP_CALL_EXC(SCIPsetLongintParam(_scip, "limits/nodes", 1000000L));
     SCIP_CALL_EXC(SCIPsetBoolParam(_scip, "misc/catchctrlc", 0));
 
     _variables.resize(n);
@@ -111,8 +109,6 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPincludeDefaultPlugins(_scip));
     SCIP_CALL_EXC(SCIPcreateProbBasic(_scip, name.c_str()));
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
-    SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
-    SCIP_CALL_EXC(SCIPsetLongintParam(_scip, "limits/nodes", 1000000L));
     SCIP_CALL_EXC(SCIPsetBoolParam(_scip, "misc/catchctrlc", 0));
 
     /// Create variables.
@@ -328,7 +324,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPfreeSolve(_scip, true));
     SCIP_CALL_EXC(SCIPfreeTransform(_scip));
 
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     result.checkConsistent();
 #endif
     result.optimal = !_isHeuristic;

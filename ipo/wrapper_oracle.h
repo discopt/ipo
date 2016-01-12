@@ -1,6 +1,7 @@
 #ifndef WRAPPER_ORACLE_H_
 #define WRAPPER_ORACLE_H_
 
+#include "ipo.h"
 #include "oracles.h"
 
 namespace ipo {

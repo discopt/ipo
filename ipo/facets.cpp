@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <map>
 
-#include "spx_gmp.h"
 #include "polar_lp.h"
 
 using namespace soplex;
@@ -154,7 +153,7 @@ namespace ipo {
         updateConstraint(_normalizationConstraint, -infinity, dense, 1);
 
         /// Perform stabilization.
-
+        
         stabilizedPresolve();
 
         /// Reset basis.
@@ -162,9 +161,9 @@ namespace ipo {
         setBasis(_basis);
 
         /// Optimize
-
+        
         optimize();
-
+        
         /// Extract solution
 
         dense.reDim(n() + 1);
@@ -210,6 +209,11 @@ namespace ipo {
           _inequality.setLhs(-infinity);
           if (_certificate.pointIndices.size() + _certificate.rayIndices.size() == _dimension)
             _separatedFacet = true;
+          else
+          {
+            std::cerr << "\n!!! IPO computed lower-dimensional face. This is a BUG, probably caused by a SoPlex restart !!!" << std::endl;
+            exit(1);
+          }
         }
 
         _output->onEnd(_violation > 0);

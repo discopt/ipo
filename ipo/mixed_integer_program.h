@@ -6,6 +6,8 @@
 
 #include <soplex.h>
 #include <scip/scip.h>
+
+#include "ipo.h"
 #include "oracles.h"
 
 namespace ipo {

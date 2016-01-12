@@ -217,7 +217,7 @@ namespace ipo {
     unique.extractAll();
   }
 
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
   void OptimizationResult::checkConsistent() const
   {
     if (points.size() != objectives.size())
@@ -266,7 +266,7 @@ namespace ipo {
   OptimizationOracleBase::OptimizationOracleBase(const std::string& name) :
       _name(name)
   {
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     _initialized = false;
 #endif
   }
@@ -278,7 +278,7 @@ namespace ipo {
 
   void OptimizationOracleBase::initialize(const std::vector<std::string>& variableNames)
   {
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     _initialized = true;
 #endif
     _variableNames = variableNames;
@@ -286,7 +286,7 @@ namespace ipo {
 
   void OptimizationOracleBase::initialize(const OptimizationOracleBase* oracle)
   {
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     _initialized = true;
 #endif
     _variableNames.resize(oracle->numVariables());

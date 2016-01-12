@@ -4,8 +4,8 @@
 #include <vector>
 #include <limits>
 
+#include "ipo.h"
 #include "spx_gmp.h"
-#include "statistics.h"
 #include "rows.h"
 
 namespace ipo {
@@ -282,7 +282,7 @@ namespace ipo {
 
     void filterDuplicates();
 
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
   public:
     void checkConsistent() const;
     bool hasDuplicates() const;
@@ -341,7 +341,10 @@ namespace ipo {
 
     inline std::size_t numVariables() const
     {
-      assert(_initialized);
+#ifdef IPO_DEBUG
+      if (!_initialized)
+        throw std::runtime_error("OptimizationOracleBase not initialized!");
+#endif
       return _variableNames.size();
     }
 
@@ -354,7 +357,10 @@ namespace ipo {
 
     inline const std::string& variableName(std::size_t var) const
     {
-      assert(_initialized);
+#ifdef IPO_DEBUG
+      if (!_initialized)
+        throw std::runtime_error("OptimizationOracleBase not initialized!");
+#endif
       return _variableNames[var];
     }
 
@@ -591,7 +597,7 @@ namespace ipo {
     std::string _name; // Name of the oracle.
     std::vector<std::string> _variableNames; // Variables names.
     soplex::DVectorRational _objective; // Variable holding the dense rational version of the current objective.
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     bool _initialized;
 #endif
   };

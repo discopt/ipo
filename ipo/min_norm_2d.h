@@ -1,6 +1,7 @@
 #ifndef IPO_MIN_NORM_2D_H_
 #define IPO_MIN_NORM_2D_H_
 
+#include "ipo.h"
 #include "spx_gmp.h"
 
 namespace ipo {

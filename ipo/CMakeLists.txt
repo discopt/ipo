@@ -1,6 +1,6 @@
 CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
 
-SET(PROJECT_NAME "Investigating Polyhedra by Oracle")
+SET(PROJECT_NAME "Investigating Polyhedra by Oracles")
 PROJECT(${PROJECT_NAME})
 
 INCLUDE(FindGMP)
@@ -49,6 +49,14 @@ SET(IPO_INSTALL_HEADERS
   wrapper_oracle.h
 )
 
+SET(IPO_OTHER_HEADERS
+  ipo-devel.h
+  ipo-release.h
+  ipo-debug.h
+  ipo-relwithdebinfo.h
+  ipo-minsizerel.h
+)
+
 ADD_LIBRARY(ipo ${IPO_SOURCES})
 
 TARGET_LINK_LIBRARIES(
@@ -56,15 +64,11 @@ TARGET_LINK_LIBRARIES(
   gmpxx
 )
 
-INSTALL(
-  TARGETS ipo
-  ARCHIVE DESTINATION lib
-  LIBRARY DESTINATION lib
-  COMPONENT library
-)
+INSTALL(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
 
-INSTALL(
-  FILES ${IPO_INSTALL_HEADERS}
-  DESTINATION include/ipo
-  COMPONENT headers
-)
+INSTALL(FILES ${IPO_INSTALL_HEADERS}              DESTINATION include/ipo  COMPONENT headers)
+INSTALL(FILES ipo-debug.h           RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
+INSTALL(FILES ipo-release.h         RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
+INSTALL(FILES ipo-relwithdebinfo.h  RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
+INSTALL(FILES ipo-minsizerel.h      RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
+

@@ -3,6 +3,7 @@
 #include <unistd.h>
 #include <sys/stat.h>
 #include <string>
+
 #include "cpu_timer.h"
 
 using namespace soplex;

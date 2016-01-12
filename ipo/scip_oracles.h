@@ -1,14 +1,15 @@
 #ifndef IPO_SCIP_ORACLES_H_
 #define IPO_SCIP_ORACLES_H_
 
-#include "oracles.h"
-#include "mixed_integer_program.h"
-
 #include <set>
 #include <map>
 #include <limits>
 
 #include <scip/scip.h>
+
+#include "ipo.h"
+#include "oracles.h"
+#include "mixed_integer_program.h"
 
 namespace ipo {
 

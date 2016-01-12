@@ -3,6 +3,8 @@
 
 #include <gmpxx.h>
 
+#include "ipo.h"
+
 namespace ipo {
 
   class Integer2d

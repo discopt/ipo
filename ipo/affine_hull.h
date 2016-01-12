@@ -1,10 +1,11 @@
 #ifndef IPO_AFFINE_HULL_H_
 #define IPO_AFFINE_HULL_H_
 
-#include "oracles.h"
+#include "ipo.h"
 #include "spx_gmp.h"
-#include "unique_rational_vectors.h"
 #include "cpu_timer.h"
+#include "unique_rational_vectors.h"
+#include "oracles.h"
 
 namespace ipo {
 

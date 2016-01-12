@@ -124,7 +124,7 @@ namespace ipo {
         output[i] = 0;
     }
 
-#ifndef NDEBUG
+#ifdef IPO_DEBUG
     gcd = 0;
     for (std::size_t i = 0; i < output.size(); ++i)
       mpz_gcd(gcd.get_mpz_t(), gcd.get_mpz_t(), output[i].get_mpz_t());

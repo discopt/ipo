@@ -227,6 +227,8 @@ namespace ipo {
 
   void PolarLP::getBasis(Basis& basis)
   {
+    assert(_spx.hasBasis());
+
     std::vector<SPxSolver::VarStatus> rowStatus(_spx.numRowsRational());
     std::vector<SPxSolver::VarStatus> colStatus(_spx.numColsRational());
 
@@ -312,6 +314,17 @@ namespace ipo {
 
     const double APPROX_VIOLATION = 1.0e-5;
 
+    /// Remove dynamic rows of exact LP.
+
+    std::vector<int> rowPermutation;
+    rowPermutation.resize(_spx.numRowsRational());
+    for (std::size_t i = 0; i < _spx.numRowsRational(); ++i)
+    {
+      rowPermutation[i] = (_rowInfos[i].type == 'p' || _rowInfos[i].type == 'r') ? -1 : 0;
+    }
+    _spx.removeRowsRational(&rowPermutation[0]);
+    _rowInfos.resize(_spx.numRowsRational());
+    
     /// Reset stabilization procedures.
 
     int localMaxAge = _maxAge;
@@ -347,7 +360,6 @@ namespace ipo {
     VectorSubset rayIndices;
     std::vector<SPxSolver::VarStatus> rowStatus;
     std::vector<SPxSolver::VarStatus> columnStatus(_stabLP.numColsReal());
-    std::vector<int> rowPermutation;
     bool firstRound = true; // Indicator telling us to remove all dynamic rows in the first round.
     double lastObjective = 0.0;
     while (true)
@@ -513,6 +525,8 @@ namespace ipo {
       }
       else
       {
+        /// If stabilization is complete, then add rows of certifying points and rays to exact LP.
+    
         for (std::size_t r = 0; r < numRows; ++r)
         {
           if (r < rowStatus.size() && rowStatus[r] == SPxSolver::ON_UPPER)
@@ -523,6 +537,7 @@ namespace ipo {
               addRayRow(_stabRowInfos[r].index, false);
           }
         }
+        
         break;
       }
     }

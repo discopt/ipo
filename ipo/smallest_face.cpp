@@ -4,7 +4,6 @@
 #include <algorithm>
 #include <map>
 
-#include "spx_gmp.h"
 #include "polar_lp.h"
 
 using namespace soplex;

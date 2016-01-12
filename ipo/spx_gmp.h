@@ -6,6 +6,8 @@
 #define SOPLEX_WITH_GMP
 #include <soplex.h>
 
+#include "ipo.h"
+
 soplex::Rational mpq2rational(const mpq_class& x);
 soplex::Rational mpz2rational(const mpz_class& x);
 mpq_class rational2mpq(const soplex::Rational& x);

@@ -4,6 +4,8 @@
 #include <vector>
 #include <soplex.h>
 
+#include "ipo.h"
+
 namespace ipo {
 
   class VectorSpaceGenerators
