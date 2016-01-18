@@ -32,6 +32,11 @@ ELSE(UNIX)
                        "Subdir for installing the examples")
 ENDIF(UNIX)
 
+## ZIMPL, SoPlex and SCIP
+
+find_package(SoPlex REQUIRED)
+find_package(SCIP)
+
 ## IPO
 
 FIND_PATH(IPO_SOURCE_ROOT_DIR CMakeLists.txt
@@ -58,13 +63,9 @@ ENDIF()
 
 ## This line finds doxygen (for document creation)
 
-FIND_PACKAGE(Doxygen)
-FIND_PACKAGE(Ghostscript)
-INCLUDE(FindPythonInterp)
-
-## SCIP MIP solver
-
-FIND_PACKAGE(SCIP REQUIRED)
+find_package(Doxygen)
+find_package(Ghostscript)
+include(FindPythonInterp)
 
 ## These are the include directories used by the compiler.
 

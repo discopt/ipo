@@ -1,17 +1,15 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.8)
+cmake_minimum_required(VERSION 2.8)
 
-SET(PROJECT_NAME "Investigating Polyhedra by Oracles")
-PROJECT(${PROJECT_NAME})
+set(PROJECT_NAME "Investigating Polyhedra by Oracles")
+project(${PROJECT_NAME})
 
-INCLUDE(FindGMP)
+set(PROJECT_VERSION 1.0)
 
-SET(PROJECT_VERSION 1.0)
+set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+find_package(Doxygen)
 
-FIND_PACKAGE(Doxygen)
-
-SET(IPO_SOURCES
+set(IPO_SOURCES
   spx_gmp.cpp
   vector_space_generators.cpp
   reconstruct.cpp
@@ -30,7 +28,7 @@ SET(IPO_SOURCES
   wrapper_oracle.cpp
 )
 
-SET(IPO_INSTALL_HEADERS
+set(IPO_INSTALL_HEADERS
   affine_hull.h
   facets.h
   mixed_integer_program.h
@@ -49,7 +47,7 @@ SET(IPO_INSTALL_HEADERS
   wrapper_oracle.h
 )
 
-SET(IPO_OTHER_HEADERS
+set(IPO_OTHER_HEADERS
   ipo-devel.h
   ipo-release.h
   ipo-debug.h
@@ -57,18 +55,24 @@ SET(IPO_OTHER_HEADERS
   ipo-minsizerel.h
 )
 
-ADD_LIBRARY(ipo ${IPO_SOURCES})
-
-TARGET_LINK_LIBRARIES(
-  ipo
-  gmpxx
+include_directories(ipo
+  ${SCIP_INCLUDE_DIRS}
+  ${SOPLEX_INCLUDE_DIRS}
 )
 
-INSTALL(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
+add_library(ipo ${IPO_SOURCES})
 
-INSTALL(FILES ${IPO_INSTALL_HEADERS}              DESTINATION include/ipo  COMPONENT headers)
-INSTALL(FILES ipo-debug.h           RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
-INSTALL(FILES ipo-release.h         RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
-INSTALL(FILES ipo-relwithdebinfo.h  RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
-INSTALL(FILES ipo-minsizerel.h      RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
+target_link_libraries(ipo
+  ${SCIP_LIBRARIES}
+  ${SOPLEX_LIBRARIES}
+  ${GMP_LIBRARIES}
+)
+
+install(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
+
+install(FILES ${IPO_INSTALL_HEADERS}              DESTINATION include/ipo  COMPONENT headers)
+install(FILES ipo-debug.h           RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
+install(FILES ipo-release.h         RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
+install(FILES ipo-relwithdebinfo.h  RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
+install(FILES ipo-minsizerel.h      RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
 
