@@ -8,44 +8,76 @@ source on Linux. The process on Windows is similar.
 Dependency: scipoptsuite >= 3.2.0
 =================================
 
-1. Install ZIMPL, SOPLEX, SCIP into /usr/local/
+Alternative A: Install ZIMPL, SoPlex and SCIP to some folder, e.g., /usr/local/:
 
-  After unpacking the SCIP tarball, unpack its subprojects:
+1. After unpacking the SCIP tarball, unpack its subprojects:
 
-  $ cd scipoptsuite-*/
-  $ make
+   $ cd scipoptsuite-*/
+   $ make
 
-  Compile ZIMPL,
+2. Compile and install ZIMPL:
 
-  $ cd zimpl-*/
-  $ make OPT=dbg
-  $ make OPT=opt
-  $ sudo cp lib/* /usr/local/lib/
-  $ cd ..
+   $ cd zimpl-*/
+   $ make OPT=dbg
+   $ make OPT=opt
+   $ sudo cp lib/* /usr/local/lib/
+   $ cd ..
 
-  SoPlex,
+3. Compile and install SoPlex:
 
-  $ cd soplex-*/
-  $ make INSTALLDIR=/usr/local/ OPT=dbg
-  $ sudo make INSTALLDIR=/usr/local/ OPT=dbg install
-  $ make INSTALLDIR=/usr/local/ OPT=opt
-  $ sudo make INSTALLDIR=/usr/local/ OPT=opt install
-  $ cd src/
-  $ sudo cp timerfactory.h notimer.h usertimer.h wallclocktimer.h /usr/local/include/
-  $ sudo chmod a+r /usr/local/include/*timer*.h
-  $ cd ../..
+   $ cd soplex-*/
+   $ make INSTALLDIR=/usr/local/ OPT=dbg
+   $ sudo make INSTALLDIR=/usr/local/ OPT=dbg install
+   $ make INSTALLDIR=/usr/local/ OPT=opt
+   $ sudo make INSTALLDIR=/usr/local/ OPT=opt install
+   $ cd src/
+   $ sudo cp timerfactory.h notimer.h usertimer.h wallclocktimer.h /usr/local/include/
+   $ sudo chmod a+r /usr/local/include/*timer*.h
+   $ cd ../..
 
-  and finally SCIP.
+3. Compile and install SCIP:
 
-  $ cd scip-*/
-  $ make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg
-  $ sudo make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg install
-  $ cd src/scip
-  $ sudo cp implics.h history.h set.h message.h tree.h misc.h var.h event.h /usr/local/include/scip/
-  $ sudo chmod a+r -R /usr/local/include/scip/
+   $ cd scip-*/
+   $ make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg
+   $ sudo make INSTALLDIR=/usr/local/ OPT=dbg LPS=spx2 LPSOPT=dbg install
+   $ cd src/scip
+   $ sudo cp implics.h history.h set.h message.h tree.h misc.h var.h event.h /usr/local/include/scip/
+   $ sudo chmod a+r -R /usr/local/include/scip/
 
-  If you already have SCIP installed, note that IPO needs certain header files
-  (see `cp` command above).
+4. If you already have SCIP installed, note that IPO needs certain header files
+   (see `cp` command above).
+
+5. Subsequently, by ${ZIMPL}, ${SOPLEX} and ${SCIP} this manual refers to the installation path, e.g., /usr/local/
+
+
+
+Alternative B: Just compile ZIMPL, SoPlex and SCIP:
+
+1. After unpacking the SCIP tarball, unpack its subprojects:
+
+   $ cd scipoptsuite-*/
+   $ make
+
+2. Compile ZIMPL:
+
+   $ cd zimpl-*/
+   $ make OPT=opt
+   $ cd ..
+
+3. Compile SoPlex:
+
+   $ cd soplex-*/
+   $ make OPT=opt
+   $ cd ..
+
+3. Compile SCIP:
+
+   $ cd scip-*/
+   $ make OPT=opt LPS=spx2 LPSOPT=opt
+
+4. Subsequently, by ${ZIMPL}, ${SOPLEX} and ${SCIP} this manual refers to the 
+   respective paths in scipoptsuite-*.
+
 
 Installing IPO
 ==============
@@ -64,7 +96,7 @@ issue the following commands:
 
 3. Perform system checks and create the makefiles.
 
-  $ cmake ..
+  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSOPLEX_ROOT_DIR=${SOPLEX} ..
 
 4. Build IPO.
 
@@ -126,6 +158,37 @@ You find a list of the most useful options below.
 
   Build shared library instead of static one. Think twice if you
   really want to use this option.
+
+-DZIMPL_ROOT_DIR=path-to-zimpl
+
+  Uses the given path when searching for the ZIMPL library.
+
+-DSOPLEX_ROOT_DIR=path-to-soplex
+
+  Uses the given path when searching for the SoPlex library.
+  This could be the source or installation directory.
+
+-DSOPLEX_BUILD_TYPE=opt|dbg|prf
+
+  Configures IPO to link to optimized, debug or profiling versions of SoPlex.
+
+-DSCIP_ROOT_DIR=path-to-scip
+
+  Uses the given path when searching for the SCIP libraries.
+  This could be the source or installation directory.
+
+-DSCIP_BUILD_TYPE=opt|dbg|prf
+
+  Configures IPO to link to optimized, debug or profiling versions of SCIP.
+
+-DSCIP_LPS=spx|spx2
+
+  Configures IPO to link to the spx or spx2 LP interface of SCIP._
+
+-DSCIP_LPS_OPT=opt|dbg|prf
+
+  Configures IPO to link to the LP interface of SCIP that
+  was built for profiling, debugging or optimized.
 
 Makefile Variables
 ==================

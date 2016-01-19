@@ -1,1 +1,2 @@
-Investigating Polyhedra by  Oracles
+Author:
+  Matthias Walter <matthias.walter@ovgu.de>
