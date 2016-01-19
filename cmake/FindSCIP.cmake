@@ -137,7 +137,8 @@ if (_SCIP_INCLUDE)
   string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+[0-9][0-9]([0-9]).*$" "\\1" SCIP_VERSION_PATCH "${_SCIP_VERSION_STR}")
   file(STRINGS "${_SCIP_INCLUDE}/scip/def.h" _SCIP_SUBVERSION_STR REGEX "^#define[\t ]+SCIP_SUBVERSION[\t ]+[0-9].*")
   string(REGEX REPLACE "^.*SCIP_SUBVERSION[\t ]+([0-9]).*$" "\\1" SCIP_VERSION_SUBVERSION "${_SCIP_SUBVERSION_STR}")
-  set(SCIP_VERSION_STRING "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUBVERSION}.${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SCIP_COMP}.${_SCIP_BUILD}")
+
+#  set(SCIP_VERSION_STRING "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUBVERSION}.${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SCIP_COMP}.${_SCIP_BUILD}")
 
   set(_SCIP_FOUND_ALL TRUE)
 
@@ -150,16 +151,21 @@ if (_SCIP_INCLUDE)
   endif()
 
   # Search for libscip corresponding to version.
-  find_library(_SCIP_LIB_SCIP NAMES "scip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
-  if (NOT ${_SCIP_LIB_SCIP} MATCHES "scip")
+  set(_SCIP_VERSION_PREFIX "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}")
+  set(_SCIP_VERSION_SUFFIX "${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SOPLEX_COMP}.${_SCIP_BUILD}")
+  find_library(_SCIP_LIB_SCIP NAMES "scip-${_SCIP_VERSION_PREFIX}.${_SCIP_VERSION_SUFFIX}" "scip-${_SCIP_VERSION_PREFIX}.${SCIP_VERSION_SUBVERSION}.${_SCIP_VERSION_SUFFIX}" 
+    PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+  if (_SCIP_LIB_SCIP)
+    string(REGEX REPLACE "^.*libscip-(.*)\\.a$" "\\1" SCIP_VERSION_STRING "${_SCIP_LIB_SCIP}")
+  else()
     set(_SCIP_FOUND_ALL FALSE)
     if (NOT SCIP_FIND_QUIETLY)
-      message(STATUS "SCIP library libscip-${SCIP_VERSION_STRING} was not found. Search paths: ${_SCIP_ROOT_PATHS}")
+      message(STATUS "SCIP library libscip-${_SCIP_VERSION_PREFIX}[.${SCIP_VERSION_SUBVERSION}].${_SCIP_VERSION_SUFFIX} was not found. Search paths: ${_SCIP_ROOT_PATHS}")
 
       # Check if some other version was found and report to user.
       find_library(_SCIP_LIB_SCIP_TEST NAMES "scip" ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
-      if (${_SCIP_LIB_SCIP_TEST} MATCHES "scip")
-        message(STATUS "Found a SCIP library different from the one promised by ${SCIP_INCLUDE_DIRS}/scip/def.h")
+      if (_SCIP_LIB_SCIP_TEST)
+        message(STATUS "Found SCIP library ${_SCIP_LIB_SCIP_TEST} different from the one promised by ${SCIP_INCLUDE_DIRS}/scip/def.h")
       endif()
     endif()
   endif()
@@ -185,11 +191,11 @@ if (_SCIP_INCLUDE)
   # Search for the LP solver: spx
   if (${_SCIP_LPS} STREQUAL "spx")
     # Search for liblpispx
-    find_library(_SCIP_LIB_LPI NAMES "lpispx-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    find_library(_SCIP_LIB_LPI NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
     if (NOT ${_SCIP_LIB_LPI} MATCHES "spx")
       set(_SCIP_FOUND_ALL FALSE)
       if (NOT SCIP_FIND_QUIETLY)
-        message(STATUS "SCIP library liblpispx-${SCIP_VERSION_STRING} was not found.")
+        message(STATUS "SCIP library liblpispx2-${SCIP_VERSION_STRING} was not found.")
       endif()
     endif()
   
@@ -268,6 +274,8 @@ if (_SCIP_INCLUDE)
     if (ZIMPL_FOUND)
       set(SCIP_LIBRARIES ${SCIP_LIBRARIES} ${ZIMPL_LIBRARIES})
     endif()
+  else()
+    set(SCIP_VERSION_STRING)
   endif()
 endif()
 
