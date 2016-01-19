@@ -121,110 +121,121 @@ else()
   set(_SCIP_COMP "gnu")
 endif()
 
-# Search scip.h
-find_path(SCIP_INCLUDE_DIRS NAMES scip/scip.h HINTS ${_SCIP_ROOT_HINTS} PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES include src)
+# Root
 
-# Extract version from scip/def.h
-file(STRINGS "${SCIP_INCLUDE_DIRS}/scip/def.h" _SCIP_VERSION_STR REGEX "^#define[\t ]+SCIP_VERSION[\t ]+[0-9][0-9][0-9].*")
-string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+([0-9]).*$" "\\1" SCIP_VERSION_MAJOR "${_SCIP_VERSION_STR}")
-string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+[0-9]([0-9]).*$" "\\1" SCIP_VERSION_MINOR "${_SCIP_VERSION_STR}")
-string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+[0-9][0-9]([0-9]).*$" "\\1" SCIP_VERSION_PATCH "${_SCIP_VERSION_STR}")
-file(STRINGS "${SCIP_INCLUDE_DIRS}/scip/def.h" _SCIP_SUBVERSION_STR REGEX "^#define[\t ]+SCIP_SUBVERSION[\t ]+[0-9].*")
-string(REGEX REPLACE "^.*SCIP_SUBVERSION[\t ]+([0-9]).*$" "\\1" SCIP_VERSION_SUBVERSION "${_SCIP_SUBVERSION_STR}")
-set(SCIP_VERSION_STRING "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUBVERSION}.${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SCIP_COMP}.${_SCIP_BUILD}")
+find_path(SCIP_ROOT_DIR NAMES include/scip/scip.h src/scip/scip.h HINTS ${_SCIP_ROOT_HINTS} PATHS ${_SCIP_ROOT_HINTS})
 
-set(_SCIP_FOUND_ALL TRUE)
+# Includes
 
-# Search for libscip corresponding to version.
-find_library(_SCIP_LIB_SCIP NAMES "scip-${SCIP_VERSION_STRING}" PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-if (NOT ${_SCIP_LIB_SCIP} MATCHES "scip")
-  set(_SCIP_FOUND_ALL FALSE)
-  if (NOT SCIP_FIND_QUIETLY)
-    message(STATUS "SCIP library libscip-${SCIP_VERSION_STRING} was not found. Search paths: ${_SCIP_ROOT_PATHS}")
+find_path(_SCIP_INCLUDE NAMES scip/scip.h PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES include src)
+if (_SCIP_INCLUDE)
+  set(SCIP_INCLUDE_DIRS ${_SCIP_INCLUDE})
 
-    # Check if some other version was found and report to user.
-    find_library(_SCIP_LIB_SCIP_TEST NAMES "scip" ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-    if (${_SCIP_LIB_SCIP_TEST} MATCHES "scip")
-      message(STATUS "Found a SCIP library different from the one promised by ${SCIP_INCLUDE_DIRS}/scip/def.h")
-    endif()
-  endif()
-endif()
+  # Extract version from scip/def.h
+  file(STRINGS "${_SCIP_INCLUDE}/scip/def.h" _SCIP_VERSION_STR REGEX "^#define[\t ]+SCIP_VERSION[\t ]+[0-9][0-9][0-9].*")
+  string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+([0-9]).*$" "\\1" SCIP_VERSION_MAJOR "${_SCIP_VERSION_STR}")
+  string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+[0-9]([0-9]).*$" "\\1" SCIP_VERSION_MINOR "${_SCIP_VERSION_STR}")
+  string(REGEX REPLACE "^.*SCIP_VERSION[\t ]+[0-9][0-9]([0-9]).*$" "\\1" SCIP_VERSION_PATCH "${_SCIP_VERSION_STR}")
+  file(STRINGS "${_SCIP_INCLUDE}/scip/def.h" _SCIP_SUBVERSION_STR REGEX "^#define[\t ]+SCIP_SUBVERSION[\t ]+[0-9].*")
+  string(REGEX REPLACE "^.*SCIP_SUBVERSION[\t ]+([0-9]).*$" "\\1" SCIP_VERSION_SUBVERSION "${_SCIP_SUBVERSION_STR}")
+  set(SCIP_VERSION_STRING "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}.${SCIP_VERSION_SUBVERSION}.${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SCIP_COMP}.${_SCIP_BUILD}")
 
-# Search for libobjscip
-find_library(_SCIP_LIB_OBJSCIP NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-if (NOT ${_SCIP_LIB_OBJSCIP} MATCHES "objscip")
-  set(_SCIP_FOUND_ALL FALSE)
-  if (NOT SCIP_FIND_QUIETLY)
-    message(STATUS "SCIP library libobjscip-${SCIP_VERSION_STRING} was not found.")
-  endif()
-endif()
+  set(_SCIP_FOUND_ALL TRUE)
 
-# Search for nlpi. TODO: cppad is currently hard-coded, while ipopt is not recognized.
-find_library(_SCIP_LIB_NLPI NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-if (NOT ${_SCIP_LIB_NLPI} MATCHES "nlpi")
-  set(_SCIP_FOUND_ALL FALSE)
-  if (NOT SCIP_FIND_QUIETLY)
-    message(STATUS "SCIP library libnlpi.cppad-${SCIP_VERSION_STRING} was not found.")
-  endif()
-endif()
-
-# Search for the LP solver: spx2
-if (${_SCIP_LPS} STREQUAL "spx2")
-  # Search for liblpispx2
-  find_library(_SCIP_LIB_LPI NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-  if (NOT ${_SCIP_LIB_LPI} MATCHES "spx2")
+  # Search for libscip corresponding to version.
+  find_library(_SCIP_LIB_SCIP NAMES "scip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+  if (NOT ${_SCIP_LIB_SCIP} MATCHES "scip")
     set(_SCIP_FOUND_ALL FALSE)
     if (NOT SCIP_FIND_QUIETLY)
-      message(STATUS "SCIP library liblpispx2-${SCIP_VERSION_STRING} was not found.")
+      message(STATUS "SCIP library libscip-${SCIP_VERSION_STRING} was not found. Search paths: ${_SCIP_ROOT_PATHS}")
+
+      # Check if some other version was found and report to user.
+      find_library(_SCIP_LIB_SCIP_TEST NAMES "scip" ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+      if (${_SCIP_LIB_SCIP_TEST} MATCHES "scip")
+        message(STATUS "Found a SCIP library different from the one promised by ${SCIP_INCLUDE_DIRS}/scip/def.h")
+      endif()
     endif()
   endif()
-
-  # Search for SoPlex.
-  if (NOT SOPLEX_FOUND)
-    set(SOPLEX_BUILD ${SCIP_LPS_BUILD})
-    find_package(SoPlex REQUIRED)
-  endif()
-  if (SOPLEX_FOUND)
-    set(_SCIP_LIB_LPSOLVER ${SOPLEX_LIBRARIES})
-  else()
+  
+  # Search for libobjscip
+  find_library(_SCIP_LIB_OBJSCIP NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+  if (NOT ${_SCIP_LIB_OBJSCIP} MATCHES "objscip")
     set(_SCIP_FOUND_ALL FALSE)
     if (NOT SCIP_FIND_QUIETLY)
-      message(STATUS "SCIP dependency SoPlex was not found.")
+      message(STATUS "SCIP library libobjscip-${SCIP_VERSION_STRING} was not found.")
     endif()
   endif()
-endif()
-
-# Search for the LP solver: spx
-if (${_SCIP_LPS} STREQUAL "spx")
-  # Search for liblpispx
-  find_library(_SCIP_LIB_LPI NAMES "lpispx-${SCIP_VERSION_STRING}" PATHS ${_SCIP_ROOT_PATHS} PATH_SUFFIXES lib)
-  if (NOT ${_SCIP_LIB_LPI} MATCHES "liblpispx")
+  
+  # Search for nlpi. TODO: cppad is currently hard-coded, while ipopt is not recognized.
+  find_library(_SCIP_LIB_NLPI NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+  if (NOT ${_SCIP_LIB_NLPI} MATCHES "nlpi")
     set(_SCIP_FOUND_ALL FALSE)
     if (NOT SCIP_FIND_QUIETLY)
-      message(STATUS "SCIP library liblpispx-${SCIP_VERSION_STRING} was not found.")
+      message(STATUS "SCIP library libnlpi.cppad-${SCIP_VERSION_STRING} was not found.")
     endif()
   endif()
-
-  # Search for SoPlex.
-  if (NOT SOPLEX_FOUND)
-    set(SOPLEX_BUILD ${SCIP_LPS_BUILD})
-    find_package(SoPlex REQUIRED)
-  endif()
-  if (SOPLEX_FOUND)
-    set(_SCIP_LIB_LPSOLVER ${SOPLEX_LIBRARIES})
-  else()
-    set(_SCIP_FOUND_ALL FALSE)
-    if (NOT SCIP_FIND_QUIETLY)
-      message(STATUS "SCIP dependency SoPlex was not found.")
+  
+  # Search for the LP solver: spx2
+  if (${_SCIP_LPS} STREQUAL "spx2")
+    # Search for liblpispx2
+    find_library(_SCIP_LIB_LPI NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    if (NOT ${_SCIP_LIB_LPI} MATCHES "spx2")
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP library liblpispx2-${SCIP_VERSION_STRING} was not found.")
+      endif()
+    endif()
+  
+    # Search for SoPlex.
+    if (NOT SOPLEX_FOUND)
+      set(SOPLEX_BUILD ${SCIP_LPS_BUILD})
+      find_package(SoPlex REQUIRED)
+    endif()
+    if (SOPLEX_FOUND)
+      set(_SCIP_LIB_LPSOLVER ${SOPLEX_LIBRARIES})
+    else()
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP dependency SoPlex was not found.")
+      endif()
     endif()
   endif()
-endif()
-
-if (_SCIP_FOUND_ALL)
-  set(SCIP_LIBRARIES ${_SCIP_LIB_OBJSCIP} ${_SCIP_LIB_SCIP} ${_SCIP_LIB_ZIMPL} ${_SCIP_LIB_LPI} ${_SCIP_LIB_NLPI} ${_SCIP_LIB_LPSOLVER} ${ZIMPL_LIBRARIES} ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES})
+  
+  # Search for the LP solver: spx
+  if (${_SCIP_LPS} STREQUAL "spx")
+    # Search for liblpispx
+    find_library(_SCIP_LIB_LPI NAMES "lpispx-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    if (NOT ${_SCIP_LIB_LPI} MATCHES "liblpispx")
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP library liblpispx-${SCIP_VERSION_STRING} was not found.")
+      endif()
+    endif()
+  
+    # Search for SoPlex.
+    if (NOT SOPLEX_FOUND)
+      set(SOPLEX_BUILD ${SCIP_LPS_BUILD})
+      find_package(SoPlex REQUIRED)
+    endif()
+    if (SOPLEX_FOUND)
+      set(_SCIP_LIB_LPSOLVER ${SOPLEX_LIBRARIES})
+    else()
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP dependency SoPlex was not found.")
+      endif()
+    endif()
+  endif()
+  
+  if (_SCIP_FOUND_ALL)
+    set(SCIP_LIBRARIES
+      ${_SCIP_LIB_OBJSCIP} ${_SCIP_LIB_SCIP} ${_SCIP_LIB_ZIMPL} ${_SCIP_LIB_LPI} ${_SCIP_LIB_NLPI} ${_SCIP_LIB_LPSOLVER}
+      ${ZIMPL_LIBRARIES} ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+    )
+  endif()
 endif()
 
 # Let cmake process everything.
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(SCIP REQUIRED_VARS SCIP_INCLUDE_DIRS SCIP_LIBRARIES VERSION_VAR SCIP_VERSION_STRING)
+find_package_handle_standard_args(SCIP REQUIRED_VARS SCIP_ROOT_DIR SCIP_INCLUDE_DIRS SCIP_LIBRARIES VERSION_VAR SCIP_VERSION_STRING)
 

@@ -88,8 +88,12 @@ else()
   set(_ZIMPL_COMP "gnu")
 endif()
 
+# Root
+
+find_path(ZIMPL_ROOT_DIR NAMES bin/zimpl HINTS ${_IPO_ROOT_HINTS} PATHS ${_IPO_ROOT_PATHS})
+
 # Run `zimpl -V` to get the version.
-execute_process(COMMAND zimpl -V OUTPUT_VARIABLE _ZIMPL_VERSION_STR OUTPUT_STRIP_TRAILING_WHITESPACE)
+execute_process(COMMAND ${ZIMPL_ROOT_DIR}/bin/zimpl -V OUTPUT_VARIABLE _ZIMPL_VERSION_STR OUTPUT_STRIP_TRAILING_WHITESPACE)
 string(REGEX REPLACE "^([0-9]).*$" "\\1" ZIMPL_VERSION_MAJOR "${_ZIMPL_VERSION_STR}")
 string(REGEX REPLACE "^[0-9]\\.([0-9]).*$" "\\1" ZIMPL_VERSION_MINOR "${_ZIMPL_VERSION_STR}")
 string(REGEX REPLACE "^[0-9]\\.[0-9]\\.([0-9]).*$" "\\1" ZIMPL_VERSION_PATCH "${_ZIMPL_VERSION_STR}")
@@ -100,5 +104,5 @@ find_library(ZIMPL_LIBRARIES NAMES "zimpl-${ZIMPL_VERSION_STRING}" PATHS ${_ZIMP
 
 # Let cmake process everything.
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(ZIMPL REQUIRED_VARS ZIMPL_LIBRARIES VERSION_VAR ZIMPL_VERSION_STRING)
+find_package_handle_standard_args(ZIMPL REQUIRED_VARS ZIMPL_ROOT_DIR ZIMPL_LIBRARIES VERSION_VAR ZIMPL_VERSION_STRING)
 
