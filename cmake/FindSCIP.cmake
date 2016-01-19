@@ -10,8 +10,8 @@
 #   Set this variable to "opt", "dbg" or "prf" for corresponding builds.
 #   The default is "opt".
 # SCIP_LPS
-#   Set this variable to "spx2" or "spx" (others not implemented, yet).
-#   The default is "spx2".
+#   Set this variable to "spx" (="spx2") or "spx1" (others not implemented, yet).
+#   The default is "spx".
 # SCIP_LPS_BUILD
 #   Set this variable to "opt", "dbg" or "prf" for corresponding builds of the LP solver.
 #   The default is "opt".
@@ -59,12 +59,12 @@ else()
 endif()
 
 # Read SCIP_LPS from (environment) variable.
-if (${SCIP_LPS} MATCHES "^(spx2|spx)$")
+if (${SCIP_LPS} MATCHES "^(spx|spx2|spx1)$")
   set(_SCIP_LPS ${SCIP_LPS})
-elseif ($ENV{SCIP_LPS} MATCHES "^(spx2|spx)$")
+elseif ($ENV{SCIP_LPS} MATCHES "^(spx|spx2|spx1)$")
   set(_SCIP_LPS $ENV{SCIP_LPS})
 else()
-  set(_SCIP_LPS "spx2")
+  set(_SCIP_LPS "spx")
 endif()
 
 # Read SCIP_LPS_BUILD from (environment) variable.
@@ -182,6 +182,32 @@ if (_SCIP_INCLUDE)
     endif()
   endif()
   
+  # Search for the LP solver: spx
+  if (${_SCIP_LPS} STREQUAL "spx")
+    # Search for liblpispx
+    find_library(_SCIP_LIB_LPI NAMES "lpispx-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    if (NOT ${_SCIP_LIB_LPI} MATCHES "spx")
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP library liblpispx-${SCIP_VERSION_STRING} was not found.")
+      endif()
+    endif()
+  
+    # Search for SoPlex.
+    if (NOT SOPLEX_FOUND)
+      set(SOPLEX_BUILD ${SCIP_LPS_BUILD})
+      find_package(SoPlex REQUIRED)
+    endif()
+    if (SOPLEX_FOUND)
+      set(_SCIP_LIB_LPSOLVER ${SOPLEX_LIBRARIES})
+    else()
+      set(_SCIP_FOUND_ALL FALSE)
+      if (NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP dependency SoPlex was not found.")
+      endif()
+    endif()
+  endif()
+  
   # Search for the LP solver: spx2
   if (${_SCIP_LPS} STREQUAL "spx2")
     # Search for liblpispx2
@@ -208,14 +234,14 @@ if (_SCIP_INCLUDE)
     endif()
   endif()
   
-  # Search for the LP solver: spx
-  if (${_SCIP_LPS} STREQUAL "spx")
-    # Search for liblpispx
-    find_library(_SCIP_LIB_LPI NAMES "lpispx-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
-    if (NOT ${_SCIP_LIB_LPI} MATCHES "liblpispx")
+  # Search for the LP solver: spx1
+  if (${_SCIP_LPS} STREQUAL "spx1")
+    # Search for liblpispx1
+    find_library(_SCIP_LIB_LPI NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    if (NOT ${_SCIP_LIB_LPI} MATCHES "liblpispx1")
       set(_SCIP_FOUND_ALL FALSE)
       if (NOT SCIP_FIND_QUIETLY)
-        message(STATUS "SCIP library liblpispx-${SCIP_VERSION_STRING} was not found.")
+        message(STATUS "SCIP library liblpispx1-${SCIP_VERSION_STRING} was not found.")
       endif()
     endif()
   
