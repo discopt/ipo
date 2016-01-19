@@ -5,7 +5,11 @@
 #include <vector>
 
 #include <soplex.h>
+
+#ifdef WITH_SCIP
 #include <scip/scip.h>
+#include "scip_oracles.h"
+#endif
 
 #include "ipo.h"
 #include "oracles.h"
@@ -23,6 +27,7 @@ namespace ipo {
   class MixedIntegerProgram
   {
   public:
+#ifdef WITH_SCIP
     /**
      * \brief Constructs a \c MixedIntegerProgram from a \c SCIP instance.
      *
@@ -31,6 +36,7 @@ namespace ipo {
      */
 
     MixedIntegerProgram(SCIP* scip);
+#endif
 
     /**
      * \brief Destructor.

@@ -3,12 +3,14 @@
 #include <sstream>
 #include <map>
 
-#include "ipo/scip_exception.hpp"
+#ifdef WITH_SCIP
+#include <ipo/scip_exception.hpp>
 #include <scip/scip.h>
 #include <scip/scipdefplugins.h>
 #include <scip/cons_linear.h>
-
 #include "ipo/scip_oracles.h"
+#endif
+
 #include "ipo/affine_hull.h"
 #include "ipo/min_norm_2d.h"
 
@@ -34,6 +36,8 @@ void printUsageAndExit(const char* program)
 
 int main(int argc, char** argv)
 {
+#ifdef WITH_SCIP
+
   int fileArg = -1;
   bool relaxation = false;
   bool optimalFace = false;
@@ -307,6 +311,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   soplex::Rational::freeListMem();
+#endif
 
   return EXIT_SUCCESS;
 }

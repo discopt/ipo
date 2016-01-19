@@ -3,12 +3,14 @@
 #include <sstream>
 #include <map>
 
+#ifdef WITH_SCIP
 #include <scip/scip.h>
 #include <scip/scipdefplugins.h>
 #include <scip/cons_linear.h>
+#include <ipo/scip_exception.hpp>
+#include <ipo/scip_oracles.h>
+#endif
 
-#include "ipo/scip_exception.hpp"
-#include "ipo/scip_oracles.h"
 #include "ipo/affine_hull.h"
 #include "ipo/facets.h"
 #include "ipo/min_norm_2d.h"
@@ -25,6 +27,8 @@ void printUsageAndExit(const char* program)
 
 int main(int argc, char** argv)
 {
+#ifdef WITH_SCIP
+
   {
     bool printCertificate = false;
     int fileArg = -1;
@@ -192,6 +196,8 @@ int main(int argc, char** argv)
   }
 
   soplex::Rational::freeListMem();
+
+#endif
 
   return EXIT_SUCCESS;
 }

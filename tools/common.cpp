@@ -1,9 +1,11 @@
 #include "common.h"
 
+#ifdef WITH_SCIP
 #include <scip/scipdefplugins.h>
-
 #include "ipo/scip_exception.hpp"
 #include "ipo/scip_oracles.h"
+#endif
+
 #include "ipo/wrapper_oracle.h"
 
 using namespace ipo;
@@ -35,6 +37,8 @@ void printOracleArguments(std::ostream& stream)
       << " --scip+scipex=BINARY MIP Use exact SCIP (binary specified) and regular SCIP as a heuristic for the MIP.\n";
   stream << " WRAPPER INSTANCE...      Call the oracle WRAPPER and pass INSTANCE parameters.\n";
 }
+
+#ifdef WITH_SCIP
 
 bool readSCIP(const std::string& name, SCIP*& scip, bool relaxation = false)
 {
@@ -77,9 +81,12 @@ bool readMIP(const std::string& name, MixedIntegerProgram*& mip, bool relaxation
 
   return true;
 }
+#endif
 
 bool parseOracleArguments(int numArgs, char** args, OptimizationOracleBase*& oracle, MIPOracleInfo& info)
 {
+#ifdef WITH_SCIP
+
   if (numArgs < 1)
     return false;
   if (args[0] == std::string("--soplex"))
@@ -140,4 +147,6 @@ bool parseOracleArguments(int numArgs, char** args, OptimizationOracleBase*& ora
     oracle = new WrapperOptimizationOracle(args[0], args[0], stream.str());
     return true;
   }
+#endif
 }
+

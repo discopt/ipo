@@ -13,6 +13,8 @@
 
 namespace ipo {
 
+  class MixedIntegerProgram;
+
   /**
    * A map to associate SCIP variables with variable indices.
    */

@@ -31,6 +31,8 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See http://www.boost.org/LICENSE_1_0.txt)
 
+find_package(ZLIB REQUIRED)
+
 # Hints and paths for the search
 set(_SOPLEX_ROOT_HINTS $ENV{SOPLEX_ROOT_DIR} ${SOPLEX_ROOT_DIR})
 set(_SOPLEX_ROOT_PATHS $ENV{SOPLEX_ROOT_DIR} ${SOPLEX_ROOT_DIR})
@@ -110,7 +112,7 @@ if (_SOPLEX_INCLUDE)
   # Search for library corresponding to version.
   find_library(_SOPLEX_LIB NAMES "soplex-${SOPLEX_VERSION_STRING}" PATHS ${_SOPLEX_ROOT_PATHS} PATH_SUFFIXES lib)
   if (_SOPLEX_LIB)
-    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB})
+    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES})
   endif()
 endif()
 

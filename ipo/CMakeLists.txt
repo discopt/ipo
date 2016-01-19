@@ -18,7 +18,6 @@ set(IPO_SOURCES
   unique_rational_vectors.cpp
   rows.cpp
   oracles.cpp
-  scip_oracles.cpp
   mixed_integer_program.cpp
   facets.cpp
   affine_hull.cpp
@@ -41,7 +40,6 @@ set(IPO_INSTALL_HEADERS
   min_norm_2d.h
   oracles.h
   reconstruct.h
-  scip_oracles.h
   spx_gmp.h
   vector_2d.h
   wrapper_oracle.h
@@ -55,18 +53,23 @@ set(IPO_OTHER_HEADERS
   ipo-minsizerel.h
 )
 
-include_directories(ipo
-  ${SCIP_INCLUDE_DIRS}
-  ${SOPLEX_INCLUDE_DIRS}
-)
+if (SCIP_FOUND)
+  set(IPO_SOURCES ${IPO_SOURCES} scip_oracles.cpp)
+  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracles.h scip_exception.h)
+  add_definitions(-DWITH_SCIP)
+endif()
 
 add_library(ipo ${IPO_SOURCES})
-
+include_directories(ipo ${SOPLEX_INCLUDE_DIRS})
 target_link_libraries(ipo
-  ${SCIP_LIBRARIES}
   ${SOPLEX_LIBRARIES}
   ${GMP_LIBRARIES}
 )
+
+if (SCIP_FOUND)
+  include_directories(${SCIP_INCLUDE_DIRS})
+  target_link_libraries(ipo ${SCIP_LIBRARIES})
+endif()
 
 install(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
 

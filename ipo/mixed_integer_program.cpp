@@ -2,12 +2,16 @@
 
 #include "spx_gmp.h"
 #include "reconstruct.h"
-#include "scip_oracles.h"
+
+#ifdef WITH_SCIP
 #include <scip/cons_linear.h>
+#endif
 
 using namespace soplex;
 
 namespace ipo {
+
+#ifdef WITH_SCIP
 
   MixedIntegerProgram::MixedIntegerProgram(SCIP* scip) :
       _face(NULL)
@@ -85,6 +89,8 @@ namespace ipo {
       }
     }
   }
+
+#endif
 
   MixedIntegerProgram::~MixedIntegerProgram()
   {

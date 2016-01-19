@@ -43,8 +43,7 @@ find_package(ZLIB REQUIRED)
 find_package(Readline REQUIRED)
 find_package(GMP REQUIRED)
 
-# TODO: ZIMPL may be optional.
-find_package(ZIMPL REQUIRED)
+find_package(ZIMPL QUIET)
 
 # Hints and paths for the search
 set(_SCIP_ROOT_HINTS $ENV{SCIP_ROOT_DIR} ${SCIP_ROOT_DIR})
@@ -142,6 +141,14 @@ if (_SCIP_INCLUDE)
 
   set(_SCIP_FOUND_ALL TRUE)
 
+  # Check for ZIMPL.
+  if (NOT ZIMPL_FOUND)
+    set(_SCIP_FOUND_ALL FALSE)
+    if (NOT SCIP_FIND_QUIETLY)
+      message(STATUS "SCIP dependency ZIMPL was not found.")
+    endif()
+  endif()
+
   # Search for libscip corresponding to version.
   find_library(_SCIP_LIB_SCIP NAMES "scip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
   if (NOT ${_SCIP_LIB_SCIP} MATCHES "scip")
@@ -229,9 +236,12 @@ if (_SCIP_INCLUDE)
   
   if (_SCIP_FOUND_ALL)
     set(SCIP_LIBRARIES
-      ${_SCIP_LIB_OBJSCIP} ${_SCIP_LIB_SCIP} ${_SCIP_LIB_ZIMPL} ${_SCIP_LIB_LPI} ${_SCIP_LIB_NLPI} ${_SCIP_LIB_LPSOLVER}
-      ${ZIMPL_LIBRARIES} ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
+      ${_SCIP_LIB_OBJSCIP} ${_SCIP_LIB_SCIP} ${_SCIP_LIB_LPI} ${_SCIP_LIB_NLPI} ${_SCIP_LIB_LPSOLVER}
+      ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
     )
+    if (ZIMPL_FOUND)
+      set(SCIP_LIBRARIES ${SCIP_LIBRARIES} ${ZIMPL_LIBRARIES})
+    endif()
   endif()
 endif()
 
