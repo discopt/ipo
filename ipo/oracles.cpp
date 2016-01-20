@@ -341,9 +341,9 @@ namespace ipo {
       if (x != 1 && x != -1)
       {
         if (x > 0)
-          stream << x << '*';
+          stream << x << ' ';
         else
-          stream << (-x) << '*';
+          stream << (-x) << ' ';
       }
       stream << variableName(v);
       first = false;

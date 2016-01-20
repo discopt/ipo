@@ -110,6 +110,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPcreateProbBasic(_scip, name.c_str()));
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
     SCIP_CALL_EXC(SCIPsetBoolParam(_scip, "misc/catchctrlc", 0));
+    SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
 
     /// Create variables.
 
