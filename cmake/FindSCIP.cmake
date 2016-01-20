@@ -29,8 +29,10 @@
 #
 # Once done, this will define
 #
+#  SCIP_ROOT_DIR       - SCIP's base directory.
 #  SCIP_INCLUDE_DIRS   - where to find scip.h, etc.
 #  SCIP_LIBRARIES      - list of libraries when using SCIP.
+#  SCIP_LPS            - LP solver used by SCIP.
 #  SCIP_FOUND          - true if SCIP was found.
 #
 # Author:
@@ -60,11 +62,10 @@ endif()
 
 # Read SCIP_LPS from (environment) variable.
 if (${SCIP_LPS} MATCHES "^(spx|spx2|spx1)$")
-  set(_SCIP_LPS ${SCIP_LPS})
 elseif ($ENV{SCIP_LPS} MATCHES "^(spx|spx2|spx1)$")
-  set(_SCIP_LPS $ENV{SCIP_LPS})
+  set(SCIP_LPS $ENV{SCIP_LPS})
 else()
-  set(_SCIP_LPS "spx")
+  set(SCIP_LPS "spx")
 endif()
 
 # Read SCIP_LPS_BUILD from (environment) variable.
@@ -189,7 +190,7 @@ if (_SCIP_INCLUDE)
   endif()
   
   # Search for the LP solver: spx
-  if (${_SCIP_LPS} STREQUAL "spx")
+  if (${SCIP_LPS} STREQUAL "spx")
     # Search for liblpispx
     find_library(_SCIP_LIB_LPI NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
     if (NOT ${_SCIP_LIB_LPI} MATCHES "spx")
@@ -215,7 +216,7 @@ if (_SCIP_INCLUDE)
   endif()
   
   # Search for the LP solver: spx2
-  if (${_SCIP_LPS} STREQUAL "spx2")
+  if (${SCIP_LPS} STREQUAL "spx2")
     # Search for liblpispx2
     find_library(_SCIP_LIB_LPI NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
     if (NOT ${_SCIP_LIB_LPI} MATCHES "spx2")
@@ -241,7 +242,7 @@ if (_SCIP_INCLUDE)
   endif()
   
   # Search for the LP solver: spx1
-  if (${_SCIP_LPS} STREQUAL "spx1")
+  if (${SCIP_LPS} STREQUAL "spx1")
     # Search for liblpispx1
     find_library(_SCIP_LIB_LPI NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
     if (NOT ${_SCIP_LIB_LPI} MATCHES "liblpispx1")
@@ -281,5 +282,5 @@ endif()
 
 # Let cmake process everything.
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(SCIP REQUIRED_VARS SCIP_ROOT_DIR SCIP_INCLUDE_DIRS SCIP_LIBRARIES VERSION_VAR SCIP_VERSION_STRING)
+find_package_handle_standard_args(SCIP REQUIRED_VARS SCIP_ROOT_DIR SCIP_INCLUDE_DIRS SCIP_LIBRARIES SCIP_LPS VERSION_VAR SCIP_VERSION_STRING)
 
