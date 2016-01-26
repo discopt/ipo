@@ -72,7 +72,7 @@ namespace ipo {
     struct Certificate
     {
       VectorSubset pointIndices;
-      VectorSubset rayIndices;
+      VectorSubset directionIndices;
     };
 
     class Implementation;
@@ -238,7 +238,7 @@ namespace ipo {
       const soplex::Rational& violation() const;
 
       bool separatePoint(const Point* targetPoint, OutputBase& output);
-      bool separateRay(const Ray* targetRay, OutputBase& output);
+      bool separateRay(const Direction* targetRay, OutputBase& output);
 
       friend class Implementation;
     };

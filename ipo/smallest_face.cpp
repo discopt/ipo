@@ -199,12 +199,12 @@ namespace ipo {
               continue;
           }
 
-          Ray* ray;
+          Direction* ray;
           if (free)
             ray = freeNormalConeElements[i];
           else
           {
-            ray = new Ray;
+            ray = new Direction;
             *ray = *copyNormalConeElements[i];
           }
           Rational rhs = *ray * *target;
@@ -237,8 +237,8 @@ namespace ipo {
         _maximizingObjective.clear();
         for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)
           _maximizingObjective += *conePoints[hull.spanningPoints()[i]];
-        for (std::size_t i = 0; i < hull.numSpanningRays(); ++i)
-          _maximizingObjective += *coneRays[hull.spanningRays()[i]];
+        for (std::size_t i = 0; i < hull.numSpanningDirections(); ++i)
+          _maximizingObjective += *coneRays[hull.spanningDirections()[i]];
 
         _output->onEnd();
         _output->_implementation = NULL;
@@ -704,7 +704,7 @@ namespace ipo {
     void ProgressOutput::AffineHullOutput::onProgress()
     {
       assert(dimensionSafeUpperBound() == dimensionUnsafeUpperBound());
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  "
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningDirections() << ",  "
           << dimensionLowerBound() << " <= dim <= " << dimensionSafeUpperBound();
       std::cout << ",  Norm. cone opts: " << numHeuristicCalls() << ".\n" << std::flush;
     }

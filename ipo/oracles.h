@@ -376,6 +376,15 @@ namespace ipo {
     }
 
     /**
+     * \brief Prints the linear form \vector to \c stream using the variable names of the oracle.
+     *
+     * Prints the linear form \vector to \c stream using the variable names of the oracle.
+     * Does not emit a newline character.
+     */
+
+    void printLinearForm(std::ostream& stream, const soplex::SVectorRational* vector) const;
+
+    /**
      * \brief Prints the \c row (inequality / equation) to \c stream using the variable names of the oracle.
      *
      * Prints the \c row (inequality / equation) to \c stream using variable names of the oracle.
@@ -603,48 +612,6 @@ namespace ipo {
   };
 
   /**
-   * \brief An oracle that calls a given first oracle, and, if not satisfied, a second one.
-   *
-   * An optimization oracle that calls a given first oracle, and, if not satisfied, a second one.
-   */
-
-  class ChainedOptimizationOracle: public OptimizationOracleBase
-  {
-  public:
-
-    /**
-     * \brief Constructor.
-     *
-     * Constructor.
-     *
-     * \param first Oracle to be called first.
-     * \param second Oracle to be called if the answer of the first is not satisfactory.
-     */
-
-    ChainedOptimizationOracle(OptimizationOracleBase* first, OptimizationOracleBase* second);
-
-    /**
-     * Destructor.
-     */
-
-    virtual ~ChainedOptimizationOracle();
-
-  protected:
-    /**
-     * \brief Implementation of the oracle.
-     *
-     * Implementation of the oracle.
-     */
-
-    virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
-        const soplex::Rational* improveValue, bool forceOptimal);
-
-  protected:
-    OptimizationOracleBase* _first; // Pointer to the first oracle.
-    OptimizationOracleBase* _second; // Pointer to the second oracle.
-  };
-
-  /**
    * \brief Base class for an oracle that can optimize over arbitrary faces.
    *
    * An optimization oracle for a polyhedron \f$ P \f$
@@ -700,6 +667,66 @@ namespace ipo {
 
   protected:
     Face* _face; // Pointer to currently active face.
+  };
+
+  /**
+   * \brief An oracle that calls a given first oracle, and, if not satisfied, a second one.
+   *
+   * An optimization oracle that calls a given first oracle, and, if not satisfied, a second one.
+   */
+
+  class ChainedOptimizationOracle: public FaceOptimizationOracleBase
+  {
+  public:
+
+    /**
+     * \brief Constructor.
+     *
+     * Constructor.
+     *
+     * \param first Oracle to be called first.
+     * \param second Oracle to be called if the answer of the first is not satisfactory.
+     */
+
+    ChainedOptimizationOracle(FaceOptimizationOracleBase* first, FaceOptimizationOracleBase* second);
+
+    /**
+     * Destructor.
+     */
+
+    virtual ~ChainedOptimizationOracle();
+
+  protected:
+    /**
+     * \brief Implementation of the oracle.
+     *
+     * Implementation of the oracle.
+     */
+
+    virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
+        const soplex::Rational* improveValue, bool forceOptimal);
+
+    /**
+     * \brief Method that is called when a new face is activated.
+     *
+     * Method that is called when a new \c face is activated.
+     * If a (non-trivial) face was active before,
+     * it is ensured that \ref faceDisabled() is called before.
+     */
+
+    virtual void faceEnabled(Face* face);
+
+    /**
+     * \brief Method that is called when a face is deactivated.
+     *
+     * Method that is called when a face is deactivated.
+     */
+
+    virtual void faceDisabled(Face* face);
+
+  protected:
+    FaceOptimizationOracleBase* _first; // Pointer to the first oracle.
+    FaceOptimizationOracleBase* _second; // Pointer to the second oracle.
   };
 
   /**

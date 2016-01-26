@@ -184,8 +184,8 @@ namespace ipo {
         getBasis(basis);
         _certificate.pointIndices.clear();
         std::copy(basis.tightPoints.begin(), basis.tightPoints.end(), std::back_inserter(_certificate.pointIndices));
-        _certificate.rayIndices.clear();
-        std::copy(basis.tightRays.begin(), basis.tightRays.end(), std::back_inserter(_certificate.rayIndices));
+        _certificate.directionIndices.clear();
+        std::copy(basis.tightRays.begin(), basis.tightRays.end(), std::back_inserter(_certificate.directionIndices));
         for (std::size_t i = 0; i < _basisConstraints.size(); ++i)
         {
           std::size_t constraint = _basisConstraints[i];
@@ -194,12 +194,12 @@ namespace ipo {
           if (_basisConstraintTypes[i] == 'p')
             _certificate.pointIndices.push_back(_basisConstraintIndices[i]);
           else
-            _certificate.rayIndices.push_back(_basisConstraintIndices[i]);
+            _certificate.directionIndices.push_back(_basisConstraintIndices[i]);
         }
 
         /// Based on certificate we know what we separated.
 
-        if (_certificate.pointIndices.size() + _certificate.rayIndices.size() == _dimension + 1)
+        if (_certificate.pointIndices.size() + _certificate.directionIndices.size() == _dimension + 1)
         {
           _separatedEquation = true;
           _inequality.setLhs(_inequality.rhs());
@@ -207,7 +207,7 @@ namespace ipo {
         else
         {
           _inequality.setLhs(-infinity);
-          if (_certificate.pointIndices.size() + _certificate.rayIndices.size() == _dimension)
+          if (_certificate.pointIndices.size() + _certificate.directionIndices.size() == _dimension)
             _separatedFacet = true;
           else
           {

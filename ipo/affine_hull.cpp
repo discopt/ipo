@@ -776,9 +776,9 @@ namespace ipo {
         if (bestIndex < std::numeric_limits<std::size_t>::max())
         {
           _output->onAfterCache(0, 1);
-          _output->onBeforeRay();
+          _output->onBeforeDirection();
           addRay(bestIndex, _directionColumn, true);
-          _output->onAfterRay();
+          _output->onAfterDirection();
           return true;
         }
         else
@@ -896,9 +896,9 @@ namespace ipo {
               idx = _rays->insertFree(_result.directions[i]);
             assert(idx != std::numeric_limits<std::size_t>::max());
 
-            _output->onBeforeRay();
+            _output->onBeforeDirection();
             addRay(idx, _directionColumn, true);
-            _output->onAfterRay();
+            _output->onAfterDirection();
 
             continue;
           }
@@ -990,9 +990,9 @@ namespace ipo {
             for (std::size_t i = 0; i < _result.directions.size(); ++i)
               idx = _rays->insertFree(_result.directions[i]);
 
-            _output->onBeforeRay();
+            _output->onBeforeDirection();
             addRay(idx, _directionColumn, true);
-            _output->onAfterRay();
+            _output->onAfterDirection();
             continue;
           }
           else if (_result.isInfeasible())
@@ -1395,15 +1395,15 @@ namespace ipo {
       return spanningPoints().size();
     }
 
-    const VectorSubset& InformationBase::spanningRays() const
+    const VectorSubset& InformationBase::spanningDirections() const
     {
       ensureImplementation();
       return _implementation->_spanningRays;
     }
 
-    std::size_t InformationBase::numSpanningRays() const
+    std::size_t InformationBase::numSpanningDirections() const
     {
-      return spanningRays().size();
+      return spanningDirections().size();
     }
 
     const VectorSubset& InformationBase::basicColumns() const
@@ -1615,12 +1615,12 @@ namespace ipo {
 
     }
 
-    void OutputBase::onBeforeRay()
+    void OutputBase::onBeforeDirection()
     {
 
     }
 
-    void OutputBase::onAfterRay()
+    void OutputBase::onAfterDirection()
     {
 
     }
@@ -1705,7 +1705,7 @@ namespace ipo {
 
     void ProgressOutput::onProgress()
     {
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  "
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningDirections() << ",  "
           << dimensionLowerBound() << " <= dim <= ";
       if (dimensionUnsafeUpperBound() < dimensionSafeUpperBound())
         std::cout << dimensionUnsafeUpperBound() << " (heuristic)";
@@ -1822,12 +1822,12 @@ namespace ipo {
       _timeFactorization += timeStamp();
     }
 
-    void ProgressOutput::onBeforeRay()
+    void ProgressOutput::onBeforeDirection()
     {
       timeStamp();
     }
 
-    void ProgressOutput::onAfterRay()
+    void ProgressOutput::onAfterDirection()
     {
       onProgress();
       _timeFactorization += timeStamp();
@@ -1887,7 +1887,7 @@ namespace ipo {
 
     void DebugOutput::printStatus()
     {
-      std::cout << "n=" << numVariables() << ", |S|=" << numSpanningPoints() << ", |R|=" << numSpanningRays()
+      std::cout << "n=" << numVariables() << ", |S|=" << numSpanningPoints() << ", |R|=" << numSpanningDirections()
           << ", n-eqs=" << dimensionSafeUpperBound() << " (n-unsafe.eqs=" << dimensionUnsafeUpperBound() << "), #calls="
           << numHeuristicCalls() << "/" << numOracleCalls() << ", cache=" << numCacheHits() << "/" << numCacheQueries()
           << ", #dirs=" << numApproximateDirectionSolves() << "/" << numExactDirectionSolves() << ", bitsize="
@@ -2071,14 +2071,14 @@ namespace ipo {
       timeStamp("add-point");
     }
 
-    void DebugOutput::onBeforeRay()
+    void DebugOutput::onBeforeDirection()
     {
       printStatus();
       std::cout << "Adding a ray.";
       timeStamp();
     }
 
-    void DebugOutput::onAfterRay()
+    void DebugOutput::onAfterDirection()
     {
       printStatus();
       std::cout << "Added a ray.";

@@ -294,6 +294,29 @@ namespace ipo {
       _variableNames[v] = oracle->variableName(v);
   }
 
+  void OptimizationOracleBase::printLinearForm(std::ostream& stream, const soplex::SVectorRational* vector) const
+  {
+    bool first = true;
+    for (std::size_t i = 0; i < vector->size(); ++i)
+    {
+      std::size_t v = vector->index(i);
+      const Rational& x = vector->value(i);
+      if (x < 0)
+        stream << (first ? "-" : " - ");
+      else if (!first)
+        stream << " + ";
+      if (x != 1 && x != -1)
+      {
+        if (x > 0)
+          stream << x << ' ';
+        else
+          stream << (-x) << ' ';
+      }
+      stream << variableName(v);
+      first = false;
+    }
+  }
+
   void OptimizationOracleBase::printRow(std::ostream& stream, const LPRowRational& row) const
   {
     const Rational& lhs = row.lhs();
@@ -315,10 +338,7 @@ namespace ipo {
   {
     for (int i = 0; i < rows.num(); ++i)
     {
-      const Rational& lhs = rows.lhs(i);
-      const Rational& rhs = rows.rhs(i);
-      printRow(stream, lhs > -soplex::infinity / 2 ? &lhs : NULL, rhs < soplex::infinity / 2 ? &rhs : NULL,
-          rows.rowVector(i));
+      printRow(stream, rows, i);
       stream << "\n";
     }
   }
@@ -329,26 +349,8 @@ namespace ipo {
     bool equation = lhs != NULL && rhs != NULL && *lhs == *rhs;
     if (lhs != NULL)
       stream << *lhs << (equation ? " == " : " <= ");
-    bool first = true;
-    for (std::size_t i = 0; i < vector.size(); ++i)
-    {
-      std::size_t v = vector.index(i);
-      const Rational& x = vector.value(i);
-      if (x < 0)
-        stream << (first ? "-" : " - ");
-      else if (!first)
-        stream << " + ";
-      if (x != 1 && x != -1)
-      {
-        if (x > 0)
-          stream << x << ' ';
-        else
-          stream << (-x) << ' ';
-      }
-      stream << variableName(v);
-      first = false;
-    }
-    if (first)
+    printLinearForm(stream, &vector);
+    if (vector.size() == 0)
       stream << '0';
     if (rhs != NULL)
       stream << (equation ? " == " : " <= ") << *rhs;
@@ -447,8 +449,9 @@ namespace ipo {
     throw std::runtime_error("You should implement OptimizationOracle::run() for a base class!");
   }
 
-  ChainedOptimizationOracle::ChainedOptimizationOracle(OptimizationOracleBase* first, OptimizationOracleBase* second) :
-      OptimizationOracleBase(first->name() + "+" + second->name()), _first(first), _second(second)
+  ChainedOptimizationOracle::ChainedOptimizationOracle(FaceOptimizationOracleBase* first,
+      FaceOptimizationOracleBase* second) :
+      FaceOptimizationOracleBase(first->name() + "+" + second->name()), _first(first), _second(second)
   {
     if (first->numVariables() != second->numVariables())
       throw std::runtime_error("ChainedOptimizationOracle: Ambient dimensions do not match.");
@@ -495,6 +498,18 @@ namespace ipo {
     result.directions.clear();
 
     _second->maximize(result, objective, forceOptimal);
+  }
+
+  void ChainedOptimizationOracle::faceEnabled(Face* face)
+  {
+    _first->setFace(face);
+    _second->setFace(face);
+  }
+
+  void ChainedOptimizationOracle::faceDisabled(Face* face)
+  {
+    _first->setFace(NULL);
+    _second->setFace(NULL);
   }
 
   FaceOptimizationOracleBase::FaceOptimizationOracleBase(const std::string& name) :

@@ -107,7 +107,7 @@ int main(int argc, char** argv)
       spx.changeBoundsRational(v, mip.columns().lower(v), mip.columns().upper(v));
 
     Separation::ProgressOutput separateOutput(2);
-    Separation::Result separate(points, rays, hull.spanningPoints(), hull.spanningRays(), hull.basicColumns(), oracle);
+    Separation::Result separate(points, rays, hull.spanningDirections(), hull.spanningDirections(), hull.basicColumns(), oracle);
 
     soplex::DVectorRational denseSolution;
     soplex::DSVectorRational sparseSolution;
@@ -168,7 +168,7 @@ int main(int argc, char** argv)
 
       oracle->printRow(std::cout, inequality);
       std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-          << certificate.rayIndices.size() << " rays.\n" << std::endl;
+          << certificate.directionIndices.size() << " rays.\n" << std::endl;
       if (printCertificate)
       {
         for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
@@ -177,10 +177,10 @@ int main(int argc, char** argv)
           oracle->printVector(std::cout, points[certificate.pointIndices[i]]);
           std::cout << "\n";
         }
-        for (std::size_t i = 0; i < certificate.rayIndices.size(); ++i)
+        for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
         {
           std::cout << "  Certifying ray: ";
-          oracle->printVector(std::cout, rays[certificate.rayIndices[i]]);
+          oracle->printVector(std::cout, rays[certificate.directionIndices[i]]);
           std::cout << "\n";
         }
         std::cout << std::endl;

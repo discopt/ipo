@@ -25,6 +25,7 @@ set(IPO_SOURCES
   polar_lp.cpp
   smallest_face.cpp
   wrapper_oracle.cpp
+  console_app.cpp
 )
 
 set(IPO_INSTALL_HEADERS

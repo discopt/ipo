@@ -14,9 +14,9 @@ namespace ipo {
 
   typedef soplex::DSVectorRational Point;
 
-  /// A ray, i.e., an unbounded direction.
+  /// An (unbounded) direction.
 
-  typedef soplex::DSVectorRational Ray;
+  typedef soplex::DSVectorRational Direction;
 
   /**
    * \brief Computes the bitsize of a vector.
