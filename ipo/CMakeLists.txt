@@ -44,6 +44,7 @@ set(IPO_INSTALL_HEADERS
   spx_gmp.h
   vector_2d.h
   wrapper_oracle.h
+  console_app.h
 )
 
 set(IPO_OTHER_HEADERS
