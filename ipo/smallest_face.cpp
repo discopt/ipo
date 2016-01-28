@@ -52,7 +52,7 @@ namespace ipo {
       {
         updateObjective(objective);
 
-        optimize();
+        optimize(false);
 
         DSVectorRational* solution = new DSVectorRational;
         getPrimalSolution(*solution);

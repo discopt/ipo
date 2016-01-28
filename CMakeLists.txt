@@ -7,6 +7,9 @@ project(IPO)
 set (IPO_VERSION_MAJOR 1)
 set (IPO_VERSION_MINOR 0)
 
+add_definitions("-std=gnu++11")
+
+
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 IF(UNIX)

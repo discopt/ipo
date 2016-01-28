@@ -1,4 +1,5 @@
 build*
 .cproject
 .project
+*.kdev4
 Makefile

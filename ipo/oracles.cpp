@@ -347,8 +347,8 @@ namespace ipo {
       const SVectorRational& vector) const
   {
     bool equation = lhs != NULL && rhs != NULL && *lhs == *rhs;
-    if (lhs != NULL)
-      stream << *lhs << (equation ? " == " : " <= ");
+    if (lhs != NULL && !equation)
+      stream << *lhs << " <= ";
     printLinearForm(stream, &vector);
     if (vector.size() == 0)
       stream << '0';

@@ -150,6 +150,7 @@ namespace ipo {
           dense -= _interiorPoint;
         else
           dense -= _interiorRay;
+        
         updateConstraint(_normalizationConstraint, -infinity, dense, 1);
 
         /// Perform stabilization.
@@ -162,7 +163,7 @@ namespace ipo {
 
         /// Optimize
         
-        optimize();
+        optimize(true);
         
         /// Extract solution
 

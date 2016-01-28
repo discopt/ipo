@@ -43,6 +43,8 @@ public:
     _relaxationArgument = false;
     _taskPrintInstanceObjective = false;
     _useInstanceObjective = true;
+    _useInstanceBounds = true;
+    _useInstanceInequalities = true;
 
 #ifdef WITH_SCIP
     _scipMip = NULL;
@@ -93,8 +95,12 @@ public:
 
   virtual void printAdditionalOptionsFurther(std::ostream& stream)
   {
-    std::cerr << " --instance-objective on|off  In case of a MIP instance, consider its maximization objective\n";
-    std::cerr << "                              as if it was given as a --objective argument. On by default.\n";
+    std::cerr << " --instance-objective on|off  If on (default) and the instance is a MIP, it considers the\n";
+    std::cerr << "                              maximization objective of the instance for facet-generation.\n";
+    std::cerr << " --use-bounds on|off          If on (default) and the instance is a MIP, it uses the bounds of the\n";
+    std::cerr << "                              instance for facet-generation.\n";
+    std::cerr << " --use-inequalities on|off    If on (default) and the instance is a MIP, it uses the inequalities\n";
+    std::cerr << "                              of the instance for facet-generation.\n";
   }
 
   virtual void printAdditionalOptionsSpecific(std::ostream& stream)
@@ -204,6 +210,40 @@ public:
       }
       throw std::runtime_error("Invalid option: --instance-objective must be followed by either \"on\" or \"off\".");
     }
+    if (firstArgument == "--use-bounds")
+    {
+      if (numArguments() > 1)
+      {
+        if (argument(1) == "on")
+        {
+          _useInstanceBounds = true;
+          return 2;
+        }
+        if (argument(1) == "off")
+        {
+          _useInstanceBounds = false;
+          return 2;
+        }
+      }
+      throw std::runtime_error("Invalid option: --use-bounds must be followed by either \"on\" or \"off\".");
+    }
+    if (firstArgument == "--use-inequalities")
+    {
+      if (numArguments() > 1)
+      {
+        if (argument(1) == "on")
+        {
+          _useInstanceInequalities = true;
+          return 2;
+        }
+        if (argument(1) == "off")
+        {
+          _useInstanceInequalities = false;
+          return 2;
+        }
+      }
+      throw std::runtime_error("Invalid option: --use-inequalities must be followed by either \"on\" or \"off\".");
+    }
 
     /// Now the remaining arguments must be an instance.
 
@@ -288,13 +328,30 @@ public:
   {
     if (!ConsoleApplicationBase::processArguments())
       return false;
+    
+    std::size_t n = oracle()->numVariables();
 
+    /// TODO: Instance objective may be invalid if projection is enabled!
     if (_useInstanceObjective)
     {
       soplex::DSVectorRational* obj = new soplex::DSVectorRational;
       *obj = _instanceObjective;
       addObjective(obj);
     }
+
+#ifdef WITH_SCIP
+    if (_useInstanceBounds)
+    {
+      soplex::DVectorRational lower(n);
+      soplex::DVectorRational upper(n);
+      const soplex::LPColSetRational& cols = _scipMip->columns();
+      setRelaxationBounds(cols.lower(), cols.upper());
+    }
+    if (_useInstanceInequalities)
+    {
+      addRelaxationRows(_scipMip->rows());
+    }
+#endif
 
     return true;
   }
@@ -315,6 +372,8 @@ protected:
   bool _relaxationArgument;
   bool _taskPrintInstanceObjective;
   bool _useInstanceObjective;
+  bool _useInstanceBounds;
+  bool _useInstanceInequalities;
 
 #ifdef WITH_SCIP
   MixedIntegerProgram* _scipMip;

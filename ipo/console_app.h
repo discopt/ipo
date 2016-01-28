@@ -118,6 +118,8 @@ namespace ipo {
      */
 
     virtual void printUsage();
+    
+    
 
   protected:
     virtual void printAdditionalOptionsPolyhedron(std::ostream& stream);
@@ -154,6 +156,9 @@ namespace ipo {
     virtual bool separatePointFacet(const Point* point);
     virtual bool computeSmallestFace(const Point* point);
     virtual bool printCached();
+    
+    void setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds);
+    void addRelaxationRows(const soplex::LPRowSetRational& rows);
 
   protected:
     inline bool taskPrintAmbientDimension() const
@@ -226,8 +231,7 @@ namespace ipo {
       return _objectives[index];
     }
 
-    inline
-    void addObjective(soplex::DSVectorRational* objective)
+    inline void addObjective(soplex::DSVectorRational* objective)
     {
       _objectives.push_back(objective);
     }
@@ -279,6 +283,7 @@ namespace ipo {
     bool _taskPrintCached;
     bool _optionReadable;
     bool _optionCertificates;
+    bool _optionReuseFacets;
 
     FaceOptimizationOracleBase* _oracle;
 
@@ -286,6 +291,8 @@ namespace ipo {
     std::vector<soplex::DSVectorRational*> _objectives;
     std::vector<Direction*> _directions;
     std::vector<Point*> _points;
+    soplex::LPColSetRational _relaxationColumns;
+    soplex::LPRowSetRational _relaxationRows;
 
     UniqueRationalVectors* _cachedPoints;
     UniqueRationalVectors* _cachedDirections;
@@ -298,3 +305,4 @@ namespace ipo {
 } /* namespace ipo */
 
 #endif /* CONSOLE_APP_H_ */
+

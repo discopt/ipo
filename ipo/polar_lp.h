@@ -43,17 +43,17 @@ namespace ipo {
 
     inline std::size_t numRows() const
     {
-      return _stabilizing ? _stabLP.numRowsReal() : _spx.numRowsRational();
+      return _stabilizing ? _stabLP.numRowsReal() : _mainLP.numRowsRational();
     }
 
     inline std::size_t numColumns() const
     {
-      return _stabilizing ? _stabLP.numColsReal() : _spx.numColsRational();
+      return _stabilizing ? _stabLP.numColsReal() : _mainLP.numColsRational();
     }
 
     inline std::size_t numNonzeros() const
     {
-      return _stabilizing ? _stabLP.numNonzerosReal() : _spx.numRowsRational();
+      return _stabilizing ? _stabLP.numNonzerosReal() : _mainLP.numRowsRational();
     }
 
     inline double lastMainObjective() const
@@ -88,8 +88,9 @@ namespace ipo {
     soplex::Rational getObjectiveValue();
     void getPrimalSolution(soplex::VectorRational& solution);
     void getPrimalSolution(soplex::DSVectorRational& solution);
-    void optimize();
     void stabilizedPresolve();
+    void optimize(bool perturbeObjective);
+    void reoptimizePerturbed();
 
     /// Callbacks for the output.
 
@@ -142,7 +143,7 @@ namespace ipo {
 
     /// Main LP
 
-    soplex::SoPlex _spx;
+    soplex::SoPlex _mainLP;
     int _maxAge;
     std::vector<RowInfo> _rowInfos;
     std::vector<std::size_t> _constraintsToRows;

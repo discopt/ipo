@@ -1,6 +1,7 @@
 #include "polar_lp.h"
 
 #include <algorithm>
+#include <random>
 
 using namespace soplex;
 
@@ -18,19 +19,20 @@ namespace ipo {
 
     /// Main LP
 
-    _spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
-    _spx.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
-    _spx.setRealParam(SoPlex::FEASTOL, 0.0);
-    _spx.setBoolParam(SoPlex::RATREC, true);
-    _spx.setBoolParam(SoPlex::RATFAC, true);
-    _spx.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
-    _spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+    _mainLP.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
+    _mainLP.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    _mainLP.setRealParam(SoPlex::FEASTOL, 0.0);
+    _mainLP.setBoolParam(SoPlex::RATREC, true);
+    _mainLP.setBoolParam(SoPlex::RATFAC, true);
+    _mainLP.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _mainLP.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+    _mainLP.setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
 
     LPColSetRational cols(_d);
     DSVectorRational vector;
     for (std::size_t c = 0; c < _d; ++c)
       cols.add(Rational(0), -infinity, vector, infinity);
-    _spx.addColsRational(cols);
+    _mainLP.addColsRational(cols);
 
     /// Stabilization LP.
 
@@ -86,7 +88,7 @@ namespace ipo {
   {
     assert(column <= n());
 
-    _spx.changeBoundsRational(column, lower, upper);
+    _mainLP.changeBoundsRational(column, lower, upper);
     _stabLP.changeBoundsReal(column, double(lower), double(upper));
   }
 
@@ -95,10 +97,10 @@ namespace ipo {
     for (int p = row.size() - 1; p >= 0; --p)
       assert(row.index(p) <= _n);
 
-    _spx.addRowRational(LPRowRational(lhs, row, rhs));
+    _mainLP.addRowRational(LPRowRational(lhs, row, rhs));
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_spx.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
 
     DSVectorReal realRow;
     for (int p = row.size() - 1; p >= 0; --p)
@@ -116,9 +118,9 @@ namespace ipo {
 
     assert(index < _constraintsToRows.size());
     std::size_t rowIndex = _constraintsToRows[index];
-    assert(rowIndex < _spx.numRowsRational());
+    assert(rowIndex < _mainLP.numRowsRational());
 
-    _spx.changeRowRational(rowIndex, row);
+    _mainLP.changeRowRational(rowIndex, row);
 
     DSVectorReal realVector;
     for (int p = row.rowVector().size() - 1; p >= 0; --p)
@@ -151,10 +153,10 @@ namespace ipo {
 
     for (std::size_t c = 0; c < _d; ++c)
     {
-      if (_spx.objRational(c) == objective[c])
+      if (_mainLP.objRational(c) == objective[c])
         continue;
 
-      _spx.changeObjRational(c, objective[c]);
+      _mainLP.changeObjRational(c, objective[c]);
       _stabLP.changeObjReal(c, double(objective[c]));
     }
   }
@@ -163,11 +165,11 @@ namespace ipo {
   {
     DSVectorRational vector = *_points[index];
     vector.add(_n, Rational(-1));
-    _spx.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
+    _mainLP.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
 
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_spx.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
 
     DSVectorReal realVector;
     for (int p = vector.size() - 1; p >= 0; --p)
@@ -180,11 +182,11 @@ namespace ipo {
 
   std::size_t PolarLP::addRayContraint(std::size_t index)
   {
-    _spx.addRowRational(LPRowRational(-infinity, *_points[index], Rational(0)));
+    _mainLP.addRowRational(LPRowRational(-infinity, *_points[index], Rational(0)));
 
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_spx.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
 
     DSVectorReal realVector;
     for (int p = _points[index]->size() - 1; p >= 0; --p)
@@ -200,15 +202,15 @@ namespace ipo {
     assert(basis.columnStatus.size() == _n + 1);
     assert(basis.constraintStatus.size() == _constraintsToRows.size());
 
-    std::vector<SPxSolver::VarStatus> rowStatus(_spx.numRowsRational());
-    std::vector<SPxSolver::VarStatus> colStatus(_spx.numColsRational());
+    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
+    std::vector<SPxSolver::VarStatus> colStatus(_mainLP.numColsRational());
     for (std::size_t c = 0; c <= _n; ++c)
       colStatus[c] = basis.columnStatus[c];
-    for (std::size_t c = _n + 1; c < _spx.numColsRational(); ++c)
+    for (std::size_t c = _n + 1; c < _mainLP.numColsRational(); ++c)
       colStatus[c] = SPxSolver::ON_LOWER;
     for (std::size_t i = 0; i < _constraintsToRows.size(); ++i)
       rowStatus[_constraintsToRows[i]] = basis.constraintStatus[i];
-    for (std::size_t r = 0; r < _spx.numRowsRational(); ++r)
+    for (std::size_t r = 0; r < _mainLP.numRowsRational(); ++r)
     {
       if (_rowInfos[r].type == 'c')
         continue;
@@ -222,17 +224,17 @@ namespace ipo {
       rowStatus[r] = tight ? SPxSolver::ON_UPPER : SPxSolver::BASIC;
     }
 
-    _spx.setBasis(&rowStatus[0], &colStatus[0]);
+    _mainLP.setBasis(&rowStatus[0], &colStatus[0]);
   }
 
   void PolarLP::getBasis(Basis& basis)
   {
-    assert(_spx.hasBasis());
+    assert(_mainLP.hasBasis());
 
-    std::vector<SPxSolver::VarStatus> rowStatus(_spx.numRowsRational());
-    std::vector<SPxSolver::VarStatus> colStatus(_spx.numColsRational());
+    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
+    std::vector<SPxSolver::VarStatus> colStatus(_mainLP.numColsRational());
 
-    _spx.getBasis(&rowStatus[0], &colStatus[0]);
+    _mainLP.getBasis(&rowStatus[0], &colStatus[0]);
     basis.columnStatus.resize(_n + 1);
     for (std::size_t c = 0; c <= _n; ++c)
       basis.columnStatus[c] = colStatus[c];
@@ -241,7 +243,7 @@ namespace ipo {
       basis.constraintStatus[i] = rowStatus[_constraintsToRows[i]];
     basis.tightPoints.clear();
     basis.tightRays.clear();
-    for (std::size_t r = 0; r < _spx.numRowsRational(); ++r)
+    for (std::size_t r = 0; r < _mainLP.numRowsRational(); ++r)
     {
       if (rowStatus[r] != SPxSolver::ON_UPPER)
         continue;
@@ -254,13 +256,13 @@ namespace ipo {
 
   Rational PolarLP::getObjectiveValue()
   {
-    return _spx.objValueRational();
+    return _mainLP.objValueRational();
   }
 
   void PolarLP::getPrimalSolution(VectorRational& solution)
   {
-    _currentPrimalSolution.reDim(_spx.numColsRational());
-    if (!_spx.getPrimalRational(_currentPrimalSolution))
+    _currentPrimalSolution.reDim(_mainLP.numColsRational());
+    if (!_mainLP.getPrimalRational(_currentPrimalSolution))
       throw std::runtime_error("PolarLP: No primal solution available.");
     for (std::size_t v = 0; v <= _n; ++v)
       solution[v] = _currentPrimalSolution[v];
@@ -268,8 +270,8 @@ namespace ipo {
 
   void PolarLP::getPrimalSolution(DSVectorRational& solution)
   {
-    _currentPrimalSolution.reDim(_spx.numColsRational());
-    assert(_spx.getPrimalRational(_currentPrimalSolution));
+    _currentPrimalSolution.reDim(_mainLP.numColsRational());
+    assert(_mainLP.getPrimalRational(_currentPrimalSolution));
     assert(solution.size() == 0);
     for (std::size_t v = 0; v <= _n; ++v)
     {
@@ -317,13 +319,13 @@ namespace ipo {
     /// Remove dynamic rows of exact LP.
 
     std::vector<int> rowPermutation;
-    rowPermutation.resize(_spx.numRowsRational());
-    for (std::size_t i = 0; i < _spx.numRowsRational(); ++i)
+    rowPermutation.resize(_mainLP.numRowsRational());
+    for (std::size_t i = 0; i < _mainLP.numRowsRational(); ++i)
     {
       rowPermutation[i] = (_rowInfos[i].type == 'p' || _rowInfos[i].type == 'r') ? -1 : 0;
     }
-    _spx.removeRowsRational(&rowPermutation[0]);
-    _rowInfos.resize(_spx.numRowsRational());
+    _mainLP.removeRowsRational(&rowPermutation[0]);
+    _rowInfos.resize(_mainLP.numRowsRational());
     
     /// Reset stabilization procedures.
 
@@ -413,7 +415,13 @@ namespace ipo {
       onBeforeSolve(true);
       SPxSolver::Status status = _stabLP.solve();
       if (status != SPxSolver::OPTIMAL)
-        throw std::runtime_error("PolarLP: Stabilization LP is not optimal.");
+      {
+        assert(_stabLP.writeFileReal("stab.lp"));
+        
+        std::stringstream ss;
+        ss << "PolarLP: Stabilization LP is " << status << ", although provably feasible and bounded.";
+        throw std::runtime_error(ss.str());
+      }
 
       rowStatus.resize(numRows);
       _stabLP.getBasis(&rowStatus[0], &columnStatus[0]);
@@ -545,7 +553,7 @@ namespace ipo {
     _stabilizing = false;
   }
 
-  void PolarLP::optimize()
+  void PolarLP::optimize(bool perturbeObjective)
   {
     _lastMainObjective = 0.0;
     _lastPenaltyCosts = 0.0;
@@ -561,8 +569,41 @@ namespace ipo {
     VectorSubset pointIndices;
     VectorSubset rayIndices;
     std::vector<SPxSolver::VarStatus> rowStatus;
-    std::vector<SPxSolver::VarStatus> columnStatus(_spx.numColsRational());
+    std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
     std::vector<int> rowPermutation;
+    
+    /// Extract objective and compute perturbed one.
+    DVectorRational objectiveVector, perturbedVector;
+    if (perturbeObjective)
+    {
+      const Rational PERTURBATION_DENOMINATOR = 1024*1024*1024;
+    
+      std::default_random_engine generator;
+      std::uniform_int_distribution<int> distribution(1,1024);
+      
+      objectiveVector.reDim(numColumns());
+      _mainLP.getObjRational(objectiveVector);
+      perturbedVector = objectiveVector;
+      LPRowRational row;
+      for (std::size_t r = 0; r < numRows(); ++r)
+      {
+        _mainLP.getRowRational(r, row);
+        int lhsLambda = (row.lhs() > -infinity) ? distribution(generator) : 0;
+        int rhsLambda = (row.rhs() < infinity) ? distribution(generator) : 0;
+        if (lhsLambda == rhsLambda)
+          continue;
+        Rational lambda = (rhsLambda - lhsLambda) / PERTURBATION_DENOMINATOR;
+        const SVectorRational& rowVector = row.rowVector();
+        for (int p = rowVector.size() - 1; p >= 0; --p)
+        {
+          perturbedVector[rowVector.index(p)] += lambda * rowVector.value(p);
+        }
+      }
+      _mainLP.changeObjRational(perturbedVector);
+    }
+    
+    /// Main loop.
+    
     while (true)
     {
       assert(pointIndices.empty());
@@ -570,10 +611,10 @@ namespace ipo {
 
       /// Perform cut aging
 
-      std::size_t numRows = _spx.numRowsRational();
+      std::size_t numRows = _mainLP.numRowsRational();
       rowStatus.resize(numRows);
       rowPermutation.resize(numRows);
-      _spx.getBasis(&rowStatus[0], &columnStatus[0]);
+      _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
       std::size_t lastStatic = 0;
       for (std::size_t i = 0; i < numRows; ++i)
       {
@@ -603,7 +644,7 @@ namespace ipo {
         }
       }
 
-      _spx.removeRowsRational(&rowPermutation[0]);
+      _mainLP.removeRowsRational(&rowPermutation[0]);
       for (std::size_t i = 0; i < numRows; ++i)
       {
         if (rowPermutation[i] < 0)
@@ -612,21 +653,32 @@ namespace ipo {
         if (newRow >= 0)
           _rowInfos[newRow] = _rowInfos[i];
       }
-      _rowInfos.resize(_spx.numRowsRational());
-      numRows = _spx.numRowsRational();
+      _rowInfos.resize(_mainLP.numRowsRational());
+      numRows = _mainLP.numRowsRational();
 
       /// Solve LP and evaluate.
 
       onBeforeSolve(false);
-      SPxSolver::Status status = _spx.solve();
+      SPxSolver::Status status = _mainLP.solve();
       if (status != SPxSolver::OPTIMAL)
         throw std::runtime_error("PolarLP: Main LP is not optimal.");
+      
+      rowStatus.resize(_mainLP.numRowsRational());
+      _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+//       int numBasic = 0;
+//       for (int c = 0; c < _mainLP.numColsRational(); ++c)
+//       {
+//         if (columnStatus[c] == SPxSolver::BASIC)
+//           numBasic++;
+//         std::cout << "Col " << c << " is " << columnStatus[c] << std::endl; 
+//       }
+//       std::cout << "#basic cols: " << numBasic << std::endl;
 
       dualSolution.reDim(numRows, false);
-      if (!_spx.getDualRational(dualSolution))
+      if (!_mainLP.getDualRational(dualSolution))
         throw std::runtime_error("Optimization: No dual solution available.");
 
-      double obj = double(_spx.objValueRational());
+      double obj = double(_mainLP.objValueRational());
       if (obj < _lastMainObjective)
         numLastCacheRounds = 0;
       _lastMainObjective = obj;
@@ -641,8 +693,8 @@ namespace ipo {
 
       /// Extract solution vector.
 
-      _currentPrimalSolution.reDim(_spx.numColsRational());
-      _spx.getPrimalRational(_currentPrimalSolution);
+      _currentPrimalSolution.reDim(_mainLP.numColsRational());
+      _mainLP.getPrimalRational(_currentPrimalSolution);
       inequalityExactSparseNormal.clear();
       inequalityExactDenseNormal.reDim(n());
       inequalityApproxDenseNormal.reDim(n());
@@ -697,9 +749,112 @@ namespace ipo {
 
       if (addPointsAndRays(pointIndices, rayIndices, false))
         continue;
-
+      
+      if (perturbeObjective)
+      {
+        _mainLP.changeObjRational(objectiveVector);
+        perturbeObjective = false;
+        SPxSolver::Status status = _mainLP.solve();
+        if (status != SPxSolver::OPTIMAL)
+          throw std::runtime_error("PolarLP: Main LP is not optimal.");
+      
+        rowStatus.resize(_mainLP.numRowsRational());
+        _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+      }
+      
       break;
     }
+  }
+  
+  void PolarLP::reoptimizePerturbed()
+  {
+    const Rational PERTURBATION_DENOMINATOR = 1024*1024*1024;
+    
+    std::default_random_engine generator;
+    std::uniform_int_distribution<int> distribution(1,1024);
+    
+//     Rational objectiveValue = _mainLP.objValueRational();
+//     std::cout << "Objective = " << objectiveValue << std::endl;
+    
+    DVectorRational objectiveVector(numColumns());
+    _mainLP.getObjRational(objectiveVector);
+    
+    DVectorRational perturbedVector(numColumns());
+    perturbedVector = objectiveVector;
+    LPRowRational row;
+    for (std::size_t r = 0; r < numRows(); ++r)
+    {
+      _mainLP.getRowRational(r, row);
+      int lhsLambda = (row.lhs() > -infinity) ? distribution(generator) : 0;
+      int rhsLambda = (row.rhs() < infinity) ? distribution(generator) : 0;
+      if (lhsLambda == rhsLambda)
+        continue;
+      Rational lambda = (rhsLambda - lhsLambda) / PERTURBATION_DENOMINATOR;
+      const SVectorRational& rowVector = row.rowVector();
+      for (int p = rowVector.size() - 1; p >= 0; --p)
+      {
+        perturbedVector[rowVector.index(p)] += lambda * rowVector.value(p);
+      }
+    }
+//     for (std::size_t c = 0; c < numColumns(); ++c)
+//     {
+//       std::cout << "Obj #" << c << ": " << objectiveVector[c] << " -> " << perturbedVector[c] << std::endl;
+//     }
+
+    _mainLP.changeObjRational(perturbedVector);
+    
+    SPxSolver::Status status = _mainLP.solve();
+    if (status != SPxSolver::OPTIMAL)
+    {
+      std::stringstream ss;
+      ss << "Polar LP (perturbed): Unexpected status " << status << ".";
+      throw std::runtime_error(ss.str());
+    }
+
+    
+//     std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
+//     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
+//     _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+//     int numBasic = 0;
+//     for (int c = 0; c < _mainLP.numColsRational(); ++c)
+//     {
+//       if (columnStatus[c] == SPxSolver::BASIC)
+//         numBasic++;
+//       std::cout << "Perturbed: Col " << c << " is " << columnStatus[c] << std::endl; 
+//     }
+//     std::cout << "Perturbed: #basic cols: " << numBasic << std::endl;
+    
+    _mainLP.changeObjRational(objectiveVector);
+    status = _mainLP.solve();
+    if (status != SPxSolver::OPTIMAL)
+    {
+      std::stringstream ss;
+      ss << "Polar LP (unperturbed): Unexpected status " << status << ".";
+      throw std::runtime_error(ss.str());
+    }
+
+    _currentPrimalSolution.reDim(_mainLP.numColsRational());
+    _mainLP.getPrimalRational(_currentPrimalSolution);
+    DSVectorRational sparsePrimal;
+    sparsePrimal = _currentPrimalSolution;
+    
+    std::cout << _mainLP.objValueRational() << std::endl;
+    std::cout << sparsePrimal << std::endl;
+    std::cout << std::endl;
+    
+//     objectiveValue = _mainLP.objValueRational();
+//     std::cout << "Objective = " << objectiveValue << std::endl;
+    
+/*
+    _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+    numBasic = 0;
+    for (int c = 0; c < _mainLP.numColsRational(); ++c)
+    {
+      if (columnStatus[c] == SPxSolver::BASIC)
+        numBasic++;
+      std::cout << "Reset: Col " << c << " is " << columnStatus[c] << std::endl; 
+    }
+    std::cout << "Reset: #basic cols: " << numBasic << std::endl;*/
   }
 
   void PolarLP::onBeforeSolve(bool stabilizing)
@@ -774,7 +929,7 @@ namespace ipo {
     }
     else
     {
-      _spx.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
+      _mainLP.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
       _rowInfos.push_back(ri);
     }
   }
@@ -792,7 +947,7 @@ namespace ipo {
     }
     else
     {
-      _spx.addRowRational(LPRowRational(-infinity, *_rays[index], Rational(0)));
+      _mainLP.addRowRational(LPRowRational(-infinity, *_rays[index], Rational(0)));
       _rowInfos.push_back(ri);
     }
   }
