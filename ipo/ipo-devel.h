@@ -1,8 +1,6 @@
 #ifndef IPO_H_
 #define IPO_H_
 
-#define WITH_SCIP 1
-
 #ifndef NDEBUG
 #define IPO_DEBUG
 #endif

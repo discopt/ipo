@@ -56,7 +56,7 @@ set(IPO_OTHER_HEADERS
 
 if (SCIP_FOUND)
   set(IPO_SOURCES ${IPO_SOURCES} scip_oracles.cpp)
-  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracles.h scip_exception.h)
+  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracles.h scip_exception.hpp)
   string(TOUPPER ${SCIP_LPS} SCIP_LPI)
   add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
 endif()
