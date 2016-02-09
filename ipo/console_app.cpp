@@ -454,7 +454,7 @@ namespace ipo {
           return 2;
         }
       }
-      throw std::runtime_error("Invalid option: --readable must be followed by either \"on\" or \"off\".");
+      throw std::runtime_error("Invalid option: --certificates must be followed by either \"on\" or \"off\".");
     }
     if (firstArgument == "--reuse-facets")
     {
@@ -501,7 +501,8 @@ namespace ipo {
 
     if (_numRandomObjectives > 0)
     {
-      std::default_random_engine generator;
+      std::random_device randomDevice;
+      std::default_random_engine generator(randomDevice());
       std::normal_distribution<double> distribution;
       DVectorReal randomVector(n);
       for (std::size_t i = 0; i < _numRandomObjectives; ++i)
