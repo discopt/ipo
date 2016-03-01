@@ -26,6 +26,7 @@ set(IPO_SOURCES
   smallest_face.cpp
   wrapper_oracle.cpp
   console_app.cpp
+  parser.cpp
 )
 
 set(IPO_INSTALL_HEADERS
@@ -45,6 +46,7 @@ set(IPO_INSTALL_HEADERS
   vector_2d.h
   wrapper_oracle.h
   console_app.h
+  parser.h
 )
 
 set(IPO_OTHER_HEADERS

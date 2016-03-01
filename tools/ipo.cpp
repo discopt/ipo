@@ -336,7 +336,7 @@ public:
     {
       soplex::DSVectorRational* obj = new soplex::DSVectorRational;
       *obj = _instanceObjective;
-      addObjective(obj);
+      addObjective(obj, "instance");
     }
 
 #ifdef WITH_SCIP

@@ -151,7 +151,7 @@ namespace ipo {
     virtual bool printVariables();
     virtual bool computeAffineHull(const Face* face = NULL);
     virtual bool optimizeObjective(const soplex::SVectorRational* objective, bool maximize);
-    virtual bool generateFacets(const soplex::SVectorRational* objective);
+    virtual bool generateFacets(const soplex::SVectorRational* objective, const std::string& objectiveName, bool print);
     virtual bool separateDirectionFacet(const Direction* direction);
     virtual bool separatePointFacet(const Point* point);
     virtual bool computeSmallestFace(const Point* point);
@@ -231,9 +231,10 @@ namespace ipo {
       return _objectives[index];
     }
 
-    inline void addObjective(soplex::DSVectorRational* objective)
+    inline void addObjective(soplex::DSVectorRational* objective, const std::string& name)
     {
       _objectives.push_back(objective);
+      _objectiveNames.push_back(name);
     }
 
     inline std::size_t numDirections() const
@@ -269,6 +270,7 @@ namespace ipo {
     std::string _faceRestrictionArgument;
     std::vector<std::string> _faceArguments;
     std::vector<std::string> _objectiveArguments;
+    std::vector<std::string> _objectiveFiles;
     std::size_t _numRandomObjectives;
 
     bool _taskPrintAmbientDimension;
@@ -284,11 +286,13 @@ namespace ipo {
     bool _optionReadable;
     bool _optionCertificates;
     bool _optionReuseFacets;
+    bool _optionPrintRandom;
 
     FaceOptimizationOracleBase* _oracle;
 
     std::vector<Face*> _faces;
     std::vector<soplex::DSVectorRational*> _objectives;
+    std::vector<std::string> _objectiveNames;
     std::vector<Direction*> _directions;
     std::vector<Point*> _points;
     soplex::LPColSetRational _relaxationColumns;

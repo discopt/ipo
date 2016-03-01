@@ -7,10 +7,60 @@
 #include "min_norm_2d.h"
 #include "facets.h"
 #include "spx_gmp.h"
+#include "parser.h"
+#include "ipo.h"
 
 using namespace soplex;
 
 namespace ipo {
+  
+  class ConsoleApplicationObjectiveParser : public LPObjectiveParser
+  {
+  public:
+    ConsoleApplicationObjectiveParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<DSVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
+      : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
+    {
+      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
+      {
+        _oracleVariables[oracle->variableName(i)] = i;
+      }
+    }
+
+    virtual ~ConsoleApplicationObjectiveParser()
+    {
+      
+    }
+
+    virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& values)
+    {
+//       std::cout << "handleObjective()" << std::endl;
+      
+      DSVectorRational* vector = new DSVectorRational;
+
+      for (std::map<std::string, Rational>::const_iterator iter = values.begin(); iter != values.end(); ++iter)
+      {
+        std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
+        if (varIter != _oracleVariables.end())
+        {
+          vector->add(varIter->second, iter->second);
+        }
+        else
+        {
+          std::cerr << "Skipping objective: Unknown variable <" << iter->first << ">.\n" << std::endl;
+          delete vector;
+          return;
+        }
+      }
+      
+      _objectives.push_back(vector);
+      _objectiveNames.push_back(name);
+    }
+    
+  private:
+    std::vector<DSVectorRational*>& _objectives;
+    std::vector<std::string>& _objectiveNames;
+    std::map<std::string, std::size_t> _oracleVariables;
+  };
 
   ConsoleApplicationBase::ConsoleApplicationBase(int numArguments, char** arguments)
   {
@@ -33,6 +83,7 @@ namespace ipo {
     _optionReadable = true;
     _optionCertificates = false;
     _optionReuseFacets = true;
+    _optionPrintRandom = false;
 
     _oracle = NULL;
     _cachedDirections = NULL;
@@ -138,7 +189,8 @@ namespace ipo {
       }
       if (taskFacets())
       {
-        if (!generateFacets(objective(i)))
+        bool print = (_objectiveNames[i] != ":RANDOM:") || _optionPrintRandom;
+        if (!generateFacets(objective(i), _objectiveNames[i], print))
           return false;
       }
     }
@@ -257,6 +309,7 @@ namespace ipo {
     std::cerr << "                              the smallest containing faces.\n";
     std::cerr << " --reuse-facets on|off        If on (default), it uses computed facets for subsequent facet-\n";
     std::cerr << "                              generation.\n";
+    std::cerr << " --print-random on|off        If off (default), it does not print the random objectives.\n";
     std::cerr << " --progress stdout|stderr|off Prints progress output to stdout or stderr. Off by default.\n";
     std::cerr << " --debug stdout|stderr|off    Prints debug output to stdout or stderr. Off by default.\n";
     printAdditionalOptionsFurther(std::cerr);
@@ -407,7 +460,7 @@ namespace ipo {
       {
         throw std::runtime_error("Invalid option: --objectives must be followed by a file name.");
       }
-      throw std::runtime_error("Nonimplemented option: --objectives");
+      _objectiveFiles.push_back(argument(1));
       return 2;
     }
     if (firstArgument == "--random")
@@ -473,6 +526,23 @@ namespace ipo {
       }
       throw std::runtime_error("Invalid option: --reuse-facets must be followed by either \"on\" or \"off\".");
     }
+    if (firstArgument == "--print-random")
+    {
+      if (numArguments() > 1)
+      {
+        if (argument(1) == "on")
+        {
+          _optionPrintRandom = true;
+          return 2;
+        }
+        if (argument(1) == "off")
+        {
+          _optionPrintRandom = false;
+          return 2;
+        }
+      }
+      throw std::runtime_error("Invalid option: --print-random must be followed by either \"on\" or \"off\".");
+    }
 
     return 0;
   }
@@ -496,6 +566,23 @@ namespace ipo {
     for (std::size_t c = 0; c < n; ++c)
       _relaxationColumns.add(0, -infinity, zeroVector, infinity);
     
+    /// Add specified objectives.
+    
+    for (std::size_t i = 0; i < _objectiveArguments.size(); ++i)
+    {
+      std::istringstream stream(_objectiveArguments[i]);
+      ConsoleApplicationObjectiveParser parser(stream, oracle(), _objectives, _objectiveNames);
+      parser.run();
+    }
+    
+    /// Parse objectives from specified files.
+    
+    for (std::size_t i = 0; i < _objectiveFiles.size(); ++i)
+    {
+      std::ifstream stream(_objectiveFiles[i]);
+      ConsoleApplicationObjectiveParser parser(stream, oracle(), _objectives, _objectiveNames);
+      parser.run();
+    }
 
     /// Add random objectives.
 
@@ -524,9 +611,12 @@ namespace ipo {
               objectiveVector->add(c, Rational(randomVector[c] / norm));
           }
           _objectives.push_back(objectiveVector);
+          _objectiveNames.push_back(":RANDOM:");
         }
       }
     }
+    
+//     std::cout << "ConsoleApplicationBase::processArguments: " << _objectives.size() << " objectives" << std::endl;
 
     return true;
   }
@@ -600,12 +690,20 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective)
+  bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective, const std::string& objectiveName, bool print)
   {
-    std::cout << "Generating facets for objective: ";
-    oracle()->printLinearForm(std::cout, objective);
+    if (objectiveName == "")
+      std::cout << "Generating facets for objective";
+    else if (objectiveName == ":RANDOM:")
+      std::cout << "Generating facets for random objective";
+    else
+      std::cout << "Generating facets for objective <" << objectiveName << ">";
+    if (print)
+    {
+      std::cout << " ";
+      oracle()->printLinearForm(std::cout, objective);
+    }
     std::cout << ".\n" << std::flush;
-
     std::size_t n = oracle()->numVariables();
 
     /// Setup the LP.
@@ -684,7 +782,7 @@ namespace ipo {
       {
         _relaxationRows.add(inequality);
       }
-      
+
       if (separate.separatedFacet())
         std::cout << " Facet: ";
       else if (separate.separatedEquation())
