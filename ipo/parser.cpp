@@ -7,6 +7,8 @@
 #include <sstream>
 #include <algorithm>
 
+using namespace soplex;
+
 namespace ipo {
 
   LPToken::LPToken(char t) : type(t), nameIndex(0), number(0.0)
@@ -302,7 +304,7 @@ namespace ipo {
     return LPToken(LPToken::END_OF_FILE);
   }
   
-  LPToken LPParser::nextNoWhite()
+  LPToken LPParser::nextNonWhite()
   {
     LPToken token;
     do
@@ -312,6 +314,11 @@ namespace ipo {
     }
     while(token.type == ' ');
     return token;
+  }
+  
+  void LPParser::fetchNextNonWhite()
+  {
+    _token = nextNonWhite();
   }
 
   LPObjectiveParser::LPObjectiveParser(std::istream& stream): LPParser(stream)
@@ -325,66 +332,70 @@ namespace ipo {
   }
   
   
-  void LPObjectiveParser::parseObjective(bool maximize)//, const std::string* name)
+  void LPObjectiveParser::parseObjective(bool maximize)
   {
-//     std::cout << "parseObjective" << std::endl;
     std::string name = "";
     bool first = true;
     bool onlyName = true;
+    std::map<std::string, soplex::Rational> coefficients;
     while (true)
     {
-//       printToken(std::cout, _token) << std::endl;
-      
-      if (_token.type == '\n')
-        _token = nextNoWhite();
+      if (token().type == '\n')
+        fetchNextNonWhite();
+
       bool negate = false;
-      if (_token.type == '+' || _token.type == '-')
+      if (token().type == '+' || token().type == '-')
       {
-        negate = _token.type == '-';
-        _token = nextNoWhite();
+        negate = token().type == '-';
+        fetchNextNonWhite();
         onlyName = false;
+      }
+      else
+      {
+        if (!first)
+          return handleObjective(name, coefficients);
       }
 
       soplex::Rational value = maximize ? 1 : -1;
-      if (_token.type == LPToken::NUMBER)
+      if (token().type == LPToken::NUMBER)
       {
-        value *= _token.number;
-        _token = nextNoWhite();
-        if (_token.type == '/')
+        value *= token().number;
+        fetchNextNonWhite();
+        if (token().type == '/')
         {
-          _token = nextNoWhite();
-          if (_token.type == LPToken::NUMBER)
+          fetchNextNonWhite();
+          if (token().type == LPToken::NUMBER)
           {
-            value /= _token.number;
-            _token = nextNoWhite();
+            value /= token().number;
+            fetchNextNonWhite();
           }
           else
             return;
         }
-        else if (_token.type == '*')
-          _token = nextNoWhite();
+        else if (token().type == '*')
+          fetchNextNonWhite();
         onlyName = false;
       }
       if (negate)
         value = -value;
 
-      if (_token.type == LPToken::NAME)
+      if (token().type == LPToken::NAME)
       {
-        const std::string& var = getTokenName(_token);
-        std::map<std::string, soplex::Rational>::iterator iter = _values.find(var);
-        if (iter != _values.end())
+        const std::string& var = getTokenName(token());
+        std::map<std::string, soplex::Rational>::iterator iter = coefficients.find(var);
+        if (iter != coefficients.end())
           iter->second += value;
         else
-          _values.insert(std::make_pair(var, value));
-        _token = nextNoWhite();
+          coefficients.insert(std::make_pair(var, value));
+        fetchNextNonWhite();
         if (first && onlyName)
         {
-          assert(_values.size() == 1);
-          if (_token.type == ':')
+          assert(coefficients.size() == 1);
+          if (token().type == ':')
           {
-            _values.clear();
+            coefficients.clear();
             name = var;
-            _token = nextNoWhite();
+            fetchNextNonWhite();
           }
         }
         first = false;
@@ -392,7 +403,7 @@ namespace ipo {
       else
       {
         if (!first)
-          handleObjective(name, _values);
+          handleObjective(name, coefficients);
         return;
       }
     }
@@ -400,31 +411,288 @@ namespace ipo {
 
   void LPObjectiveParser::parseGoal()
   {
-//     std::cout << "parseGoal: ";
-//     printToken(std::cout, _token) << std::endl;
-
-    if (_token.type == LPToken::NAME)
+    if (token().type == LPToken::NAME)
     {
-      std::string lowered =  getTokenName(_token);
+      std::string lowered =  getTokenName(token());
       std::transform(lowered.begin(), lowered.end(), lowered.begin(), ::tolower);
-      _token = nextNoWhite();
+      fetchNextNonWhite();
       if (lowered == "maximize" || lowered == "maximum" || lowered == "max")
         parseObjective(true);
       if (lowered == "minimize" || lowered == "minimum" || lowered == "min")
         parseObjective(false);
     }
     else
-      _token = nextNoWhite();
+      fetchNextNonWhite();
   }
 
   void LPObjectiveParser::run()
   {
-    _token = nextNoWhite();
-    while (true)
+    fetchNextNonWhite();
+    while (token().type != LPToken::END_OF_FILE)
     {
-      if (_token.type == LPToken::END_OF_FILE)
-        break;
       parseGoal();
+    }
+  }
+  
+  LPInequalityParser::LPInequalityParser(std::istream& stream): LPParser(stream)
+  {
+
+  }
+
+  LPInequalityParser::~LPInequalityParser()
+  {
+
+  }
+  
+  void LPInequalityParser::parseRhs(const std::string& name, const Rational& lhsValue, char lhsSign, const std::map< std::string, Rational>& coefficients)
+  {
+    char rhsSign = token().type;
+    assert(rhsSign == '<' || rhsSign == '>' || rhsSign == '=');
+    fetchNextNonWhite();
+    
+//     std::cout << "rhsSign = " << rhsSign << ", token = ";
+//     printToken(std::cout, token()) << std::endl;
+    
+    bool negate = false;
+    if (token().type == '+' || token().type == '-')
+    {
+      negate = token().type == '-';
+      fetchNextNonWhite();
+    }
+    Rational rhsValue = negate ? -1 : 1;
+    if (token().type == LPToken::NUMBER)
+    {
+      rhsValue *= token().number;
+      fetchNextNonWhite();
+      if (token().type == '/')
+      {
+        fetchNextNonWhite();
+        if (token().type == LPToken::NUMBER)
+        {
+          rhsValue /= token().number;
+          fetchNextNonWhite();
+        }
+        else
+        {
+          rhsSign = '<';
+          rhsValue = infinity;
+        }
+      }
+    }
+    else
+    {
+      rhsSign = '<';
+      rhsValue = infinity;
+    }
+    
+    Rational left = -infinity;
+    Rational right = infinity;
+    if (lhsSign == '<' || lhsSign == '=')
+      left = std::max(left, lhsValue);
+    if (lhsSign == '>' || lhsSign == '=')
+      right = std::min(right, lhsValue);
+    if (rhsSign == '<' || rhsSign == '=')
+      right = std::min(right, rhsValue);
+    if (rhsSign == '>' || rhsSign == '=')
+      left = std::max(left, rhsValue);
+    return handleInequality(name, left, coefficients, right);
+  }
+
+  void LPInequalityParser::parseVector(const std::string& name, const Rational& lhsValue, char lhsSign, bool triedLhs, const Rational& coefficient, const std::string& triedVar)
+  {
+//     std::cout << "parseVector(" << name << ", " << lhsValue << " " << lhsSign << ", " << (triedLhs ? "true" : "false") << ", " << coefficient << ", " << triedVar << "), token = ";
+//     printToken(std::cout, token()) << std::endl;
+    
+    std::string varName = triedVar;
+    Rational value = coefficient;
+    bool negate;
+    std::map<std::string, soplex::Rational> values;
+    bool first = true;
+    while (token().type != LPToken::END_OF_FILE)
+    {
+      if (triedLhs)
+      {
+        assert(token().type == LPToken::NAME);
+        varName = getTokenName(token());
+        triedLhs = false;
+        fetchNextNonWhite();
+      }
+      else if (varName == "")
+      {
+        if (token().type == '\n')
+          fetchNextNonWhite();
+        
+        negate = false;
+        if (token().type == '+' || token().type == '-')
+        {
+          negate = token().type == '-';
+          fetchNextNonWhite();
+        }
+        else
+        {
+          if (!first)
+          {
+            if (token().type == '<' || token().type == '>' || token().type == '=')
+            {
+              return parseRhs(name, lhsValue, lhsSign, values);
+            }
+            else if (lhsSign != '<' || lhsValue > -infinity)
+            {
+              if (lhsSign == '<')
+                return handleInequality(name, lhsValue, values, infinity);
+              else if (lhsSign == '>')
+                return handleInequality(name, -infinity, values, lhsValue);
+              else
+                return handleInequality(name, lhsValue, values, lhsValue);
+            }
+            else if (token().type == LPToken::NAME)
+            {
+//               std::cout << "Found a name ";
+//               printToken(std::cout, token()) << " although +/- expected." << std::endl;
+              return parseName();
+            }
+            else
+              return;
+          }
+        }
+        
+        value = negate ? -1 : 1;
+        if (token().type == LPToken::NUMBER)
+        {
+          value *= token().number;
+          fetchNextNonWhite();
+          if (token().type == '/')
+          {
+            fetchNextNonWhite();
+            if (token().type == LPToken::NUMBER)
+            {
+              value /= token().number;
+              fetchNextNonWhite();
+            }
+            else
+              return;
+          }
+        }
+
+        if (token().type == '*')
+          fetchNextNonWhite();
+        
+        if (token().type == LPToken::NAME)
+        {
+          varName = getTokenName(token());
+          fetchNextNonWhite();
+        }
+        else
+          return;
+      }
+
+      std::map<std::string, Rational>::iterator iter = values.find(varName);
+      if (iter != values.end())
+        iter->second += value;
+      else
+        values.insert(std::make_pair(varName, value));
+      
+//       std::cout << "Added a coefficient with var = " << varName << ", next token = ";
+//       printToken(std::cout, token()) << std::endl;
+
+      varName = "";
+      first = false;
+    }
+  }
+
+  void LPInequalityParser::parseLhs(const std::string& name)
+  {
+//     std::cout << "parseLhs(" << name << ")" << std::endl;
+    
+    bool negate = false;
+    if (token().type == '+' || token().type == '-')
+    {
+      negate = token().type == '-';
+      fetchNextNonWhite();
+    }
+    Rational coefficient = negate ? -1 : 1;
+    if (token().type == LPToken::NUMBER)
+    {
+      coefficient *= token().number;
+      fetchNextNonWhite();
+      if (token().type == '/')
+      {
+        fetchNextNonWhite();
+        if (token().type == LPToken::NUMBER)
+        {
+          coefficient /= token().number;
+          fetchNextNonWhite();
+        }
+        else
+          return;
+      }
+    }
+    else if (token().type == LPToken::NAME)
+    {
+      std::string lowered = getTokenName(token());
+      std::transform(lowered.begin(), lowered.end(), lowered.begin(), ::tolower);
+      if (lowered == "infinity" || lowered == "inf")
+      {
+        coefficient *= infinity;
+        fetchNextNonWhite();
+      }
+      else
+        return parseVector(name, -infinity, '<', true, coefficient, "");
+    }
+    else
+      return;
+
+    /// We now have read an optional sign and a number/infinity.
+    
+    if (token().type == '<' || token().type == '>' || token().type == '=')
+    {
+      char t = token().type;
+      fetchNextNonWhite();
+      return parseVector(name, coefficient, t, false, 0, "");
+    }
+    else if (token().type == '*')
+      fetchNextNonWhite();
+    
+    if (token().type == LPToken::NAME)
+      return parseVector(name, -infinity, '<', true, coefficient, "");
+    else
+      return;
+  }
+
+      
+  void LPInequalityParser::parseName()
+  {
+    assert(token().type == LPToken::NAME);
+    const std::string& name = getTokenName(token());
+    fetchNextNonWhite();
+    if (token().type == ':')
+    {
+      fetchNextNonWhite();
+      if (token().type == '\n')
+        fetchNextNonWhite();
+      parseLhs(name);
+    }
+    else
+    {
+      parseVector("", -soplex::infinity, '<', false, 1, name);
+    }
+  }
+
+
+  void LPInequalityParser::run()
+  {
+    fetchNextNonWhite();
+    while (token().type != LPToken::END_OF_FILE)
+    {
+//       std::cout << "run: ";
+//       printToken(std::cout, token()) << std::endl;
+      
+      if (token().type == '+' || token().type == '-' || token().type == LPToken::NUMBER)
+        parseLhs("");
+      else if (token().type == LPToken::NAME)
+        parseName();
+      else
+        fetchNextNonWhite();
     }
   }
 

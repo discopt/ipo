@@ -21,9 +21,7 @@ namespace ipo {
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
       for (std::size_t i = 0; i < oracle->numVariables(); ++i)
-      {
         _oracleVariables[oracle->variableName(i)] = i;
-      }
     }
 
     virtual ~ConsoleApplicationObjectiveParser()
@@ -31,13 +29,10 @@ namespace ipo {
       
     }
 
-    virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& values)
+    virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& coefficients)
     {
-//       std::cout << "handleObjective()" << std::endl;
-      
       DSVectorRational* vector = new DSVectorRational;
-
-      for (std::map<std::string, Rational>::const_iterator iter = values.begin(); iter != values.end(); ++iter)
+      for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
@@ -51,16 +46,72 @@ namespace ipo {
           return;
         }
       }
-      
       _objectives.push_back(vector);
       _objectiveNames.push_back(name);
     }
-    
+
   private:
     std::vector<DSVectorRational*>& _objectives;
     std::vector<std::string>& _objectiveNames;
     std::map<std::string, std::size_t> _oracleVariables;
   };
+  
+  class ConsoleApplicationInequalityParser : public LPInequalityParser
+  {
+  public:
+    ConsoleApplicationInequalityParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Face*>& faces, std::vector<std::string>& faceNames)
+      : LPInequalityParser(stream), _faces(faces), _faceNames(faceNames)
+    {
+      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
+        _oracleVariables[oracle->variableName(i)] = i;
+    }
+
+    virtual ~ConsoleApplicationInequalityParser()
+    {
+      
+    }
+    
+    virtual void handleInequality(const std::string& name, const Rational& lhs, const std::map< std::string, Rational >& coefficients, const Rational& rhs)
+    {
+      if ((lhs <= -infinity && rhs >= infinity) || lhs == rhs)
+        return;
+
+      DSVectorRational vector;
+      for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
+      {
+        std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
+        if (varIter != _oracleVariables.end())
+        {
+          vector.add(varIter->second, iter->second);
+        }
+        else
+        {
+          std::cerr << "Skipping inequality: Unknown variable <" << iter->first << ">.\n" << std::endl;
+          return;
+        }
+      }
+      
+      bool hasBoth = lhs > -infinity && rhs < infinity;
+      if (lhs > -infinity)
+      {
+        LPRowRational row(lhs, vector, infinity);
+        _faces.push_back(new Face(_oracleVariables.size(), row));
+        _faceNames.push_back(hasBoth ? (name + "-lhs") : name);
+      }
+      if (rhs < infinity)
+      {
+        LPRowRational row(-infinity, vector, rhs);
+        _faces.push_back(new Face(_oracleVariables.size(), row));
+        _faceNames.push_back(hasBoth ? (name + "-rhs") : name);
+      }
+    }
+    
+  private:
+    std::map<std::string, std::size_t> _oracleVariables;
+    std::vector<Face*>& _faces;
+    std::vector<std::string>& _faceNames;
+  };
+  
 
   ConsoleApplicationBase::ConsoleApplicationBase(int numArguments, char** arguments)
   {
@@ -104,6 +155,8 @@ namespace ipo {
       delete _oracle;
     for (std::size_t i = 0; i < numObjectives(); ++i)
       delete _objectives[i];
+    for (std::size_t i = 0; i < numFaces(); ++i)
+      delete _faces[i];
     for (std::size_t i = 0; i < numDirections(); ++i)
       delete _directions[i];
     for (std::size_t i = 0; i < numPoints(); ++i)
@@ -162,7 +215,7 @@ namespace ipo {
 
     if (taskDimension() || taskEquations() || taskFacet() || taskFacets() || taskSmallestFace())
     {
-      if (!computeAffineHull())
+      if (!computeAffineHull(NULL, ""))
         return false;
     }
 
@@ -170,7 +223,16 @@ namespace ipo {
     {
       for (std::size_t i = 0; i < numFaces(); ++i)
       {
-        if (!computeAffineHull(face(i)))
+        std::string name;
+        if (_faceNames[i] == "" || _faceNames[i] == "-lhs" || _faceNames[i] == "-rhs")
+        {
+          std::stringstream stream;
+          stream << "#" << (i+1) << _faceNames[i];
+          name = stream.str();
+        }
+        else
+          name = _faceNames[i];
+        if (!computeAffineHull(_faces[i], name))
           return false;
       }
     }
@@ -278,10 +340,11 @@ namespace ipo {
         << "                              it does not match the pattern, the line is silently ignored, allowing\n";
     std::cerr << "                              it to be in LP format.\n";
     std::cerr << " --objective OBJ              Use the given objective vector for optimization/facet generation.\n";
-    std::cerr << "                              OBJ is a sparse vector, e.g., \"x#1 + 3y#5\". Usable multiple times.\n";
+    std::cerr << "                              OBJ is an LP file objective, e.g., \"max x#1 + 3y#5\".\n";
+    std::cerr << "                              Usable multiple times.\n";
     std::cerr
-        << " --objectives FILE            Each line of the file is considered as a single --objective argument.\n";
-    std::cerr << "                              If it does not match the pattern, the line is silently ignored.\n";
+        << " --objectives FILE            The file is considered as multiple --objective arguments.\n";
+    std::cerr << "                              Invalid lines are silently ignored. See LP format.\n";
     std::cerr
         << " --random n                   Sample n objective vectors (uniformly at random from the sphere) to\n";
     std::cerr << "                              be used for facet generation.\n";
@@ -442,7 +505,7 @@ namespace ipo {
       {
         throw std::runtime_error("Invalid option: --faces must be followed by a file name.");
       }
-      throw std::runtime_error("Nonimplemented option: --faces");
+      _faceFiles.push_back(argument(1));
       return 2;
     }
     if (firstArgument == "--objective")
@@ -616,7 +679,23 @@ namespace ipo {
       }
     }
     
-//     std::cout << "ConsoleApplicationBase::processArguments: " << _objectives.size() << " objectives" << std::endl;
+    /// Parse specified faces.
+
+    for (std::size_t i = 0; i < _faceArguments.size(); ++i)
+    {
+      std::istringstream stream(_faceArguments[i]);
+      ConsoleApplicationInequalityParser parser(stream, oracle(), _faces, _faceNames);
+      parser.run();
+    }
+    
+    /// Parse faces from specified files.
+    
+    for (std::size_t i = 0; i < _faceFiles.size(); ++i)
+    {
+      std::ifstream stream(_faceFiles[i]);
+      ConsoleApplicationInequalityParser parser(stream, oracle(), _faces, _faceNames);
+      parser.run();
+    }
 
     return true;
   }
@@ -638,14 +717,14 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::computeAffineHull(const Face* face)
+  bool ConsoleApplicationBase::computeAffineHull(Face* face, const std::string& faceName)
   {
     if (_taskDimension || _taskEquations)
     {
       std::cout << "Computing the affine hull";
       if (face)
       {
-        throw std::runtime_error("Not implemented: Affine hull of a face.");
+        std::cout << " of face " << faceName << ":\n" << std::flush;
       }
       else
       {
@@ -653,15 +732,38 @@ namespace ipo {
       }
     }
 
-    OptimizationOracleBase* orac = oracle();
+    FaceOptimizationOracleBase* orac = oracle();
     std::size_t n = orac->numVariables();
 
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
-    hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
-    _basicColumns = hull.basicColumns();
-    _spanningCachedDirections = hull.spanningDirections();
-    _spanningCachedPoints = hull.spanningPoints();
+    
+    LPRowSetRational properFaceEquations;
+    
+    LPRowSetRational* equations;
+    if (face == NULL)
+    {
+      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
+      _basicColumns = hull.basicColumns();
+      _spanningCachedDirections = hull.spanningDirections();
+      _spanningCachedPoints = hull.spanningPoints();
+      equations = _equations;
+    }
+    else
+    {
+      orac->setFace(face);
+      properFaceEquations = LPRowSetRational(*_equations);
+      
+      // TODO: init from filtered!
+      
+      UniqueRationalVectors points(n);
+      UniqueRationalVectors directions(n);
+      
+      hull.run(points, directions, properFaceEquations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
+      
+      equations = &properFaceEquations;
+      orac->setFace();
+    }
 
     if (_taskDimension)
     {
@@ -673,10 +775,10 @@ namespace ipo {
 
     if (_taskEquations)
     {
-      for (int i = 0; i < _equations->num(); ++i)
+      for (int i = 0; i < equations->num(); ++i)
       {
         std::cout << " Equation: ";
-        orac->printRow(std::cout, *_equations, i);
+        orac->printRow(std::cout, *equations, i);
         std::cout << "\n";
       }
       std::cout << std::flush;

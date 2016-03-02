@@ -45,13 +45,18 @@ namespace ipo {
 
   protected:
     LPToken next();
-    LPToken nextNoWhite();
+    LPToken nextNonWhite();
+    void fetchNextNonWhite();
+    
+    inline const LPToken& token() const
+    {
+      return _token;
+    }
 
     std::ostream& printToken(std::ostream& stream, const LPToken& token);
     const std::string& getTokenName(const LPToken& token);
 
   private:
-  public:
     LPToken extractName();
     LPToken extractNumber();
     
@@ -60,6 +65,7 @@ namespace ipo {
     std::vector<std::string> _nameList;
     std::map<std::string, std::size_t> _nameMap;
     std::istream& _stream;
+    LPToken _token;
   };
 
   class LPObjectiveParser : public LPParser
@@ -75,12 +81,24 @@ namespace ipo {
     
     void parseObjective(bool maximize);
     void parseGoal();
-    
-  private:
-    LPToken _token;
-    std::map<std::string, soplex::Rational> _values;
   };
-  
+
+  class LPInequalityParser : public LPParser
+  {
+  public:
+    LPInequalityParser(std::istream& stream);
+    virtual ~LPInequalityParser();
+    
+    void run();
+    
+  protected:
+    void parseRhs(const std::string& name, const soplex::Rational& lhsValue, char lhsSign, const std::map<std::string, soplex::Rational>& coefficients);
+    void parseVector(const std::string& name, const soplex::Rational& lhsValue, char lhsSign, bool triedLhs, const soplex::Rational& coefficient, const std::string& triedVar);
+    void parseLhs(const std::string& name);
+    void parseName();
+    
+    virtual void handleInequality(const std::string& name, const soplex::Rational& lhs, const std::map<std::string, soplex::Rational>& values, const soplex::Rational& rhs) = 0;
+  };  
 }
 
 #endif

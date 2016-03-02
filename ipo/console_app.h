@@ -149,7 +149,7 @@ namespace ipo {
 
     virtual bool printAmbientDimension();
     virtual bool printVariables();
-    virtual bool computeAffineHull(const Face* face = NULL);
+    virtual bool computeAffineHull(Face* face, const std::string& faceName);
     virtual bool optimizeObjective(const soplex::SVectorRational* objective, bool maximize);
     virtual bool generateFacets(const soplex::SVectorRational* objective, const std::string& objectiveName, bool print);
     virtual bool separateDirectionFacet(const Direction* direction);
@@ -269,6 +269,7 @@ namespace ipo {
     std::string _projectionArgument;
     std::string _faceRestrictionArgument;
     std::vector<std::string> _faceArguments;
+    std::vector<std::string> _faceFiles;
     std::vector<std::string> _objectiveArguments;
     std::vector<std::string> _objectiveFiles;
     std::size_t _numRandomObjectives;
@@ -291,6 +292,7 @@ namespace ipo {
     FaceOptimizationOracleBase* _oracle;
 
     std::vector<Face*> _faces;
+    std::vector<std::string> _faceNames;
     std::vector<soplex::DSVectorRational*> _objectives;
     std::vector<std::string> _objectiveNames;
     std::vector<Direction*> _directions;
