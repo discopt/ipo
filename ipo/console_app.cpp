@@ -112,6 +112,49 @@ namespace ipo {
     std::vector<std::string>& _faceNames;
   };
   
+  class ConsoleApplicationPointParser : public PointParser
+  {
+  public:
+    ConsoleApplicationPointParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Point*>& points, std::vector<std::string>& pointNames)
+      : PointParser(stream), _points(points), _pointNames(pointNames)
+    {
+      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
+        _oracleVariables[oracle->variableName(i)] = i;
+    }
+
+    virtual ~ConsoleApplicationPointParser()
+    {
+      
+    }
+    
+    virtual void handlePoint(const std::string& name, const std::map< std::string, Rational >& values)
+    {
+      DSVectorRational* point = new DSVectorRational;
+      for (std::map<std::string, Rational>::const_iterator iter = values.begin(); iter != values.end(); ++iter)
+      {
+        std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
+        if (varIter != _oracleVariables.end())
+        {
+          point->add(varIter->second, iter->second);
+        }
+        else
+        {
+          std::cerr << "Skipping point: Unknown variable <" << iter->first << ">.\n" << std::endl;
+          delete point;
+          return;
+        }
+      }
+      
+      _points.push_back(point);
+      _pointNames.push_back(name);
+    }
+    
+  private:
+    std::map<std::string, std::size_t> _oracleVariables;
+    std::vector<Point*>& _points;
+    std::vector<std::string>& _pointNames;
+  };
+  
 
   ConsoleApplicationBase::ConsoleApplicationBase(int numArguments, char** arguments)
   {
@@ -237,23 +280,39 @@ namespace ipo {
       }
     }
 
-    for (std::size_t i = 0; i < numObjectives(); ++i)
+    if (taskMaximize() || taskMinimize() || taskFacets())
     {
-      if (taskMaximize())
+      for (std::size_t i = 0; i < numObjectives(); ++i)
       {
-        if (!optimizeObjective(objective(i), true))
-          return false;
-      }
-      if (taskMinimize())
-      {
-        if (!optimizeObjective(objective(i), false))
-          return false;
-      }
-      if (taskFacets())
-      {
+        if (_objectiveNames[i] == "")
+          std::cout << "Objective";
+        else if (_objectiveNames[i] == ":RANDOM:")
+          std::cout << "Random objective";
+        else
+          std::cout << "Objective <" << _objectiveNames[i] << ">";
         bool print = (_objectiveNames[i] != ":RANDOM:") || _optionPrintRandom;
-        if (!generateFacets(objective(i), _objectiveNames[i], print))
-          return false;
+        if (print)
+        {
+          std::cout << " ";
+          oracle()->printLinearForm(std::cout, objective(i));
+        }
+        std::cout << ":\n" << std::flush;
+        
+        if (taskMaximize())
+        {
+          if (!optimizeObjective(objective(i), true))
+            return false;
+        }
+        if (taskMinimize())
+        {
+          if (!optimizeObjective(objective(i), false))
+            return false;
+        }
+        if (taskFacets())
+        {
+          if (!generateFacets(objective(i), print))
+            return false;
+        }
       }
     }
 
@@ -261,7 +320,7 @@ namespace ipo {
     {
       if (taskFacet())
       {
-        if (!separateDirectionFacet(directions(i)))
+        if (!separateDirectionFacet(directions(i), ""))
           return false;
       }
     }
@@ -270,7 +329,7 @@ namespace ipo {
     {
       if (taskFacet())
       {
-        if (!separatePointFacet(points(i)))
+        if (!separatePointFacet(_points[i], _pointNames[i]))
           return false;
       }
       if (taskSmallestFace())
@@ -526,6 +585,24 @@ namespace ipo {
       _objectiveFiles.push_back(argument(1));
       return 2;
     }
+    if (firstArgument == "--point")
+    {
+      if (numArguments() == 1)
+      {
+        throw std::runtime_error("Invalid option: --point must be followed by a vector.");
+      }
+      _pointArguments.push_back(argument(1));
+      return 2;
+    }
+    if (firstArgument == "--points")
+    {
+      if (numArguments() == 1)
+      {
+        throw std::runtime_error("Invalid option: --points must be followed by a file name.");
+      }
+      _pointFiles.push_back(argument(1));
+      return 2;
+    }
     if (firstArgument == "--random")
     {
       if (numArguments() == 1)
@@ -696,6 +773,24 @@ namespace ipo {
       ConsoleApplicationInequalityParser parser(stream, oracle(), _faces, _faceNames);
       parser.run();
     }
+    
+     /// Add specified points.
+    
+    for (std::size_t i = 0; i < _pointArguments.size(); ++i)
+    {
+      std::istringstream stream(_pointArguments[i]);
+      ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
+      parser.run();
+    }
+    
+    /// Parse objectives from specified files.
+    
+    for (std::size_t i = 0; i < _objectiveFiles.size(); ++i)
+    {
+      std::ifstream stream(_objectiveFiles[i]);
+      ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
+      parser.run();
+    }
 
     return true;
   }
@@ -738,7 +833,7 @@ namespace ipo {
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
     
-    LPRowSetRational properFaceEquations;
+    LPRowSetRational faceEquations;
     
     LPRowSetRational* equations;
     if (face == NULL)
@@ -752,16 +847,32 @@ namespace ipo {
     else
     {
       orac->setFace(face);
-      properFaceEquations = LPRowSetRational(*_equations);
+      FilteredUniqueRationalVectors filteredPoints(*_cachedPoints);
+      FilteredUniqueRationalVectors filteredDirections(*_cachedDirections);
+
+      /// Filter points and rays.
+
+      soplex::DVectorRational faceNormal(n);
+      faceNormal.clear();
+      faceNormal.assign(face->normal());
+
+      for (std::size_t p = _cachedPoints->first(); p < _cachedPoints->size(); p = _cachedPoints->next(p))
+      {
+        soplex::Rational activity = *(*_cachedPoints)[p] * faceNormal;
+        filteredPoints.set(p, activity == face->rhs());
+      }
+      for (std::size_t r = _cachedDirections->first(); r < _cachedDirections->size(); r = _cachedDirections->next(r))
+      {
+        soplex::Rational activity = *(*_cachedDirections)[r] * faceNormal;
+        filteredDirections.set(r, activity == 0);
+      }
       
-      // TODO: init from filtered!
+      faceEquations = LPRowSetRational(*_equations);
+      faceEquations.add(face->rhs(), face->normal(), face->rhs());
       
-      UniqueRationalVectors points(n);
-      UniqueRationalVectors directions(n);
+      hull.run(filteredPoints, filteredDirections, faceEquations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
       
-      hull.run(points, directions, properFaceEquations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
-      
-      equations = &properFaceEquations;
+      equations = &faceEquations;
       orac->setFace();
     }
 
@@ -789,23 +900,40 @@ namespace ipo {
 
   bool ConsoleApplicationBase::optimizeObjective(const SVectorRational* objective, bool maximize)
   {
+    std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
+    
+    OptimizationResult result;
+    if (maximize)
+      oracle()->maximize(result, *objective);
+    else
+    {
+      DSVectorRational negated;
+      negated = *objective;
+      for (int p = negated.size() - 1; p >= 0; --p)
+        negated.value(p) *= -1;
+      oracle()->maximize(result, negated);
+    }
+    
+    if (result.isInfeasible())
+    {
+      std::cout << "infeasible.\n" << std::flush;
+    }
+    else if (result.isUnbounded())
+    {
+      std::cout << "unbounded direction ";
+      oracle()->printVector(std::cout, result.directions.front());
+      std::cout << "\n" << std::flush;
+    }
+    else
+    {
+      oracle()->printVector(std::cout, result.points.front());
+      std::cout << "\n" << std::flush;
+    }
     return true;
   }
 
-  bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective, const std::string& objectiveName, bool print)
+  bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective, bool print)
   {
-    if (objectiveName == "")
-      std::cout << "Generating facets for objective";
-    else if (objectiveName == ":RANDOM:")
-      std::cout << "Generating facets for random objective";
-    else
-      std::cout << "Generating facets for objective <" << objectiveName << ">";
-    if (print)
-    {
-      std::cout << " ";
-      oracle()->printLinearForm(std::cout, objective);
-    }
-    std::cout << ".\n" << std::flush;
     std::size_t n = oracle()->numVariables();
 
     /// Setup the LP.
@@ -826,7 +954,6 @@ namespace ipo {
     spx.addRowsRational(_relaxationRows);
     
     Separation::QuietOutput separateOutput;
-//     Separation::ProgressOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
         _basicColumns, oracle());
 
@@ -925,13 +1052,127 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction)
+  bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, const std::string& directionName)
   {
+    std::cout << "Direction " << directionName << std::flush;
+    if (directionName != "")
+      std::cout << " ";
+    
+    std::size_t n = oracle()->numVariables();
+    
+    Separation::QuietOutput separateOutput;
+    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
+        _basicColumns, oracle());
+    separate.separateRay(direction, separateOutput);
+    if (separate.violation() <= 0)
+    {
+      std::cout << "is feasible.\n" << std::flush;
+      return true;
+    }
+
+    LPRowRational inequality;
+    Separation::Certificate certificate;
+    separate.inequality(inequality);
+    separate.certificate(certificate);
+    
+    if (separate.separatedFacet())
+      std::cout << "is separated by facet: ";
+    else if (separate.separatedEquation())
+      std::cout << "is separated by equation: ";
+    else
+    {
+      throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
+    }
+    
+    manhattanNormImproveInequality(n, inequality, *_equations);
+
+    oracle()->printRow(std::cout, inequality);
+
+    if (_optionCertificates)
+    {
+      std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
+          << certificate.directionIndices.size() << " rays.\n" << std::endl;
+      for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
+      {
+        std::cout << "  Certifying point: ";
+        oracle()->printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        std::cout << "\n";
+      }
+      for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
+      {
+        std::cout << "  Certifying ray: ";
+        oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        std::cout << "\n";
+      }
+      std::cout << "\n" << std::flush;
+    }
+    else
+    {
+      std::cout << "\n" << std::flush;
+    }
+    
     return true;
   }
 
-  bool ConsoleApplicationBase::separatePointFacet(const Point* point)
+  bool ConsoleApplicationBase::separatePointFacet(const Point* point, const std::string& pointName)
   {
+    std::cout << "Point " << pointName << std::flush;
+    if (pointName != "")
+      std::cout << " ";
+    
+    std::size_t n = oracle()->numVariables();
+    
+    Separation::QuietOutput separateOutput;
+    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
+        _basicColumns, oracle());
+    separate.separatePoint(point, separateOutput);
+    if (separate.violation() <= 0)
+    {
+      std::cout << "is feasible.\n" << std::flush;
+      return true;
+    }
+
+    LPRowRational inequality;
+    Separation::Certificate certificate;
+    separate.inequality(inequality);
+    separate.certificate(certificate);
+    
+    if (separate.separatedFacet())
+      std::cout << "is separated by facet: ";
+    else if (separate.separatedEquation())
+      std::cout << "is separated by equation: ";
+    else
+    {
+      throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
+    }
+    
+    manhattanNormImproveInequality(n, inequality, *_equations);
+
+    oracle()->printRow(std::cout, inequality);
+
+    if (_optionCertificates)
+    {
+      std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
+          << certificate.directionIndices.size() << " rays.\n" << std::endl;
+      for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
+      {
+        std::cout << "  Certifying point: ";
+        oracle()->printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        std::cout << "\n";
+      }
+      for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
+      {
+        std::cout << "  Certifying ray: ";
+        oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        std::cout << "\n";
+      }
+      std::cout << "\n" << std::flush;
+    }
+    else
+    {
+      std::cout << "\n" << std::flush;
+    }
+    
     return true;
   }
 

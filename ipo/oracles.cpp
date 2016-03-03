@@ -369,7 +369,7 @@ namespace ipo {
     if (delimit)
       stream << ")";
     else
-      stream << "<zero-vector>";
+      stream << "()";
   }
 
   void OptimizationOracleBase::maximize(OptimizationResult& result, const soplex::VectorRational& objective,

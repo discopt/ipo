@@ -98,7 +98,22 @@ namespace ipo {
     void parseName();
     
     virtual void handleInequality(const std::string& name, const soplex::Rational& lhs, const std::map<std::string, soplex::Rational>& values, const soplex::Rational& rhs) = 0;
-  };  
+  };
+
+  class PointParser : public LPParser
+  {
+  public:
+    PointParser(std::istream& stream);
+    virtual ~PointParser();
+    
+    void run();
+    
+  protected:
+    void parseVector(const std::string& name);
+    void parseName();
+    
+    virtual void handlePoint(const std::string& name, const std::map<std::string, soplex::Rational>& values) = 0;
+  };
 }
 
 #endif

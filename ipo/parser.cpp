@@ -143,6 +143,9 @@ namespace ipo {
             case '[':
             case ']':
             case '*':
+            case '(':
+            case ')':
+            case ',':
               return LPToken(char(c));
             default:
             {
@@ -696,5 +699,125 @@ namespace ipo {
     }
   }
 
+  PointParser::PointParser(std::istream& stream): LPParser(stream)
+  {
 
+  }
+
+  PointParser::~PointParser()
+  {
+
+  }
+
+
+  void PointParser::parseVector(const std::string& name)
+  {
+    assert(token().type == '(');
+    fetchNextNonWhite();
+    Rational value;
+    std::string varName;
+    std::map<std::string, soplex::Rational> values;
+    while (token().type != LPToken::END_OF_FILE)
+    {
+      if (token().type == '\n')
+        fetchNextNonWhite();
+      
+      if (token().type == ')')
+        return handlePoint(name, values);
+      
+      if (token().type == LPToken::NAME)
+      {
+        varName = getTokenName(token());
+        fetchNextNonWhite();
+      }
+      else
+        return;
+      
+      if (token().type == '\n')
+        fetchNextNonWhite();
+      
+      if (token().type != '=')
+        break;
+      fetchNextNonWhite();
+      
+      if (token().type == '\n')
+        fetchNextNonWhite();
+      
+      value = 1;
+      if (token().type == '+' || token().type == '-')
+      {
+        if (token().type == '-')
+          value = -1;
+        fetchNextNonWhite();
+      }
+
+      if (token().type == LPToken::NUMBER)
+      {
+        value *= token().number;
+        fetchNextNonWhite();
+        if (token().type == '/')
+        {
+          fetchNextNonWhite();
+          if (token().type == LPToken::NUMBER)
+          {
+            value /= token().number;
+            fetchNextNonWhite();
+          }
+          else
+            return;
+        }
+      }
+
+      /// Add var/value pair to values map.
+
+      std::map<std::string, Rational>::iterator iter = values.find(varName);
+      if (iter != values.end())
+        iter->second += value;
+      else
+        values.insert(std::make_pair(varName, value));
+      
+      if (token().type == '\n')
+        fetchNextNonWhite();
+
+      if (token().type == ',')
+      {
+        fetchNextNonWhite();
+        continue;
+      }
+      else if (token().type != ')')
+        break;
+    }
+  }
+
+
+  void PointParser::parseName()
+  {
+    assert(token().type == LPToken::NAME);
+    const std::string name = getTokenName(token());
+    fetchNextNonWhite();
+    if (token().type == ':')
+    {
+      fetchNextNonWhite();
+      if (token().type == '\n')
+        fetchNextNonWhite();
+      if (token().type == '(')
+        return parseVector(name);
+    }
+  }
+
+  void PointParser::run()
+  {
+    fetchNextNonWhite();
+    while (token().type != LPToken::END_OF_FILE)
+    {
+      if (token().type == LPToken::NAME)
+        parseName();
+      else if (token().type == '(')
+        parseVector("");
+      else
+        fetchNextNonWhite();
+    }
+  }
+
+  
 }
