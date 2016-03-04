@@ -1195,6 +1195,21 @@ namespace ipo {
 
   bool ConsoleApplicationBase::printCached()
   {
+    std::cout << "Cached points: " << _cachedPoints->size() << "\n";
+    for (std::size_t i = _cachedPoints->first(); i < _cachedPoints->size(); i = _cachedPoints->next(i))
+    {
+      std::cout << "  ";
+      oracle()->printVector(std::cout, _cachedPoints->get(i));
+      std::cout << "\n";
+    }
+    std::cout << "Cached directions: " << _cachedDirections->size() << "\n";
+    for (std::size_t i = _cachedDirections->first(); i < _cachedDirections->size(); i = _cachedDirections->next(i))
+    {
+      std::cout << "  ";
+      oracle()->printVector(std::cout, _cachedDirections->get(i));
+      std::cout << "\n";
+    }
+    std::cout << std::flush;
     return true;
   }
 
