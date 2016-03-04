@@ -82,25 +82,29 @@ public:
 
   virtual void printAdditionalOptionsPolyhedron(std::ostream& stream)
   {
-    std::cerr << " --oracle ORACLE              Use oracle ORACLE to define the polyhedron P.\n";
-    std::cerr << " --heuristic ORACLE           Use oracle ORACLE as a heuristic in addition to the oracle.\n";
-    std::cerr << "                              See section on oracles below.\n";
-    std::cerr << " --relaxation                 In case of a MIP instance, set all variable to continuous.\n";
+    std::cerr << "  --oracle ORACLE\n";
+    std::cerr << "      Use oracle ORACLE to define the polyhedron P.\n";
+    std::cerr << "  --heuristic ORACLE\n";
+    std::cerr << "      Use oracle ORACLE as a heuristic in addition to the oracle. See section on oracles below.\n";
+    std::cerr << "  --relaxation\n";
+    std::cerr << "      If the instance is a MIP, set all variables to continuous.\n";
   }
 
   virtual void printAdditionalOptionsTasks(std::ostream& stream)
   {
-    std::cerr << " --print-instance-objective   In case of a MIP instance, print its maximization objective.\n";
+    std::cerr << "  --print-instance-objective\n";
+    std::cerr << "      If the instance is a MIP, print its maximization objective.\n";
   }
 
   virtual void printAdditionalOptionsFurther(std::ostream& stream)
   {
-    std::cerr << " --instance-objective on|off  If on (default) and the instance is a MIP, it considers the\n";
-    std::cerr << "                              maximization objective of the instance for facet-generation.\n";
-    std::cerr << " --use-bounds on|off          If on (default) and the instance is a MIP, it uses the bounds of the\n";
-    std::cerr << "                              instance for facet-generation.\n";
-    std::cerr << " --use-inequalities on|off    If on (default) and the instance is a MIP, it uses the inequalities\n";
-    std::cerr << "                              of the instance for facet-generation.\n";
+    std::cerr << "  --instance-objective on|off\n";
+    std::cerr << "      If on (default) and the instance is a MIP, it considers the maximization objective of the\n";
+    std::cerr << "      instance for facet-generation.\n";
+    std::cerr << "  --use-bounds on|off\n";
+    std::cerr << "      If on (default) and the instance is a MIP, it uses its bounds for facet-generation.\n";
+    std::cerr << "  --use-inequalities on|off\n";
+    std::cerr << "      If on (default) and the instance is a MIP, it uses its inequalities for facet-generation.\n";
   }
 
   virtual void printAdditionalOptionsSpecific(std::ostream& stream)
@@ -108,18 +112,17 @@ public:
     std::cerr << "\n";
     std::cerr << "Oracles that can be used for --oracle and --heuristic (see IPO's build options):\n";
 #ifdef WITH_SCIP
-    std::cerr << " scip                         Use the MIP solver SCIP from the SCIP Optimization Suite\n";
-    std::cerr << "                              (default oracle).\n";
+    std::cerr << "  scip      Use the MIP solver SCIP from the SCIP Optimization Suite (default oracle).\n";
 #endif
 #ifdef WITH_EXACT_SCIP
-    std::cerr << " exactscip                    Use the exact MIP solver SCIP-ex from the SCIP Optimization Suite";
+    std::cerr << "  exactscip Use the exact MIP solver SCIP-ex from the SCIP Optimization Suite";
 #ifdef ORACLE_DEFAULt_EXACT_SCIP
-    std::cerr << "\n                              (default oracle)";
+    std::cerr << " (default oracle)";
 #endif
     std::cerr << ".\n";
 #endif
-    std::cerr << " PROGRAM                      For each oracle call, execute PROGRAM and communicate via stdin and\n";
-    std::cerr << "                              stdout. See IPO's python directory for example implementations.\n";
+    std::cerr << "  PROGRAM   For each oracle call, execute PROGRAM and communicate via stdin and stdout.\n";
+    std::cerr << "            See IPO's python directory for example implementations.\n";
 #ifdef ORACLE_DEFAULT_NONE
     std::cerr << "IPO is built without a default oracle (e.g., SCIP). See build options!\n";
 #endif
