@@ -18,7 +18,7 @@ namespace ipo {
       NormalConeOptimizationOracle(UniqueRationalVectorsBase& originalPoints, UniqueRationalVectorsBase& originalRays,
           OptimizationOracleBase* originalOracle, const SVectorRational* target, OutputBase* output) :
           OptimizationOracleBase("normal.cone(" + originalOracle->name() + ")"), PolarLP(originalPoints, originalRays,
-              originalOracle), _output(output)
+              originalOracle, 1024.0, 1000), _output(output)
       {
         /// Initialize oracle.
 
@@ -51,14 +51,20 @@ namespace ipo {
           bool approximate)
       {
         updateObjective(objective);
+        
+        /// Perform stabilization.
+        
+        stabilizedPresolve();
 
+        /// Optimize
+        
         optimize(false);
 
         DSVectorRational* solution = new DSVectorRational;
         getPrimalSolution(*solution);
 
         result.points.push_back(solution);
-        result.setFeasible(objective);
+        result.setFeasible(objective); // This sets result.bestValue.
         if (result.bestValue > 0)
         {
           result.directions.push_back(result.points.front());
@@ -67,52 +73,58 @@ namespace ipo {
         }
         result.optimal = true;
       }
-
-      virtual void onBeforeSolve()
+      
+      virtual void onBeforeSolve(bool stabilizing)
       {
-        _output->onConeBeforeSolve();
+        _output->onConeBeforeSolve(stabilizing);
       }
-
-      virtual void onAfterSolve()
+      
+      virtual void onAfterSolve(bool stabilizing)
       {
-        _output->onConeAfterSolve();
+        _output->onConeAfterSolve(stabilizing);
       }
-
+      
+      virtual void onPenaltyDecrease()
+      {
+        _output->onConePenaltyDecrease();
+      }
+      
       virtual void onBeforeCache()
       {
         _output->onConeBeforeCache();
       }
-
+      
       virtual void onAfterCache(std::size_t numPoints, std::size_t numRays)
       {
-        _output->onConeAfterCache(numPoints, numRays);
+         _output->onConeAfterCache(numPoints, numRays);
       }
-
+      
       virtual void onBeforeOracleCall(bool forceOptimal)
       {
         _output->onConeBeforeOracleCall(forceOptimal);
       }
-
-      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays)
+      
+      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays,
+          bool lastIteration)
       {
         _output->onConeAfterOracleCall(forceOptimal, feasible, numPoints, numRays);
       }
-
+      
       virtual void onBeforeAddPoint()
       {
         _output->onConeBeforeAddPoint();
       }
-
+      
       virtual void onAfterAddPoint()
       {
         _output->onConeAfterAddPoint();
       }
-
+      
       virtual void onBeforeAddRay()
       {
         _output->onConeBeforeAddRay();
       }
-
+      
       virtual void onAfterAddRay()
       {
         _output->onConeAfterAddRay();
@@ -507,14 +519,19 @@ namespace ipo {
 
     }
 
-    void OutputBase::onConeBeforeSolve()
+    void OutputBase::onConeBeforeSolve(bool stabilizing)
     {
 
     }
 
-    void OutputBase::onConeAfterSolve()
+    void OutputBase::onConeAfterSolve(bool stabilizing)
     {
 
+    }
+    
+    void OutputBase::onConePenaltyDecrease()
+    {
+      
     }
 
     void OutputBase::onConeBeforeCache()
@@ -617,12 +634,12 @@ namespace ipo {
 
     }
 
-    void DebugOutput::onConeBeforeSolve()
+    void DebugOutput::onConeBeforeSolve(bool stabilizing)
     {
-      std::cout << "Solving target cut LP..." << std::flush;
+      std::cout << "Solving " << (stabilizing ? "Stab-LP" : "Main-LP") << "..." << std::flush;
     }
 
-    void DebugOutput::onConeAfterSolve()
+    void DebugOutput::onConeAfterSolve(bool stabilizing)
     {
       std::cout << " done.\n" << std::flush;
     }
@@ -821,12 +838,12 @@ namespace ipo {
       _timeFactorization += timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onBeforeRay()
+    void ProgressOutput::AffineHullOutput::onBeforeDirection()
     {
       timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onAfterRay()
+    void ProgressOutput::AffineHullOutput::onAfterDirection()
     {
       onProgress();
       _timeFactorization += timeStamp();
@@ -909,16 +926,21 @@ namespace ipo {
           << " equations.\n" << std::flush;
     }
 
-    void ProgressOutput::onConeBeforeSolve()
+    void ProgressOutput::onConeBeforeSolve(bool stabilizing)
     {
       _normalConeHullOutput.timeStamp();
-      std::cout << _indent << "  LP " << numRowsLP() << "x" << numColumnsLP() << ": " << std::flush;
+      std::cout << _indent << (stabilizing ?  "  Stab-LP " : "  Main-LP ") << numRowsLP() << "x" << numColumnsLP() << ": " << std::flush;
     }
 
-    void ProgressOutput::onConeAfterSolve()
+    void ProgressOutput::onConeAfterSolve(bool stabilizing)
     {
       _normalConeHullOutput._timeLP += _normalConeHullOutput.timeStamp();
       std::cout << "solved." << std::flush;
+    }
+    
+    void ProgressOutput::onConePenaltyDecrease()
+    {
+      std::cout << " Decreasing penalty.\n" << std::flush;
     }
 
     void ProgressOutput::onConeBeforeCache()

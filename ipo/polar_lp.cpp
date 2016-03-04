@@ -310,10 +310,6 @@ namespace ipo {
 
   void PolarLP::stabilizedPresolve()
   {
-    // TODO: SOLUTION DUMP
-//    iteration = 0;
-//    std::cout << "\nSOLUTION:" << "iter     X1     X2" << std::endl;
-
     const double APPROX_VIOLATION = 1.0e-5;
 
     /// Remove dynamic rows of exact LP.

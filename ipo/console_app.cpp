@@ -6,6 +6,7 @@
 #include "affine_hull.h"
 #include "min_norm_2d.h"
 #include "facets.h"
+#include "smallest_face.h"
 #include "spx_gmp.h"
 #include "parser.h"
 #include "ipo.h"
@@ -316,26 +317,45 @@ namespace ipo {
       }
     }
 
-    for (std::size_t i = 0; i < numDirections(); ++i)
+    if (taskFacet())
     {
-      if (taskFacet())
+      for (std::size_t i = 0; i < numDirections(); ++i)
       {
-        if (!separateDirectionFacet(directions(i), ""))
+        std::cout << "Point";
+        if (_directionNames[i] != "")
+          std::cout << " " << _directionNames[i];
+        std::cout << std::flush;
+        
+        bool isFeasible = true;
+        if (!separateDirectionFacet(directions(i), isFeasible))
           return false;
       }
     }
 
-    for (std::size_t i = 0; i < numPoints(); ++i)
+    if (taskFacet() || taskSmallestFace())
     {
-      if (taskFacet())
+      for (std::size_t i = 0; i < numPoints(); ++i)
       {
-        if (!separatePointFacet(_points[i], _pointNames[i]))
-          return false;
-      }
-      if (taskSmallestFace())
-      {
-        if (!computeSmallestFace(points(i)))
-          return false;
+        std::cout << "Point";
+        if (_pointNames[i] != "")
+          std::cout << " " << _pointNames[i];
+        std::cout << std::flush;
+        
+        bool isFeasible = true;
+        if (taskFacet())
+        {
+          if (!separatePointFacet(_points[i], isFeasible))
+            return false;
+        }
+        else
+        {
+          std::cout << " is assumed to be feasible.\n" << std::flush;
+        }
+        if (taskSmallestFace() && isFeasible)
+        {
+          if (!computeSmallestFace(points(i)))
+            return false;
+        }
       }
     }
 
@@ -556,6 +576,11 @@ namespace ipo {
       _taskGenerateFacets = true;
       return 1;
     }
+    if (firstArgument == "--smallest-face")
+    {
+      _taskSmallestFace = true;
+      return 1;
+    }
     if (firstArgument == "--print-cached")
     {
       _taskPrintCached = true;
@@ -595,6 +620,24 @@ namespace ipo {
         throw std::runtime_error("Invalid option: --objectives must be followed by a file name.");
       }
       _objectiveFiles.push_back(argument(1));
+      return 2;
+    }
+    if (firstArgument == "--direction")
+    {
+      if (numArguments() == 1)
+      {
+        throw std::runtime_error("Invalid option: --direction must be followed by a vector.");
+      }
+      _directionArguments.push_back(argument(1));
+      return 2;
+    }
+    if (firstArgument == "--directions")
+    {
+      if (numArguments() == 1)
+      {
+        throw std::runtime_error("Invalid option: --directions must be followed by a file name.");
+      }
+      _directionFiles.push_back(argument(1));
       return 2;
     }
     if (firstArgument == "--point")
@@ -786,20 +829,38 @@ namespace ipo {
       parser.run();
     }
     
-     /// Add specified points.
+    /// Add specified directions.
+
+    for (std::size_t i = 0; i < _directionArguments.size(); ++i)
+    {
+      std::istringstream stream(_directionArguments[i]);
+      ConsoleApplicationPointParser parser(stream, oracle(), _directions, _directionNames);
+      parser.run();
+    }
     
+    /// Parse directions from specified files.
+    
+    for (std::size_t i = 0; i < _directionFiles.size(); ++i)
+    {
+      std::ifstream stream(_directionFiles[i]);
+      ConsoleApplicationPointParser parser(stream, oracle(), _directions, _directionNames);
+      parser.run();
+    }
+    
+     /// Add specified points.
+
     for (std::size_t i = 0; i < _pointArguments.size(); ++i)
     {
       std::istringstream stream(_pointArguments[i]);
       ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
       parser.run();
     }
+
+    /// Parse points from specified files.
     
-    /// Parse objectives from specified files.
-    
-    for (std::size_t i = 0; i < _objectiveFiles.size(); ++i)
+    for (std::size_t i = 0; i < _pointFiles.size(); ++i)
     {
-      std::ifstream stream(_objectiveFiles[i]);
+      std::ifstream stream(_pointFiles[i]);
       ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
       parser.run();
     }
@@ -1064,12 +1125,8 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, const std::string& directionName)
+  bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, bool& isFeasible)
   {
-    std::cout << "Direction " << directionName << std::flush;
-    if (directionName != "")
-      std::cout << " ";
-    
     std::size_t n = oracle()->numVariables();
     
     Separation::QuietOutput separateOutput;
@@ -1078,19 +1135,23 @@ namespace ipo {
     separate.separateRay(direction, separateOutput);
     if (separate.violation() <= 0)
     {
-      std::cout << "is feasible.\n" << std::flush;
+      isFeasible = true;
+      std::cout << " is feasible.\n" << std::flush;
       return true;
     }
-
+    else
+      isFeasible = false;
+ 
+ 
     LPRowRational inequality;
     Separation::Certificate certificate;
     separate.inequality(inequality);
     separate.certificate(certificate);
     
     if (separate.separatedFacet())
-      std::cout << "is separated by facet: ";
+      std::cout << "\n Separated by facet: ";
     else if (separate.separatedEquation())
-      std::cout << "is separated by equation: ";
+      std::cout << "\n Separated by equation: ";
     else
     {
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
@@ -1103,7 +1164,7 @@ namespace ipo {
     if (_optionCertificates)
     {
       std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-          << certificate.directionIndices.size() << " rays.\n" << std::endl;
+          << certificate.directionIndices.size() << " rays.\n" << std::flush;
       for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
       {
         std::cout << "  Certifying point: ";
@@ -1112,11 +1173,11 @@ namespace ipo {
       }
       for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
       {
-        std::cout << "  Certifying ray: ";
+        std::cout << "  Certifying direction: ";
         oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
         std::cout << "\n";
       }
-      std::cout << "\n" << std::flush;
+      std::cout << std::flush;
     }
     else
     {
@@ -1126,12 +1187,8 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::separatePointFacet(const Point* point, const std::string& pointName)
+  bool ConsoleApplicationBase::separatePointFacet(const Point* point, bool& isFeasible)
   {
-    std::cout << "Point " << pointName << std::flush;
-    if (pointName != "")
-      std::cout << " ";
-    
     std::size_t n = oracle()->numVariables();
     
     Separation::QuietOutput separateOutput;
@@ -1140,9 +1197,12 @@ namespace ipo {
     separate.separatePoint(point, separateOutput);
     if (separate.violation() <= 0)
     {
-      std::cout << "is feasible.\n" << std::flush;
+      isFeasible = true;
+      std::cout << " is feasible.\n" << std::flush;
       return true;
     }
+    else
+      isFeasible = false;
 
     LPRowRational inequality;
     Separation::Certificate certificate;
@@ -1150,9 +1210,9 @@ namespace ipo {
     separate.certificate(certificate);
     
     if (separate.separatedFacet())
-      std::cout << "is separated by facet: ";
+      std::cout << "\n Separated by facet: ";
     else if (separate.separatedEquation())
-      std::cout << "is separated by equation: ";
+      std::cout << "\n Separated by equation: ";
     else
     {
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
@@ -1165,7 +1225,7 @@ namespace ipo {
     if (_optionCertificates)
     {
       std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-          << certificate.directionIndices.size() << " rays.\n" << std::endl;
+          << certificate.directionIndices.size() << " rays.\n" << std::flush;
       for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
       {
         std::cout << "  Certifying point: ";
@@ -1174,11 +1234,11 @@ namespace ipo {
       }
       for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
       {
-        std::cout << "  Certifying ray: ";
+        std::cout << "  Certifying direction: ";
         oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
         std::cout << "\n";
       }
-      std::cout << "\n" << std::flush;
+      std::cout << std::flush;
     }
     else
     {
@@ -1190,6 +1250,17 @@ namespace ipo {
 
   bool ConsoleApplicationBase::computeSmallestFace(const Point* point)
   {
+    SmallestFace::QuietOutput smallestFaceOutput;
+    SmallestFace::Result smallestFace(*_cachedPoints, *_cachedDirections, oracle());
+    smallestFace.run(point, smallestFaceOutput);
+
+    std::cout << " Dimension: " << smallestFace.dimension() << std::endl;
+    Point maximizingObjective;
+    smallestFace.getMaximizingObjective(maximizingObjective);
+    std::cout << " Objective : ";
+    oracle()->printVector(std::cout, &maximizingObjective);
+    std::cout << "\n" << std::flush;
+    
     return true;
   }
 
@@ -1198,16 +1269,16 @@ namespace ipo {
     std::cout << "Cached points: " << _cachedPoints->size() << "\n";
     for (std::size_t i = _cachedPoints->first(); i < _cachedPoints->size(); i = _cachedPoints->next(i))
     {
-      std::cout << "  ";
+      std::cout << ' ';
       oracle()->printVector(std::cout, _cachedPoints->get(i));
-      std::cout << "\n";
+      std::cout << '\n';
     }
     std::cout << "Cached directions: " << _cachedDirections->size() << "\n";
     for (std::size_t i = _cachedDirections->first(); i < _cachedDirections->size(); i = _cachedDirections->next(i))
     {
-      std::cout << "  ";
+      std::cout << ' ';
       oracle()->printVector(std::cout, _cachedDirections->get(i));
-      std::cout << "\n";
+      std::cout << '\n';
     }
     std::cout << std::flush;
     return true;

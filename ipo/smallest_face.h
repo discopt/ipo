@@ -88,8 +88,9 @@ namespace ipo {
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
       virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
       virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
-      virtual void onConeBeforeSolve();
-      virtual void onConeAfterSolve();
+      virtual void onConeBeforeSolve(bool stabilizing);
+      virtual void onConeAfterSolve(bool stabilizing);
+      virtual void onConePenaltyDecrease();
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);
@@ -139,8 +140,8 @@ namespace ipo {
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
       virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
       virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
-      virtual void onConeBeforeSolve();
-      virtual void onConeAfterSolve();
+      virtual void onConeBeforeSolve(bool stabilizing);
+      virtual void onConeAfterSolve(bool stabilizing);
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);
@@ -187,8 +188,8 @@ namespace ipo {
         virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numRays);
         virtual void onBeforePoint(bool twoPoints);
         virtual void onAfterPoint(bool twoPoints);
-        virtual void onBeforeRay();
-        virtual void onAfterRay();
+        virtual void onBeforeDirection();
+        virtual void onAfterDirection();
         virtual void onPotentialEquation();
         virtual void onEquation();
         virtual void onBeforeVerifyImmediate();
@@ -227,8 +228,9 @@ namespace ipo {
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
       virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
       virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
-      virtual void onConeBeforeSolve();
-      virtual void onConeAfterSolve();
+      virtual void onConeBeforeSolve(bool stabilizing);
+      virtual void onConeAfterSolve(bool stabilizing);
+      virtual void onConePenaltyDecrease();
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);

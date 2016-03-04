@@ -152,8 +152,8 @@ namespace ipo {
     virtual bool computeAffineHull(Face* face, const std::string& faceName);
     virtual bool optimizeObjective(const soplex::SVectorRational* objective, bool maximize);
     virtual bool generateFacets(const soplex::SVectorRational* objective, bool print);
-    virtual bool separateDirectionFacet(const Direction* direction, const std::string& directionName);
-    virtual bool separatePointFacet(const Point* point, const std::string& pointName);
+    virtual bool separateDirectionFacet(const Direction* direction, bool& isFeasible);
+    virtual bool separatePointFacet(const Point* point, bool& isFeasible);
     virtual bool computeSmallestFace(const Point* point);
     virtual bool printCached();
     
@@ -272,6 +272,8 @@ namespace ipo {
     std::vector<std::string> _faceFiles;
     std::vector<std::string> _objectiveArguments;
     std::vector<std::string> _objectiveFiles;
+    std::vector<std::string> _directionArguments;
+    std::vector<std::string> _directionFiles;
     std::vector<std::string> _pointArguments;
     std::vector<std::string> _pointFiles;
     std::size_t _numRandomObjectives;
@@ -298,6 +300,7 @@ namespace ipo {
     std::vector<soplex::DSVectorRational*> _objectives;
     std::vector<std::string> _objectiveNames;
     std::vector<Direction*> _directions;
+    std::vector<std::string> _directionNames;
     std::vector<Point*> _points;
     std::vector<std::string> _pointNames;
     soplex::LPColSetRational _relaxationColumns;
