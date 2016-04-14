@@ -256,8 +256,13 @@ namespace ipo {
     {
       return _points[index];
     }
+    
+    inline const Space& space() const
+    {
+      return _space;
+    }
 
-    FaceOptimizationOracleBase* oracle()
+    inline FaceOptimizationOracleBase* oracle()
     {
       return _oracle;
     }
@@ -293,6 +298,7 @@ namespace ipo {
     bool _optionReuseFacets;
     bool _optionPrintRandom;
 
+    Space _space;
     FaceOptimizationOracleBase* _oracle;
 
     std::vector<Face*> _faces;

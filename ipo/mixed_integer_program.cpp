@@ -13,8 +13,7 @@ namespace ipo {
 
 #ifdef WITH_SCIP
 
-  MixedIntegerProgram::MixedIntegerProgram(SCIP* scip) :
-      _face(NULL)
+  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space), _face(NULL)
   {
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -26,9 +25,15 @@ namespace ipo {
     getSCIPvarToIndexMap(scip, varToIndexMap);
 
     /// Setup columns.
-
+    
+    bool buildSpace = space.dimension() == 0;
+    if (!buildSpace && space.dimension() != n)
+    {
+      throw std::runtime_error(
+        "Dimension mismatch while constructing a MixedIntegerProgram for a non-empty space.");
+    }
+    
     _columns.reMax(n);
-    _variableNames.resize(n);
     _integrality.resize(n);
     Rational obj, lower, upper;
     DSVectorRational vector;
@@ -47,7 +52,8 @@ namespace ipo {
         upper = infinity;
       _columns.add(SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ? obj : -obj, lower, vector, upper);
       _integrality[v] = SCIPvarGetType(origVars[v]) != SCIP_VARTYPE_CONTINUOUS;
-      _variableNames[v] = SCIPvarGetName(origVars[v]);
+      if (buildSpace)
+        space.addVariable(SCIPvarGetName(origVars[v]));
     }
 
     /// Setup rows.
@@ -58,7 +64,7 @@ namespace ipo {
     {
       SCIP_CONS** linearConstraints = SCIPconshdlrGetConss(linearHandler);
       _rows.reMax(numLinearConstraints);
-      _constraintNames.resize(numLinearConstraints);
+      _rowNames.resize(numLinearConstraints);
       for (std::size_t i = 0; i < numLinearConstraints; ++i)
       {
         SCIP_CONS* cons = linearConstraints[i];
@@ -85,7 +91,7 @@ namespace ipo {
             vector.add(varToIndexMap[consVars[j]], obj);
         }
         _rows.add(lower, vector, upper);
-        _constraintNames[i] = SCIPconsGetName(cons);
+        _rowNames[i] = SCIPconsGetName(cons);
       }
     }
   }
@@ -111,7 +117,7 @@ namespace ipo {
     return true;
   }
 
-  bool MixedIntegerProgram::checkPointConstraints(const SVectorRational* point)
+  bool MixedIntegerProgram::checkPointRows(const SVectorRational* point)
   {
     _worker.clear();
     _worker.assign(*point);
@@ -141,7 +147,7 @@ namespace ipo {
 
   bool MixedIntegerProgram::checkPoint(const SVectorRational* point)
   {
-    return checkPointIntegral(point) && checkPointBounds(point) && checkPointConstraints(point);
+    return checkPointIntegral(point) && checkPointBounds(point) && checkPointRows(point);
   }
 
   bool MixedIntegerProgram::checkRayBounds(const SVectorRational* ray) const
@@ -158,7 +164,7 @@ namespace ipo {
     return true;
   }
 
-  bool MixedIntegerProgram::checkRayConstraints(const SVectorRational* ray)
+  bool MixedIntegerProgram::checkRayRows(const SVectorRational* ray)
   {
     _worker.clear();
     _worker.assign(*ray);
@@ -176,7 +182,7 @@ namespace ipo {
 
   bool MixedIntegerProgram::checkRay(const SVectorRational* ray)
   {
-    return checkRayBounds(ray) && checkRayConstraints(ray);
+    return checkRayBounds(ray) && checkRayRows(ray);
   }
 
   void MixedIntegerProgram::faceEnabled(Face* face)
@@ -219,7 +225,7 @@ namespace ipo {
         {
           rows.add(lower, _rows.rowVector(r), upper);
           if (names)
-            names->push_back(constraintName(r));
+            names->push_back(rowName(r));
         }
         continue;
       }
@@ -230,7 +236,7 @@ namespace ipo {
       {
         rows.add(-infinity, _rows.rowVector(r), upper);
         if (names)
-          names->push_back(constraintName(r) + "-rhs");
+          names->push_back(rowName(r) + "-rhs");
       }
       if (lower > -infinity)
       {
@@ -238,7 +244,7 @@ namespace ipo {
         vector *= -1;
         rows.add(-infinity, vector, -lower);
         if (names)
-          names->push_back(constraintName(r) + "-lhs");
+          names->push_back(rowName(r) + "-lhs");
       }
     }
   }
@@ -256,18 +262,17 @@ namespace ipo {
       vector.add(c, Rational(1));
       rows.add(value, vector, value);
       if (names)
-        names->push_back("fixed-" + variableName(c));
+        names->push_back("fixed-" + space()[c]);
     }
   }
 
   MixedIntegerProgramCorrectorOracle::MixedIntegerProgramCorrectorOracle(const std::string& name,
       MixedIntegerProgram& mip, FaceOptimizationOracleBase* inexact, bool correctAlways) :
-      FaceOptimizationOracleBase(name), _mip(mip), _inexact(inexact), _worker(mip.numVariables()), _correctAlways(
-          correctAlways)
+      FaceOptimizationOracleBase(name, mip.space()), _mip(mip), _inexact(inexact), 
+      _worker(mip.space().dimension()), _correctAlways(correctAlways)
   {
-    if (_mip.numVariables() != _inexact->numVariables())
-      throw std::runtime_error("Dimensions of MixedIntegerProgram and inexact oracle differ!");
-    initialize(_inexact);
+    if (_mip.space() != _inexact->space())
+      throw std::runtime_error("Spaces of MixedIntegerProgram and inexact oracle differ.");
 
     /// Setup LP for corrections.
 
@@ -300,7 +305,7 @@ namespace ipo {
 
     /// Fix integers to zero.
 
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       if (!_mip.isIntegral(v))
       {
@@ -350,7 +355,7 @@ namespace ipo {
 
     /// Relax integers to original bounds.
 
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       if (!_mip.isIntegral(v))
       {
@@ -384,9 +389,10 @@ namespace ipo {
   {
     /// Run inexact oracle.
 
-    if (improveValue != NULL)
-      _inexact->improve(result, objective, *improveValue, forceOptimal);
-    else
+// TODO:
+//    if (improveValue != NULL)
+//      _inexact->improve(result, objective, *improveValue, forceOptimal);
+//    else
       _inexact->maximize(result, objective, forceOptimal);
 
     bool correctedOptimal = false;
@@ -396,7 +402,7 @@ namespace ipo {
       /// and we correct all solutions, then we are optimal.
 
       correctedOptimal = true;
-      for (std::size_t v = 0; v < _mip.numVariables(); ++v)
+      for (std::size_t v = 0; v < _mip.space().dimension(); ++v)
       {
         if (_mip.isIntegral(v))
         {

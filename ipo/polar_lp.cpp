@@ -9,11 +9,13 @@ using namespace soplex;
 
 namespace ipo {
 
-  PolarLP::PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, OptimizationOracleBase* oracle,
-      double initialPenalty, int maxAge) :
-      _points(points), _rays(rays), _oracle(oracle), _n(oracle->numVariables()), _d(oracle->numVariables() + 1), _offsetLower(
-          oracle->numVariables() + 1), _offsetUpper(2 * (oracle->numVariables() + 1)), _stabilizing(false), _maxAge(
-          maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0), _lastPenaltyCosts(0.0)
+  PolarLP::PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, 
+    OptimizationOracleBase* oracle, double initialPenalty, int maxAge) :
+    _points(points), _rays(rays), _oracle(oracle), _n(oracle->space().dimension()), 
+    _d(oracle->space().dimension() + 1), _offsetLower(oracle->space().dimension() + 1), 
+    _offsetUpper(2 * (oracle->space().dimension() + 1)), _stabilizing(false),
+    _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0), 
+    _lastPenaltyCosts(0.0)
   {
     // TODO: have a temporary maxAge variable during each run which is increased if stuck.
 

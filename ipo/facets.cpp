@@ -229,7 +229,7 @@ namespace ipo {
     protected:
       std::size_t n() const
       {
-        return _oracle->numVariables();
+        return _oracle->space().dimension();
       }
 
     protected:

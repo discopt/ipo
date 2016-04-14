@@ -11,13 +11,14 @@ find_package(Doxygen)
 
 set(IPO_SOURCES
   spx_gmp.cpp
+  space.cpp
+  oracles.cpp
   vector_space_generators.cpp
   reconstruct.cpp
   vector_2d.cpp
   min_norm_2d.cpp
   unique_rational_vectors.cpp
   rows.cpp
-  oracles.cpp
   mixed_integer_program.cpp
   facets.cpp
   affine_hull.cpp
@@ -47,6 +48,7 @@ set(IPO_INSTALL_HEADERS
   wrapper_oracle.h
   console_app.h
   parser.h
+  space.h
 )
 
 set(IPO_OTHER_HEADERS

@@ -105,12 +105,12 @@ namespace ipo {
 
   }
 
-  Projection::Projection(const OptimizationOracleBase* oracle, const std::vector<std::size_t>& variableSubset)
+  Projection::Projection(const Space& space, const std::vector<std::size_t>& variableSubset)
   {
     _map.reserve(variableSubset.size());
     _shift.reserve(variableSubset.size());
     for (std::size_t v = 0; v < variableSubset.size(); ++v)
-      addVariable(oracle, variableSubset[v]);
+      addVariable(space, variableSubset[v]);
   }
 
   Projection::~Projection()
@@ -126,10 +126,10 @@ namespace ipo {
     _shift.push_back(shift);
   }
 
-  void Projection::addVariable(const OptimizationOracleBase* oracle, std::size_t originalVariable,
+  void Projection::addVariable(const Space& space, std::size_t originalVariable,
       const soplex::Rational& shift)
   {
-    _names.push_back(oracle->variableName(originalVariable));
+    _names.push_back(space[originalVariable]);
     _map.push_back(DSVectorRational(1));
     _map.back().add(originalVariable, Rational(1));
     _shift.push_back(shift);
@@ -263,127 +263,29 @@ namespace ipo {
   }
 #endif
 
-  OptimizationOracleBase::OptimizationOracleBase(const std::string& name) :
-      _name(name)
+  OptimizationOracleBase::OptimizationOracleBase(const std::string& name, const Space& space) :
+      _name(name), _space(space)
   {
-#ifdef IPO_DEBUG
-    _initialized = false;
-#endif
+    
   }
 
   OptimizationOracleBase::~OptimizationOracleBase()
   {
 
   }
-
-  void OptimizationOracleBase::initialize(const std::vector<std::string>& variableNames)
-  {
-#ifdef IPO_DEBUG
-    _initialized = true;
-#endif
-    _variableNames = variableNames;
-  }
-
-  void OptimizationOracleBase::initialize(const OptimizationOracleBase* oracle)
-  {
-#ifdef IPO_DEBUG
-    _initialized = true;
-#endif
-    _variableNames.resize(oracle->numVariables());
-    for (std::size_t v = 0; v < _variableNames.size(); ++v)
-      _variableNames[v] = oracle->variableName(v);
-  }
-
-  void OptimizationOracleBase::printLinearForm(std::ostream& stream, const soplex::SVectorRational* vector) const
-  {
-    bool first = true;
-    for (std::size_t i = 0; i < vector->size(); ++i)
-    {
-      std::size_t v = vector->index(i);
-      const Rational& x = vector->value(i);
-      if (x < 0)
-        stream << (first ? "-" : " - ");
-      else if (!first)
-        stream << " + ";
-      if (x != 1 && x != -1)
-      {
-        if (x > 0)
-          stream << x << ' ';
-        else
-          stream << (-x) << ' ';
-      }
-      stream << variableName(v);
-      first = false;
-    }
-  }
-
-  void OptimizationOracleBase::printRow(std::ostream& stream, const LPRowRational& row) const
-  {
-    const Rational& lhs = row.lhs();
-    const Rational& rhs = row.rhs();
-    printRow(stream, lhs > -soplex::infinity / 2 ? &lhs : NULL, rhs < soplex::infinity / 2 ? &rhs : NULL,
-        row.rowVector());
-  }
-
-  void OptimizationOracleBase::printRow(std::ostream& stream, const LPRowSetRational& rows, std::size_t index) const
-  {
-    assert(index < rows.num());
-    const Rational& lhs = rows.lhs(index);
-    const Rational& rhs = rows.rhs(index);
-    printRow(stream, lhs > -soplex::infinity / 2 ? &lhs : NULL, rhs < soplex::infinity / 2 ? &rhs : NULL,
-        rows.rowVector(index));
-  }
-
-  void OptimizationOracleBase::printRows(std::ostream& stream, const LPRowSetRational& rows) const
-  {
-    for (int i = 0; i < rows.num(); ++i)
-    {
-      printRow(stream, rows, i);
-      stream << "\n";
-    }
-  }
-
-  void OptimizationOracleBase::printRow(std::ostream& stream, const Rational* lhs, const Rational* rhs,
-      const SVectorRational& vector) const
-  {
-    bool equation = lhs != NULL && rhs != NULL && *lhs == *rhs;
-    if (lhs != NULL && !equation)
-      stream << *lhs << " <= ";
-    printLinearForm(stream, &vector);
-    if (vector.size() == 0)
-      stream << '0';
-    if (rhs != NULL)
-      stream << (equation ? " == " : " <= ") << *rhs;
-  }
-
-  void OptimizationOracleBase::printVector(std::ostream& stream, const soplex::SVectorRational* vector) const
-  {
-    bool delimit = false;
-    for (std::size_t i = 0; i < vector->size(); ++i)
-    {
-      std::size_t v = vector->index(i);
-      const soplex::Rational& x = vector->value(i);
-      stream << (delimit ? ", " : "(") << variableName(v) << "=" << x;
-      delimit = true;
-    }
-    if (delimit)
-      stream << ")";
-    else
-      stream << "()";
-  }
-
+  
   void OptimizationOracleBase::maximize(OptimizationResult& result, const soplex::VectorRational& objective,
       bool forceOptimal)
   {
-    result.reset(numVariables());
+    result.reset(space().dimension());
     return run(result, objective, NULL, forceOptimal);
   }
 
   void OptimizationOracleBase::maximize(OptimizationResult& result, const soplex::VectorReal& objective,
       bool forceOptimal)
   {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
+    result.reset(space().dimension());
+    _objective.reDim(space().dimension(), false);
     _objective = objective;
     return run(result, _objective, NULL, forceOptimal);
   }
@@ -391,8 +293,8 @@ namespace ipo {
   void OptimizationOracleBase::maximize(OptimizationResult& result, const soplex::SVectorRational& objective,
       bool forceOptimal)
   {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
+    result.reset(space().dimension());
+    _objective.reDim(space().dimension(), false);
     _objective.clear();
     _objective.assign(objective);
     return run(result, _objective, NULL, forceOptimal);
@@ -401,46 +303,10 @@ namespace ipo {
   void OptimizationOracleBase::maximize(OptimizationResult& result, const soplex::SVectorReal& objective,
       bool forceOptimal)
   {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
+    result.reset(space().dimension());
+    _objective.reDim(space().dimension(), false);
     _objective = objective;
     return run(result, _objective, NULL, forceOptimal);
-  }
-
-  void OptimizationOracleBase::improve(OptimizationResult& result, const soplex::VectorRational& objective,
-      const soplex::Rational& value, bool forceOptimal)
-  {
-    result.reset(numVariables());
-    return run(result, objective, &value, forceOptimal);
-  }
-
-  void OptimizationOracleBase::improve(OptimizationResult& result, const soplex::VectorReal& objective,
-      const soplex::Rational& value, bool forceOptimal)
-  {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
-    _objective = objective;
-    return run(result, _objective, &value, forceOptimal);
-  }
-
-  void OptimizationOracleBase::improve(OptimizationResult& result, const soplex::SVectorRational& objective,
-      const soplex::Rational& value, bool forceOptimal)
-  {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
-    _objective.clear();
-    _objective.assign(objective);
-    return run(result, _objective, &value, forceOptimal);
-  }
-
-  void OptimizationOracleBase::improve(OptimizationResult& result, const soplex::SVectorReal& objective,
-      const soplex::Rational& value, bool forceOptimal)
-  {
-    result.reset(numVariables());
-    _objective.reDim(numVariables(), false);
-    _objective.clear();
-    _objective = objective;
-    return run(result, _objective, &value, forceOptimal);
   }
 
   void OptimizationOracleBase::run(OptimizationResult& result, const soplex::VectorRational& objective,
@@ -450,25 +316,12 @@ namespace ipo {
   }
 
   ChainedOptimizationOracle::ChainedOptimizationOracle(FaceOptimizationOracleBase* first,
-      FaceOptimizationOracleBase* second) :
-      FaceOptimizationOracleBase(first->name() + "+" + second->name()), _first(first), _second(second)
+      FaceOptimizationOracleBase* second) : 
+      FaceOptimizationOracleBase(first->name() + "+" + second->name(), first->space()),       
+      _first(first), _second(second)
   {
-    if (first->numVariables() != second->numVariables())
-      throw std::runtime_error("ChainedOptimizationOracle: Ambient dimensions do not match.");
-
-    std::size_t n = first->numVariables();
-
-    for (std::size_t v = 0; v < n; ++v)
-    {
-      if (first->variableName(v) != second->variableName(v))
-      {
-        throw std::runtime_error(
-            "ChainedOptimizationOracle: Variables \"" + first->variableName(v) + "\" and \"" + second->variableName(v)
-                + "\" do not match.");
-      }
-    }
-
-    initialize(first);
+    if (first->space() != second->space())
+      throw std::runtime_error("ChainedOptimizationOracle: Spaces do not match.");
   }
 
   ChainedOptimizationOracle::~ChainedOptimizationOracle()
@@ -512,8 +365,8 @@ namespace ipo {
     _second->setFace(NULL);
   }
 
-  FaceOptimizationOracleBase::FaceOptimizationOracleBase(const std::string& name) :
-      OptimizationOracleBase(name), _face(NULL)
+  FaceOptimizationOracleBase::FaceOptimizationOracleBase(const std::string& name,
+    const Space& space) : OptimizationOracleBase(name, space), _face(NULL)
   {
 
   }
@@ -538,61 +391,61 @@ namespace ipo {
     return result;
   }
 
-  ProjectedOptimizationOracle::ProjectedOptimizationOracle(const std::string& name, const Projection& projection,
-      OptimizationOracleBase* oracle) :
-      OptimizationOracleBase(name), _projection(projection), _oracle(oracle)
-  {
-    initialize(projection.names());
-    _liftedObjective.reDim(oracle->numVariables());
-  }
-
-  ProjectedOptimizationOracle::~ProjectedOptimizationOracle()
-  {
-
-  }
-
-  void ProjectedOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,
-      const Rational* improveValue, bool forceOptimal)
-  {
-    _liftedObjective.clear();
-    for (std::size_t v = 0; v < numVariables(); ++v)
-    {
-      if (objective[v] == 0)
-        continue;
-      const SVectorRational& vector = _projection.map(v);
-      for (int p = vector.size() - 1; p >= 0; --p)
-        _liftedObjective[vector.index(p)] += vector.value(p) * objective[v];
-    }
-
-//    std::cout << "Extension oracle has " << _oracle->numVariables() << " variables." << std::endl;
-//    std::cout << "Original objective is " << objective << std::endl;
-//    std::cout << "Lifted objective is " << _liftedObjective << std::endl;
-
-    _oracle->maximize(_result, _liftedObjective, forceOptimal);
-
-    if (_result.isFeasible())
-    {
-      result.reset(numVariables());
-      DVectorRational dense;
-      dense.reDim(_oracle->numVariables());
-      for (std::size_t i = 0; i < _result.points.size(); ++i)
-      {
-        dense.clear();
-//        _oracle->printVector(std::cout, _result.points[i]);
-        dense.assign(*_result.points[i]);
-//        std::cout << " -> ";
-        _projection.projectPoint(dense, result.newPoint());
-//        printVector(std::cout, result.points.back());
-//        std::cout << std::endl;
-        delete _result.points[i];
-      }
-      result.filterDuplicates();
-      result.setFeasible(objective);
-    }
-    else
-    {
-      throw std::runtime_error("NOT IMPLEMENTED.");
-    }
-  }
+//   ProjectedOptimizationOracle::ProjectedOptimizationOracle(const std::string& name, const Projection& projection,
+//       OptimizationOracleBase* oracle) :
+//       OptimizationOracleBase(name), _projection(projection), _oracle(oracle)
+//   {
+//     initialize(projection.names());
+//     _liftedObjective.reDim(oracle->numVariables());
+//   }
+// 
+//   ProjectedOptimizationOracle::~ProjectedOptimizationOracle()
+//   {
+// 
+//   }
+// 
+//   void ProjectedOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,
+//       const Rational* improveValue, bool forceOptimal)
+//   {
+//     _liftedObjective.clear();
+//     for (std::size_t v = 0; v < numVariables(); ++v)
+//     {
+//       if (objective[v] == 0)
+//         continue;
+//       const SVectorRational& vector = _projection.map(v);
+//       for (int p = vector.size() - 1; p >= 0; --p)
+//         _liftedObjective[vector.index(p)] += vector.value(p) * objective[v];
+//     }
+// 
+// //    std::cout << "Extension oracle has " << _oracle->numVariables() << " variables." << std::endl;
+// //    std::cout << "Original objective is " << objective << std::endl;
+// //    std::cout << "Lifted objective is " << _liftedObjective << std::endl;
+// 
+//     _oracle->maximize(_result, _liftedObjective, forceOptimal);
+// 
+//     if (_result.isFeasible())
+//     {
+//       result.reset(numVariables());
+//       DVectorRational dense;
+//       dense.reDim(_oracle->numVariables());
+//       for (std::size_t i = 0; i < _result.points.size(); ++i)
+//       {
+//         dense.clear();
+// //        _oracle->printVector(std::cout, _result.points[i]);
+//         dense.assign(*_result.points[i]);
+// //        std::cout << " -> ";
+//         _projection.projectPoint(dense, result.newPoint());
+// //        printVector(std::cout, result.points.back());
+// //        std::cout << std::endl;
+//         delete _result.points[i];
+//       }
+//       result.filterDuplicates();
+//       result.setFeasible(objective);
+//     }
+//     else
+//     {
+//       throw std::runtime_error("NOT IMPLEMENTED.");
+//     }
+//   }
 
 } /* namespace ipo */

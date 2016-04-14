@@ -93,7 +93,8 @@ namespace ipo {
      *   If set to \c false, then the oracle will pretend that returned solutions are optimal.
      */
 
-    SCIPOptimizationOracle(const std::string& name, SCIP* originalSCIP, bool isHeuristic = true);
+    SCIPOptimizationOracle(const std::string& name, Space& space, SCIP* originalSCIP, 
+      bool isHeuristic = true);
 
     /**
      * \brief Constructor based on an explicit MIP.

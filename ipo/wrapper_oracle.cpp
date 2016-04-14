@@ -10,9 +10,9 @@ using namespace soplex;
 
 namespace ipo {
 
-  WrapperOptimizationOracle::WrapperOptimizationOracle(const std::string& name, const std::string& wrapper,
-      const std::string& instance) :
-      OptimizationOracleBase(name), _wrapper(wrapper), _instance(instance)
+  WrapperOptimizationOracle::WrapperOptimizationOracle(const std::string& name, Space& space, 
+    const std::string& wrapper, const std::string& instance) :
+    OptimizationOracleBase(name, space), _wrapper(wrapper), _instance(instance)
   {
     /// Create temporary directory.
 
@@ -21,8 +21,10 @@ namespace ipo {
     if (dirName == NULL)
       throw std::runtime_error("Cannot create temporary directory!");
     _path = std::string(dirName);
-    /// Initialize
+    
+    /// Initialize space.
 
+    bool buildSpace = space.dimension() == 0;
     std::stringstream initStream;
     call("--init", initStream);
     std::vector<std::string> varNames;
@@ -32,13 +34,23 @@ namespace ipo {
     if (info == "variables")
     {
       initStream >> n;
-      varNames.resize(n);
+      if (!buildSpace && space.dimension() != n)
+        throw std::runtime_error("Spaces differ while constructing WrapperOptimizationOracle.");
       for (std::size_t v = 0; v < n; ++v)
       {
-        initStream >> varNames[v];
+        std::string varName;
+        initStream >> varName;
+        if (buildSpace)
+          space.addVariable(varName);
+        else
+        {
+          if (space[v] != varName)
+          {
+            throw std::runtime_error("Spaces differ while constructing WrapperOptimizationOracle.");
+          }
+        }
       }
     }
-    initialize(varNames);
   }
 
   WrapperOptimizationOracle::~WrapperOptimizationOracle()
@@ -52,7 +64,7 @@ namespace ipo {
   void WrapperOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,
       const Rational* improveValue, bool forceOptimal)
   {
-    result.reset(numVariables());
+    result.reset(space().dimension());
     result.optimal = true;
 
     DVectorRational scaledObjective;
@@ -60,7 +72,7 @@ namespace ipo {
 
     std::stringstream param, output;
     param << (forceOptimal ? "--optimize \"" : "--heuristic \"");
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       if (v > 0)
         param << ' ';
@@ -99,7 +111,7 @@ namespace ipo {
   DSVectorRational* WrapperOptimizationOracle::parseSolution(std::stringstream& stream)
   {
     DSVectorRational* solution = new DSVectorRational;
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       Rational x;
       std::string value;

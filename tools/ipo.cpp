@@ -47,6 +47,7 @@ public:
     _useInstanceInequalities = true;
 
 #ifdef WITH_SCIP
+    _scipSpace = NULL;
     _scipMip = NULL;
     _scipOracle = NULL;
     _scipCorrectorOracle = NULL;
@@ -65,6 +66,8 @@ public:
       delete _scipMip;
     if (_scipOracle)
       delete _scipOracle;
+    if (_scipSpace)
+      delete _scipSpace;
 #endif
   }
 
@@ -277,7 +280,8 @@ public:
         SCIP_CALL_EXC(SCIPreadProb(scip, firstArgument.c_str(), NULL));
         SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-        _scipMip = new MixedIntegerProgram(scip);
+        _scipSpace = new Space;
+        _scipMip = new MixedIntegerProgram(*_scipSpace, scip);
         SCIP_CALL_EXC(SCIPfree(&scip));
       }
       catch (SCIPException& exc)
@@ -290,7 +294,7 @@ public:
       /// Extract instance objective.
 
       assert(_instanceObjective.size() == 0);
-      for (std::size_t i = 0; i < _scipMip->numVariables(); ++i)
+      for (std::size_t i = 0; i < _scipSpace->dimension(); ++i)
       {
         const soplex::Rational& x = _scipMip->columns().maxObj(i);
         if (x != 0)
@@ -332,7 +336,7 @@ public:
     if (!ConsoleApplicationBase::processArguments())
       return false;
     
-    std::size_t n = oracle()->numVariables();
+    std::size_t n = space().dimension();
 
     /// TODO: Instance objective may be invalid if projection is enabled!
     if (_useInstanceObjective)
@@ -364,7 +368,7 @@ protected:
   virtual bool printInstanceObjective()
   {
     std::cout << "Instance objective:\n ";
-    oracle()->printLinearForm(std::cout, &_instanceObjective);
+    space().printLinearForm(std::cout, &_instanceObjective);
     std::cout << "\n" << std::flush;
     return true;
   }
@@ -379,6 +383,7 @@ protected:
   bool _useInstanceInequalities;
 
 #ifdef WITH_SCIP
+  Space* _scipSpace;
   MixedIntegerProgram* _scipMip;
   SCIPOptimizationOracle* _scipOracle;
   MixedIntegerProgramCorrectorOracle* _scipCorrectorOracle;

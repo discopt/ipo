@@ -49,24 +49,29 @@ namespace ipo {
     }
   }
 
-  SCIPOptimizationOracle::SCIPOptimizationOracle(const std::string& name, SCIP* originalSCIP, bool isHeuristic) :
-      FaceOptimizationOracleBase(name), _isHeuristic(isHeuristic), _maxLargestCoefficient(1024), _minLargestCoefficient(
-          1), _bestLargestCoefficient(1024), _faceConstraint(
-      NULL)
+  SCIPOptimizationOracle::SCIPOptimizationOracle(const std::string& name, Space& space,
+    SCIP* originalSCIP, bool isHeuristic) : FaceOptimizationOracleBase(name, space), 
+    _isHeuristic(isHeuristic), _maxLargestCoefficient(1024), _minLargestCoefficient(1), 
+    _bestLargestCoefficient(1024), _faceConstraint(NULL)
   {
     if (!SCIPisTransformed(originalSCIP))
       throw std::runtime_error("Initialization of SCIPOptimizationOracle requires transformed problem!");
 
     std::size_t n = SCIPgetNOrigVars(originalSCIP);
     SCIP_VAR** origVars = SCIPgetOrigVars(originalSCIP);
-
-    /// Extract the names.
-
-    std::vector<std::string> names;
-    names.reserve(n);
+    
+    bool buildSpace = space.dimension() == 0;
+    if (!buildSpace && space.dimension() != n)
+      throw std::runtime_error("Spaces differ while constructing SCIPOptimizationOracle.");
+    
     for (std::size_t v = 0; v < n; ++v)
-      names.push_back(SCIPvarGetName(origVars[v]));
-    initialize(names);
+    {
+      const std::string varName = SCIPvarGetName(origVars[v]);
+      if (buildSpace)
+        space.addVariable(varName);
+      else if (varName != space[v])
+        throw std::runtime_error("Spaces differ while constructing SCIPOptimizationOracle.");
+    }
 
     /// Create SCIP instance via copy.
 
@@ -90,18 +95,13 @@ namespace ipo {
     SCIPhashmapFree(&hashMap);
   }
 
-  SCIPOptimizationOracle::SCIPOptimizationOracle(const std::string& name, const MixedIntegerProgram& mip,
-      bool isHeuristic) :
-      FaceOptimizationOracleBase(name), _isHeuristic(isHeuristic), _maxLargestCoefficient(1024), _minLargestCoefficient(
-          1), _bestLargestCoefficient(1024), _faceConstraint(NULL)
+  SCIPOptimizationOracle::SCIPOptimizationOracle(const std::string& name,
+    const MixedIntegerProgram& mip, bool isHeuristic) :
+    FaceOptimizationOracleBase(name, mip.space()), _isHeuristic(isHeuristic), 
+    _maxLargestCoefficient(1024), _minLargestCoefficient(1), _bestLargestCoefficient(1024), 
+    _faceConstraint(NULL)
   {
-    /// Extract the names.
-
-    std::vector<std::string> names;
-    names.reserve(mip.numVariables());
-    for (std::size_t v = 0; v < mip.numVariables(); ++v)
-      names.push_back(mip.variableName(v));
-    initialize(names);
+    std::size_t n = space().dimension();
 
     /// Initialize SCIP.
 
@@ -118,10 +118,9 @@ namespace ipo {
     _variables.resize(cols.num());
     for (std::size_t c = 0; c < cols.num(); ++c)
     {
-      SCIP_CALL_EXC(
-          SCIPcreateVarBasic(_scip, &_variables[c], mip.variableName(c).c_str(), double(cols.lower(c)),
-              double(cols.upper(c)), double(cols.maxObj(c)),
-              mip.isIntegral(c) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
+      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[c], space()[c].c_str(), 
+        double(cols.lower(c)), double(cols.upper(c)), double(cols.maxObj(c)),
+        mip.isIntegral(c) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
       SCIP_CALL_EXC(SCIPaddVar(_scip, _variables[c]));
     }
 
@@ -131,9 +130,8 @@ namespace ipo {
     for (std::size_t r = 0; r < rows.num(); ++r)
     {
       SCIP_CONS* cons = NULL;
-      SCIP_CALL_EXC(
-          SCIPcreateConsBasicLinear(_scip, &cons, mip.constraintName(r).c_str(), 0, 0, 0, double(rows.lhs(r)),
-              double(rows.rhs(r))));
+      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mip.rowName(r).c_str(), 0, 0, 0, 
+        double(rows.lhs(r)), double(rows.rhs(r))));
       const SVectorRational& row = rows.rowVector(r);
       for (int p = row.size() - 1; p >= 0; --p)
       {
@@ -150,9 +148,9 @@ namespace ipo {
 
   Rational SCIPOptimizationOracle::computeVectorScaling(const VectorRational& vector)
   {
-    assert(vector.dim() == numVariables());
+    assert(vector.dim() == space().dimension());
     Rational largest = 0;
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       if (vector[v] > 0 && vector[v] > largest)
         largest = vector[v];
@@ -201,9 +199,9 @@ namespace ipo {
   void SCIPOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,
       const Rational* improveValue, bool forceOptimal)
   {
-    if (objective.dim() != numVariables())
+    std::size_t n = space().dimension();
+    if (objective.dim() != n)
       throw std::runtime_error("Oracle called with objective vector of wrong dimension!");
-    std::size_t n = numVariables();
 
     /// Scale objective vector.
 
@@ -333,19 +331,14 @@ namespace ipo {
 
   ExactSCIPOptimizationOracle::ExactSCIPOptimizationOracle(const std::string& name, const std::string& exactBinary,
       MixedIntegerProgram& mip, FaceOptimizationOracleBase* heuristic, double timeLimit) :
-      FaceOptimizationOracleBase(name), scaleObjective(true), _binary(exactBinary), _mip(mip), _heuristic(heuristic), _timeLimit(
+      FaceOptimizationOracleBase(name, mip.space()), scaleObjective(true), _binary(exactBinary), 
+_mip(mip), _heuristic(heuristic), _timeLimit(
           timeLimit)
   {
-    std::vector<std::string> varNames;
-    varNames.resize(mip.numVariables());
-    for (std::size_t v = 0; v < mip.numVariables(); ++v)
-      varNames[v] = mip.variableName(v);
-    initialize(varNames);
-
     if (_heuristic != NULL)
     {
-      if (_heuristic->numVariables() != numVariables())
-        throw std::runtime_error("Ambient dimensions for MIP and oracle do not match!");
+      if (_heuristic->space() != space())
+        throw std::runtime_error("Spaces of MixedIntegerProgram and heuristic differ.");
     }
 
     createTempDirectory();
@@ -364,9 +357,10 @@ namespace ipo {
     Rational primalObjective = improveValue != NULL ? *improveValue : Rational(-infinity);
     if (_heuristic && !forceOptimal)
     {
-      if (improveValue != NULL)
-        _heuristic->improve(result, objective, *improveValue, forceOptimal);
-      else
+//       TODO:
+//       if (improveValue != NULL)
+//         _heuristic->improve(result, objective, *improveValue, forceOptimal);
+//       else
         _heuristic->maximize(result, objective, forceOptimal);
 
       if (result.isUnbounded() || result.isInfeasible())
@@ -470,7 +464,7 @@ namespace ipo {
 
     const LPColSetRational& columns = _mip.columns();
     const LPRowSetRational& rows = _mip.rows();
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       file << "var x" << v;
       if (_mip.isIntegral(v))
@@ -485,7 +479,7 @@ namespace ipo {
     }
     file << "\nmaximize cost:";
     bool first = true;
-    for (std::size_t v = 0; v < numVariables(); ++v)
+    for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       if (objective[v] == 0)
         continue;

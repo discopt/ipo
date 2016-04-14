@@ -15,18 +15,23 @@ namespace ipo {
     class NormalConeOptimizationOracle: public OptimizationOracleBase, public PolarLP
     {
     public:
-      NormalConeOptimizationOracle(UniqueRationalVectorsBase& originalPoints, UniqueRationalVectorsBase& originalRays,
-          OptimizationOracleBase* originalOracle, const SVectorRational* target, OutputBase* output) :
-          OptimizationOracleBase("normal.cone(" + originalOracle->name() + ")"), PolarLP(originalPoints, originalRays,
-              originalOracle, 1024.0, 1000), _output(output)
+      NormalConeOptimizationOracle(Space& space, UniqueRationalVectorsBase& originalPoints, 
+        UniqueRationalVectorsBase& originalRays, OptimizationOracleBase* originalOracle, 
+        const SVectorRational* target, OutputBase* output) :
+        OptimizationOracleBase("normal cone of " + originalOracle->name(), space),
+        PolarLP(originalPoints, originalRays, originalOracle, 1024.0, 1000), _output(output)
       {
-        /// Initialize oracle.
-
-        std::vector<std::string> varNames(n() + 1);
-        for (std::size_t v = 0; v < n(); ++v)
-          varNames[v] = "a#" + originalOracle->variableName(v);
-        varNames[n()] = "beta";
-        initialize(varNames);
+        if (space.dimension() == 0)
+        {
+          for (std::size_t v = 0; v < n(); ++v)
+            space.addVariable("a#" + originalOracle->space()[v]);
+          space.addVariable("beta"); 
+        }
+        else if (space.dimension() != originalOracle->space().dimension())
+        {
+          throw std::runtime_error(
+            "Spaces differ while constructing NormalConeOptimizationOracle.");
+        }
 
         /// Initialize Polar LP.
 
@@ -142,7 +147,7 @@ namespace ipo {
           _originalPoints(points), _originalRays(rays), _originalOracle(oracle), _output(NULL), _normalConeOptimizationOracle(
           NULL), _dimension(-2)
       {
-        _maximizingObjective.reDim(_originalOracle->numVariables() + 1);
+        _maximizingObjective.reDim(_originalOracle->space().dimension() + 1);
       }
 
       virtual ~Implementation()
@@ -169,14 +174,16 @@ namespace ipo {
           const std::vector<DSVectorRational*>& freeNormalConeElements,
           const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
       {
-        std::size_t n = _originalOracle->numVariables();
+        std::size_t n = _originalOracle->space().dimension();
         _output = &output;
         _output->_implementation = this;
         _dimension = -2;
 
         _output->onStart();
 
-        NormalConeOptimizationOracle normalConeOracle(_originalPoints, _originalRays, _originalOracle, target, _output);
+        Space normaleConeSpace;
+        NormalConeOptimizationOracle normalConeOracle(normaleConeSpace, _originalPoints, 
+          _originalRays, _originalOracle, target, _output);
         _normalConeOptimizationOracle = &normalConeOracle;
         UniqueRationalVectors conePoints(n + 1);
         UniqueRationalVectors coneRays(n + 1);
@@ -264,7 +271,7 @@ namespace ipo {
           const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
       {
         DVectorRational dense;
-        dense.reDim(_originalOracle->numVariables(), true);
+        dense.reDim(_originalOracle->space().dimension(), true);
         Point sparse;
 
         /// Compute difference and create equation valid for normal cone.
@@ -281,7 +288,7 @@ namespace ipo {
         dense.assign(*first);
         dense += *second;
         sparse.clear();
-        for (std::size_t v = 0; v < _originalOracle->numVariables(); ++v)
+        for (std::size_t v = 0; v < _originalOracle->space().dimension(); ++v)
         {
           if (dense[v] != 0)
             sparse.add(v, dense[v] / 2);
@@ -443,7 +450,7 @@ namespace ipo {
     std::size_t InformationBase::numVariables() const
     {
       ensureImplementation();
-      return _implementation->_originalOracle->numVariables();
+      return _implementation->_originalOracle->space().dimension();
     }
 
     std::size_t InformationBase::numRowsLP() const

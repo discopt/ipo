@@ -48,7 +48,8 @@ namespace ipo {
      *   Specification of the instance.
      */
 
-    WrapperOptimizationOracle(const std::string& name, const std::string& wrapper, const std::string& instance);
+    WrapperOptimizationOracle(const std::string& name, Space& space,
+      const std::string& wrapper, const std::string& instance);
 
     /**
      * \brief Destructor.

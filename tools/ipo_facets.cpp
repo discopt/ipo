@@ -51,7 +51,8 @@ int main(int argc, char** argv)
     SCIP_CALL_EXC(SCIPreadProb(scip, argv[fileArg], NULL));
     SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-    MixedIntegerProgram mip(scip);
+    Space  mipSpace;
+    MixedIntegerProgram mip(mipSpace, scip);
     SCIP_CALL_EXC(SCIPfree(&scip));
 
     std::string name = argv[fileArg];

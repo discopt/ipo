@@ -7,6 +7,7 @@
 #include "ipo.h"
 #include "spx_gmp.h"
 #include "rows.h"
+#include "space.h"
 
 namespace ipo {
 
@@ -14,11 +15,8 @@ namespace ipo {
    * \brief Defines a face of a polyhedron by a set of inequalities.
    * 
    * Defines a face \f$F\f$ of a polyhedron \f$P\f$ by a set of inequalities.
-   * It is used to create an optimization oracle for \f$F\f$.
-   * If the optimization oracle class for \f$P\f$ inherits from
-   * \ref FaceOptimizationOracleBase, the face can be controlled directly.
-   * In any case one can construct an instance of \ref \FaceOptimizationOracle
-   * that calls the optimization oracle for \f$P\f$ (maybe multiple times per call).
+   * It is used to control that a class inheriting from \ref OptimizationOracleBase
+   * optimizes over a face.
    **/
 
   class Face
@@ -146,7 +144,7 @@ namespace ipo {
     /**
      *
      * \brief If \c true, then optimality is guaranteed.
-     * If points are returned, then it is \c true iff an optimum is among the returned points.
+     * If points are returned, then it is \c true iff it is guaranteed that an optimum is among the returned points.
      * If neither points nor directions are returned,
      * then it is \c true iff the oracle guarantees emptyness of \f$P\f$.
      */
@@ -305,9 +303,13 @@ namespace ipo {
    * \brief Base class for an oracle.
    *
    * Base class that every optimization oracle must inherit from,
-   * implementing the \c maximize() and \c improve() methods or the \c run() method.
+   * typically implementing the \c run() method.
    * This class also manages the names of all variables,
    * and hence the ambient dimension.
+   * Every oracle must be able to optimize over any face (see \ref Face).
+   * The default implementation does this by modifying the objective vector.
+   * In principle, one can also implement the \c maximize() methods, taking
+   * calls to \c faceEnabled and \c faceDisabled into account.
    *
    * Every optimization oracle implementation for a polyhedron \f$P \subseteq \mathbb{R}^n\f$
    * must obey the following rules when called with an objective vector \f$c \in \mathbb{R}^n\f$:
@@ -332,38 +334,7 @@ namespace ipo {
     // Destructor.
 
     virtual ~OptimizationOracleBase();
-
-    /**
-     * \brief Returns the ambient dimension of \f$ P \f$.
-     *
-     * Returns the ambient dimension of \f$ P \f$.
-     */
-
-    inline std::size_t numVariables() const
-    {
-#ifdef IPO_DEBUG
-      if (!_initialized)
-        throw std::runtime_error("OptimizationOracleBase not initialized!");
-#endif
-      return _variableNames.size();
-    }
-
-    /**
-     * \brief Returns the name of the variable of index \c var.
-     *
-     * Returns the name of the variable of index \c var,
-     * where \c var must nonnegative and less than \ref numVariables().
-     */
-
-    inline const std::string& variableName(std::size_t var) const
-    {
-#ifdef IPO_DEBUG
-      if (!_initialized)
-        throw std::runtime_error("OptimizationOracleBase not initialized!");
-#endif
-      return _variableNames[var];
-    }
-
+    
     /**
      * \brief Returns the name of the oracle.
      *
@@ -374,55 +345,17 @@ namespace ipo {
     {
       return _name;
     }
-
+    
     /**
-     * \brief Prints the linear form \vector to \c stream using the variable names of the oracle.
-     *
-     * Prints the linear form \vector to \c stream using the variable names of the oracle.
-     * Does not emit a newline character.
+     * \brief Returns the ambient \c space.
+     * 
+     * Returns a reference to the ambient \c space.
      */
-
-    void printLinearForm(std::ostream& stream, const soplex::SVectorRational* vector) const;
-
-    /**
-     * \brief Prints the \c row (inequality / equation) to \c stream using the variable names of the oracle.
-     *
-     * Prints the \c row (inequality / equation) to \c stream using variable names of the oracle.
-     * Does not emit a newline character.
-     */
-
-    void printRow(std::ostream& stream, const soplex::LPRowRational& row) const;
-
-    /**
-     * \brief Prints the row (inequality / equation) \c index from the set of \c rows
-     * to \c stream using the variable names of the oracle.
-     *
-     * Prints the row (inequality / equation) \c index from the set of \c rows
-     * to \c stream using the variable names of the oracle.
-     * Does not emit a newline character.
-     */
-
-    void printRow(std::ostream& stream, const soplex::LPRowSetRational& rows, std::size_t index) const;
-
-    /**
-     * \brief Prints the \c rows (inequality / equation)
-     * to \c stream using the variable names of the oracle.
-     *
-     * Prints the \c rows (inequality / equation)
-     * to \c stream using the variable names of the oracle.
-     * Emit a newline character after each row.
-     */
-
-    void printRows(std::ostream& stream, const soplex::LPRowSetRational& rows) const;
-
-    /**
-     * \brief Prints \c vector to \c stream using the variable names of the oracle.
-     *
-     * Prints \c vector to \c stream using the variable names of the oracle.
-     * Does not emit a newline character.
-     */
-
-    void printVector(std::ostream& stream, const soplex::SVectorRational* vector) const;
+    
+    inline const Space& space() const
+    {
+      return _space;
+    }
 
     /**
      * \brief Runs the optimization oracle for the given dense rational \c objective, returning \c result.
@@ -472,71 +405,8 @@ namespace ipo {
      *         (see Detailed Description of \ref OptimizationOracleBase).
      */
 
-    virtual void maximize(OptimizationResult& result, const soplex::SVectorReal& objective, bool forceOptimal = true);
-
-    /**
-     * \brief Runs the optimization oracle for the given dense rational \c objective
-     * in order to obtain a better objective than \c value, returning \c result.
-     *
-     * Runs the optimization oracle for the given dense rational \c objective, returning \c result.
-     * Even if \c forceOptimal is \c true, it may abort with non-optimal points
-     * if it found one whose objective is greater than \c value.
-     * The default implementation calls the \ref run() method.
-     *
-     * \params forceOptimal Controls optimality requirements
-     *         (see Detailed Description of \ref OptimizationOracleBase).
-     */
-
-    virtual void improve(OptimizationResult& result, const soplex::VectorRational& objective,
-        const soplex::Rational& value, bool forceOptimal = true);
-
-    /**
-     * \brief Runs the optimization oracle for the given dense floating-point \c objective
-     * in order to obtain a better objective than \c value, returning \c result.
-     *
-     * Runs the optimization oracle for the given dense floating-point \c objective, returning \c result.
-     * Even if \c forceOptimal is \c true, it may abort with non-optimal points
-     * if it found one whose objective is greater than \c value.
-     * The default implementation converts it to a rational objective and calls the \ref run() method.
-     *
-     * \params forceOptimal Controls optimality requirements
-     *         (see Detailed Description of \ref OptimizationOracleBase).
-     */
-
-    virtual void improve(OptimizationResult& result, const soplex::VectorReal& objective, const soplex::Rational& value,
-        bool forceOptimal = true);
-
-    /**
-     * \brief Runs the optimization oracle for the given sparse rational \c objective
-     * in order to obtain a better objective than \c value, returning \c result.
-     *
-     * Runs the optimization oracle for the given sparse rational \c objective, returning \c result.
-     * Even if \c forceOptimal is \c true, it may abort with non-optimal points
-     * if it found one whose objective is greater than \c value.
-     * The default implementation converts it to a sparse objective and calls the \ref run() method.
-     *
-     * \params forceOptimal Controls optimality requirements
-     *         (see Detailed Description of \ref OptimizationOracleBase).
-     */
-
-    virtual void improve(OptimizationResult& result, const soplex::SVectorRational& objective,
-        const soplex::Rational& value, bool forceOptimal = true);
-
-    /**
-     * \brief Runs the optimization oracle for the given sparse floating-point \c objective
-     * in order to obtain a better objective than \c value, returning \c result.
-     *
-     * Runs the optimization oracle for the given sparse floating-point \c objective, returning \c result.
-     * Even if \c forceOptimal is \c true, it may abort with non-optimal points
-     * if it found one whose objective is greater than \c value.
-     * The default implementation converts it to a sparse rational objective and calls the \ref run() method.
-     *
-     * \params forceOptimal Controls optimality requirements
-     *         (see Detailed Description of \ref OptimizationOracleBase).
-     */
-
-    virtual void improve(OptimizationResult& result, const soplex::SVectorReal& objective,
-        const soplex::Rational& value, bool forceOptimal = true);
+    virtual void maximize(OptimizationResult& result, const soplex::SVectorReal& objective, bool 
+forceOptimal = true);
 
   protected:
     /**
@@ -544,71 +414,35 @@ namespace ipo {
      *
      * Main method for an actual implementation of an optimization oracle.
      * Runs the optimization oracle for the given dense rational \c objective, returning \c result.
-     * If \c improveValue is not \c NULL and \c forceOptimal is \c true,
-     * then it may abort with non-optimal points
-     * if it found one whose objective is greater than \c *improveValue.
+     * If \c forceOptimal is \c false then it may abort with non-optimal points.
      *
-     * \params improveValue
-     *   If not NULL, allows early termination if objective \c *improveValue is exceeded.
      * \params forceOptimal
      *   Controls optimality requirements (see Detailed Description of \ref OptimizationOracleBase).
      */
 
     virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
-        const soplex::Rational* improveValue, bool forceOptimal);
+      const soplex::Rational* improveValue, bool forceOptimal);
 
     /**
-     * \brief Constructs an optimization oracle with given \c name.
+     * \brief Constructs an optimization oracle with given \c name in given \c space.
      *
-     * Constructs an optimization oracle with given \c name.
-     * An actual implementation must call one of the \ref initialize() methods
-     * from its own constructor.
+     * Constructs an optimization oracle with given \c name in given \c space.
      */
 
-    OptimizationOracleBase(const std::string& name);
-
-    /**
-     * \brief Initializes the oracle with the given set of variables.
-     *
-     * Initializes the oracle with the given set of variables.
-     * This method should be called from the constructor of a subclass.
-     *
-     * \param variableNames Vector of variable names.
-     */
-
-    void initialize(const std::vector<std::string>& variableNames);
-
-    /**
-     * \brief Initializes the oracle using the variables of another oracle.
-     *
-     * Initializes the oracle using the variables of another \c oracle.
-     * This method should be called from the constructor of a subclass.
-     */
-
-    void initialize(const OptimizationOracleBase* oracle);
+    OptimizationOracleBase(const std::string& name, const Space& space);
 
   private:
-    /*
-     * This should not be used.
+    /**
+     * \brief Default constructor is disabled.
+     * 
+     * Default constructor is disabled.
      */
 
     OptimizationOracleBase();
 
-    /*
-     * \brief Implementation of row printing.
-     *
-     * Implementation of row printing.
-     */
-
-    void printRow(std::ostream& stream, const soplex::Rational* lhs, const soplex::Rational* rhs,
-        const soplex::SVectorRational& vector) const;
-
     std::string _name; // Name of the oracle.
-    std::vector<std::string> _variableNames; // Variables names.
+    const Space& _space;
     soplex::DVectorRational _objective; // Variable holding the dense rational version of the current objective.
-#ifdef IPO_DEBUG
-    bool _initialized;
-#endif
   };
 
   /**
@@ -638,14 +472,12 @@ namespace ipo {
 
   protected:
     /**
-     * \brief Constructs a face optimization oracle with given \c name.
+     * \brief Constructs a face optimization oracle with given \c name in given \c space.
      *
-     * Constructs a face optimization oracle with given \c name.
-     * An actual implementation must call one of the \ref initialize() methods
-     * from its own constructor.
+     * Constructs a face optimization oracle with given \c name in given \c space..
      */
 
-    FaceOptimizationOracleBase(const std::string& name);
+    FaceOptimizationOracleBase(const std::string& name, const Space& space);
 
     /**
      * \brief Method that is called when a new face is activated.
@@ -688,7 +520,8 @@ namespace ipo {
      * \param second Oracle to be called if the answer of the first is not satisfactory.
      */
 
-    ChainedOptimizationOracle(FaceOptimizationOracleBase* first, FaceOptimizationOracleBase* second);
+    ChainedOptimizationOracle(FaceOptimizationOracleBase* first,
+      FaceOptimizationOracleBase* second);
 
     /**
      * Destructor.
@@ -751,18 +584,17 @@ namespace ipo {
     Projection();
 
     /**
-     * \brief Construct an orthogonal projection for a given oracle.
+     * \brief Construct an orthogonal projection for a given space.
      *
-     * Construct an orthogonal projection of the ambient space of a given \c oracle
-     * onto a subset of the variables.
+     * Construct an orthogonal projection of the \c space onto a subset of the variables.
      *
-     * \param oracle
-     *   Given oracle, used to define the source space and the variable names.
+     * \param space
+     *   Given space used to define the source space and the variable names.
      * \param variableSubset
      *   Indices of the subset of variables to project onto.
      */
 
-    Projection(const OptimizationOracleBase* oracle, const std::vector<std::size_t>& variableSubset);
+    Projection(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset);
 
     /**
      * \brief Destructor.
@@ -792,16 +624,16 @@ namespace ipo {
      *
      * Copy a source variable to the image space.
      *
-     * \param oracle
-     *   Oracle to copy the name from.
+     * \param space
+     *   Space to copy the variable name from.
      * \param originalVariable.
      *   Index of the original variable.
      * \param shift
      *   Rational entry for shift vector \f$ b \f$.
      */
 
-    void addVariable(const OptimizationOracleBase* oracle, std::size_t originalVariable, const soplex::Rational& shift =
-        soplex::Rational(0));
+    void addVariable(const Space& space, std::size_t originalVariable,
+      const soplex::Rational& shift = soplex::Rational(0));
 
     /**
      * \brief Project a point.
@@ -862,60 +694,60 @@ namespace ipo {
     std::vector<soplex::Rational> _shift; // Entries of the projection vector.
   };
 
-  /**
-   * \brief An oracle for the projection of a polyhedron defined by another oracle.
-   *
-   * Defines an optimization oracle for the projection \f$ \pi(P) \f$
-   * of a polyhedron \f$ P \f$ defined by another oracle
-   * for given projection map \f$ \pi \f$
-   *
-   * \sa Projection
-   */
-
-  class ProjectedOptimizationOracle: public OptimizationOracleBase
-  {
-  public:
-    /**
-     * \brief Constructor for given projection and source oracle.
-     *
-     * Constructor for given \c projection and source \c oracle.
-     *
-     * \param name
-     *   Name of the new oracle.
-     * \param projection
-     *   Projection map.
-     * \param oracle
-     *   Source oracle.
-     */
-
-    ProjectedOptimizationOracle(const std::string& name, const Projection& projection, OptimizationOracleBase* oracle);
-
-    /**
-     * \brief Destructor.
-     */
-
-    virtual ~ProjectedOptimizationOracle();
-
-  protected:
-
-    /**
-     * \brief Implementation of the oracle.
-     *
-     * Implementation of the oracle.
-     * For a projection \f$ \pi(x) = Ax + b \f$ it
-     * calls the oracle with objective \f$ A^{\intercal} c \f$
-     * where \f$ c \f$ is the given objective vector.
-     */
-
-    virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
-        const soplex::Rational* improveValue, bool forceOptimal);
-
-  protected:
-    const Projection& _projection; // Projection.
-    OptimizationOracleBase* _oracle; // Source oracle.
-    soplex::DVectorRational _liftedObjective; // Dense rational lifted objective A^t c
-    OptimizationResult _result; // Result structure for result of source oracle.
-  };
+//   /**
+//    * \brief An oracle for the projection of a polyhedron defined by another oracle.
+//    *
+//    * Defines an optimization oracle for the projection \f$ \pi(P) \f$
+//    * of a polyhedron \f$ P \f$ defined by another oracle
+//    * for given projection map \f$ \pi \f$
+//    *
+//    * \sa Projection
+//    */
+//
+//   class ProjectedOptimizationOracle: public OptimizationOracleBase
+//   {
+//   public:
+//     /**
+//      * \brief Constructor for given projection and source oracle.
+//      *
+//      * Constructor for given \c projection and source \c oracle.
+//      *
+//      * \param name
+//      *   Name of the new oracle.
+//      * \param projection
+//      *   Projection map.
+//      * \param oracle
+//      *   Source oracle.
+//      */
+// 
+//     ProjectedOptimizationOracle(const std::string& name, const Projection& projection, OptimizationOracleBase* oracle);
+// 
+//     /**
+//      * \brief Destructor.
+//      */
+// 
+//     virtual ~ProjectedOptimizationOracle();
+// 
+//   protected:
+// 
+//     /**
+//      * \brief Implementation of the oracle.
+//      *
+//      * Implementation of the oracle.
+//      * For a projection \f$ \pi(x) = Ax + b \f$ it
+//      * calls the oracle with objective \f$ A^{\intercal} c \f$
+//      * where \f$ c \f$ is the given objective vector.
+//      */
+// 
+//     virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
+//         const soplex::Rational* improveValue, bool forceOptimal);
+// 
+//   protected:
+//     const Projection& _projection; // Projection.
+//     OptimizationOracleBase* _oracle; // Source oracle.
+//     soplex::DVectorRational _liftedObjective; // Dense rational lifted objective A^t c
+//     OptimizationResult _result; // Result structure for result of source oracle.
+//   };
 
 } /* namespace ipo */
 

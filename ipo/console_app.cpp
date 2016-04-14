@@ -21,8 +21,8 @@ namespace ipo {
     ConsoleApplicationObjectiveParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<DSVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
-      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
-        _oracleVariables[oracle->variableName(i)] = i;
+      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
+        _oracleVariables[oracle->space()[i]] = i;
     }
 
     virtual ~ConsoleApplicationObjectiveParser()
@@ -63,8 +63,8 @@ namespace ipo {
     ConsoleApplicationInequalityParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Face*>& faces, std::vector<std::string>& faceNames)
       : LPInequalityParser(stream), _faces(faces), _faceNames(faceNames)
     {
-      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
-        _oracleVariables[oracle->variableName(i)] = i;
+      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
+        _oracleVariables[oracle->space()[i]] = i;
     }
 
     virtual ~ConsoleApplicationInequalityParser()
@@ -119,8 +119,8 @@ namespace ipo {
     ConsoleApplicationPointParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Point*>& points, std::vector<std::string>& pointNames)
       : PointParser(stream), _points(points), _pointNames(pointNames)
     {
-      for (std::size_t i = 0; i < oracle->numVariables(); ++i)
-        _oracleVariables[oracle->variableName(i)] = i;
+      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
+        _oracleVariables[oracle->space()[i]] = i;
     }
 
     virtual ~ConsoleApplicationPointParser()
@@ -214,6 +214,7 @@ namespace ipo {
     if (_faceRestrictionArgument != "" || _projectionArgument != "")
       throw std::runtime_error("Restricting to faces or projecting is not implemented, yet.");
     _oracle = oracle;
+    _space = oracle->space();
   }
 
   bool ConsoleApplicationBase::parseArguments()
@@ -295,7 +296,7 @@ namespace ipo {
         if (print)
         {
           std::cout << " ";
-          oracle()->printLinearForm(std::cout, objective(i));
+          space().printLinearForm(std::cout, objective(i));
         }
         std::cout << ":\n" << std::flush;
         
@@ -751,7 +752,7 @@ namespace ipo {
       return false;
     }
 
-    std::size_t n = oracle()->numVariables();
+    std::size_t n = space().dimension();
 
     _cachedDirections = new UniqueRationalVectors(n);
     _cachedPoints = new UniqueRationalVectors(n);
@@ -870,17 +871,17 @@ namespace ipo {
 
   bool ConsoleApplicationBase::printAmbientDimension()
   {
-    std::cout << "Ambient dimension:\n " << _oracle->numVariables() << "\n" << std::flush;
+    std::cout << "Ambient dimension:\n " << space().dimension() << "\n" << std::flush;
     return true;
   }
 
   bool ConsoleApplicationBase::printVariables()
   {
     std::cout << "Variables:\n";
-    for (std::size_t i = 0; i < _oracle->numVariables(); ++i)
+    for (std::size_t i = 0; i < space().dimension(); ++i)
     {
-      const std::string& name = _oracle->variableName(i);
-      std::cout << " " << name << (i + 1 < _oracle->numVariables() ? "," : "\n");
+      const std::string& name = space()[i];
+      std::cout << " " << name << (i + 1 < space().dimension() ? "," : "\n");
     }
     return true;
   }
@@ -901,7 +902,7 @@ namespace ipo {
     }
 
     FaceOptimizationOracleBase* orac = oracle();
-    std::size_t n = orac->numVariables();
+    std::size_t n = space().dimension();
 
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
@@ -962,7 +963,7 @@ namespace ipo {
       for (int i = 0; i < equations->num(); ++i)
       {
         std::cout << " Equation: ";
-        orac->printRow(std::cout, *equations, i);
+        space().printRow(std::cout, *equations, i);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -994,12 +995,12 @@ namespace ipo {
     else if (result.isUnbounded())
     {
       std::cout << "unbounded direction ";
-      oracle()->printVector(std::cout, result.directions.front());
+      space().printVector(std::cout, result.directions.front());
       std::cout << "\n" << std::flush;
     }
     else
     {
-      oracle()->printVector(std::cout, result.points.front());
+      space().printVector(std::cout, result.points.front());
       std::cout << "\n" << std::flush;
     }
     return true;
@@ -1007,7 +1008,7 @@ namespace ipo {
 
   bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective, bool print)
   {
-    std::size_t n = oracle()->numVariables();
+    std::size_t n = space().dimension();
 
     /// Setup the LP.
 
@@ -1096,7 +1097,7 @@ namespace ipo {
 
       manhattanNormImproveInequality(n, inequality, *_equations);
 
-      oracle()->printRow(std::cout, inequality);
+      space().printRow(std::cout, inequality);
 
       if (_optionCertificates)
       {
@@ -1105,13 +1106,13 @@ namespace ipo {
         for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
         {
           std::cout << "  Certifying point: ";
-          oracle()->printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+          space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
           std::cout << "\n";
         }
         for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
         {
           std::cout << "  Certifying ray: ";
-          oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+          space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
           std::cout << "\n";
         }
         std::cout << "\n" << std::flush;
@@ -1127,7 +1128,7 @@ namespace ipo {
 
   bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, bool& isFeasible)
   {
-    std::size_t n = oracle()->numVariables();
+    std::size_t n = space().dimension();
     
     Separation::QuietOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
@@ -1159,7 +1160,7 @@ namespace ipo {
     
     manhattanNormImproveInequality(n, inequality, *_equations);
 
-    oracle()->printRow(std::cout, inequality);
+    space().printRow(std::cout, inequality);
 
     if (_optionCertificates)
     {
@@ -1168,13 +1169,13 @@ namespace ipo {
       for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        oracle()->printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
         std::cout << "\n";
       }
       for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
       {
         std::cout << "  Certifying direction: ";
-        oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1189,7 +1190,7 @@ namespace ipo {
 
   bool ConsoleApplicationBase::separatePointFacet(const Point* point, bool& isFeasible)
   {
-    std::size_t n = oracle()->numVariables();
+    std::size_t n = space().dimension();
     
     Separation::QuietOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
@@ -1220,7 +1221,7 @@ namespace ipo {
 
     manhattanNormImproveInequality(n, inequality, *_equations);
 
-    oracle()->printRow(std::cout, inequality);
+    space().printRow(std::cout, inequality);
 
     if (_optionCertificates)
     {
@@ -1229,13 +1230,13 @@ namespace ipo {
       for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        oracle()->printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
         std::cout << "\n";
       }
       for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
       {
         std::cout << "  Certifying direction: ";
-        oracle()->printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1258,7 +1259,7 @@ namespace ipo {
     Point maximizingObjective;
     smallestFace.getMaximizingObjective(maximizingObjective);
     std::cout << " Objective : ";
-    oracle()->printVector(std::cout, &maximizingObjective);
+    space().printVector(std::cout, &maximizingObjective);
     std::cout << "\n" << std::flush;
     
     return true;
@@ -1270,14 +1271,14 @@ namespace ipo {
     for (std::size_t i = _cachedPoints->first(); i < _cachedPoints->size(); i = _cachedPoints->next(i))
     {
       std::cout << ' ';
-      oracle()->printVector(std::cout, _cachedPoints->get(i));
+      space().printVector(std::cout, _cachedPoints->get(i));
       std::cout << '\n';
     }
     std::cout << "Cached directions: " << _cachedDirections->size() << "\n";
     for (std::size_t i = _cachedDirections->first(); i < _cachedDirections->size(); i = _cachedDirections->next(i))
     {
       std::cout << ' ';
-      oracle()->printVector(std::cout, _cachedDirections->get(i));
+      space().printVector(std::cout, _cachedDirections->get(i));
       std::cout << '\n';
     }
     std::cout << std::flush;

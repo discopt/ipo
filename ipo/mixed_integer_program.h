@@ -35,7 +35,7 @@ namespace ipo {
      * Only explicitly stated linear constraints of the instance are considered.
      */
 
-    MixedIntegerProgram(SCIP* scip);
+    MixedIntegerProgram(Space& space, SCIP* scip);
 #endif
 
     /**
@@ -43,27 +43,38 @@ namespace ipo {
      */
 
     virtual ~MixedIntegerProgram();
-
+    
     /**
-     * \brief Returns the number of variables.
-     *
-     * Returns the number of variables.
+     * \brief Returns the space.
+     * 
+     * Returns a const reference to the space.
      */
-
-    inline std::size_t numVariables() const
+    
+    inline const Space& space() const
     {
-      return _variableNames.size();
+      return _space;
     }
 
     /**
-     * \brief Returns the number of constraints.
+     * \brief Returns the number of columns.
      *
-     * Returns the number of constraints.
+     * Returns the number of columns.
      */
 
-    inline std::size_t numConstraints() const
+    inline std::size_t numColumns() const
     {
-      return _constraintNames.size();
+      return _space.dimension();
+    }
+
+    /**
+     * \brief Returns the number of rows.
+     *
+     * Returns the number of rows.
+     */
+
+    inline std::size_t numRows() const
+    {
+      return _rowNames.size();
     }
 
     /**
@@ -100,25 +111,14 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the name of the given variable.
+     * \brief Returns the name of the given row.
      *
-     * Returns the name of the given \c variable.
+     * Returns the name of the given \c row.
      */
 
-    inline const std::string& variableName(std::size_t variable) const
+    inline const std::string& rowName(std::size_t row) const
     {
-      return _variableNames[variable];
-    }
-
-    /**
-     * \brief Returns the name of the given constraint.
-     *
-     * Returns the name of the given \c constraint.
-     */
-
-    inline const std::string& constraintName(std::size_t constraint) const
-    {
-      return _constraintNames[constraint];
+      return _rowNames[row];
     }
 
     /**
@@ -135,7 +135,7 @@ namespace ipo {
      * Returns true if the given \c point satisfies all row constraints.
      */
 
-    bool checkPointConstraints(const soplex::SVectorRational* point);
+    bool checkPointRows(const soplex::SVectorRational* point);
 
     /**
      * \brief Returns true if the given \c point satisfies all integrality constraints.
@@ -167,7 +167,7 @@ namespace ipo {
      * Returns true if the given \c ray satisfies all row constraints.
      */
 
-    bool checkRayConstraints(const soplex::SVectorRational* ray);
+    bool checkRayRows(const soplex::SVectorRational* ray);
 
     /**
      * \brief Returns true if the given \c ray is feasible.
@@ -226,10 +226,10 @@ namespace ipo {
     void getFixedVariableEquations(soplex::LPRowSetRational& rows, std::vector<std::string>* names = NULL);
 
   protected:
+    const Space& _space; // Space with column names.
     soplex::LPColSetRational _columns; // Columns
     soplex::LPRowSetRational _rows; // Rows
-    std::vector<std::string> _variableNames; // Variable names
-    std::vector<std::string> _constraintNames; // Row names
+    std::vector<std::string> _rowNames; // Row names
     std::vector<bool> _integrality; // Integrality constraints
     soplex::DVectorRational _worker; // Temporary dense rational vector.
     Face* _face; // Currently active face.
