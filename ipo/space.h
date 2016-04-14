@@ -18,32 +18,45 @@ namespace ipo {
    * Defines the ambient space for one or more oracle(s), including the names of variables.
    * Contains relevant methods for printing linear forms, vectors, inequalities and equations.
    */
-  
+
   class Space
   {
   public:
     /**
      * \brief Constructs a space without variables.
-     * 
+     *
      * Constructs the 0-dimensional space. Use \ref addVariable() method to increase its dimension.
      */
-    
+
     Space();
+
+    /**
+     * \brief Constructs a space with given \c variables.
+     *
+     * Constructs a space with given \c variables.
+     */
+
     Space(const std::vector<std::string>& variables);
+
+    /**
+     * \brief Destructor.
+     *
+     */
+
     ~Space();
-    
+
     /**
      * \brief Adds a variable with given \c name.
-     * 
+     *
      * Adds a variable with given \c name. Does only ensure uniqueness of this variable name
      * in debug mode.
      */
 
     void addVariable(const std::string& name);
-    
+
     /**
      * \brief Returns the dimension of the space.
-     * 
+     *
      * Returns the dimension of the space, i.e., the number of variables.
      */
 
@@ -54,7 +67,7 @@ namespace ipo {
 
     /**
      * \brief Returns the name of the variable indexed by \c var.
-     * 
+     *
      * Returns the name of the variable indexed by \c var.
      */
 
@@ -65,7 +78,7 @@ namespace ipo {
 
     /**
      * \brief Returns the name of the variable indexed by \c var.
-     * 
+     *
      * Returns the name of the variable indexed by \c var.
      */
 
@@ -73,7 +86,7 @@ namespace ipo {
     {
       return _variables[var];
     }
-    
+
     /**
      * \brief Prints the linear form with these \c coefficients to \c stream.
      *
@@ -119,23 +132,22 @@ namespace ipo {
      */
 
     void printVector(std::ostream& stream, const soplex::SVectorRational* vector) const;
-    
+
     /**
      * \brief Returns \c true iff spaces are equal.
-     * 
+     *
      * Returns \c true iff spaces have the same variables in the same order.
      */
-    
+
     bool operator==(const Space& other) const;
-    
+
     /**
      * \brief Returns \c true iff spaces are not equal.
-     * 
-     * Returns \c true iff spaces are not equal (\see operator==()).
+     *
+     * Returns \c true iff spaces are not equal (\sa operator==()).
      */
-    
-    inline
-    bool operator!=(const Space& other) const
+
+    inline bool operator!=(const Space& other) const
     {
       return !(*this == other);
     }
@@ -149,7 +161,7 @@ namespace ipo {
 
     void printRow(std::ostream& stream, const soplex::Rational* lhs, const soplex::Rational* rhs,
       const soplex::SVectorRational& vector) const;
-    
+
     std::vector<std::string> _variables; // Variable names.
   };
 

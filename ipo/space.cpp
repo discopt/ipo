@@ -3,22 +3,22 @@
 using namespace soplex;
 
 namespace ipo {
-  
+
   Space::Space()
   {
-    
+
   }
-  
+
   Space::Space(const std::vector<std::string>& variables) : _variables(variables)
   {
-    
+
   }
-  
+
   Space::~Space()
   {
-    
+
   }
-    
+
   void Space::addVariable(const std::string& name)
   {
 #ifdef IPO_DEBUG
@@ -30,7 +30,7 @@ namespace ipo {
 #endif
     _variables.push_back(name);
   }
-    
+
   void Space::printLinearForm(std::ostream& stream, const SVectorRational* coefficients)
     const
   {
@@ -79,7 +79,7 @@ namespace ipo {
       stream << "\n";
     }
   }
-  
+
   void Space::printRow(std::ostream& stream, const Rational* lhs, const Rational* rhs,
     const SVectorRational& vector) const
   {
@@ -92,7 +92,7 @@ namespace ipo {
     if (rhs != NULL)
       stream << (equation ? " == " : " <= ") << *rhs;
   }
-    
+
   void Space::printVector(std::ostream& stream, const SVectorRational* vector) const
   {
     bool delimit = false;
@@ -108,7 +108,7 @@ namespace ipo {
     else
       stream << "()";
   }
-  
+
   bool Space::operator==(const Space& other) const
   {
     if (this == &other)
@@ -122,5 +122,5 @@ namespace ipo {
     }
     return true;
   }
-  
+
 }
