@@ -19,7 +19,11 @@ namespace ipo {
   {
     OracleBase::initializedSpace();
   }
+  
+  CacheOracle::~CacheOracle()
+  {
 
+  }
 
   void CacheOracle::setFace(Face* newFace)
   {

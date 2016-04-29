@@ -7,6 +7,7 @@
 #include "ipo.h"
 #include "unique_rational_vectors.h"
 #include "oracles.h"
+#include "cache_oracle.h"
 #include "spx_gmp.h"
 
 namespace ipo {
@@ -59,9 +60,9 @@ namespace ipo {
     /**
      * \brief Sets the basic oracle.
      *
-     * Sets the basic oracle. If a restriction to a face or a projection
-     * are requested, it gets wrapped.
-     * The implementation assumes that the latter options were already parsed.
+     * Sets the basic oracle. If a restriction to a face, a projection or caching of results are
+     * requested, it gets wrapped. The implementation assumes that the latter options were already 
+     * parsed.
      */
 
     void setBasicOracle(OracleBase* oracle);
@@ -297,8 +298,10 @@ namespace ipo {
     bool _optionCertificates;
     bool _optionReuseFacets;
     bool _optionPrintRandom;
+    bool _optionCache;
 
     Space _space;
+    CacheOracle* _cacheOracle;
     OracleBase* _oracle;
 
     std::vector<Face*> _faces;

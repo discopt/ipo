@@ -184,8 +184,10 @@ namespace ipo {
     _optionCertificates = false;
     _optionReuseFacets = true;
     _optionPrintRandom = false;
-
+    _optionCache = true;
+    
     _oracle = NULL;
+    _cacheOracle = NULL;
     _cachedDirections = NULL;
     _cachedPoints = NULL;
     _equations = NULL;
@@ -200,8 +202,8 @@ namespace ipo {
     if (_equations)
       delete _equations;
 
-    if (_oracle)
-      delete _oracle;
+    if (_cacheOracle)
+      delete _cacheOracle;
     for (std::size_t i = 0; i < numObjectives(); ++i)
       delete _objectives[i];
     for (std::size_t i = 0; i < numFaces(); ++i)
@@ -218,8 +220,20 @@ namespace ipo {
       throw std::runtime_error("Error in ConsoleApplicationBase::setBasicOracle: Oracle already set.");
     if (_faceRestrictionArgument != "" || _projectionArgument != "")
       throw std::runtime_error("Restricting to faces or projecting is not implemented, yet.");
-    _oracle = oracle;
+
     _space = oracle->space();
+    if (_optionCache)
+    {
+      _cachedPoints = new UniqueRationalVectors(space().dimension());
+      _cachedDirections = new UniqueRationalVectors(space().dimension());
+      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle, *_cachedPoints, 
+        *_cachedDirections);
+      _oracle = _cacheOracle;
+    }
+    else
+    {
+      _oracle = oracle;
+    }
   }
 
   bool ConsoleApplicationBase::parseArguments()
@@ -676,6 +690,24 @@ namespace ipo {
       _numRandomObjectives += n;
       return 2;
     }
+    if (firstArgument == "--cache")
+    {
+      if (numArguments() > 1)
+      {
+        if (argument(1) == "on")
+        {
+          _optionCache = true;
+          return 2;
+        }
+        if (argument(1) == "off")
+        {
+          _optionCache = false;
+          return 2;
+        }
+      }
+      throw std::runtime_error(
+        "Invalid option: --cache must be followed by either \"on\" or \"off\".");
+    }
     if (firstArgument == "--readable")
     {
       if (numArguments() > 1)
@@ -691,7 +723,8 @@ namespace ipo {
           return 2;
         }
       }
-      throw std::runtime_error("Invalid option: --readable must be followed by either \"on\" or \"off\".");
+      throw std::runtime_error(
+        "Invalid option: --readable must be followed by either \"on\" or \"off\".");
     }
     if (firstArgument == "--certificates")
     {
