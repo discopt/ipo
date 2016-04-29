@@ -1,4 +1,4 @@
-/* 
+/*
  * This file is a part of IPO, a C++ library for investigating
  * polyhedra by oracles.
  *

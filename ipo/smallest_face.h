@@ -46,7 +46,7 @@ namespace ipo {
   namespace SmallestFace {
 
     class Implementation;
-    class NormalConeOptimizationOracle;
+    class NormalConeOracle;
 
     class InformationBase
     {
@@ -86,15 +86,18 @@ namespace ipo {
       virtual void onBeforeVerifyElements(std::size_t numVerifications);
       virtual void onAfterVerifyElements(std::size_t numVerifications);
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
-      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
-      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
+      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool
+verified);
+      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t
+numEquations);
       virtual void onConeBeforeSolve(bool stabilizing);
       virtual void onConeAfterSolve(bool stabilizing);
       virtual void onConePenaltyDecrease();
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);
-      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays);
+      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
+std::size_t numRays);
       virtual void onConeBeforeAddPoint();
       virtual void onConeAfterAddPoint();
       virtual void onConeBeforeAddRay();
@@ -103,7 +106,7 @@ namespace ipo {
 
       virtual AffineHull::OutputBase& normalConeHullOutput() = 0;
 
-      friend class NormalConeOptimizationOracle;
+      friend class NormalConeOracle;
       friend class Implementation;
     };
 
@@ -138,14 +141,17 @@ namespace ipo {
       virtual void onBeforeVerifyElements(std::size_t numVerifications);
       virtual void onAfterVerifyElements(std::size_t numVerifications);
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
-      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
-      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
+      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool
+verified);
+      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t
+numEquations);
       virtual void onConeBeforeSolve(bool stabilizing);
       virtual void onConeAfterSolve(bool stabilizing);
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);
-      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays);
+      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
+std::size_t numRays);
       virtual void onEnd();
 
     protected:
@@ -226,15 +232,18 @@ namespace ipo {
     protected:
       virtual void onBeforeVerifyElements(std::size_t numVerifications);
       virtual void onBeforeOracleVerifyElement(std::size_t verifyIndex);
-      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified);
-      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations);
+      virtual void onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool
+verified);
+      virtual void onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t
+numEquations);
       virtual void onConeBeforeSolve(bool stabilizing);
       virtual void onConeAfterSolve(bool stabilizing);
       virtual void onConePenaltyDecrease();
       virtual void onConeBeforeCache();
       virtual void onConeAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onConeBeforeOracleCall(bool forceOptimal);
-      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays);
+      virtual void onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
+        std::size_t numRays);
 
     protected:
       virtual AffineHull::OutputBase& normalConeHullOutput();
@@ -251,7 +260,8 @@ namespace ipo {
     class Result: public InformationBase
     {
     public:
-      Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, OptimizationOracleBase* oracle);
+      Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
+        OracleBase* oracle);
       virtual ~Result();
 
       void getMaximizingObjective(soplex::DSVectorRational& maximizingObjective) const;

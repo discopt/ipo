@@ -12,26 +12,28 @@ namespace ipo {
 
   namespace SmallestFace {
 
-    class NormalConeOptimizationOracle: public OptimizationOracleBase, public PolarLP
+    class NormalConeOracle: public OracleBase, public PolarLP
     {
     public:
-      NormalConeOptimizationOracle(Space& space, UniqueRationalVectorsBase& originalPoints, 
-        UniqueRationalVectorsBase& originalRays, OptimizationOracleBase* originalOracle, 
-        const SVectorRational* target, OutputBase* output) :
-        OptimizationOracleBase("normal cone of " + originalOracle->name(), space),
+      NormalConeOracle(Space& space, UniqueRationalVectorsBase& originalPoints,
+        UniqueRationalVectorsBase& originalRays, OracleBase* originalOracle,
+        const SVectorRational* target, OutputBase* output)
+        : OracleBase("normal cone of " + originalOracle->name(), space),
         PolarLP(originalPoints, originalRays, originalOracle, 1024.0, 1000), _output(output)
       {
         if (space.dimension() == 0)
         {
           for (std::size_t v = 0; v < n(); ++v)
             space.addVariable("a#" + originalOracle->space()[v]);
-          space.addVariable("beta"); 
+          space.addVariable("beta");
         }
-        else if (space.dimension() != originalOracle->space().dimension())
+        else if (space.dimension() != originalOracle->space().dimension() + 1)
         {
           throw std::runtime_error(
-            "Spaces differ while constructing NormalConeOptimizationOracle.");
+            "Spaces differ while constructing NormalConeOracle.");
         }
+
+        OracleBase::initializedSpace();
 
         /// Initialize Polar LP.
 
@@ -43,93 +45,128 @@ namespace ipo {
           setBounds(v, Rational(-1), Rational(1));
       }
 
-      virtual ~NormalConeOptimizationOracle()
+      virtual ~NormalConeOracle()
       {
 
       }
 
-      friend class InformationBase;
+      /**
+      * \brief Restricts the oracle to the face defined by \p newFace.
+      *
+      * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
+      * For \p newFace equal to \c NULL we define \f$ F := P \f$.
+      *
+      * This implementation throws an exception since we should not use this oracle to
+      * optimize over the faces of a normal cone.
+      */
 
-    protected:
+      virtual void setFace(Face* newFace = NULL)
+      {
+        throw std::runtime_error("NormalConeOracle does not support faces.");
+      }
 
-      virtual void run(OptimizationResult& result, const VectorRational& objective, const Rational* improveValue,
-          bool approximate)
+      /**
+      * \brief Runs the oracle to maximize the dense rational \p objective.
+      *
+      * Runs the optimization oracle to maximize the given dense rational \p objective
+      * over the current face \f$ F \f$ (see setFace()) and returns \p result.
+      * If \p maxHeuristic is less than thisHeuristic() or if the objective value
+      * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
+      * next oracle.
+      *
+      * \param result         After the call, contains the oracle's answer.
+      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+      * \param maxHeuristic   Requested maximum heuristic level.
+      * \param minHeuristic   Requested minimum heuristic level.
+      *
+      * This implementation
+      */
+
+      virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
+        const ObjectiveBound& objectiveBound = ObjectiveBound(),
+        std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
+        std::size_t minHeuristic = 0)
       {
         updateObjective(objective);
-        
+
         /// Perform stabilization.
-        
+
         stabilizedPresolve();
 
         /// Optimize
-        
+
         optimize(false);
 
         DSVectorRational* solution = new DSVectorRational;
         getPrimalSolution(*solution);
 
-        result.points.push_back(solution);
-        result.setFeasible(objective); // This sets result.bestValue.
-        if (result.bestValue > 0)
-        {
-          result.directions.push_back(result.points.front());
-          result.points.pop_back();
-          result.setUnbounded();
-        }
-        result.optimal = true;
+        result.buildStart(objective);
+        if (*solution * objective == 0)
+          result.buildAddPoint(solution);
+        else
+          result.buildAddDirection(solution);
+        result.buildFinish(0, true, false, false);
+        return result.buildAddPoint(solution);
       }
-      
+
+      friend class InformationBase;
+
+
+    protected:
+
       virtual void onBeforeSolve(bool stabilizing)
       {
         _output->onConeBeforeSolve(stabilizing);
       }
-      
+
       virtual void onAfterSolve(bool stabilizing)
       {
         _output->onConeAfterSolve(stabilizing);
       }
-      
+
       virtual void onPenaltyDecrease()
       {
         _output->onConePenaltyDecrease();
       }
-      
+
       virtual void onBeforeCache()
       {
         _output->onConeBeforeCache();
       }
-      
+
       virtual void onAfterCache(std::size_t numPoints, std::size_t numRays)
       {
          _output->onConeAfterCache(numPoints, numRays);
       }
-      
+
       virtual void onBeforeOracleCall(bool forceOptimal)
       {
         _output->onConeBeforeOracleCall(forceOptimal);
       }
-      
-      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays,
+
+      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
+std::size_t numRays,
           bool lastIteration)
       {
         _output->onConeAfterOracleCall(forceOptimal, feasible, numPoints, numRays);
       }
-      
+
       virtual void onBeforeAddPoint()
       {
         _output->onConeBeforeAddPoint();
       }
-      
+
       virtual void onAfterAddPoint()
       {
         _output->onConeAfterAddPoint();
       }
-      
+
       virtual void onBeforeAddRay()
       {
         _output->onConeBeforeAddRay();
       }
-      
+
       virtual void onAfterAddRay()
       {
         _output->onConeAfterAddRay();
@@ -143,8 +180,10 @@ namespace ipo {
     class Implementation
     {
     public:
-      Implementation(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, OptimizationOracleBase* oracle) :
-          _originalPoints(points), _originalRays(rays), _originalOracle(oracle), _output(NULL), _normalConeOptimizationOracle(
+      Implementation(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
+OracleBase* oracle) :
+          _originalPoints(points), _originalDirections(directions), _originalOracle(oracle),
+_output(NULL), _normalConeOracle(
           NULL), _dimension(-2)
       {
         _maximizingObjective.reDim(_originalOracle->space().dimension() + 1);
@@ -155,16 +194,13 @@ namespace ipo {
 
       }
 
-      bool verifyNormalConeElements(OptimizationResult& result, const SVectorRational& objective,
-          const VectorRational& target)
+      bool verifyNormalConeElements(OracleResult& result, const SVectorRational& objective,
+        const VectorRational& target)
       {
         Rational product = objective * target;
-        _originalOracle->maximize(result, objective, true);
-        for (std::size_t i = 0; i < result.points.size(); ++i)
-          _originalPoints.insertFree(result.points[i]);
-        for (std::size_t i = 0; i < result.directions.size(); ++i)
-          _originalRays.insertFree(result.directions[i]);
-        if (result.isFeasible() && result.bestValue == product)
+        _originalOracle->maximize(result, objective, ObjectiveBound());
+        result.addToContainers(_originalPoints, _originalDirections);
+        if (result.isFeasible() && result.points.front().objectiveValue == product)
           return true;
         else
           return false;
@@ -182,22 +218,21 @@ namespace ipo {
         _output->onStart();
 
         Space normaleConeSpace;
-        NormalConeOptimizationOracle normalConeOracle(normaleConeSpace, _originalPoints, 
-          _originalRays, _originalOracle, target, _output);
-        _normalConeOptimizationOracle = &normalConeOracle;
+        NormalConeOracle normalConeOracle(normaleConeSpace, _originalPoints,
+          _originalDirections, _originalOracle, target, _output);
+        _normalConeOracle = &normalConeOracle;
         UniqueRationalVectors conePoints(n + 1);
         UniqueRationalVectors coneRays(n + 1);
 
-        /// Initialize points and rays.
+        /// Initialize points and directions.
 
         conePoints.insertFree(new Point);
 
         DVectorRational denseTarget;
-        OptimizationResult verifyResult;
+        OracleResult verifyResult;
         std::size_t numElements = freeNormalConeElements.size() + copyNormalConeElements.size();
         if (verifyElements)
         {
-          verifyResult.reset(n);
           denseTarget.reDim(n, true);
           denseTarget.assign(*target);
           if (verifyElements)
@@ -207,13 +242,15 @@ namespace ipo {
         {
           bool free = i < freeNormalConeElements.size();
           std::size_t index = free ? i : i - freeNormalConeElements.size();
-          const SVectorRational& element = free ? *freeNormalConeElements[index] : *copyNormalConeElements[index];
+          const SVectorRational& element = free ? *freeNormalConeElements[index] :
+*copyNormalConeElements[index];
 
           if (verifyElements)
           {
             _output->onBeforeOracleVerifyElement(i);
             bool verified = verifyNormalConeElements(verifyResult, element, denseTarget);
-            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.directions.size(), verified);
+            _output->onAfterOracleVerifyElement(verifyResult.points.size(),
+verifyResult.directions.size(), verified);
             if (!verified)
               continue;
           }
@@ -261,7 +298,7 @@ namespace ipo {
 
         _output->onEnd();
         _output->_implementation = NULL;
-        _normalConeOptimizationOracle = NULL;
+        _normalConeOracle = NULL;
 
         return _dimension;
       }
@@ -294,7 +331,8 @@ namespace ipo {
             sparse.add(v, dense[v] / 2);
         }
 
-        return run(&sparse, output, coneEquations, freeNormalConeElements, copyNormalConeElements, verifyElements);
+        return run(&sparse, output, coneEquations, freeNormalConeElements, copyNormalConeElements,
+verifyElements);
       }
 
       friend class InformationBase;
@@ -302,18 +340,19 @@ namespace ipo {
 
     protected:
       UniqueRationalVectorsBase& _originalPoints;
-      UniqueRationalVectorsBase& _originalRays;
-      OptimizationOracleBase* _originalOracle;
+      UniqueRationalVectorsBase& _originalDirections;
+      OracleBase* _originalOracle;
       OutputBase* _output;
-      NormalConeOptimizationOracle* _normalConeOptimizationOracle;
+      NormalConeOracle* _normalConeOracle;
 
       int _dimension;
       DVectorRational _maximizingObjective;
     };
 
-    Result::Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, OptimizationOracleBase* oracle)
+    Result::Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
+OracleBase* oracle)
     {
-      _implementation = new Implementation(points, rays, oracle);
+      _implementation = new Implementation(points, directions, oracle);
     }
 
     Result::~Result()
@@ -352,11 +391,13 @@ namespace ipo {
     {
       LPRowSetRational coneEquations;
       std::vector<DSVectorRational*> freeNormalConeElements;
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements, normalConeElements,
+      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
+normalConeElements,
           verifyElements);
     }
 
-    int Result::run(const Point* target, OutputBase& output, const LPRowSetRational& affineHullEquations)
+    int Result::run(const Point* target, OutputBase& output, const LPRowSetRational&
+affineHullEquations)
     {
       LPRowSetRational coneEquations;
       std::vector<DSVectorRational*> freeNormalConeElements;
@@ -371,7 +412,8 @@ namespace ipo {
         freeNormalConeElements.push_back(positiveNormal);
         freeNormalConeElements.push_back(negativeNormal);
       }
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements, copyNormalConeElements, false);
+      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
+copyNormalConeElements, false);
     }
 
     int Result::run(const Point* target, OutputBase& output)
@@ -379,7 +421,8 @@ namespace ipo {
       LPRowSetRational coneEquations;
       std::vector<DSVectorRational*> freeNormalConeElements;
       std::vector<const SVectorRational*> copyNormalConeElements;
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements, copyNormalConeElements, false);
+      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
+copyNormalConeElements, false);
     }
 
     bool Result::isVertex(const Point* target, OutputBase& output,
@@ -388,7 +431,8 @@ namespace ipo {
       return run(target, output, normalConeElements, verifyElements) == 0;
     }
 
-    bool Result::isVertex(const Point* target, OutputBase& output, const LPRowSetRational& affineHullEquations)
+    bool Result::isVertex(const Point* target, OutputBase& output, const LPRowSetRational&
+affineHullEquations)
     {
       return run(target, output, affineHullEquations) == 0;
     }
@@ -402,7 +446,8 @@ namespace ipo {
         const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
     {
       std::vector<DSVectorRational*> freeNormalConeElements;
-      return _implementation->runAdjacency(first, second, output, freeNormalConeElements, copyNormalConeElements,
+      return _implementation->runAdjacency(first, second, output, freeNormalConeElements,
+copyNormalConeElements,
           verifyElements);
     }
 
@@ -421,7 +466,8 @@ namespace ipo {
         freeNormalConeElements.push_back(positiveNormal);
         freeNormalConeElements.push_back(negativeNormal);
       }
-      return _implementation->runAdjacency(first, second, output, freeNormalConeElements, copyNormalConeElements, false);
+      return _implementation->runAdjacency(first, second, output, freeNormalConeElements,
+copyNormalConeElements, false);
     }
 
     bool Result::areAdjacent(const Point* first, const Point* second, OutputBase& output)
@@ -456,19 +502,19 @@ namespace ipo {
     std::size_t InformationBase::numRowsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOptimizationOracle->numRows();
+      return _implementation->_normalConeOracle->numRows();
     }
 
     std::size_t InformationBase::numColumnsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOptimizationOracle->numColumns();
+      return _implementation->_normalConeOracle->numColumns();
     }
 
     std::size_t InformationBase::numNonzerosLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOptimizationOracle->numNonzeros();
+      return _implementation->_normalConeOracle->numNonzeros();
     }
 
     bool InformationBase::hasImplementation() const
@@ -479,7 +525,10 @@ namespace ipo {
     void InformationBase::ensureImplementation() const
     {
       if (!hasImplementation())
-        throw std::runtime_error("Facets.Separation: Output is not associated to an implementation.");
+      {
+        throw std::runtime_error(
+          "Facets.Separation: Output is not associated to an implementation.");
+      }
     }
 
     OutputBase::OutputBase()
@@ -516,12 +565,14 @@ namespace ipo {
 
     }
 
-    void OutputBase::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified)
+    void OutputBase::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays,
+      bool verified)
     {
 
     }
 
-    void OutputBase::onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations)
+    void OutputBase::onAddedInitials(std::size_t numPoints, std::size_t numRays,
+      std::size_t numEquations)
     {
 
     }
@@ -535,10 +586,10 @@ namespace ipo {
     {
 
     }
-    
+
     void OutputBase::onConePenaltyDecrease()
     {
-      
+
     }
 
     void OutputBase::onConeBeforeCache()
@@ -556,7 +607,8 @@ namespace ipo {
 
     }
 
-    void OutputBase::onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays)
+    void OutputBase::onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
+      std::size_t numRays)
     {
 
     }
@@ -613,7 +665,8 @@ namespace ipo {
 
     void DebugOutput::onStart()
     {
-      std::cout << "Determining smallest face via the affine hull of the normal cone.\n" << std::flush;
+      std::cout << "Determining smallest face via the affine hull of the normal cone.\n" <<
+std::flush;
     }
 
     void DebugOutput::onBeforeVerifyElements(std::size_t numVerifications)
@@ -631,12 +684,14 @@ namespace ipo {
 
     }
 
-    void DebugOutput::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified)
+    void DebugOutput::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool
+verified)
     {
 
     }
 
-    void DebugOutput::onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations)
+    void DebugOutput::onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t
+numEquations)
     {
 
     }
@@ -653,17 +708,19 @@ namespace ipo {
 
     void DebugOutput::onConeBeforeCache()
     {
-      std::cout << "Searching known points and rays:" << std::flush;
+      std::cout << "Searching known points and directions:" << std::flush;
     }
 
     void DebugOutput::onConeAfterCache(std::size_t numPoints, std::size_t numRays)
     {
-      std::cout << " (" << numPoints << " known points and " << numRays << " rays).\n" << std::flush;
+      std::cout << " (" << numPoints << " known points and " << numRays << " directions).\n" <<
+std::flush;
     }
 
     void DebugOutput::onConeBeforeOracleCall(bool forceOptimal)
     {
-      std::cout << "Calling oracle" << (forceOptimal ? "" : " (w/ non-optimal sols)") << ":" << std::flush;
+      std::cout << "Calling oracle" << (forceOptimal ? "" : " (w/ non-optimal sols)") << ":" <<
+std::flush;
     }
 
     void DebugOutput::onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
@@ -677,7 +734,7 @@ namespace ipo {
           std::cout << " (feasible).\n" << std::flush;
       }
       else if (numRays > 0)
-        std::cout << " (" << numRays << " rays).\n" << std::flush;
+        std::cout << " (" << numRays << " directions).\n" << std::flush;
       else
         std::cout << " (infeasible).\n" << std::flush;
     }
@@ -728,7 +785,8 @@ namespace ipo {
     void ProgressOutput::AffineHullOutput::onProgress()
     {
       assert(dimensionSafeUpperBound() == dimensionUnsafeUpperBound());
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningDirections() << ",  "
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " <<
+numSpanningDirections() << ",  "
           << dimensionLowerBound() << " <= dim <= " << dimensionSafeUpperBound();
       std::cout << ",  Norm. cone opts: " << numHeuristicCalls() << ".\n" << std::flush;
     }
@@ -800,7 +858,8 @@ namespace ipo {
 //      timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onAfterOracleMaximize(std::size_t numPoints, std::size_t numRays)
+    void ProgressOutput::AffineHullOutput::onAfterOracleMaximize(std::size_t numPoints, std::size_t
+numRays)
     {
 //      if (_lastApprox)
 //        _timeNormalizationConeOracle += timeStamp();
@@ -814,7 +873,8 @@ namespace ipo {
 //      timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onAfterOracleMinimize(std::size_t numPoints, std::size_t numRays)
+    void ProgressOutput::AffineHullOutput::onAfterOracleMinimize(std::size_t numPoints, std::size_t
+numRays)
     {
 //      if (_lastApprox)
 //        _timeNormalizationConeOracle += timeStamp();
@@ -824,11 +884,13 @@ namespace ipo {
 
     void ProgressOutput::AffineHullOutput::onBeforeOracleVerify(std::size_t verifyIndex)
     {
-//      std::cout << _indent << "(calling exact oracle " << (verifyIndex + 1) << "/" << _numVerificationCalls << "..."
+//      std::cout << _indent << "(calling exact oracle " << (verifyIndex + 1) << "/" <<
+// 7_numVerificationCalls << "..."
 //          << std::flush;
     }
 
-    void ProgressOutput::AffineHullOutput::onAfterOracleVerify(std::size_t numPoints, std::size_t numRays)
+    void ProgressOutput::AffineHullOutput::onAfterOracleVerify(std::size_t numPoints, std::size_t
+numRays)
     {
 //      _timeExactOracles += timeStamp();
 //      std::cout << " done)" << std::endl;
@@ -885,16 +947,24 @@ namespace ipo {
     void ProgressOutput::AffineHullOutput::onEnd()
     {
       std::cout << _indent << "Max. direction bitsize: " << maxDirectionBitsize() << "\n";
-      std::cout << _indent << "Number of invocations:            LP: " << std::setw(6) << numHeuristicCalls()
-          << ", Main heuristics: " << std::setw(6) << _numMainHeuristics << ", Main oracles: " << std::setw(6)
-          << _numMainOracles << ", Main cache: " << std::setw(6) << _numMainCache << ", Cache: " << std::setw(6)
-          << numCacheQueries() << ", Directions: " << std::setw(6) << numApproximateDirectionSolves() << " (approx.), "
-          << std::setw(6) << numExactDirectionSolves() << " (exact), Factorizations: " << std::setw(6)
+      std::cout << _indent << "Number of invocations:            LP: " << std::setw(6) <<
+numHeuristicCalls()
+          << ", Main heuristics: " << std::setw(6) << _numMainHeuristics << ", Main oracles: " <<
+std::setw(6)
+          << _numMainOracles << ", Main cache: " << std::setw(6) << _numMainCache << ", Cache: " <<
+std::setw(6)
+          << numCacheQueries() << ", Directions: " << std::setw(6) <<
+numApproximateDirectionSolves() << " (approx.), "
+          << std::setw(6) << numExactDirectionSolves() << " (exact), Factorizations: " <<
+std::setw(6)
           << (dimensionLowerBound() + 1) << "\n";
-      std::cout << _indent << "Timings (s): Overall:   " << std::setw(8) << (_timer.time() - _timeStarted) << ", LP: "
+      std::cout << _indent << "Timings (s): Overall:   " << std::setw(8) << (_timer.time() -
+_timeStarted) << ", LP: "
           << std::setw(6) << _timeLP << ", Main heuristics: " << std::setw(6) << _timeMainHeuristics
-          << ", Main oracles: " << std::setw(6) << _timeMainOracles << ", Main cache: " << std::setw(6)
-          << _timeMainCache << ", Cache: " << std::setw(6) << _timeCache << ", Directions: " << std::setw(6)
+          << ", Main oracles: " << std::setw(6) << _timeMainOracles << ", Main cache: " <<
+std::setw(6)
+          << _timeMainCache << ", Cache: " << std::setw(6) << _timeCache << ", Directions: " <<
+std::setw(6)
           << _timeApproxDirections << " (approx.), " << std::setw(6) << _timeExactDirections
           << " (exact), Factorizations: " << std::setw(6) << _timeFactorization << std::endl;
       _timer.stop();
@@ -922,21 +992,25 @@ namespace ipo {
           << " with enforcing oracle..." << std::flush;
     }
 
-    void ProgressOutput::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool verified)
+    void ProgressOutput::onAfterOracleVerifyElement(std::size_t numPoints, std::size_t numRays, bool
+verified)
     {
       std::cout << (verified ? " verified.\n" : " failed!\n") << std::flush;
     }
 
-    void ProgressOutput::onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t numEquations)
+    void ProgressOutput::onAddedInitials(std::size_t numPoints, std::size_t numRays, std::size_t
+numEquations)
     {
-      std::cout << _indent << "Added " << numPoints << " initial points, " << numRays << " rays, and " << numEquations
+      std::cout << _indent << "Added " << numPoints << " initial points, " << numRays <<
+        " directions, and " << numEquations
           << " equations.\n" << std::flush;
     }
 
     void ProgressOutput::onConeBeforeSolve(bool stabilizing)
     {
       _normalConeHullOutput.timeStamp();
-      std::cout << _indent << (stabilizing ?  "  Stab-LP " : "  Main-LP ") << numRowsLP() << "x" << numColumnsLP() << ": " << std::flush;
+      std::cout << _indent << (stabilizing ?  "  Stab-LP " : "  Main-LP ") << numRowsLP() << "x" <<
+numColumnsLP() << ": " << std::flush;
     }
 
     void ProgressOutput::onConeAfterSolve(bool stabilizing)
@@ -944,7 +1018,7 @@ namespace ipo {
       _normalConeHullOutput._timeLP += _normalConeHullOutput.timeStamp();
       std::cout << "solved." << std::flush;
     }
-    
+
     void ProgressOutput::onConePenaltyDecrease()
     {
       std::cout << " Decreasing penalty.\n" << std::flush;
@@ -963,12 +1037,12 @@ namespace ipo {
       if (numPoints > 0)
       {
         if (numRays > 0)
-          std::cout << numPoints << " points, " << numRays << " rays.\n" << std::flush;
+          std::cout << numPoints << " points, " << numRays << " directions.\n" << std::flush;
         else
           std::cout << numPoints << " points.\n" << std::flush;
       }
       else if (numRays > 0)
-        std::cout << numRays << " rays.\n" << std::flush;
+        std::cout << numRays << " directions.\n" << std::flush;
       else
         std::cout << "nothing." << std::flush;
     }
@@ -987,8 +1061,8 @@ namespace ipo {
         std::cout << " Heuristic: " << std::flush;
     }
 
-    void ProgressOutput::onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
-        std::size_t numRays)
+    void ProgressOutput::onConeAfterOracleCall(bool forceOptimal, bool feasible, std::size_t
+      numPoints, std::size_t numRays)
     {
       double time = _normalConeHullOutput.timeStamp();
       if (forceOptimal)
@@ -1001,7 +1075,7 @@ namespace ipo {
         if (numPoints > 0)
           std::cout << numPoints << " points.\n" << std::flush;
         else if (numRays > 0)
-          std::cout << numRays << " rays.\n" << std::flush;
+          std::cout << numRays << " directions.\n" << std::flush;
         else
         {
           std::cout << "feasible." << (forceOptimal ? "\n" : "") << std::flush;

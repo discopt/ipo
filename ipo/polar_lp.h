@@ -26,8 +26,8 @@ namespace ipo {
       std::set<std::size_t> tightRays;
     };
 
-    PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, OptimizationOracleBase* oracle,
-        double initialPenalty = 1024.0, int maxAge = 30);
+    PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
+      OracleBase* oracle, double initialPenalty = 1024.0, int maxAge = 30);
     virtual ~PolarLP();
 
   protected:
@@ -99,9 +99,9 @@ namespace ipo {
     virtual void onPenaltyDecrease();
     virtual void onBeforeCache();
     virtual void onAfterCache(std::size_t numPoints, std::size_t numRays);
-    virtual void onBeforeOracleCall(bool forceOptimal);
-    virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays,
-        bool lastIteration);
+    virtual void onBeforeOracleCall();
+    virtual void onAfterOracleCall(bool feasible, std::size_t numPoints, std::size_t numRays,
+      bool lastIteration);
     virtual void onBeforeAddPoint();
     virtual void onAfterAddPoint();
     virtual void onBeforeAddRay();
@@ -116,13 +116,13 @@ namespace ipo {
     void searchCache(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
         const soplex::VectorReal& approxObjective, const soplex::VectorRational& exactObjective,
         const soplex::Rational& rhs, std::size_t maxAdd);
-    void maximizeOracle(VectorSubset& pointIndices, VectorSubset& rayIndices,
-        const soplex::VectorRational& exactObjective, const soplex::Rational& rhs, bool forceOptimal);
+    void maximizeOracle(VectorSubset& pointIndices, VectorSubset& directionIndices,
+        const soplex::VectorRational& exactObjective, const soplex::Rational& rhs);
 
   protected:
     UniqueRationalVectorsBase& _points;
-    UniqueRationalVectorsBase& _rays;
-    OptimizationOracleBase* _oracle;
+    UniqueRationalVectorsBase& _directions;
+    OracleBase* _oracle;
 
 //    int iteration;
 
@@ -170,7 +170,7 @@ namespace ipo {
 
     /// Oracle
 
-    OptimizationResult _result;
+    OracleResult _result;
 
     /// Query data
 

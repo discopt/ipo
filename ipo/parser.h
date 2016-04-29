@@ -14,29 +14,29 @@ namespace ipo {
   struct LPToken
   {
     /// Special token types. All others are represented by themselves.
-    
+
     static const char NAME = 'x';
     static const char ARROW = 'a';
     static const char DOUBLE_COLON = 'd';
     static const char NUMBER = 'n';
     static const char END_OF_FILE = (char)0;
-    
+
     char type;
     std::size_t nameIndex;
     soplex::Rational number;
-    
+
     LPToken(char type = 'Z');
     LPToken(std::size_t nameIndex);
     LPToken(const soplex::Rational& number);
     ~LPToken();
-    
+
     inline
     bool operator()() const
     {
       return type != END_OF_FILE;
     }
   };
-  
+
   class LPParser
   {
   public:
@@ -47,7 +47,7 @@ namespace ipo {
     LPToken next();
     LPToken nextNonWhite();
     void fetchNextNonWhite();
-    
+
     inline const LPToken& token() const
     {
       return _token;
@@ -59,7 +59,7 @@ namespace ipo {
   private:
     LPToken extractName();
     LPToken extractNumber();
-    
+
     std::string _buffer;
     int _lookAhead;
     std::vector<std::string> _nameList;
@@ -73,12 +73,12 @@ namespace ipo {
   public:
     LPObjectiveParser(std::istream& stream);
     virtual ~LPObjectiveParser();
-    
+
     void run();
-    
+
   protected:
     virtual void handleObjective(const std::string& name, const std::map<std::string, soplex::Rational>& values) = 0;
-    
+
     void parseObjective(bool maximize);
     void parseGoal();
   };
@@ -88,15 +88,15 @@ namespace ipo {
   public:
     LPInequalityParser(std::istream& stream);
     virtual ~LPInequalityParser();
-    
+
     void run();
-    
+
   protected:
     void parseRhs(const std::string& name, const soplex::Rational& lhsValue, char lhsSign, const std::map<std::string, soplex::Rational>& coefficients);
     void parseVector(const std::string& name, const soplex::Rational& lhsValue, char lhsSign, bool triedLhs, const soplex::Rational& coefficient, const std::string& triedVar);
     void parseLhs(const std::string& name);
     void parseName();
-    
+
     virtual void handleInequality(const std::string& name, const soplex::Rational& lhs, const std::map<std::string, soplex::Rational>& values, const soplex::Rational& rhs) = 0;
   };
 
@@ -105,13 +105,13 @@ namespace ipo {
   public:
     PointParser(std::istream& stream);
     virtual ~PointParser();
-    
+
     void run();
-    
+
   protected:
     void parseVector(const std::string& name);
     void parseName();
-    
+
     virtual void handlePoint(const std::string& name, const std::map<std::string, soplex::Rational>& values) = 0;
   };
 }

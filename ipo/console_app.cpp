@@ -14,20 +14,21 @@
 using namespace soplex;
 
 namespace ipo {
-  
+
   class ConsoleApplicationObjectiveParser : public LPObjectiveParser
   {
   public:
-    ConsoleApplicationObjectiveParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<DSVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
+    ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space,
+      std::vector<DSVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
-      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
-        _oracleVariables[oracle->space()[i]] = i;
+      for (std::size_t i = 0; i < space.dimension(); ++i)
+        _oracleVariables[space[i]] = i;
     }
 
     virtual ~ConsoleApplicationObjectiveParser()
     {
-      
+
     }
 
     virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& coefficients)
@@ -56,23 +57,25 @@ namespace ipo {
     std::vector<std::string>& _objectiveNames;
     std::map<std::string, std::size_t> _oracleVariables;
   };
-  
+
   class ConsoleApplicationInequalityParser : public LPInequalityParser
   {
   public:
-    ConsoleApplicationInequalityParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Face*>& faces, std::vector<std::string>& faceNames)
-      : LPInequalityParser(stream), _faces(faces), _faceNames(faceNames)
+    ConsoleApplicationInequalityParser(std::istream& stream, const Space& space,
+      std::vector<Face*>& faces, std::vector<std::string>& faceNames)
+      : LPInequalityParser(stream), _faces(faces), _faceNames(faceNames), _space(space)
     {
-      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
-        _oracleVariables[oracle->space()[i]] = i;
+      for (std::size_t i = 0; i < space.dimension(); ++i)
+        _oracleVariables[space[i]] = i;
     }
 
     virtual ~ConsoleApplicationInequalityParser()
     {
-      
+
     }
-    
-    virtual void handleInequality(const std::string& name, const Rational& lhs, const std::map< std::string, Rational >& coefficients, const Rational& rhs)
+
+    virtual void handleInequality(const std::string& name, const Rational& lhs,
+      const std::map<std::string, Rational >& coefficients, const Rational& rhs)
     {
       if ((lhs <= -infinity && rhs >= infinity) || lhs == rhs)
         return;
@@ -91,43 +94,45 @@ namespace ipo {
           return;
         }
       }
-      
+
       bool hasBoth = lhs > -infinity && rhs < infinity;
       if (lhs > -infinity)
       {
         LPRowRational row(lhs, vector, infinity);
-        _faces.push_back(new Face(_oracleVariables.size(), row));
+        _faces.push_back(new Face(_space, row));
         _faceNames.push_back(hasBoth ? (name + "-lhs") : name);
       }
       if (rhs < infinity)
       {
         LPRowRational row(-infinity, vector, rhs);
-        _faces.push_back(new Face(_oracleVariables.size(), row));
+        _faces.push_back(new Face(_space, row));
         _faceNames.push_back(hasBoth ? (name + "-rhs") : name);
       }
     }
-    
+
   private:
     std::map<std::string, std::size_t> _oracleVariables;
     std::vector<Face*>& _faces;
     std::vector<std::string>& _faceNames;
+    const Space& _space;
   };
-  
+
   class ConsoleApplicationPointParser : public PointParser
   {
   public:
-    ConsoleApplicationPointParser(std::istream& stream, OptimizationOracleBase* oracle, std::vector<Point*>& points, std::vector<std::string>& pointNames)
+    ConsoleApplicationPointParser(std::istream& stream, const Space& space,
+      std::vector<Point*>&points, std::vector<std::string>& pointNames)
       : PointParser(stream), _points(points), _pointNames(pointNames)
     {
-      for (std::size_t i = 0; i < oracle->space().dimension(); ++i)
-        _oracleVariables[oracle->space()[i]] = i;
+      for (std::size_t i = 0; i < space.dimension(); ++i)
+        _oracleVariables[space[i]] = i;
     }
 
     virtual ~ConsoleApplicationPointParser()
     {
-      
+
     }
-    
+
     virtual void handlePoint(const std::string& name, const std::map< std::string, Rational >& values)
     {
       DSVectorRational* point = new DSVectorRational;
@@ -145,17 +150,17 @@ namespace ipo {
           return;
         }
       }
-      
+
       _points.push_back(point);
       _pointNames.push_back(name);
     }
-    
+
   private:
     std::map<std::string, std::size_t> _oracleVariables;
     std::vector<Point*>& _points;
     std::vector<std::string>& _pointNames;
   };
-  
+
 
   ConsoleApplicationBase::ConsoleApplicationBase(int numArguments, char** arguments)
   {
@@ -207,7 +212,7 @@ namespace ipo {
       delete _points[i];
   }
 
-  void ConsoleApplicationBase::setBasicOracle(FaceOptimizationOracleBase* oracle)
+  void ConsoleApplicationBase::setBasicOracle(OracleBase* oracle)
   {
     if (_oracle)
       throw std::runtime_error("Error in ConsoleApplicationBase::setBasicOracle: Oracle already set.");
@@ -299,7 +304,7 @@ namespace ipo {
           space().printLinearForm(std::cout, objective(i));
         }
         std::cout << ":\n" << std::flush;
-        
+
         if (taskMaximize())
         {
           if (!optimizeObjective(objective(i), true))
@@ -326,7 +331,7 @@ namespace ipo {
         if (_directionNames[i] != "")
           std::cout << " " << _directionNames[i];
         std::cout << std::flush;
-        
+
         bool isFeasible = true;
         if (!separateDirectionFacet(directions(i), isFeasible))
           return false;
@@ -341,7 +346,7 @@ namespace ipo {
         if (_pointNames[i] != "")
           std::cout << " " << _pointNames[i];
         std::cout << std::flush;
-        
+
         bool isFeasible = true;
         if (taskFacet())
         {
@@ -471,16 +476,16 @@ namespace ipo {
     printAdditionalOptionsSpecific(std::cerr);
     std::cerr << std::flush;
   }
-  
+
   void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds)
   {
     assert(lowerBounds.dim() == _relaxationColumns.num());
     assert(upperBounds.dim() == _relaxationColumns.num());
-    
+
     _relaxationColumns.lower_w() = lowerBounds;
     _relaxationColumns.upper_w() = upperBounds;
   }
-  
+
   void ConsoleApplicationBase::addRelaxationRows(const soplex::LPRowSetRational& rows)
   {
     _relaxationRows.add(rows);
@@ -761,22 +766,22 @@ namespace ipo {
     DSVectorRational zeroVector;
     for (std::size_t c = 0; c < n; ++c)
       _relaxationColumns.add(0, -infinity, zeroVector, infinity);
-    
+
     /// Add specified objectives.
-    
+
     for (std::size_t i = 0; i < _objectiveArguments.size(); ++i)
     {
       std::istringstream stream(_objectiveArguments[i]);
-      ConsoleApplicationObjectiveParser parser(stream, oracle(), _objectives, _objectiveNames);
+      ConsoleApplicationObjectiveParser parser(stream, space(), _objectives, _objectiveNames);
       parser.run();
     }
-    
+
     /// Parse objectives from specified files.
-    
+
     for (std::size_t i = 0; i < _objectiveFiles.size(); ++i)
     {
       std::ifstream stream(_objectiveFiles[i]);
-      ConsoleApplicationObjectiveParser parser(stream, oracle(), _objectives, _objectiveNames);
+      ConsoleApplicationObjectiveParser parser(stream, space(), _objectives, _objectiveNames);
       parser.run();
     }
 
@@ -811,58 +816,58 @@ namespace ipo {
         }
       }
     }
-    
+
     /// Parse specified faces.
 
     for (std::size_t i = 0; i < _faceArguments.size(); ++i)
     {
       std::istringstream stream(_faceArguments[i]);
-      ConsoleApplicationInequalityParser parser(stream, oracle(), _faces, _faceNames);
+      ConsoleApplicationInequalityParser parser(stream, space(), _faces, _faceNames);
       parser.run();
     }
-    
+
     /// Parse faces from specified files.
-    
+
     for (std::size_t i = 0; i < _faceFiles.size(); ++i)
     {
       std::ifstream stream(_faceFiles[i]);
-      ConsoleApplicationInequalityParser parser(stream, oracle(), _faces, _faceNames);
+      ConsoleApplicationInequalityParser parser(stream, space(), _faces, _faceNames);
       parser.run();
     }
-    
+
     /// Add specified directions.
 
     for (std::size_t i = 0; i < _directionArguments.size(); ++i)
     {
       std::istringstream stream(_directionArguments[i]);
-      ConsoleApplicationPointParser parser(stream, oracle(), _directions, _directionNames);
+      ConsoleApplicationPointParser parser(stream, space(), _directions, _directionNames);
       parser.run();
     }
-    
+
     /// Parse directions from specified files.
-    
+
     for (std::size_t i = 0; i < _directionFiles.size(); ++i)
     {
       std::ifstream stream(_directionFiles[i]);
-      ConsoleApplicationPointParser parser(stream, oracle(), _directions, _directionNames);
+      ConsoleApplicationPointParser parser(stream, space(), _directions, _directionNames);
       parser.run();
     }
-    
+
      /// Add specified points.
 
     for (std::size_t i = 0; i < _pointArguments.size(); ++i)
     {
       std::istringstream stream(_pointArguments[i]);
-      ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
+      ConsoleApplicationPointParser parser(stream, space(), _points, _pointNames);
       parser.run();
     }
 
     /// Parse points from specified files.
-    
+
     for (std::size_t i = 0; i < _pointFiles.size(); ++i)
     {
       std::ifstream stream(_pointFiles[i]);
-      ConsoleApplicationPointParser parser(stream, oracle(), _points, _pointNames);
+      ConsoleApplicationPointParser parser(stream, space(), _points, _pointNames);
       parser.run();
     }
 
@@ -901,18 +906,18 @@ namespace ipo {
       }
     }
 
-    FaceOptimizationOracleBase* orac = oracle();
+    OracleBase* orac = oracle();
     std::size_t n = space().dimension();
 
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
-    
+
     LPRowSetRational faceEquations;
-    
+
     LPRowSetRational* equations;
     if (face == NULL)
     {
-      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
+      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, 0, true);
       _basicColumns = hull.basicColumns();
       _spanningCachedDirections = hull.spanningDirections();
       _spanningCachedPoints = hull.spanningPoints();
@@ -926,26 +931,22 @@ namespace ipo {
 
       /// Filter points and rays.
 
-      soplex::DVectorRational faceNormal(n);
-      faceNormal.clear();
-      faceNormal.assign(face->normal());
-
       for (std::size_t p = _cachedPoints->first(); p < _cachedPoints->size(); p = _cachedPoints->next(p))
       {
-        soplex::Rational activity = *(*_cachedPoints)[p] * faceNormal;
+        soplex::Rational activity = *(*_cachedPoints)[p] * face->denseNormal();
         filteredPoints.set(p, activity == face->rhs());
       }
       for (std::size_t r = _cachedDirections->first(); r < _cachedDirections->size(); r = _cachedDirections->next(r))
       {
-        soplex::Rational activity = *(*_cachedDirections)[r] * faceNormal;
+        soplex::Rational activity = *(*_cachedDirections)[r] * face->denseNormal();
         filteredDirections.set(r, activity == 0);
       }
-      
+
       faceEquations = LPRowSetRational(*_equations);
-      faceEquations.add(face->rhs(), face->normal(), face->rhs());
-      
-      hull.run(filteredPoints, filteredDirections, faceEquations, orac, hullOutput, AffineHull::REDUNDANT_EQUATIONS_REMOVE);
-      
+      faceEquations.add(face->rhs(), face->sparseNormal(), face->rhs());
+
+      hull.run(filteredPoints, filteredDirections, faceEquations, orac, hullOutput, 0, true);
+
       equations = &faceEquations;
       orac->setFace();
     }
@@ -975,8 +976,8 @@ namespace ipo {
   bool ConsoleApplicationBase::optimizeObjective(const SVectorRational* objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
-    
-    OptimizationResult result;
+
+    OracleResult result;
     if (maximize)
       oracle()->maximize(result, *objective);
     else
@@ -987,7 +988,7 @@ namespace ipo {
         negated.value(p) *= -1;
       oracle()->maximize(result, negated);
     }
-    
+
     if (result.isInfeasible())
     {
       std::cout << "infeasible.\n" << std::flush;
@@ -995,14 +996,18 @@ namespace ipo {
     else if (result.isUnbounded())
     {
       std::cout << "unbounded direction ";
-      space().printVector(std::cout, result.directions.front());
+      space().printVector(std::cout, result.directions.front().direction);
       std::cout << "\n" << std::flush;
     }
     else
     {
-      space().printVector(std::cout, result.points.front());
+      space().printVector(std::cout, result.points.front().point);
       std::cout << "\n" << std::flush;
     }
+    for (std::size_t i = 0; i < result.points.size(); ++i)
+      delete result.points[i].point;
+    for (std::size_t i = 0; i < result.directions.size(); ++i)
+      delete result.directions[i].direction;
     return true;
   }
 
@@ -1026,7 +1031,7 @@ namespace ipo {
     spx.addColsRational(cols);
     spx.addRowsRational(*_equations);
     spx.addRowsRational(_relaxationRows);
-    
+
     Separation::QuietOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
         _basicColumns, oracle());
@@ -1079,7 +1084,7 @@ namespace ipo {
       separate.inequality(inequality);
       separate.certificate(certificate);
       spx.addRowRational(inequality);
-      
+
       /// If it should be reused, record the facet.
       if (_optionReuseFacets)
       {
@@ -1129,7 +1134,7 @@ namespace ipo {
   bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, bool& isFeasible)
   {
     std::size_t n = space().dimension();
-    
+
     Separation::QuietOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
         _basicColumns, oracle());
@@ -1142,13 +1147,13 @@ namespace ipo {
     }
     else
       isFeasible = false;
- 
- 
+
+
     LPRowRational inequality;
     Separation::Certificate certificate;
     separate.inequality(inequality);
     separate.certificate(certificate);
-    
+
     if (separate.separatedFacet())
       std::cout << "\n Separated by facet: ";
     else if (separate.separatedEquation())
@@ -1157,7 +1162,7 @@ namespace ipo {
     {
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
     }
-    
+
     manhattanNormImproveInequality(n, inequality, *_equations);
 
     space().printRow(std::cout, inequality);
@@ -1184,14 +1189,14 @@ namespace ipo {
     {
       std::cout << "\n" << std::flush;
     }
-    
+
     return true;
   }
 
   bool ConsoleApplicationBase::separatePointFacet(const Point* point, bool& isFeasible)
   {
     std::size_t n = space().dimension();
-    
+
     Separation::QuietOutput separateOutput;
     Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
         _basicColumns, oracle());
@@ -1209,7 +1214,7 @@ namespace ipo {
     Separation::Certificate certificate;
     separate.inequality(inequality);
     separate.certificate(certificate);
-    
+
     if (separate.separatedFacet())
       std::cout << "\n Separated by facet: ";
     else if (separate.separatedEquation())
@@ -1245,7 +1250,7 @@ namespace ipo {
     {
       std::cout << "\n" << std::flush;
     }
-    
+
     return true;
   }
 
@@ -1261,7 +1266,7 @@ namespace ipo {
     std::cout << " Objective : ";
     space().printVector(std::cout, &maximizingObjective);
     std::cout << "\n" << std::flush;
-    
+
     return true;
   }
 

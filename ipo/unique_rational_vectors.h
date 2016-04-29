@@ -69,7 +69,7 @@ namespace ipo {
      * Inserts a vector and frees it, if duplicate.
      */
 
-    virtual std::size_t insertFree(Point* vector) = 0;
+    virtual std::size_t insertFree(Point const* vector) = 0;
 
     /**
      * \brief Returns the index of first vector.
@@ -95,7 +95,7 @@ namespace ipo {
      * Returns an upper bound on the indices for the vectors.
      */
 
-    virtual std::size_t size() = 0;
+    virtual std::size_t size() const = 0;
 
     /**
      * \brief Returns the vector of a given index.
@@ -218,7 +218,7 @@ namespace ipo {
      * Inserts a vector and frees it, if duplicate.
      */
 
-    virtual std::size_t insertFree(Point* vector);
+    virtual std::size_t insertFree(Point const* vector);
 
     /**
      * \brief Returns the index of first vector.
@@ -244,7 +244,7 @@ namespace ipo {
      * Returns an upper bound on the indices for the vectors.
      */
 
-    virtual std::size_t size();
+    virtual std::size_t size() const;
 
     /**
      * \brief Returns the vector of a given index.
@@ -284,7 +284,7 @@ namespace ipo {
      * Returns a writable version of the vector at \c index.
      */
 
-    soplex::DSVectorRational* get(std::size_t index);
+    soplex::DSVectorRational const* get(std::size_t index);
 
     /**
      * \brief Clears the container without freeing the vectors.
@@ -304,7 +304,7 @@ namespace ipo {
 
     bool find(const Point* vector, Hash& hash, std::size_t& index, HashMap::iterator& hashMapIter);
 
-    std::vector<Point*> _vectors; // The rational sparse vectors.
+    std::vector<Point const*> _vectors; // The rational sparse vectors.
     std::vector<soplex::DSVectorReal*> _approximations; // The floating-point versions of the vectors.
     std::vector<std::size_t> _bitSizes; // The bitsizes of the vectors.
     HashMap _hashMap; // The hash map to speed-up searching for duplicates.
@@ -359,7 +359,7 @@ namespace ipo {
      * If it is added, it is also marked as visible.
      */
 
-    virtual std::size_t insertFree(Point* vector);
+    virtual std::size_t insertFree(Point const* vector);
 
     /**
      * \brief Returns the index of first visible vector.
@@ -385,7 +385,7 @@ namespace ipo {
      * Returns an upper bound on the indices for the vectors.
      */
 
-    virtual std::size_t size();
+    virtual std::size_t size() const;
 
     /**
      * \brief Returns the vector of a given index.

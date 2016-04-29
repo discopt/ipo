@@ -229,7 +229,7 @@ namespace ipo {
     {
     public:
       Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, const VectorSubset& spanningPoints,
-          const VectorSubset& spanningRays, const VectorSubset& columnBasis, OptimizationOracleBase* oracle);
+          const VectorSubset& spanningRays, const VectorSubset& columnBasis, OracleBase* oracle);
       virtual ~Result();
 
       void inequality(soplex::LPRowRational& inequality) const;

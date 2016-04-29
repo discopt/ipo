@@ -44,21 +44,6 @@ namespace ipo {
 
     class Implementation;
 
-    enum Options
-    {
-      REDUNDANT_EQUATIONS_KEEP = 0, // Given equations are kept.
-      REDUNDANT_EQUATIONS_REMOVE = 1, // Only irredundant given equations are kept.
-      MASK_REDUNDANT_EQUATIONS = 1,
-      CACHE_USE = 0, // Use point / direction cache.
-      CACHE_SKIP = 2, // Don't use point / direction cache.
-      MASK_CACHE = 2,
-      ORACLE_DELAYED = 0, // Use heuristic calls and verify equations at the end.
-      ORACLE_ONLY = 4, // Always use oracle calls.
-      ORACLE_IMMEDIATE = 8, // Use heuristic calls and verify equation immediately.
-      ORACLE_NEVER = 12, // Always use heuristic oracle calls and trust.
-      MASK_ORACLE = 12
-    };
-
     class InformationBase
     {
     public:
@@ -87,9 +72,6 @@ namespace ipo {
       std::size_t numExactDirectionSolves() const;
       std::size_t lastDirectionBitsize() const;
       std::size_t maxDirectionBitsize() const;
-      bool optionRemoveRedundantEquations() const;
-      bool optionUseCache() const;
-      int optionOracleUsage() const;
 
       friend class Implementation;
       friend class Result;
@@ -120,11 +102,11 @@ namespace ipo {
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
       virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleZero(bool forceOptimal);
+      virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
-      virtual void onBeforeOracleMaximize(bool forceOptimal);
+      virtual void onBeforeOracleMaximize();
       virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleMinimize(bool forceOptimal);
+      virtual void onBeforeOracleMinimize();
       virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
       virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
@@ -177,11 +159,11 @@ namespace ipo {
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
       virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleZero(bool forceOptimal);
+      virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
-      virtual void onBeforeOracleMaximize(bool forceOptimal);
+      virtual void onBeforeOracleMaximize();
       virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleMinimize(bool forceOptimal);
+      virtual void onBeforeOracleMinimize();
       virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
       virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
@@ -233,11 +215,11 @@ namespace ipo {
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
       virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleZero(bool forceOptimal);
+      virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
-      virtual void onBeforeOracleMaximize(bool forceOptimal);
+      virtual void onBeforeOracleMaximize();
       virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
-      virtual void onBeforeOracleMinimize(bool forceOptimal);
+      virtual void onBeforeOracleMinimize();
       virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
       virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
@@ -272,16 +254,17 @@ namespace ipo {
 
       int dimension() const;
 
-      int run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions, soplex::LPRowSetRational& equations,
-          OptimizationOracleBase* oracle, OutputBase& output,
-          int options = REDUNDANT_EQUATIONS_KEEP | CACHE_USE | ORACLE_DELAYED);
+      int run(UniqueRationalVectorsBase& points,
+        UniqueRationalVectorsBase& directions,soplex::LPRowSetRational& equations,
+        OracleBase* oracle, OutputBase& output,
+        std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
       friend class Implementation;
     };
 
     int run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions, soplex::LPRowSetRational& equations,
-        OptimizationOracleBase* oracle, OutputBase& output,
-        int options = REDUNDANT_EQUATIONS_KEEP | CACHE_USE | ORACLE_DELAYED);
+        OracleBase* oracle, OutputBase& output,
+        std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
   } /* namespace AffineHull */
 

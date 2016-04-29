@@ -118,7 +118,7 @@ namespace ipo {
     return index;
   }
 
-  std::size_t UniqueRationalVectors::insertFree(Point* vector)
+  std::size_t UniqueRationalVectors::insertFree(Point const* vector)
   {
     Point copy;
     copy = *vector;
@@ -157,7 +157,7 @@ namespace ipo {
     return index + 1;
   }
 
-  std::size_t UniqueRationalVectors::size()
+  std::size_t UniqueRationalVectors::size() const
   {
     return _vectors.size();
   }
@@ -182,7 +182,7 @@ namespace ipo {
     return _bitSizes[index];
   }
 
-  soplex::DSVectorRational* UniqueRationalVectors::get(std::size_t index)
+  soplex::DSVectorRational const* UniqueRationalVectors::get(std::size_t index)
   {
     return _vectors[index];
   }
@@ -247,7 +247,7 @@ namespace ipo {
     return index;
   }
 
-  std::size_t FilteredUniqueRationalVectors::insertFree(Point* vector)
+  std::size_t FilteredUniqueRationalVectors::insertFree(Point const* vector)
   {
     std::size_t index = _base.insertFree(vector);
     update();
@@ -278,7 +278,7 @@ namespace ipo {
     return std::numeric_limits<std::size_t>::max();
   }
 
-  std::size_t FilteredUniqueRationalVectors::size()
+  std::size_t FilteredUniqueRationalVectors::size() const
   {
     return _base.size();
   }

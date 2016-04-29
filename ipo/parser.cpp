@@ -13,34 +13,34 @@ namespace ipo {
 
   LPToken::LPToken(char t) : type(t), nameIndex(0), number(0.0)
   {
-    
+
   }
 
   LPToken::LPToken(std::size_t nameIdx) : type(NAME), nameIndex(nameIdx), number(0.0)
   {
-    
+
   }
 
   LPToken::LPToken(const soplex::Rational& num) : type(NUMBER), nameIndex(0), number(num)
   {
-    
+
   }
 
   LPToken::~LPToken()
   {
-    
+
   }
-  
+
   LPParser::LPParser(std::istream& stream) : _stream(stream), _lookAhead(EOF)
   {
 
   }
-  
+
   LPParser::~LPParser()
   {
-    
+
   }
-  
+
   std::ostream& LPParser::printToken(std::ostream& stream, const LPToken& token)
   {
     if (token.type == LPToken::NAME)
@@ -73,7 +73,7 @@ namespace ipo {
     _nameList.push_back(_buffer);
     return LPToken(_nameList.size() - 1);
   }
-  
+
   LPToken LPParser::extractNumber()
   {
     soplex::Rational q;
@@ -137,7 +137,7 @@ namespace ipo {
               state = STATE_COMMENT;
               break;
             case '\n':
-            case '+': 
+            case '+':
             case '^':
             case '/':
             case '[':
@@ -212,7 +212,7 @@ namespace ipo {
         case STATE_NAME:
         {
           if ((c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || c == '!' || c == '"' || c == '#' || c == '$'
-            || c == '%' || c == '&' || c == ';' || c == '?' || c == '@' || c == '_' || c == '\'' || c == '{' 
+            || c == '%' || c == '&' || c == ';' || c == '?' || c == '@' || c == '_' || c == '\'' || c == '{'
             || c == '}' || c == '~' || (c >= '0' && c <= '9') || c == '.')
           {
             _buffer += c;
@@ -306,7 +306,7 @@ namespace ipo {
     }
     return LPToken(LPToken::END_OF_FILE);
   }
-  
+
   LPToken LPParser::nextNonWhite()
   {
     LPToken token;
@@ -318,7 +318,7 @@ namespace ipo {
     while(token.type == ' ');
     return token;
   }
-  
+
   void LPParser::fetchNextNonWhite()
   {
     _token = nextNonWhite();
@@ -326,15 +326,15 @@ namespace ipo {
 
   LPObjectiveParser::LPObjectiveParser(std::istream& stream): LPParser(stream)
   {
-    
+
   }
 
   LPObjectiveParser::~LPObjectiveParser()
   {
-    
+
   }
-  
-  
+
+
   void LPObjectiveParser::parseObjective(bool maximize)
   {
     std::string name = "";
@@ -436,7 +436,7 @@ namespace ipo {
       parseGoal();
     }
   }
-  
+
   LPInequalityParser::LPInequalityParser(std::istream& stream): LPParser(stream)
   {
 
@@ -446,16 +446,16 @@ namespace ipo {
   {
 
   }
-  
+
   void LPInequalityParser::parseRhs(const std::string& name, const Rational& lhsValue, char lhsSign, const std::map< std::string, Rational>& coefficients)
   {
     char rhsSign = token().type;
     assert(rhsSign == '<' || rhsSign == '>' || rhsSign == '=');
     fetchNextNonWhite();
-    
+
 //     std::cout << "rhsSign = " << rhsSign << ", token = ";
 //     printToken(std::cout, token()) << std::endl;
-    
+
     bool negate = false;
     if (token().type == '+' || token().type == '-')
     {
@@ -487,7 +487,7 @@ namespace ipo {
       rhsSign = '<';
       rhsValue = infinity;
     }
-    
+
     Rational left = -infinity;
     Rational right = infinity;
     if (lhsSign == '<' || lhsSign == '=')
@@ -505,7 +505,7 @@ namespace ipo {
   {
 //     std::cout << "parseVector(" << name << ", " << lhsValue << " " << lhsSign << ", " << (triedLhs ? "true" : "false") << ", " << coefficient << ", " << triedVar << "), token = ";
 //     printToken(std::cout, token()) << std::endl;
-    
+
     std::string varName = triedVar;
     Rational value = coefficient;
     bool negate;
@@ -524,7 +524,7 @@ namespace ipo {
       {
         if (token().type == '\n')
           fetchNextNonWhite();
-        
+
         negate = false;
         if (token().type == '+' || token().type == '-')
         {
@@ -558,7 +558,7 @@ namespace ipo {
               return;
           }
         }
-        
+
         value = negate ? -1 : 1;
         if (token().type == LPToken::NUMBER)
         {
@@ -579,7 +579,7 @@ namespace ipo {
 
         if (token().type == '*')
           fetchNextNonWhite();
-        
+
         if (token().type == LPToken::NAME)
         {
           varName = getTokenName(token());
@@ -594,7 +594,7 @@ namespace ipo {
         iter->second += value;
       else
         values.insert(std::make_pair(varName, value));
-      
+
 //       std::cout << "Added a coefficient with var = " << varName << ", next token = ";
 //       printToken(std::cout, token()) << std::endl;
 
@@ -606,7 +606,7 @@ namespace ipo {
   void LPInequalityParser::parseLhs(const std::string& name)
   {
 //     std::cout << "parseLhs(" << name << ")" << std::endl;
-    
+
     bool negate = false;
     if (token().type == '+' || token().type == '-')
     {
@@ -646,7 +646,7 @@ namespace ipo {
       return;
 
     /// We now have read an optional sign and a number/infinity.
-    
+
     if (token().type == '<' || token().type == '>' || token().type == '=')
     {
       char t = token().type;
@@ -655,14 +655,14 @@ namespace ipo {
     }
     else if (token().type == '*')
       fetchNextNonWhite();
-    
+
     if (token().type == LPToken::NAME)
       return parseVector(name, -infinity, '<', true, coefficient, "");
     else
       return;
   }
 
-      
+
   void LPInequalityParser::parseName()
   {
     assert(token().type == LPToken::NAME);
@@ -689,7 +689,7 @@ namespace ipo {
     {
 //       std::cout << "run: ";
 //       printToken(std::cout, token()) << std::endl;
-      
+
       if (token().type == '+' || token().type == '-' || token().type == LPToken::NUMBER)
         parseLhs("");
       else if (token().type == LPToken::NAME)
@@ -721,10 +721,10 @@ namespace ipo {
     {
       if (token().type == '\n')
         fetchNextNonWhite();
-      
+
       if (token().type == ')')
         return handlePoint(name, values);
-      
+
       if (token().type == LPToken::NAME)
       {
         varName = getTokenName(token());
@@ -732,17 +732,17 @@ namespace ipo {
       }
       else
         return;
-      
+
       if (token().type == '\n')
         fetchNextNonWhite();
-      
+
       if (token().type != '=')
         break;
       fetchNextNonWhite();
-      
+
       if (token().type == '\n')
         fetchNextNonWhite();
-      
+
       value = 1;
       if (token().type == '+' || token().type == '-')
       {
@@ -775,7 +775,7 @@ namespace ipo {
         iter->second += value;
       else
         values.insert(std::make_pair(varName, value));
-      
+
       if (token().type == '\n')
         fetchNextNonWhite();
 
@@ -819,5 +819,5 @@ namespace ipo {
     }
   }
 
-  
+
 }

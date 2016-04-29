@@ -13,7 +13,8 @@ namespace ipo {
 
 #ifdef WITH_SCIP
 
-  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space), _face(NULL)
+  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space),
+    _currentFace(NULL)
   {
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -25,14 +26,14 @@ namespace ipo {
     getSCIPvarToIndexMap(scip, varToIndexMap);
 
     /// Setup columns.
-    
+
     bool buildSpace = space.dimension() == 0;
     if (!buildSpace && space.dimension() != n)
     {
       throw std::runtime_error(
         "Dimension mismatch while constructing a MixedIntegerProgram for a non-empty space.");
     }
-    
+
     _columns.reMax(n);
     _integrality.resize(n);
     Rational obj, lower, upper;
@@ -185,29 +186,18 @@ namespace ipo {
     return checkRayBounds(ray) && checkRayRows(ray);
   }
 
-  void MixedIntegerProgram::faceEnabled(Face* face)
+  void MixedIntegerProgram::setFace(Face* newFace)
   {
-    if (_face != NULL && _face != face)
-    {
-      throw std::runtime_error("Error while enabling two distinct faces for MixedIntegerProgram!");
-    }
-    else if (_face != face)
-    {
-      _face = face;
-      _rows.add(face->rhs(), face->normal(), face->rhs());
-    }
-  }
-
-  void MixedIntegerProgram::faceDisabled(Face* face)
-  {
-    if (_face == NULL)
+    if (newFace == _currentFace)
       return;
-    if (_face != face)
-    {
-      throw std::runtime_error("Error while disabling unknown face for MixedIntegerProgram!");
-    }
-    _face = NULL;
-    _rows.remove(_rows.num() - 1);
+
+    if (_currentFace != NULL)
+      _rows.remove(_rows.num() - 1);
+
+    _currentFace = newFace;
+
+    if (_currentFace != NULL)
+      _rows.add(_currentFace->rhs(), _currentFace->sparseNormal(), _currentFace->rhs());
   }
 
   void MixedIntegerProgram::getConstraints(LPRowSetRational& rows, bool inequalities, bool equations,
@@ -267,15 +257,41 @@ namespace ipo {
   }
 
   MixedIntegerProgramCorrectorOracle::MixedIntegerProgramCorrectorOracle(const std::string& name,
-      MixedIntegerProgram& mip, FaceOptimizationOracleBase* inexact, bool correctAlways) :
-      FaceOptimizationOracleBase(name, mip.space()), _mip(mip), _inexact(inexact), 
-      _worker(mip.space().dimension()), _correctAlways(correctAlways)
+    MixedIntegerProgram& mip, OracleBase* approximateOracle)
+    : OracleBase(name, mip.space()), _mip(mip), _approximateOracle(approximateOracle),
+    _denseVector(mip.space().dimension())
   {
-    if (_mip.space() != _inexact->space())
-      throw std::runtime_error("Spaces of MixedIntegerProgram and inexact oracle differ.");
+    if (_mip.space() != _approximateOracle->space())
+      throw std::runtime_error("Spaces of MixedIntegerProgram and approximate oracle differ.");
 
-    /// Setup LP for corrections.
+    OracleBase::initializedSpace();
 
+    initializeLP();
+  }
+
+  MixedIntegerProgramCorrectorOracle::MixedIntegerProgramCorrectorOracle(const std::string& name,
+    MixedIntegerProgram& mip, OracleBase* approximateOracle,
+    OracleBase* nextOracle)
+    : OracleBase(name, nextOracle), _mip(mip), _approximateOracle(approximateOracle),
+    _denseVector(mip.space().dimension())
+  {
+    if (_mip.space() != _approximateOracle->space())
+      throw std::runtime_error("Spaces of MixedIntegerProgram and approximate oracle differ.");
+    if (_mip.space() != _nextOracle->space())
+      throw std::runtime_error("Spaces of MixedIntegerProgram and next oracle differ.");
+
+    OracleBase::initializedSpace();
+
+    initializeLP();
+  }
+
+  MixedIntegerProgramCorrectorOracle::~MixedIntegerProgramCorrectorOracle()
+  {
+
+  }
+
+  void MixedIntegerProgramCorrectorOracle::initializeLP()
+  {
     _spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
     _spx.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
     _spx.setRealParam(SoPlex::FEASTOL, 0.0);
@@ -288,20 +304,11 @@ namespace ipo {
     _spx.addRowsRational(_mip.rows());
   }
 
-  MixedIntegerProgramCorrectorOracle::~MixedIntegerProgramCorrectorOracle()
-  { 
-
-  }
 
   DSVectorRational* MixedIntegerProgramCorrectorOracle::correctPoint(const SVectorRational* point,
       const VectorRational& objective)
   {
-    if (!_correctAlways && _mip.checkPoint(point))
-      return NULL;
-
     _spx.clearBasis(); // TODO: This should not be necessary, but produced a bug!
-//     std::cerr << _spx.numRowsRational() << "x" << _spx.numColsRational() << std::endl;
-//     _spx.writeFileRational("correct-point.lp");
 
     /// Fix integers to zero.
 
@@ -311,7 +318,6 @@ namespace ipo {
       {
         assert(_spx.lowerRational(v) == _mip.columns().lower(v));
         assert(_spx.upperRational(v) == _mip.columns().upper(v));
-//        std::cerr << "Continuous var " << v << ": " << _spx.lowerRational(v) << " -- " << _spx.upperRational(v) << std::endl;
         continue;
       }
       _spx.changeBoundsRational(v, 0, 0);
@@ -332,27 +338,27 @@ namespace ipo {
     _spx.changeObjRational(objective);
 
     /// Solve LP.
-    
-//     std::cerr << "Solving" << std::endl;
 
     SPxSolver::Status status = _spx.solve();
     if (status != SPxSolver::OPTIMAL)
-      throw std::runtime_error("MixedIntegerProgram: Unexpected LP status while correcting point!");
+    {
+      std::stringstream error;
+      error << "MIP corrector: Unexpected LP status ";
+      error << status << " while correcting point.";
+      throw std::runtime_error(error.str());
+    }
 
     /// Extract solution.
 
     DSVectorRational* result = new DSVectorRational;
-    _spx.getPrimalRational(_worker);
-    (*result) = _worker;
+    _spx.getPrimalRational(_denseVector);
+    (*result) = _denseVector;
     return result;
   }
 
-  DSVectorRational* MixedIntegerProgramCorrectorOracle::correctRay(const SVectorRational* ray,
-      const VectorRational& objective)
+  DSVectorRational* MixedIntegerProgramCorrectorOracle::correctDirection(
+    const SVectorRational* direction, const VectorRational& objective)
   {
-    if (!_correctAlways && _mip.checkRay(ray))
-      return NULL;
-
     /// Relax integers to original bounds.
 
     for (std::size_t v = 0; v < space().dimension(); ++v)
@@ -374,106 +380,86 @@ namespace ipo {
 
     SPxSolver::Status status = _spx.solve();
     if (status != SPxSolver::UNBOUNDED)
-      throw std::runtime_error("MixedIntegerProgram: Unexpected LP status while correcting ray!");
+    {
+      std::stringstream error;
+      error << "MIP corrector: Unexpected LP status ";
+      error << status << " while correcting direction.";
+      throw std::runtime_error(error.str());
+    }
 
-    /// Extract ray.
+    /// Extract direction.
 
     DSVectorRational* result = new DSVectorRational;
-    _spx.getPrimalRayRational(_worker);
-    (*result) = _worker;
+    _spx.getPrimalRayRational(_denseVector);
+    (*result) = _denseVector;
     return result;
   }
 
-  void MixedIntegerProgramCorrectorOracle::run(OptimizationResult& result, const VectorRational& objective,
-      const Rational* improveValue, bool forceOptimal)
+  void MixedIntegerProgramCorrectorOracle::setFace(Face* newFace)
   {
-    /// Run inexact oracle.
+    if (newFace == currentFace())
+      return;
 
-// TODO:
-//    if (improveValue != NULL)
-//      _inexact->improve(result, objective, *improveValue, forceOptimal);
-//    else
-      _inexact->maximize(result, objective, forceOptimal);
+    if (currentFace() != NULL)
+      _spx.removeRowRational(_spx.numRowsRational() - 1);
 
-    bool correctedOptimal = false;
-    if (!result.optimal)
+    OracleBase::setFace(newFace);
+    _approximateOracle->setFace(newFace);
+    _mip.setFace(newFace);
+
+    if (currentFace() != NULL)
     {
-      /// If returned solution is not optimal, but all variables are continuous
-      /// and we correct all solutions, then we are optimal.
-
-      correctedOptimal = true;
-      for (std::size_t v = 0; v < _mip.space().dimension(); ++v)
-      {
-        if (_mip.isIntegral(v))
-        {
-          correctedOptimal = false;
-          break;
-        }
-      }
+      _spx.addRowRational(
+        LPRowRational(currentFace()->rhs(), currentFace()->sparseNormal(), currentFace()->rhs()));
     }
-
-    if (result.isUnbounded())
-    {
-      /// Unbounded case.
-
-      bool filterDuplicates = false;
-      for (std::size_t r = 0; r < result.directions.size(); ++r)
-      {
-        DSVectorRational* ray = correctRay(result.directions[r], objective);
-        if (ray == NULL)
-          correctedOptimal = false;
-        else
-        {
-          delete result.directions[r];
-          result.directions[r] = ray;
-          filterDuplicates = true;
-        }
-      }
-      if (filterDuplicates)
-        result.filterDuplicates();
-    }
-    else if (result.isFeasible())
-    {
-      /// Feasible case.
-
-      bool filterDuplicates = false;
-      for (std::size_t p = 0; p < result.points.size(); ++p)
-      {
-        DSVectorRational* point = correctPoint(result.points[p], objective);
-        if (point == NULL)
-          correctedOptimal = false;
-        else
-        {
-          delete result.points[p];
-          result.points[p] = point;
-          filterDuplicates = true;
-        }
-      }
-
-      if (filterDuplicates)
-        result.filterDuplicates();
-
-      /// Recompute objective values.
-
-      result.setFeasible(objective);
-    }
-
-    if (correctedOptimal)
-      result.optimal = true;
   }
 
-  void MixedIntegerProgramCorrectorOracle::faceEnabled(Face* face)
+  void MixedIntegerProgramCorrectorOracle::maximize(OracleResult& result,
+    const VectorRational& objective, const ObjectiveBound& objectiveBound,
+    std::size_t maxHeuristic, std::size_t minHeuristic)
   {
-    _inexact->setFace(face);
-    _mip.faceEnabled(face);
-    _spx.addRowRational(LPRowRational(face->rhs(), face->normal(), face->rhs()));
+    assert((thisHeuristic() == 0 && _nextOracle == NULL)
+      || thisHeuristic() > 0 && _nextOracle != NULL);
+
+    // Forward call if requested.
+
+    if (thisHeuristic() > maxHeuristic)
+      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
+
+    // Call approximate oracle with precisely its heuristic level to avoid forwarding there.
+
+    OracleResult approximateResult;
+    _approximateOracle->maximize(approximateResult, objective, objectiveBound,
+      _approximateOracle->thisHeuristic(), _approximateOracle->thisHeuristic());
+
+    if (approximateResult.isFeasible())
+    {
+      result.buildStart(objective);
+      for (std::size_t i = 0; i < approximateResult.points.size(); ++i)
+      {
+        result.buildAddPoint(correctPoint(approximateResult.points[i].point, objective));
+        delete approximateResult.points[i].point;
+      }
+      return result.buildFinish(thisHeuristic(), true, true, true);
+    }
+    else if (approximateResult.isUnbounded())
+    {
+      result.buildStart(objective);
+      for (std::size_t i = 0; i < approximateResult.directions.size(); ++i)
+      {
+        result.buildAddDirection(correctDirection(approximateResult.directions[i].direction,
+          objective));
+        delete approximateResult.directions[i].direction;
+      }
+      return result.buildFinish(thisHeuristic(), false, false, true);
+    }
+    else
+    {
+      assert(approximateResult.isInfeasible());
+      result.buildStart(objective);
+      return result.buildFinish(thisHeuristic(), false, false, false);
+    }
   }
 
-  void MixedIntegerProgramCorrectorOracle::faceDisabled(Face* face)
-  {
-    _inexact->setFace(NULL);
-    _spx.removeRowRational(_spx.numRowsRational() - 1);
-    _mip.faceDisabled(face);
-  }
 
 } /* namespace ipo */

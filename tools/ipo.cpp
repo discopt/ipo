@@ -52,7 +52,6 @@ public:
     _scipOracle = NULL;
     _scipCorrectorOracle = NULL;
 #endif
-    _chainedOracle = NULL;
   }
 
   virtual ~IPOConsoleApplication()
@@ -60,8 +59,6 @@ public:
     /// ~ConsoleApplicationBase will free the oracle passed to setBasicOracle.
 
 #ifdef WITH_SCIP
-    if (_scipCorrectorOracle && _chainedOracle)
-      delete _scipCorrectorOracle;
     if (_scipMip)
       delete _scipMip;
     if (_scipOracle)
@@ -266,19 +263,26 @@ public:
       throw std::runtime_error(ss.str());
     }
 
-    FaceOptimizationOracleBase* oracle = NULL;
-    FaceOptimizationOracleBase* heuristic = NULL;
+    OracleBase* oracle = NULL;
 #ifdef WITH_SCIP
     if (_oracleArgument == "scip")
     {
       try
       {
         SCIP* scip = NULL;
-        SCIP_CALL_EXC(SCIPcreate(&scip));
-        SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
-        SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
-        SCIP_CALL_EXC(SCIPreadProb(scip, firstArgument.c_str(), NULL));
-        SCIP_CALL_EXC(SCIPtransformProb(scip));
+        try
+        {
+          SCIP_CALL_EXC(SCIPcreate(&scip));
+          SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
+          SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
+          SCIP_CALL_EXC(SCIPreadProb(scip, firstArgument.c_str(), NULL));
+          SCIP_CALL_EXC(SCIPtransformProb(scip));
+        }
+        catch (SCIPException& ex)
+        {
+          SCIP_CALL_EXC(SCIPfree(&scip));
+          throw ex;
+        }
 
         _scipSpace = new Space;
         _scipMip = new MixedIntegerProgram(*_scipSpace, scip);
@@ -301,9 +305,9 @@ public:
           _instanceObjective.add(i, x);
       }
 
-      _scipOracle = new SCIPOptimizationOracle(firstArgument, *_scipMip, false);
+      _scipOracle = new SCIPOracle(firstArgument, *_scipMip);
       _scipCorrectorOracle = new MixedIntegerProgramCorrectorOracle(firstArgument + "-corrected", *_scipMip,
-          _scipOracle);
+        _scipOracle);
       oracle = _scipCorrectorOracle;
     }
 #endif
@@ -320,13 +324,7 @@ public:
       throw std::runtime_error(ss.str());
     }
 
-    if (heuristic != NULL)
-    {
-      _chainedOracle = new ChainedOptimizationOracle(heuristic, oracle);
-      setBasicOracle(_chainedOracle);
-    }
-    else
-      setBasicOracle(oracle);
+    setBasicOracle(oracle);
 
     return 1;
   }
@@ -335,7 +333,7 @@ public:
   {
     if (!ConsoleApplicationBase::processArguments())
       return false;
-    
+
     std::size_t n = space().dimension();
 
     /// TODO: Instance objective may be invalid if projection is enabled!
@@ -385,11 +383,10 @@ protected:
 #ifdef WITH_SCIP
   Space* _scipSpace;
   MixedIntegerProgram* _scipMip;
-  SCIPOptimizationOracle* _scipOracle;
+  SCIPOracle* _scipOracle;
   MixedIntegerProgramCorrectorOracle* _scipCorrectorOracle;
 #endif
   soplex::DSVectorRational _instanceObjective;
-  ChainedOptimizationOracle* _chainedOracle;
 };
 
 int main(int argc, char** argv)

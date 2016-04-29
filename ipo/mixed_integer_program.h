@@ -21,7 +21,7 @@ namespace ipo {
    *
    * A mixed-integer program.
    * It is typically used to create oracles for optimizing over it,
-   * e.g., using \ref SCIPOptimizationOracle and \ref ExactSCIPOptimizationOracle.
+   * e.g., using \ref SCIPOracle and \ref ExactSCIPOracle.
    */
 
   class MixedIntegerProgram
@@ -43,13 +43,13 @@ namespace ipo {
      */
 
     virtual ~MixedIntegerProgram();
-    
+
     /**
      * \brief Returns the space.
-     * 
+     *
      * Returns a const reference to the space.
      */
-    
+
     inline const Space& space() const
     {
       return _space;
@@ -183,15 +183,7 @@ namespace ipo {
      * Restricts the MIP to the given face by adding an equation constraint.
      */
 
-    void faceEnabled(Face* face);
-
-    /**
-     * \brief Removes a face restriction.
-     *
-     * Removes a face restriction added by \ref faceEnabled().
-     */
-
-    void faceDisabled(Face* face);
+    void setFace(Face* newFace);
 
     /**
      * \brief Returns all row constraints.
@@ -223,7 +215,8 @@ namespace ipo {
      *   If not \c NULL, writes corresponding row names.
      */
 
-    void getFixedVariableEquations(soplex::LPRowSetRational& rows, std::vector<std::string>* names = NULL);
+    void getFixedVariableEquations(soplex::LPRowSetRational& rows,
+      std::vector<std::string>* names = NULL);
 
   protected:
     const Space& _space; // Space with column names.
@@ -232,41 +225,104 @@ namespace ipo {
     std::vector<std::string> _rowNames; // Row names
     std::vector<bool> _integrality; // Integrality constraints
     soplex::DVectorRational _worker; // Temporary dense rational vector.
-    Face* _face; // Currently active face.
+    Face* _currentFace; // Currently active face.
   };
 
   /**
-   * \brief An oracle that postprocesses solutions from an inexact oracle.
+   * \brief An oracle that postprocesses floating-point solutions from an approximate oracle.
    *
    * An oracle that can postprocess floating-point solutions
    * of a mixed-integer program to get correct rational ones.
    */
 
-  class MixedIntegerProgramCorrectorOracle: public FaceOptimizationOracleBase
+  class MixedIntegerProgramCorrectorOracle: public OracleBase
   {
   public:
+
     /**
-     * \brief Constructor.
+     * \brief Constructs an oracle that postprocesses floating-point solutions to make them exact.
      *
-     * Constructs the oracle for a given \c mip.
-     * It calls another \c inexact oracle.
-     * If a returned solution (point or direction) is
-     * infeasible or if \c correctAlways is \c true,
-     * then it rounds the integer variables of the \c mip,
-     * and recomputes optimal continuous variables
-     * by solving a linear program.
+     * Constructs an oracle that postprocesses floating-point solutions to make them exact for the
+     * given \c mip. It calls the \c approximateOracle and then solves an LP to recompute the
+     * continuous part.
+     *
+     * \param name              Name of the oracle.
+     * \param mip               Associated mixed-integer program.
+     * \param approximateOracle Approximate oracle whose solutions are postprocessed.
      */
 
     MixedIntegerProgramCorrectorOracle(const std::string& name, MixedIntegerProgram& mip,
-        FaceOptimizationOracleBase* inexact, bool correctAlways = true);
+      OracleBase* approximateOracle);
+
+    /**
+     * \brief Constructs a heuristic oracle that postprocesses floating-point solutions.
+     *
+     * Constructs an oracle that postprocesses floating-point solutions to make them exact for the
+     * given \c mip. It calls the \c approximateOracle and then solves an LP to recompute the
+     * continuous part.
+     *
+     * \param name              Name of the oracle.
+     * \param mip               Associated mixed-integer program.
+     * \param approximateOracle Approximate oracle whose solutions are postprocessed.
+     * \param nextOracle        Next associated oracle.
+     */
+
+    MixedIntegerProgramCorrectorOracle(const std::string& name, MixedIntegerProgram& mip,
+      OracleBase* approximateOracle, OracleBase* nextOracle);
 
     /**
      * \brief Destructor.
+     *
+     * Destructor.
      */
 
     virtual ~MixedIntegerProgramCorrectorOracle();
 
+    /**
+     * \brief Restricts the oracle to the face defined by \p newFace.
+     *
+     * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
+     * For \p newFace equal to \c NULL we define \f$ F := P \f$.
+     *
+     * This implementation adds a corresponding equation to the LP that is used for the
+     * postprocessing.
+     */
+
+    virtual void setFace(Face* newFace = NULL);
+
+    /**
+     * \brief Runs the oracle to maximize the dense rational \p objective.
+     *
+     * Runs the optimization oracle to maximize the given dense rational \p objective
+     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
+     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
+     * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
+     * next oracle.
+     *
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param maxHeuristic   Requested maximum heuristic level.
+     * \param minHeuristic   Requested minimum heuristic level.
+     *
+     * This implementation forwards the call to the oracle and then solves an LP for every
+     * solution that is returned.
+     */
+
+    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound = ObjectiveBound(),
+      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
+      std::size_t minHeuristic = 0);
+
   protected:
+
+    /**
+     * \brief Initializes the LP and solver.
+     *
+     * Initializes the LP and solver.
+     */
+
+    void initializeLP();
 
     /**
      * \brief Corrects a given point.
@@ -285,50 +341,15 @@ namespace ipo {
      * by solving an LP.
      */
 
-    soplex::DSVectorRational* correctRay(const soplex::SVectorRational* ray, const soplex::VectorRational& objective);
-
-    /**
-     * \brief Actual implementation.
-     *
-     * The actual implementation calls the inexact oracle,
-     * checks feasibility of the returned points or directions,
-     * and finally corrects them, if required.
-     */
-
-    virtual void run(OptimizationResult& result, const soplex::VectorRational& objective,
-        const soplex::Rational* improveValue, bool forceOptimal);
-
-    /**
-     * \brief Method that is called when a new face is activated.
-     *
-     * Method that is called when a new \c face is activated.
-     * If a (non-trivial) face was active before,
-     * it is ensured that \ref faceDisabled() is called before.
-     *
-     * The implementation calls the corresponding method
-     * for the inexact oracle and adds an equation constraint.
-     */
-
-    virtual void faceEnabled(Face* face);
-
-    /**
-     * \brief Method that is called when a face is deactivated.
-     *
-     * Method that is called when a face is deactivated.
-     *
-     * The implementation removes the constraint that was added in \ref faceEnabled()
-     * and calls the corresponding method for the inexact oracle.
-     */
-
-    virtual void faceDisabled(Face* face);
+    soplex::DSVectorRational* correctDirection(const soplex::SVectorRational* direction,
+      const soplex::VectorRational& objective);
 
   protected:
 
-    MixedIntegerProgram& _mip; // Mixed-integer program.
-    FaceOptimizationOracleBase* _inexact; // Inexact oracle.
+    MixedIntegerProgram& _mip; // Associated mixed-integer program.
+    OracleBase* _approximateOracle; // Approximate oracle.
     soplex::SoPlex _spx; // LP solver
-    soplex::DVectorRational _worker; // Temporary dense rational vector.
-    bool _correctAlways; // Whether to always correct, regardless of feasibility.
+    soplex::DVectorRational _denseVector; // Temporary dense rational vector.
   };
 
 } /* namespace ipo */

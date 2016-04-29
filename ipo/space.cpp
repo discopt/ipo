@@ -14,6 +14,11 @@ namespace ipo {
 
   }
 
+  Space::Space(const Space& other) : _variables(other._variables)
+  {
+
+  }
+
   Space::~Space()
   {
 

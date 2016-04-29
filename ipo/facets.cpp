@@ -17,7 +17,7 @@ namespace ipo {
     public:
       Implementation(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays,
           const VectorSubset& spanningPoints, const VectorSubset& spanningRays, const VectorSubset& columnBasis,
-          OptimizationOracleBase* oracle) :
+          OracleBase* oracle) :
           PolarLP(points, rays, oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(
               false)
       {
@@ -48,8 +48,8 @@ namespace ipo {
           _basisConstraints.push_back(addRayContraint(index));
           _basisConstraintTypes.push_back('r');
           _basisConstraintIndices.push_back(index);
-          _interiorPoint += *_rays[index];
-          _interiorRay += *_rays[index];
+          _interiorPoint += *_directions[index];
+          _interiorRay += *_directions[index];
         }
 
         /// Set initial basis.
@@ -150,11 +150,11 @@ namespace ipo {
           dense -= _interiorPoint;
         else
           dense -= _interiorRay;
-        
+
         updateConstraint(_normalizationConstraint, -infinity, dense, 1);
 
         /// Perform stabilization.
-        
+
         stabilizedPresolve();
 
         /// Reset basis.
@@ -162,9 +162,9 @@ namespace ipo {
         setBasis(_basis);
 
         /// Optimize
-        
+
         optimize(true);
-        
+
         /// Extract solution
 
         dense.reDim(n() + 1);
@@ -255,7 +255,7 @@ namespace ipo {
 
     Result::Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays,
         const VectorSubset& spanningPoints, const VectorSubset& spanningRays, const VectorSubset& columnBasis,
-        OptimizationOracleBase* oracle)
+        OracleBase* oracle)
     {
       _implementation = new Implementation(points, rays, spanningPoints, spanningRays, columnBasis, oracle);
     }

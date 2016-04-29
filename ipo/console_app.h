@@ -64,7 +64,7 @@ namespace ipo {
      * The implementation assumes that the latter options were already parsed.
      */
 
-    void setBasicOracle(FaceOptimizationOracleBase* oracle);
+    void setBasicOracle(OracleBase* oracle);
 
     /**
      * \brief Parses all arguments by repeatedly calling \ref parseArgument().
@@ -118,8 +118,8 @@ namespace ipo {
      */
 
     virtual void printUsage();
-    
-    
+
+
 
   protected:
     virtual void printAdditionalOptionsPolyhedron(std::ostream& stream);
@@ -156,7 +156,7 @@ namespace ipo {
     virtual bool separatePointFacet(const Point* point, bool& isFeasible);
     virtual bool computeSmallestFace(const Point* point);
     virtual bool printCached();
-    
+
     void setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds);
     void addRelaxationRows(const soplex::LPRowSetRational& rows);
 
@@ -256,13 +256,13 @@ namespace ipo {
     {
       return _points[index];
     }
-    
+
     inline const Space& space() const
     {
       return _space;
     }
 
-    inline FaceOptimizationOracleBase* oracle()
+    inline OracleBase* oracle()
     {
       return _oracle;
     }
@@ -299,7 +299,7 @@ namespace ipo {
     bool _optionPrintRandom;
 
     Space _space;
-    FaceOptimizationOracleBase* _oracle;
+    OracleBase* _oracle;
 
     std::vector<Face*> _faces;
     std::vector<std::string> _faceNames;

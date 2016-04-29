@@ -9,12 +9,12 @@ using namespace soplex;
 
 namespace ipo {
 
-  PolarLP::PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, 
-    OptimizationOracleBase* oracle, double initialPenalty, int maxAge) :
-    _points(points), _rays(rays), _oracle(oracle), _n(oracle->space().dimension()), 
-    _d(oracle->space().dimension() + 1), _offsetLower(oracle->space().dimension() + 1), 
+  PolarLP::PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays,
+    OracleBase* oracle, double initialPenalty, int maxAge) :
+    _points(points), _directions(rays), _oracle(oracle), _n(oracle->space().dimension()),
+    _d(oracle->space().dimension() + 1), _offsetLower(oracle->space().dimension() + 1),
     _offsetUpper(2 * (oracle->space().dimension() + 1)), _stabilizing(false),
-    _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0), 
+    _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0),
     _lastPenaltyCosts(0.0)
   {
     // TODO: have a temporary maxAge variable during each run which is increased if stuck.
@@ -94,7 +94,8 @@ namespace ipo {
     _stabLP.changeBoundsReal(column, double(lower), double(upper));
   }
 
-  std::size_t PolarLP::addConstraint(const Rational& lhs, const SVectorRational& row, const Rational& rhs)
+  std::size_t PolarLP::addConstraint(const Rational& lhs, const SVectorRational& row, const
+Rational& rhs)
   {
     for (int p = row.size() - 1; p >= 0; --p)
       assert(row.index(p) <= _n);
@@ -131,13 +132,15 @@ namespace ipo {
         LPRowReal(double(row.lhs()), realVector, double(row.rhs())));
   }
 
-  void PolarLP::updateConstraint(std::size_t index, const soplex::Rational& lhs, const soplex::SVectorRational& normal,
+  void PolarLP::updateConstraint(std::size_t index, const soplex::Rational& lhs, const
+soplex::SVectorRational& normal,
       const soplex::Rational& rhs)
   {
     updateConstraint(index, LPRowRational(lhs, normal, rhs));
   }
 
-  void PolarLP::updateConstraint(std::size_t index, const soplex::Rational& lhs, const soplex::VectorRational& normal,
+  void PolarLP::updateConstraint(std::size_t index, const soplex::Rational& lhs, const
+soplex::VectorRational& normal,
       const soplex::Rational& rhs)
   {
     DSVectorRational sparseNormal;
@@ -324,7 +327,7 @@ namespace ipo {
     }
     _mainLP.removeRowsRational(&rowPermutation[0]);
     _rowInfos.resize(_mainLP.numRowsRational());
-    
+
     /// Reset stabilization procedures.
 
     int localMaxAge = _maxAge;
@@ -415,9 +418,10 @@ namespace ipo {
       if (status != SPxSolver::OPTIMAL)
       {
         assert(_stabLP.writeFileReal("stab.lp"));
-        
+
         std::stringstream ss;
-        ss << "PolarLP: Stabilization LP is " << status << ", although provably feasible and bounded.";
+        ss << "PolarLP: Stabilization LP is " << status <<
+          ", although provably feasible and bounded.";
         throw std::runtime_error(ss.str());
       }
 
@@ -438,7 +442,8 @@ namespace ipo {
         throw std::runtime_error("Stabilization: No dual solution available.");
 
       // TODO: SOLUTION DUMP
-//      std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " << std::setw(6)
+//      std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " <<
+// std::setw(6)
 //          << primalSolution[10] << " " << std::setw(6) << primalSolution[11] << std::endl;
 //      ++iteration;
 
@@ -468,11 +473,13 @@ namespace ipo {
       /// Search cache.
 
       onBeforeCache();
-      searchCacheApproximate(pointIndices, _points, true, inequalityApproxDenseNormal, inequalityApproxRhs, 10,
+      searchCacheApproximate(pointIndices, _points, true, inequalityApproxDenseNormal,
+inequalityApproxRhs, 10,
           APPROX_VIOLATION);
       if (pointIndices.size() < 10)
       {
-        searchCacheApproximate(rayIndices, _rays, false, inequalityApproxDenseNormal, 0, 10 - pointIndices.size(),
+        searchCacheApproximate(rayIndices, _directions, false, inequalityApproxDenseNormal, 0, 10 -
+pointIndices.size(),
             APPROX_VIOLATION);
       }
       onAfterCache(pointIndices.size(), rayIndices.size());
@@ -500,21 +507,14 @@ namespace ipo {
       inequalityRoundedRhs = inequalityApproxRhs + APPROX_VIOLATION;
 
       assert(pointIndices.empty() && rayIndices.empty());
-      onBeforeOracleCall(false);
-      maximizeOracle(pointIndices, rayIndices, inequalityRoundedDenseNormal, inequalityRoundedRhs, false);
-      onAfterOracleCall(false, _result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
+      onBeforeOracleCall();
+      maximizeOracle(pointIndices, rayIndices, inequalityRoundedDenseNormal, inequalityRoundedRhs);
+      onAfterOracleCall(_result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
 
       if (addPointsAndRays(pointIndices, rayIndices, true))
         continue;
 
-      assert(pointIndices.empty() && rayIndices.empty());
-      onBeforeOracleCall(true);
-      maximizeOracle(pointIndices, rayIndices, inequalityRoundedDenseNormal, inequalityRoundedRhs, true);
       bool penalizing = _stabPenalty > 1.0e-6;
-      onAfterOracleCall(true, _result.isFeasible(), pointIndices.size(), rayIndices.size(), !penalizing);
-
-      if (addPointsAndRays(pointIndices, rayIndices, true))
-        continue;
 
       /// If we are feasible, then quickly decrease penalty, if not already low.
 
@@ -532,7 +532,7 @@ namespace ipo {
       else
       {
         /// If stabilization is complete, then add rows of certifying points and rays to exact LP.
-    
+
         for (std::size_t r = 0; r < numRows; ++r)
         {
           if (r < rowStatus.size() && rowStatus[r] == SPxSolver::ON_UPPER)
@@ -543,7 +543,7 @@ namespace ipo {
               addRayRow(_stabRowInfos[r].index, false);
           }
         }
-        
+
         break;
       }
     }
@@ -569,16 +569,16 @@ namespace ipo {
     std::vector<SPxSolver::VarStatus> rowStatus;
     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
     std::vector<int> rowPermutation;
-    
+
     /// Extract objective and compute perturbed one.
     DVectorRational objectiveVector, perturbedVector;
     if (perturbeObjective)
     {
       const Rational PERTURBATION_DENOMINATOR = 1024*1024*1024;
-    
+
       std::default_random_engine generator;
       std::uniform_int_distribution<int> distribution(1,1024);
-      
+
       objectiveVector.reDim(numColumns());
       _mainLP.getObjRational(objectiveVector);
       perturbedVector = objectiveVector;
@@ -599,9 +599,9 @@ namespace ipo {
       }
       _mainLP.changeObjRational(perturbedVector);
     }
-    
+
     /// Main loop.
-    
+
     while (true)
     {
       assert(pointIndices.empty());
@@ -660,7 +660,7 @@ namespace ipo {
       SPxSolver::Status status = _mainLP.solve();
       if (status != SPxSolver::OPTIMAL)
         throw std::runtime_error("PolarLP: Main LP is not optimal.");
-      
+
       rowStatus.resize(_mainLP.numRowsRational());
       _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
 //       int numBasic = 0;
@@ -668,7 +668,7 @@ namespace ipo {
 //       {
 //         if (columnStatus[c] == SPxSolver::BASIC)
 //           numBasic++;
-//         std::cout << "Col " << c << " is " << columnStatus[c] << std::endl; 
+//         std::cout << "Col " << c << " is " << columnStatus[c] << std::endl;
 //       }
 //       std::cout << "#basic cols: " << numBasic << std::endl;
 
@@ -706,19 +706,23 @@ namespace ipo {
       inequalityRhs = _currentPrimalSolution[_n];
 
       // TODO: SOLUTION DUMP
-//        std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " << std::setw(6)
-//            << double(_currentPrimalSolution[10]) << " " << std::setw(6) << double(_currentPrimalSolution[11])
+//        std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " <<
+// std::setw(6)
+//            << double(_currentPrimalSolution[10]) << " " << std::setw(6) <<
+// double(_currentPrimalSolution[11])
 //            << std::endl;
 //        ++iteration;
 
       /// Search cache.
 
       onBeforeCache();
-      searchCache(pointIndices, _points, true, inequalityApproxDenseNormal, inequalityExactDenseNormal, inequalityRhs,
+      searchCache(pointIndices, _points, true, inequalityApproxDenseNormal,
+inequalityExactDenseNormal, inequalityRhs,
           10);
       if (pointIndices.size() < 10)
       {
-        searchCache(rayIndices, _rays, false, inequalityApproxDenseNormal, inequalityExactDenseNormal, 0,
+        searchCache(rayIndices, _directions, false, inequalityApproxDenseNormal,
+inequalityExactDenseNormal, 0,
             10 - pointIndices.size());
       }
       onAfterCache(pointIndices.size(), rayIndices.size());
@@ -733,21 +737,14 @@ namespace ipo {
       numLastCacheRounds = 0;
 
       assert(pointIndices.empty() && rayIndices.empty());
-      onBeforeOracleCall(false);
-      maximizeOracle(pointIndices, rayIndices, inequalityExactDenseNormal, inequalityRhs, false);
-      onAfterOracleCall(false, _result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
+      onBeforeOracleCall();
+      maximizeOracle(pointIndices, rayIndices, inequalityExactDenseNormal, inequalityRhs);
+      onAfterOracleCall(_result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
 
       if (addPointsAndRays(pointIndices, rayIndices, false))
         continue;
 
-      assert(pointIndices.empty() && rayIndices.empty());
-      onBeforeOracleCall(true);
-      maximizeOracle(pointIndices, rayIndices, inequalityExactDenseNormal, inequalityRhs, true);
-      onAfterOracleCall(true, _result.isFeasible(), pointIndices.size(), rayIndices.size(), true);
 
-      if (addPointsAndRays(pointIndices, rayIndices, false))
-        continue;
-      
       if (perturbeObjective)
       {
         _mainLP.changeObjRational(objectiveVector);
@@ -755,28 +752,28 @@ namespace ipo {
         SPxSolver::Status status = _mainLP.solve();
         if (status != SPxSolver::OPTIMAL)
           throw std::runtime_error("PolarLP: Main LP is not optimal.");
-      
+
         rowStatus.resize(_mainLP.numRowsRational());
         _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
       }
-      
+
       break;
     }
   }
-  
+
   void PolarLP::reoptimizePerturbed()
   {
     const Rational PERTURBATION_DENOMINATOR = 1024*1024*1024;
-    
+
     std::default_random_engine generator;
     std::uniform_int_distribution<int> distribution(1,1024);
-    
+
 //     Rational objectiveValue = _mainLP.objValueRational();
 //     std::cout << "Objective = " << objectiveValue << std::endl;
-    
+
     DVectorRational objectiveVector(numColumns());
     _mainLP.getObjRational(objectiveVector);
-    
+
     DVectorRational perturbedVector(numColumns());
     perturbedVector = objectiveVector;
     LPRowRational row;
@@ -796,11 +793,12 @@ namespace ipo {
     }
 //     for (std::size_t c = 0; c < numColumns(); ++c)
 //     {
-//       std::cout << "Obj #" << c << ": " << objectiveVector[c] << " -> " << perturbedVector[c] << std::endl;
+//       std::cout << "Obj #" << c << ": " << objectiveVector[c] << " -> " << perturbedVector[c] <<
+// std::endl;
 //     }
 
     _mainLP.changeObjRational(perturbedVector);
-    
+
     SPxSolver::Status status = _mainLP.solve();
     if (status != SPxSolver::OPTIMAL)
     {
@@ -809,7 +807,7 @@ namespace ipo {
       throw std::runtime_error(ss.str());
     }
 
-    
+
 //     std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
 //     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
 //     _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
@@ -818,10 +816,10 @@ namespace ipo {
 //     {
 //       if (columnStatus[c] == SPxSolver::BASIC)
 //         numBasic++;
-//       std::cout << "Perturbed: Col " << c << " is " << columnStatus[c] << std::endl; 
+//       std::cout << "Perturbed: Col " << c << " is " << columnStatus[c] << std::endl;
 //     }
 //     std::cout << "Perturbed: #basic cols: " << numBasic << std::endl;
-    
+
     _mainLP.changeObjRational(objectiveVector);
     status = _mainLP.solve();
     if (status != SPxSolver::OPTIMAL)
@@ -835,14 +833,14 @@ namespace ipo {
     _mainLP.getPrimalRational(_currentPrimalSolution);
     DSVectorRational sparsePrimal;
     sparsePrimal = _currentPrimalSolution;
-    
+
     std::cout << _mainLP.objValueRational() << std::endl;
     std::cout << sparsePrimal << std::endl;
     std::cout << std::endl;
-    
+
 //     objectiveValue = _mainLP.objValueRational();
 //     std::cout << "Objective = " << objectiveValue << std::endl;
-    
+
 /*
     _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
     numBasic = 0;
@@ -850,7 +848,7 @@ namespace ipo {
     {
       if (columnStatus[c] == SPxSolver::BASIC)
         numBasic++;
-      std::cout << "Reset: Col " << c << " is " << columnStatus[c] << std::endl; 
+      std::cout << "Reset: Col " << c << " is " << columnStatus[c] << std::endl;
     }
     std::cout << "Reset: #basic cols: " << numBasic << std::endl;*/
   }
@@ -880,12 +878,12 @@ namespace ipo {
 
   }
 
-  void PolarLP::onBeforeOracleCall(bool forceOptimal)
+  void PolarLP::onBeforeOracleCall()
   {
 
   }
 
-  void PolarLP::onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays,
+  void PolarLP::onAfterOracleCall(bool feasible, std::size_t numPoints, std::size_t numRays,
       bool lastIteration)
   {
 
@@ -945,7 +943,7 @@ namespace ipo {
     }
     else
     {
-      _mainLP.addRowRational(LPRowRational(-infinity, *_rays[index], Rational(0)));
+      _mainLP.addRowRational(LPRowRational(-infinity, *_directions[index], Rational(0)));
       _rowInfos.push_back(ri);
     }
   }
@@ -968,7 +966,8 @@ namespace ipo {
   };
 
   void PolarLP::searchCache(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
-      const VectorReal& approxObjective, const VectorRational& exactObjective, const Rational& rhs, std::size_t maxAdd)
+      const VectorReal& approxObjective, const VectorRational& exactObjective, const Rational& rhs,
+std::size_t maxAdd)
   {
     if (maxAdd == 0)
       return;
@@ -1001,7 +1000,8 @@ namespace ipo {
     }
   }
 
-  void PolarLP::searchCacheApproximate(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
+  void PolarLP::searchCacheApproximate(VectorSubset& indices, UniqueRationalVectorsBase& objects,
+bool points,
       const VectorReal& approxObjective, double approxRhs, std::size_t maxAdd, double epsilon)
   {
     if (maxAdd == 0)
@@ -1029,22 +1029,20 @@ namespace ipo {
     }
   }
 
-  void PolarLP::maximizeOracle(VectorSubset& pointIndices, VectorSubset& rayIndices,
-      const VectorRational& exactObjective, const Rational& rhs, bool forceOptimal)
+  void PolarLP::maximizeOracle(VectorSubset& pointIndices, VectorSubset& directionIndices,
+    const VectorRational& exactObjective, const Rational& rhs)
   {
-    _oracle->maximize(_result, exactObjective, forceOptimal);
+    _oracle->maximize(_result, exactObjective, ObjectiveBound(rhs, true));
+    _result.addToContainers(_points, _directions);
 
     if (_result.isUnbounded())
     {
-      std::size_t oldSize = _rays.size();
+      std::size_t oldSize = _directions.size();
       for (std::size_t i = 0; i < _result.directions.size(); ++i)
       {
-        std::size_t index = _rays.insertFree(_result.directions[i]);
+        std::size_t index = _result.directions[i].index;
         if (index >= oldSize)
-        {
-          assert(_result.objectives[i] > 0);
-          rayIndices.push_back(index);
-        }
+          directionIndices.push_back(index);
       }
     }
     else if (_result.isFeasible())
@@ -1052,10 +1050,10 @@ namespace ipo {
       std::size_t oldSize = _points.size();
       for (std::size_t i = 0; i < _result.points.size(); ++i)
       {
-        std::size_t index = _points.insertFree(_result.points[i]);
+        std::size_t index = _result.points[i].index;
         if (index >= oldSize)
         {
-          if (_result.objectives[i] > rhs)
+          if (_result.points[i].objectiveValue > rhs)
             pointIndices.push_back(index);
         }
       }

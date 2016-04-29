@@ -25,7 +25,7 @@ namespace ipo {
     /**
      * \brief Constructs a space without variables.
      *
-     * Constructs the 0-dimensional space. Use \ref addVariable() method to increase its dimension.
+     * Constructs the 0-dimensional space. Use \ref addVariable() to increase its dimension.
      */
 
     Space();
@@ -37,6 +37,14 @@ namespace ipo {
      */
 
     Space(const std::vector<std::string>& variables);
+
+    /**
+     * \brief Copy constructor.
+     *
+     * Copy constructor.
+     */
+
+    Space(const Space& other);
 
     /**
      * \brief Destructor.

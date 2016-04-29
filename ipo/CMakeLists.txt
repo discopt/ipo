@@ -13,6 +13,8 @@ set(IPO_SOURCES
   spx_gmp.cpp
   space.cpp
   oracles.cpp
+  projection.cpp
+  cache_oracle.cpp
   vector_space_generators.cpp
   reconstruct.cpp
   vector_2d.cpp
@@ -25,7 +27,7 @@ set(IPO_SOURCES
   cpu_timer.cpp
   polar_lp.cpp
   smallest_face.cpp
-  wrapper_oracle.cpp
+  external_oracle.cpp
   console_app.cpp
   parser.cpp
 )
@@ -42,6 +44,7 @@ set(IPO_INSTALL_HEADERS
   cpu_timer.h
   min_norm_2d.h
   oracles.h
+  projection.h
   reconstruct.h
   spx_gmp.h
   vector_2d.h
