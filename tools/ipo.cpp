@@ -334,8 +334,6 @@ public:
     if (!ConsoleApplicationBase::processArguments())
       return false;
 
-    std::size_t n = space().dimension();
-
     /// TODO: Instance objective may be invalid if projection is enabled!
     if (_useInstanceObjective)
     {
@@ -347,8 +345,8 @@ public:
 #ifdef WITH_SCIP
     if (_useInstanceBounds)
     {
-      soplex::DVectorRational lower(n);
-      soplex::DVectorRational upper(n);
+      soplex::DVectorRational lower(space().dimension());
+      soplex::DVectorRational upper(space().dimension());
       const soplex::LPColSetRational& cols = _scipMip->columns();
       setRelaxationBounds(cols.lower(), cols.upper());
     }
