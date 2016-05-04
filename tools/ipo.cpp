@@ -63,6 +63,8 @@ public:
       delete _scipMip;
     if (_scipOracle)
       delete _scipOracle;
+    if (_scipCorrectorOracle)
+      delete _scipCorrectorOracle;
     if (_scipSpace)
       delete _scipSpace;
 #endif
