@@ -110,6 +110,10 @@ namespace ipo {
 
   SCIPOracle::~SCIPOracle()
   {
+    for (std::size_t c = 0; c < _variables.size(); ++c)
+    {
+      SCIP_CALL_EXC(SCIPreleaseVar(_scip, &_variables[c]));
+    }
     SCIP_CALL_EXC(SCIPfree(&_scip));
   }
 
@@ -137,7 +141,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPhashmapCreate(&hashMap, SCIPblkmem(originalSCIP), n));
     SCIP_CALL_EXC(SCIPcreate(&_scip));
     SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, FALSE,
-&validSCIP));
+      &validSCIP));
     if (!validSCIP)
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
@@ -193,6 +197,7 @@ namespace ipo {
 double(row.value(p))));
       }
       SCIP_CALL_EXC(SCIPaddCons(_scip, cons));
+      SCIP_CALL_EXC(SCIPreleaseCons(_scip, &cons));
     }
   }
 
@@ -224,7 +229,6 @@ double(row.value(p))));
     if (currentFace() != NULL)
     {
       SCIP_CALL_EXC(SCIPdelCons(_scip, _faceConstraint));
-      SCIP_CALL_EXC(SCIPreleaseCons(_scip, &_faceConstraint));
     }
 
     OracleBase::setFace(newFace);
