@@ -19,7 +19,7 @@ namespace ipo {
   {
     OracleBase::initializedSpace();
   }
-  
+
   CacheOracle::~CacheOracle()
   {
 
@@ -34,11 +34,8 @@ namespace ipo {
 
     _facePoints.clear();
     _endFacePoints = 0;
-    updateFaceIndices(_points, _facePoints, _endFacePoints, true);
-
     _faceDirections.clear();
     _endFaceDirections = 0;
-    updateFaceIndices(_directions, _faceDirections, _endFaceDirections, false);
   }
 
   void CacheOracle::maximize(OracleResult& result, const VectorRational& objective,
@@ -51,6 +48,11 @@ namespace ipo {
 
     if (thisHeuristic() > maxHeuristic)
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
+
+    // Update face indices since in the meantime points / directions could have been added.
+
+    updateFaceIndices(_points, _facePoints, _endFacePoints, true);
+    updateFaceIndices(_directions, _faceDirections, _endFaceDirections, false);
 
     result.buildStart(objective);
     DVectorReal approxObjective(objective.dim());
@@ -82,6 +84,7 @@ namespace ipo {
     {
       std::size_t p = _facePoints[searchResult[i]];
       Rational activity = *_points.vector(p) * objective;
+
       bool satisfied = objectiveBound.satisfiedBy(activity);
       if (i == 0 || satisfied)
       {
@@ -93,12 +96,14 @@ namespace ipo {
       }
     }
 
-    if (foundSatisfying || thisHeuristic() <= minHeuristic)
+    if (!result.points.empty() && (foundSatisfying || thisHeuristic() <= minHeuristic))
+    {
       return result.buildFinish(thisHeuristic(), false, true, true);
+    }
 
     // Forward call if no sufficiently good points were found.
 
-    return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
+    _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
   void CacheOracle::updateFaceIndices(const UniqueRationalVectorsBase& vectors,
@@ -141,8 +146,6 @@ namespace ipo {
 
     // Extract the top element from every exponent group.
 
-    std::cerr << "CacheOracle::search()" << std::endl;
-
     int lastSign = 2;
     int lastExponent = std::numeric_limits<int>::min();
     for (std::size_t i = 0; i < _vectorStats.size(); ++i)
@@ -153,10 +156,8 @@ namespace ipo {
       {
         lastSign = sign;
         lastExponent = stats.valueExponent;
-        std::cerr << "! ";
         result.push_back(i);
       }
-      std::cerr << stats.value << ", sparsity = " << stats.sparsity << std::endl;
     }
   }
 

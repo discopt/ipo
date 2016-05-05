@@ -31,7 +31,7 @@ namespace ipo {
   typedef std::vector<std::size_t> VectorSubset;
 
   // TODO: Remove inheritance and filtered version: Deprecated due to CacheOracle.
-  
+
   /**
    * \brief Defines a container for unique sparse rational vectors.
    *

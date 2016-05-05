@@ -61,7 +61,7 @@ namespace ipo {
      * \brief Sets the basic oracle.
      *
      * Sets the basic oracle. If a restriction to a face, a projection or caching of results are
-     * requested, it gets wrapped. The implementation assumes that the latter options were already 
+     * requested, it gets wrapped. The implementation assumes that the latter options were already
      * parsed.
      */
 

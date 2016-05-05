@@ -185,7 +185,7 @@ namespace ipo {
     _optionReuseFacets = true;
     _optionPrintRandom = false;
     _optionCache = true;
-    
+
     _oracle = NULL;
     _cacheOracle = NULL;
     _cachedDirections = NULL;
@@ -222,11 +222,11 @@ namespace ipo {
       throw std::runtime_error("Restricting to faces or projecting is not implemented, yet.");
 
     _space = oracle->space();
+    _cachedPoints = new UniqueRationalVectors(space().dimension());
+    _cachedDirections = new UniqueRationalVectors(space().dimension());
     if (_optionCache)
     {
-      _cachedPoints = new UniqueRationalVectors(space().dimension());
-      _cachedDirections = new UniqueRationalVectors(space().dimension());
-      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle, *_cachedPoints, 
+      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle, *_cachedPoints,
         *_cachedDirections);
       _oracle = _cacheOracle;
     }
@@ -792,8 +792,8 @@ namespace ipo {
 
     std::size_t n = space().dimension();
 
-    _cachedDirections = new UniqueRationalVectors(n);
-    _cachedPoints = new UniqueRationalVectors(n);
+    assert(_cachedPoints != NULL);
+    assert(_cachedDirections != NULL);
     _equations = new LPRowSetRational;
     _relaxationColumns.clear();
     DSVectorRational zeroVector;
@@ -950,7 +950,7 @@ namespace ipo {
     LPRowSetRational* equations;
     if (face == NULL)
     {
-      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, 0, true);
+      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, 1, true);
       _basicColumns = hull.basicColumns();
       _spanningCachedDirections = hull.spanningDirections();
       _spanningCachedPoints = hull.spanningPoints();
@@ -958,6 +958,8 @@ namespace ipo {
     }
     else
     {
+      throw std::runtime_error("This should be reimplemented!");
+      /*
       orac->setFace(face);
       FilteredUniqueRationalVectors filteredPoints(*_cachedPoints);
       FilteredUniqueRationalVectors filteredDirections(*_cachedDirections);
@@ -981,7 +983,7 @@ namespace ipo {
       hull.run(filteredPoints, filteredDirections, faceEquations, orac, hullOutput, 0, true);
 
       equations = &faceEquations;
-      orac->setFace();
+      orac->setFace();*/
     }
 
     if (_taskDimension)

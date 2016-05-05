@@ -443,8 +443,9 @@ namespace ipo {
         for (std::size_t e = 0; e < _equations->num(); ++e)
           _irredundantEquations.push_back(e);
         _potentialEquations.clear();
+
         /// TODO: After this, all equations are irredundant and not potential anymore, so
-// approximation status got lost.
+        /// approximation status got lost.
 
         _output->onRemovedRedundantEquations(redundantEquations.size());
       }
@@ -613,10 +614,10 @@ namespace ipo {
         for (std::size_t c = 0; c <= n(); ++c)
         {
           if (_factorization->isBasic(c))
-          continue;
+            continue;
 
-          if (_directionColumn == std::numeric_limits<std::size_t>::max() || _columns[c] <
-_columns[_directionColumn])
+          if (_directionColumn == std::numeric_limits<std::size_t>::max()
+            || _columns[c] < _columns[_directionColumn])
           {
             _directionColumn = c;
           }
@@ -665,121 +666,8 @@ _columns[_directionColumn])
         return false;
       }
 
-//       struct PointRayInfo
-//       {
-//         std::size_t sparsity;
-//         std::size_t index;
-//
-//         PointRayInfo(std::size_t sp, std::size_t idx) :
-//             sparsity(sp), index(idx)
-//         {
-//
-//         }
-//
-//         bool operator<(const PointRayInfo& other) const
-//         {
-//           return sparsity < other.sparsity;
-//         }
-//       };
-//
-//       std::size_t searchCache(UniqueRationalVectorsBase* objects, bool points)
-//       {
-//         std::vector<PointRayInfo> info;
-//         for (std::size_t i = objects->first(); i < objects->size(); i = objects->next(i))
-//         {
-//           info.push_back(PointRayInfo(objects->nonzeros(i), i));
-//         }
-//         std::sort(info.begin(), info.end());
-//
-//         std::size_t bestIndex = std::numeric_limits<std::size_t>::max();
-//
-//         /// Find the sparsest point/ray with good approx. scalar product.
-//
-//         double threshold = 1.e-3;
-//         Rational localCommonValue = points ? _commonValue : Rational(0);
-//         double approximateCommonValue = points ? double(localCommonValue) : 0.0;
-//         std::size_t mostDifferent = std::numeric_limits<std::size_t>::max();
-//         double mostDifference = 0.0;
-//         for (std::size_t i = 0; i < info.size(); ++i)
-//         {
-//           std::size_t index = info[i].index;
-// #ifndef EXACT_CACHE_SEARCH
-//           double approxProduct = *objects->approximation(index) * _denseApproximateDirectionVector;
-//           approxProduct = fabs(approxProduct - approximateCommonValue);
-//           if (approxProduct > mostDifference)
-//           {
-//             mostDifferent = index;
-//             mostDifference = approxProduct;
-//           }
-//
-//           if (approxProduct > threshold)
-// #endif
-//           {
-//             Rational product = *objects->vector(index) * _denseDirectionVector;
-//             if (product != localCommonValue)
-//               return index;
-//             else
-//               threshold *= 10;
-//           }
-//         }
-//
-//         /// If no attempt succeeds, take the one with the largest approx. discrepancy.
-//
-//         if (mostDifference > 0.0)
-//         {
-//           Rational product = *objects->vector(mostDifferent) * _denseDirectionVector;
-//           if (product != localCommonValue)
-//           {
-//             return mostDifferent;
-//           }
-//         }
-//
-//         return std::numeric_limits<std::size_t>::max();
-//       }
-//
-//       bool searchPoints()
-//       {
-//         std::size_t bestIndex = std::numeric_limits<std::size_t>::max();
-//
-//         if (_spanningPoints.empty())
-//         {
-//           std::size_t index = _points->first();
-//           if (index < _points->size())
-//             bestIndex = index;
-//         }
-//         else
-//           bestIndex = searchCache(_points, true);
-//
-//         if (bestIndex < std::numeric_limits<std::size_t>::max())
-//         {
-//           _output->onAfterCache(1, 0);
-//           _output->onBeforePoint(false);
-//           addPoint(bestIndex, _spanningPoints.empty() ? n() : _directionColumn, true);
-//           _output->onAfterPoint(false);
-//           return true;
-//         }
-//         else
-//           return false;
-//       }
-//
-//       bool searchRays()
-//       {
-//         std::size_t bestIndex = searchCache(_directions, false);
-//
-//         if (bestIndex < std::numeric_limits<std::size_t>::max())
-//         {
-//           _output->onAfterCache(0, 1);
-//           _output->onBeforeDirection();
-//           addDirection(bestIndex, _directionColumn, true);
-//           _output->onAfterDirection();
-//           return true;
-//         }
-//         else
-//           return false;
-//       }
-
-      std::size_t findPointsDifferingVariable(std::size_t firstPointIndex, std::size_t
-secondPointIndex)
+      std::size_t findPointsDifferingVariable(std::size_t firstPointIndex,
+        std::size_t secondPointIndex)
       {
         const DSVectorRational& firstPoint = *_points->vector(firstPointIndex);
         const DSVectorRational& secondPoint = *_points->vector(secondPointIndex);
@@ -842,6 +730,7 @@ secondPointIndex)
             updateExactDirection(_directionColumn);
           }
           while (checkDirectionDepends());
+
           _sparseDirectionVector = _columns[_directionColumn].exactDirection;
           _denseDirectionVector.clear();
           _denseDirectionVector.assign(_sparseDirectionVector);
@@ -867,10 +756,6 @@ secondPointIndex)
            * specific levels taking turns.
            */
 
-//           std::cout << "Objective: ";
-//           _oracle->space().printLinearForm(std::cout, &_sparseDirectionVector);
-//           std::cout << std::endl;
-
           /// Maximize direction.
 
           _objectiveBound.value = _commonValue;
@@ -878,14 +763,6 @@ secondPointIndex)
           _output->onBeforeOracleMaximize();
           oracleMaximize(minHeuristic);
           _output->onAfterOracleMaximize(_result.points.size(), _result.directions.size());
-
-//           std::cout << "max ";
-//           if (_result.isFeasible())
-//             std::cout << "= " << _result.points.front().objectiveValue << std::endl;
-//           else if (_result.isUnbounded())
-//             std::cout << " is unbounded." << std::endl;
-//           else
-//             std::cout << " is infeasible." << std::endl;
 
           _result.addToContainers(*_points, *_directions);
 
@@ -974,17 +851,10 @@ secondPointIndex)
           _sparseDirectionVector *= -1;
           _commonValue *= -1;
 
+          _objectiveBound.value = _commonValue;
           _output->onBeforeOracleMinimize();
           oracleMaximize(minHeuristic);
           _output->onAfterOracleMinimize(_result.points.size(), _result.directions.size());
-
-//           std::cout << "min ";
-//           if (_result.isFeasible())
-//             std::cout << "= " << -_result.points.front().objectiveValue << std::endl;
-//           else if (_result.isUnbounded())
-//             std::cout << " is unbounded." << std::endl;
-//           else
-//             std::cout << " is infeasible." << std::endl;
 
           _result.addToContainers(*_points, *_directions);
 
@@ -1009,12 +879,13 @@ secondPointIndex)
             std::size_t index = std::numeric_limits<std::size_t>::max();
             for (std::size_t i = 0; i < _result.points.size(); ++i)
             {
-              if (_result.points[i].objectiveValue > _commonValue)
+              if (_result.points[i].objectiveValue != _commonValue)
               {
                 index = _result.points[i].index;
                 break;
               }
             }
+
             if (index != std::numeric_limits<std::size_t>::max())
             {
               _output->onBeforePoint(false);
@@ -1098,107 +969,102 @@ secondPointIndex)
 
         mainLoop(minHeuristicBeforeVerification);
 
-//         if (!_infeasible && dimensionSafeUpperBound() > dimensionLowerBound())
-//         {
-//           /// Verify k equations with only k+1 oracle calls. If one fails, continue with exact
-// loop.
-//
-//           _output->onBeforeVerifyDelayed(_potentialEquations.size());
-//
-//           DSVectorRational objective;
-//           Rational rhsSum = 0;
-//           DVectorRational objectiveSum;
-//           objectiveSum.reDim(n(), true);
-//           bool failure = false;
-//           for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
-//           {
-//             objective = _equations->rowVector(_potentialEquations[i]);
-//             objectiveSum += objective;
-//
-//             objective *= -1;
-//             rhsSum += _equations->rhs(_potentialEquations[i]);
-//
-//             _output->onBeforeOracleVerify(i);
-//             _oracle->maximize(_result, objective, true);
-//             ++_numOracleCalls;
-//             _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
-//
-//             if (_result.isFeasible())
-//             {
-//
-//               for (std::size_t j = 0; j < _result.points.size(); ++j)
-//                 _points->insertFree(_result.points[j]);
-//
-//               if (_result.bestValue != -_equations->rhs(_potentialEquations[i]))
-//               {
-//                 failure = true;
-//                 break;
-//               }
-//             }
-//             else
-//             {
-//               for (std::size_t j = 0; j < _result.directions.size(); ++j)
-//                 _directions->insertFree(_result.directions[j]);
-//               failure = true;
-//               break;
-//             }
-//           }
-//
-//           if (!failure)
-//           {
-//             _output->onBeforeOracleVerify(_potentialEquations.size());
-//             _oracle->maximize(_result, objectiveSum, true);
-//             ++_numOracleCalls;
-//             _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
-//
-//             for (std::size_t j = 0; j < _result.points.size(); ++j)
-//               _points->insertFree(_result.points[j]);
-//             for (std::size_t j = 0; j < _result.directions.size(); ++j)
-//               _directions->insertFree(_result.directions[j]);
-//
-//             failure = !_result.isFeasible() || _result.bestValue != rhsSum;
-//           }
-//
-//           if (failure)
-//           {
-//             _output->onAfterVerifyDelayed(0);
-//           }
-//           else
-//           {
-//             std::size_t numVerified = _potentialEquations.size();
-//             std::copy(_potentialEquations.begin(), _potentialEquations.end(),
-//                 std::back_inserter(_irredundantEquations));
-//             _potentialEquations.clear();
-//             _output->onAfterVerifyDelayed(numVerified);
-//           }
-//         }
-//
-//         if (optionOracleUsage() != ORACLE_NEVER && dimensionSafeUpperBound() >
-// dimensionLowerBound())
-//         {
-//           /// Run loop allowing only exact oracle usage.
-//
-//           for (std::size_t c = 0; c <= n(); ++c)
-//             _columns[c].definesEquation = false;
-//
-//           if (!_potentialEquations.empty())
-//           {
-//             std::vector<int> remove;
-//             for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
-//               remove.push_back(_potentialEquations[i]);
-//             _equations->remove(&remove[0], remove.size());
-//             _potentialEquations.clear();
-//
-//             /// Reinitialize edeps.
-//
-//             _espace.reset(n()); // TODO: Could be improved
-//             for (int e = 0; e < _equations->num(); ++e)
-//               _espace.addLazy(_equations->rowVector(e));
-//             _espace.flushLazy();
-//           }
-//
-//           mainLoop(false, false);
-//         }
+        if (!_infeasible && dimensionSafeUpperBound() > dimensionLowerBound())
+        {
+          /// Verify k equations with only k+1 oracle calls. If one fails, continue with exact loop.
+
+          _output->onBeforeVerifyDelayed(_potentialEquations.size());
+
+          Rational rhsSum = 0;
+          DVectorRational objectiveSum;
+          objectiveSum.reDim(n(), true);
+          bool failure = false;
+          for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
+          {
+            _sparseDirectionVector = _equations->rowVector(_potentialEquations[i]);
+            const Rational& rhs = _equations->rhs(_potentialEquations[i]);
+            objectiveSum += _sparseDirectionVector;
+            rhsSum += rhs;
+
+            _sparseDirectionVector *= -1;
+
+            _output->onBeforeOracleVerify(i);
+            _objectiveBound.value = -rhs;
+            _objectiveBound.strict = true;
+            oracleMaximize(0);
+            ++_numOracleCalls;
+            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
+            _result.addToContainers(*_points, *_directions);
+
+            if (_result.isFeasible())
+            {
+              if (_result.points.front().objectiveValue != _objectiveBound.value)
+              {
+                failure = true;
+                break;
+              }
+            }
+            else
+            {
+              failure = true;
+              break;
+            }
+          }
+
+          if (!failure)
+          {
+            _sparseDirectionVector.clear();
+            _sparseDirectionVector = objectiveSum;
+            _objectiveBound.value = rhsSum;
+            _objectiveBound.strict = true;
+            _output->onBeforeOracleVerify(_potentialEquations.size());
+            oracleMaximize(0);
+            ++_numOracleCalls;
+            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
+            _result.addToContainers(*_points, *_directions);
+
+            failure = !_result.isFeasible() || _result.points.front().objectiveValue != rhsSum;
+          }
+
+          if (failure)
+          {
+            _output->onAfterVerifyDelayed(0);
+          }
+          else
+          {
+            std::size_t numVerified = _potentialEquations.size();
+            std::copy(_potentialEquations.begin(), _potentialEquations.end(),
+                std::back_inserter(_irredundantEquations));
+            _potentialEquations.clear();
+            _output->onAfterVerifyDelayed(numVerified);
+          }
+        }
+
+        if (dimensionSafeUpperBound() > dimensionLowerBound())
+        {
+          /// Run loop allowing only exact oracle usage.
+
+          for (std::size_t c = 0; c <= n(); ++c)
+            _columns[c].definesEquation = false;
+
+          if (!_potentialEquations.empty())
+          {
+            std::vector<int> remove;
+            for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
+              remove.push_back(_potentialEquations[i]);
+            _equations->remove(&remove[0], remove.size());
+            _potentialEquations.clear();
+
+            /// Reinitialize edeps.
+
+            _espace.reset(n()); // TODO: Could be improved
+            for (int e = 0; e < _equations->num(); ++e)
+              _espace.addLazy(_equations->rowVector(e));
+            _espace.flushLazy();
+          }
+
+          mainLoop(0);
+        }
 
         if (!_infeasible && removeRedundantEqns)
           removeRedundantEquations();

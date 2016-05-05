@@ -408,6 +408,9 @@ namespace ipo {
     }
   };
 
+  // TODO: Change interface such that default heuristicLevel pre- and postprocessing during the call
+  // does not need to be implemented for each oracle.
+
   /**
    * \brief Base class for an optimization oracle.
    *
