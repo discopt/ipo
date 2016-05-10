@@ -106,6 +106,45 @@ namespace ipo {
     _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
+  CacheOracle::VectorStats::VectorStats()
+  {
+
+  }
+
+  CacheOracle::VectorStats::VectorStats(double theObjectiveValue, std::size_t theSparsity, 
+    std::size_t theIndex) : sparsity(theSparsity), index(theIndex)
+  {
+    valueMantissa = frexp(theObjectiveValue, &valueExponent);
+    value = theObjectiveValue;
+  }
+
+  CacheOracle::VectorStats& CacheOracle::VectorStats::operator=(
+    const CacheOracle::VectorStats& other)
+  {
+    valueExponent = other.valueExponent;
+    valueMantissa = other.valueMantissa;
+    sparsity = other.sparsity;
+    index = other.index;
+    return *this;
+  }
+
+  bool CacheOracle::VectorStats::operator<(const CacheOracle::VectorStats& other) const
+  {
+    if (valueMantissa > 0 && other.valueMantissa <= 0)
+      return true;
+    if (valueMantissa >= 0 && other.valueMantissa > 0)
+      return false;
+    if (valueExponent > other.valueExponent)
+      return true;
+    if (valueExponent < other.valueExponent)
+      return false;
+    if (sparsity < other.sparsity)
+      return true;
+    if (sparsity > other.sparsity)
+      return false;
+    return valueMantissa > other.valueMantissa;
+  }
+
   void CacheOracle::updateFaceIndices(const UniqueRationalVectorsBase& vectors,
     CacheOracle::FaceIndices& faceIndices, std::size_t& end, bool handlingPoints)
   {

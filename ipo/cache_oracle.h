@@ -88,34 +88,10 @@ namespace ipo {
 
       double value; // TODO: remove
 
-      VectorStats()
-      {
-
-      }
-
-      VectorStats(double theObjectiveValue, std::size_t theSparsity, std::size_t theIndex)
-        : sparsity(theSparsity), index(theIndex)
-      {
-        valueMantissa = frexp(theObjectiveValue, &valueExponent);
-        value = theObjectiveValue;
-      }
-
-      inline bool operator<(const VectorStats& other) const
-      {
-        if (valueMantissa > 0 && other.valueMantissa <= 0)
-          return true;
-        if (valueMantissa >= 0 && other.valueMantissa > 0)
-          return false;
-        if (valueExponent > other.valueExponent)
-          return true;
-        if (valueExponent < other.valueExponent)
-          return false;
-        if (sparsity < other.sparsity)
-          return true;
-        if (sparsity > other.sparsity)
-          return false;
-        return valueMantissa > other.valueMantissa;
-      }
+      VectorStats();
+      VectorStats(double theObjectiveValue, std::size_t theSparsity, std::size_t theIndex);
+      VectorStats& operator=(const VectorStats& other);
+      bool operator<(const VectorStats& other) const;
     };
 
     typedef std::vector<std::size_t> FaceIndices;
