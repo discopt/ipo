@@ -7,7 +7,7 @@
 #include <map>
 #include <string>
 
-#include "spx_gmp.h"
+#include "ipo.h"
 
 namespace ipo {
 

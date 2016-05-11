@@ -111,7 +111,7 @@ namespace ipo {
 
   }
 
-  CacheOracle::VectorStats::VectorStats(double theObjectiveValue, std::size_t theSparsity, 
+  CacheOracle::VectorStats::VectorStats(double theObjectiveValue, std::size_t theSparsity,
     std::size_t theIndex) : sparsity(theSparsity), index(theIndex)
   {
     valueMantissa = frexp(theObjectiveValue, &valueExponent);

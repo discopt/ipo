@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "ipo.h"
-#include "spx_gmp.h"
 
 namespace ipo {
 

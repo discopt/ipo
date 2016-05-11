@@ -2,6 +2,7 @@
 
 #include "unique_rational_vectors.h"
 #include "min_norm_2d.h"
+#include "spx_gmp.h"
 
 using namespace soplex;
 

@@ -3,12 +3,8 @@
 
 #include <vector>
 
-#include <gmpxx.h>
-
-#define SOPLEX_WITH_GMP
-#include <soplex.h>
-
 #include "ipo.h"
+
 
 namespace ipo {
 

@@ -320,8 +320,10 @@ namespace ipo {
         assert(_spx.upperRational(v) == _mip.columns().upper(v));
         continue;
       }
-      _spx.changeBoundsRational(v, 0, 0);
+      
+      _spx.changeBoundsRational(v, Rational(0), Rational(0));
     }
+    
 
     /// Fix integers to point's values for its nonzeros.
 
@@ -330,7 +332,9 @@ namespace ipo {
       std::size_t v = point->index(p);
       const Rational& x = point->value(p);
       if (_mip.isIntegral(v))
+      {
         _spx.changeBoundsRational(v, x, x);
+      }
     }
 
     /// Set objective.

@@ -8,7 +8,6 @@
 #include "unique_rational_vectors.h"
 #include "oracles.h"
 #include "cache_oracle.h"
-#include "spx_gmp.h"
 
 namespace ipo {
 

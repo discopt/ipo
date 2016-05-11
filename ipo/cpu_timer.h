@@ -1,11 +1,9 @@
 #ifndef IPO_CPU_TIMER_H_
 #define IPO_CPU_TIMER_H_
 
-#include <soplex.h>
-#include <spxdefines.h>
-#include <timer.h>
-
 #include "ipo.h"
+
+#include <timer.h>
 
 namespace ipo {
 

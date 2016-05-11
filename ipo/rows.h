@@ -2,7 +2,6 @@
 #define IPO_ROWS_H_
 
 #include "ipo.h"
-#include "spx_gmp.h"
 
 namespace ipo {
 

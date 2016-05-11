@@ -7,6 +7,7 @@
 
 #include "vector_2d.h"
 #include "rows.h"
+#include "spx_gmp.h"
 
 #include <iostream> // TODO: Debug
 

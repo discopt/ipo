@@ -2,7 +2,6 @@
 #define IPO_VECTOR_SPACE_GENERATORS_H_
 
 #include <vector>
-#include <soplex.h>
 
 #include "ipo.h"
 

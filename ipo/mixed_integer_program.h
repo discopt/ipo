@@ -1,17 +1,16 @@
 #ifndef IPO_MIXED_INTEGER_PROGRAM_H_
 #define IPO_MIXED_INTEGER_PROGRAM_H_
 
+#include "ipo.h"
+
 #include <string>
 #include <vector>
-
-#include <soplex.h>
 
 #ifdef WITH_SCIP
 #include <scip/scip.h>
 #include "scip_oracles.h"
 #endif
 
-#include "ipo.h"
 #include "oracles.h"
 
 namespace ipo {

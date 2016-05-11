@@ -391,10 +391,8 @@ protected:
 
 int main(int argc, char** argv)
 {
-  {
-    IPOConsoleApplication app(argc, argv);
-    app.run();
-  }
+  IPOConsoleApplication app(argc, argv);
+  app.run();
   soplex::Rational::freeListMem();
 
   return EXIT_SUCCESS;

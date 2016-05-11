@@ -135,6 +135,9 @@ namespace ipo {
 
         /// Set objective.
 
+        std::cerr << "Separating " << (separatingPoint ? "point " : "direction ")
+          << *target << std::endl;
+
         DVectorRational dense;
         dense.reDim(n() + 1, true);
         for (int p = target->size() - 1; p >= 0; --p)
@@ -155,7 +158,7 @@ namespace ipo {
 
         /// Perform stabilization.
 
-        stabilizedPresolve();
+//         stabilizedPresolve();
 
         /// Reset basis.
 
@@ -164,6 +167,9 @@ namespace ipo {
         /// Optimize
 
         optimize(true);
+
+//         _mainLP.writeFileRational("facets.lp");
+//         exit(1);
 
         /// Extract solution
 
@@ -176,6 +182,8 @@ namespace ipo {
           if (dense[v] != 0)
             sparse.add(v, dense[v]);
         }
+        std::cerr << dense << std::endl;
+
         _inequality.setRowVector(sparse);
         _violation = getObjectiveValue();
 

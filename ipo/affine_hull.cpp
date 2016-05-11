@@ -357,12 +357,14 @@ namespace ipo {
         _lastDirectionBitsize = 0;
         _maxDirectionBitsize = 0;
         _infeasible = false;
+        _espace = new VectorSpaceGenerators();
       }
 
       virtual ~Implementation()
       {
         if (_factorization != NULL)
           delete _factorization;
+        delete _espace;
       }
 
       int dimensionLowerBound() const
@@ -388,15 +390,15 @@ namespace ipo {
 
       void initializeEquations()
       {
-        _espace.reset(n());
+        _espace->reset(n());
         for (int e = 0; e < _equations->num(); ++e)
-          _espace.addLazy(_equations->rowVector(e));
-        _espace.flushLazy();
+          _espace->addLazy(_equations->rowVector(e));
+        _espace->flushLazy();
 
         _irredundantEquations.clear();
         for (int e = 0; e < _equations->num(); ++e)
         {
-          if (!_espace.isDependent(e))
+          if (!_espace->isDependent(e))
             _irredundantEquations.push_back(e);
         }
       }
@@ -435,7 +437,7 @@ namespace ipo {
         std::vector<int> redundantEquations;
         for (std::size_t e = 0; e < _equations->num(); ++e)
         {
-          if (_espace.isDependent(e))
+          if (_espace->isDependent(e))
             redundantEquations.push_back(e);
         }
         _equations->remove(&redundantEquations[0], redundantEquations.size());
@@ -658,7 +660,7 @@ namespace ipo {
 
       bool checkDirectionDepends()
       {
-        if (_espace.isDependent(_columns[_directionColumn].exactDirection))
+        if (_espace->isDependent(_columns[_directionColumn].exactDirection))
         {
           _columns[_directionColumn].definesEquation = true;
           return true;
@@ -900,7 +902,7 @@ namespace ipo {
           _sparseDirectionVector *= -1;
           _commonValue *= -1;
 
-          _espace.add(_sparseDirectionVector, false);
+          _espace->add(_sparseDirectionVector, false);
           _equations->add(_commonValue, _sparseDirectionVector, _commonValue);
           _columns[_directionColumn].definesEquation = true;
 
@@ -938,7 +940,7 @@ namespace ipo {
         _basicColumns.clear();
         _irredundantEquations.clear();
         _potentialEquations.clear();
-        _espace.reset(n());
+        _espace->reset(n());
         _factorization = new Factorization(n() + 1);
         _columns.resize(n() + 1);
         _columns[n()].avoid = true;
@@ -1057,10 +1059,10 @@ namespace ipo {
 
             /// Reinitialize edeps.
 
-            _espace.reset(n()); // TODO: Could be improved
+            _espace->reset(n()); // TODO: Could be improved
             for (int e = 0; e < _equations->num(); ++e)
-              _espace.addLazy(_equations->rowVector(e));
-            _espace.flushLazy();
+              _espace->addLazy(_equations->rowVector(e));
+            _espace->flushLazy();
           }
 
           mainLoop(0);
@@ -1097,7 +1099,7 @@ namespace ipo {
       VectorSubset _basicColumns;
       VectorSubset _irredundantEquations;
       VectorSubset _potentialEquations;
-      VectorSpaceGenerators _espace;
+      VectorSpaceGenerators *_espace;
       Factorization* _factorization;
       std::vector<NonbasicColumn> _columns;
       OracleResult _result;

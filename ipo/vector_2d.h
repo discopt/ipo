@@ -1,8 +1,6 @@
 #ifndef IPO_VECTOR_2D_H_
 #define IPO_VECTOR_2D_H_
 
-#include <gmpxx.h>
-
 #include "ipo.h"
 
 namespace ipo {

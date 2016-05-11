@@ -5,11 +5,12 @@
 #include <map>
 #include <limits>
 
-#include <scip/scip.h>
-
 #include "ipo.h"
 #include "oracles.h"
 #include "mixed_integer_program.h"
+
+#include <scip/scip.h>
+
 
 namespace ipo {
 

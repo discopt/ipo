@@ -4,10 +4,6 @@
 #include <vector>
 #include <limits>
 
-#include <gmpxx.h>
-#define SOPLEX_WITH_GMP
-#include <soplex.h>
-
 #include "ipo.h"
 #include "rows.h"
 #include "space.h"

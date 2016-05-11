@@ -3,4 +3,8 @@
 
 #undef IPO_DEBUG
 
+#include <gmpxx.h>
+#define SOPLEX_WITH_GMP
+#include <soplex.h>
+
 #endif /* IPO_H_ */
