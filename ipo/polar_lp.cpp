@@ -285,34 +285,6 @@ soplex::VectorRational& normal,
     }
   }
 
-  /**
-   * Add rows corresponding points and rays given by their indices to the LP.
-   **/
-
-  bool PolarLP::addPointsAndRays(VectorSubset& pointIndices, VectorSubset& rayIndices, bool stabLP)
-  {
-    if (!pointIndices.empty() || !rayIndices.empty())
-    {
-      for (std::size_t i = 0; i < pointIndices.size(); ++i)
-      {
-        onBeforeAddPoint();
-        addPointRow(pointIndices[i], stabLP);
-        onAfterAddPoint();
-      }
-      pointIndices.clear();
-      for (std::size_t i = 0; i < rayIndices.size(); ++i)
-      {
-        onBeforeAddRay();
-        addRayRow(rayIndices[i], stabLP);
-        onAfterAddRay();
-      }
-      rayIndices.clear();
-      return true;
-    }
-    else
-      return false;
-  }
-
   void PolarLP::stabilizedPresolve()
   {
     const double APPROX_VIOLATION = 1.0e-5;
@@ -359,8 +331,6 @@ soplex::VectorRational& normal,
     Rational inequalityRoundedRhs;
     DVectorReal dualSolution;
     primalSolution.reDim(3 * _d, false);
-    VectorSubset pointIndices;
-    VectorSubset rayIndices;
     std::vector<SPxSolver::VarStatus> rowStatus;
     std::vector<SPxSolver::VarStatus> columnStatus(_stabLP.numColsReal());
     bool firstRound = true; // Indicator telling us to remove all dynamic rows in the first round.
@@ -470,32 +440,7 @@ soplex::VectorRational& normal,
         continue;
       }
 
-      /// Search cache.
-
-      onBeforeCache();
-      searchCacheApproximate(pointIndices, _points, true, inequalityApproxDenseNormal,
-inequalityApproxRhs, 10,
-          APPROX_VIOLATION);
-      if (pointIndices.size() < 10)
-      {
-        searchCacheApproximate(rayIndices, _directions, false, inequalityApproxDenseNormal, 0, 10 -
-pointIndices.size(),
-            APPROX_VIOLATION);
-      }
-      onAfterCache(pointIndices.size(), rayIndices.size());
-
-      if (addPointsAndRays(pointIndices, rayIndices, true))
-      {
-        numLastCacheRounds++;
-        if (numLastCacheRounds > localMaxAge)
-        {
-          ++localMaxAge;
-        }
-        continue;
-      }
-      numLastCacheRounds = 0;
-
-      /// Call heuristic and oracle.
+      /// Call oracle.
 
       for (std::size_t v = 0; v < _n; ++v)
       {
@@ -506,13 +451,40 @@ pointIndices.size(),
       }
       inequalityRoundedRhs = inequalityApproxRhs + APPROX_VIOLATION;
 
-      assert(pointIndices.empty() && rayIndices.empty());
       onBeforeOracleCall();
-      maximizeOracle(pointIndices, rayIndices, inequalityRoundedDenseNormal, inequalityRoundedRhs);
-      onAfterOracleCall(_result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
+      _oracle->maximize(_result, inequalityRoundedDenseNormal, ObjectiveBound(inequalityRoundedRhs, 
+        true));
+      onAfterOracleCall(_result.isFeasible(), _result.points.size(), _result.directions.size(),
+        false);
+      _result.addToContainers(_points, _directions);
 
-      if (addPointsAndRays(pointIndices, rayIndices, true))
+      if (_result.isUnbounded())
+      {
+        for (std::size_t i = 0; i < _result.directions.size(); ++i)
+        {
+          onBeforeAddRay();
+          addRayRow(_result.directions[i].index, true);
+          onAfterAddRay();
+        }
         continue;
+      }
+      else if (_result.isFeasible())
+      {
+        if (_result.points.front().objectiveValue > inequalityRoundedRhs)
+        {
+          for (std::size_t i = 0; i < _result.points.size(); ++i)
+          {
+            onBeforeAddPoint();
+            addPointRow(_result.points[i].index, true);
+            onAfterAddPoint();
+          }
+          continue;
+        }
+      }
+      else
+      {
+        throw std::runtime_error("Polar LP: Oracle claims infeasible.");
+      }
 
       bool penalizing = _stabPenalty > 1.0e-6;
 
@@ -558,14 +530,11 @@ pointIndices.size(),
     _stabPenalty = 0.0;
 
     int localMaxAge = _maxAge;
-    int numLastCacheRounds = 0; // Number of subsequent rows without really new solutions.
     DSVectorRational inequalityExactSparseNormal;
     DVectorRational inequalityExactDenseNormal;
     DVectorReal inequalityApproxDenseNormal;
     DVectorRational dualSolution;
     Rational inequalityRhs;
-    VectorSubset pointIndices;
-    VectorSubset rayIndices;
     std::vector<SPxSolver::VarStatus> rowStatus;
     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
     std::vector<int> rowPermutation;
@@ -604,9 +573,6 @@ pointIndices.size(),
 
     while (true)
     {
-      assert(pointIndices.empty());
-      assert(rayIndices.empty());
-
       /// Perform cut aging
 
       std::size_t numRows = _mainLP.numRowsRational();
@@ -659,7 +625,11 @@ pointIndices.size(),
       onBeforeSolve(false);
       SPxSolver::Status status = _mainLP.solve();
       if (status != SPxSolver::OPTIMAL)
-        throw std::runtime_error("PolarLP: Main LP is not optimal.");
+      {
+        std::stringstream ss;
+        ss << "Polar LP: Unexpected status " << status << ".";
+        throw std::runtime_error(ss.str());
+      }
 
       rowStatus.resize(_mainLP.numRowsRational());
       _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
@@ -670,6 +640,17 @@ pointIndices.size(),
 //           numBasic++;
 //         std::cout << "Col " << c << " is " << columnStatus[c] << std::endl;
 //       }
+//       for (int r = 0; r < _mainLP.numRowsRational(); ++r)
+//       {
+//         if (rowStatus[r] == SPxSolver::ON_UPPER)
+//         {
+//           std::cerr << "Row " << r << " is on upper." << std::endl;
+//         }
+//         else
+//         {
+//           std::cerr << "Row " << r << " is not on upper." << std::endl;
+//         }
+//       }
 //       std::cout << "#basic cols: " << numBasic << std::endl;
 
       dualSolution.reDim(numRows, false);
@@ -677,17 +658,8 @@ pointIndices.size(),
         throw std::runtime_error("Optimization: No dual solution available.");
 
       double obj = double(_mainLP.objValueRational());
-      if (obj < _lastMainObjective)
-        numLastCacheRounds = 0;
       _lastMainObjective = obj;
       onAfterSolve(false);
-
-      if (status != SPxSolver::OPTIMAL)
-      {
-        std::stringstream ss;
-        ss << "Polar LP: Unexpected status " << status << ".";
-        throw std::runtime_error(ss.str());
-      }
 
       /// Extract solution vector.
 
@@ -705,45 +677,40 @@ pointIndices.size(),
       }
       inequalityRhs = _currentPrimalSolution[_n];
 
-      // TODO: SOLUTION DUMP
-//        std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " <<
-// std::setw(6)
-//            << double(_currentPrimalSolution[10]) << " " << std::setw(6) <<
-// double(_currentPrimalSolution[11])
-//            << std::endl;
-//        ++iteration;
-
-      /// Search cache.
-
-      onBeforeCache();
-      searchCache(pointIndices, _points, true, inequalityApproxDenseNormal,
-inequalityExactDenseNormal, inequalityRhs,
-          10);
-      if (pointIndices.size() < 10)
-      {
-        searchCache(rayIndices, _directions, false, inequalityApproxDenseNormal,
-inequalityExactDenseNormal, 0,
-            10 - pointIndices.size());
-      }
-      onAfterCache(pointIndices.size(), rayIndices.size());
-
-      if (addPointsAndRays(pointIndices, rayIndices, false))
-      {
-        numLastCacheRounds++;
-        if (numLastCacheRounds > localMaxAge)
-          ++localMaxAge;
-        continue;
-      }
-      numLastCacheRounds = 0;
-
-      assert(pointIndices.empty() && rayIndices.empty());
       onBeforeOracleCall();
-      maximizeOracle(pointIndices, rayIndices, inequalityExactDenseNormal, inequalityRhs);
-      onAfterOracleCall(_result.isFeasible(), pointIndices.size(), rayIndices.size(), false);
+      _oracle->maximize(_result, inequalityExactDenseNormal, ObjectiveBound(inequalityRhs, true));
+      onAfterOracleCall(_result.isFeasible(), _result.points.size(), 
+        _result.directions.size(), false);
+      _result.addToContainers(_points, _directions);
 
-      if (addPointsAndRays(pointIndices, rayIndices, false))
+      if (_result.isUnbounded())
+      {
+        for (std::size_t i = 0; i < _result.directions.size(); ++i)
+        {
+          onBeforeAddRay();
+          addRayRow(_result.directions[i].index, false);
+          onAfterAddRay();
+        }
         continue;
-
+      }
+      else if (_result.isFeasible())
+      {
+        if (_result.points.front().objectiveValue > inequalityRhs)
+        {
+          for (std::size_t i = 0; i < _result.points.size(); ++i)
+          {
+            onBeforeAddPoint();
+            addPointRow(_result.points[i].index, false);
+            onAfterAddPoint();
+          }
+          continue;
+        }
+      }
+      else
+      {
+        throw std::runtime_error("Polar LP: Oracle claims infeasible.");
+      }
+      
 
       if (perturbeObjective)
       {
@@ -948,120 +915,5 @@ inequalityExactDenseNormal, 0,
     }
   }
 
-  struct CachedElement
-  {
-    double approxObjective;
-    std::size_t index;
-
-    CachedElement(double newApproxObjective, std::size_t newIndex) :
-        approxObjective(newApproxObjective), index(newIndex)
-    {
-
-    }
-
-    bool operator<(const CachedElement& other) const
-    {
-      return approxObjective < other.approxObjective;
-    }
-  };
-
-  void PolarLP::searchCache(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
-      const VectorReal& approxObjective, const VectorRational& exactObjective, const Rational& rhs,
-std::size_t maxAdd)
-  {
-    if (maxAdd == 0)
-      return;
-
-    /// First we compute approximate activities and sort them.
-
-    std::vector<CachedElement> sorted;
-    for (std::size_t i = objects.first(); i < objects.size(); i = objects.next(i))
-    {
-      double approxViolation = (*objects.approximation(i) * approxObjective);
-      approxViolation -= double(rhs);
-      if (approxViolation > 0)
-        sorted.push_back(CachedElement(approxViolation, i));
-    }
-    std::sort(sorted.begin(), sorted.end());
-
-    std::size_t numAdded = 0;
-    while (numAdded < maxAdd && !sorted.empty())
-    {
-      // TODO: Check for too many false positives!
-      std::size_t index = sorted.back().index;
-      sorted.pop_back();
-
-      Rational violation = *objects.vector(index) * exactObjective - rhs;
-      if (violation > 0)
-      {
-        indices.push_back(index);
-        ++numAdded;
-      }
-    }
-  }
-
-  void PolarLP::searchCacheApproximate(VectorSubset& indices, UniqueRationalVectorsBase& objects,
-bool points,
-      const VectorReal& approxObjective, double approxRhs, std::size_t maxAdd, double epsilon)
-  {
-    if (maxAdd == 0)
-      return;
-
-    /// First we compute approximate activities and sort them.
-
-    std::vector<CachedElement> sorted;
-    for (std::size_t i = objects.first(); i < objects.size(); i = objects.next(i))
-    {
-      double approxViolation = (*objects.approximation(i) * approxObjective);
-      approxViolation -= approxRhs;
-      if (approxViolation > epsilon)
-        sorted.push_back(CachedElement(approxViolation, i));
-    }
-    std::sort(sorted.begin(), sorted.end());
-
-    std::size_t numAdded = 0;
-    while (numAdded < maxAdd && !sorted.empty())
-    {
-      std::size_t index = sorted.back().index;
-      sorted.pop_back();
-      indices.push_back(index);
-      ++numAdded;
-    }
-  }
-
-  void PolarLP::maximizeOracle(VectorSubset& pointIndices, VectorSubset& directionIndices,
-    const VectorRational& exactObjective, const Rational& rhs)
-  {
-    _oracle->maximize(_result, exactObjective, ObjectiveBound(rhs, true));
-    _result.addToContainers(_points, _directions);
-
-    if (_result.isUnbounded())
-    {
-      std::size_t oldSize = _directions.size();
-      for (std::size_t i = 0; i < _result.directions.size(); ++i)
-      {
-        std::size_t index = _result.directions[i].index;
-        if (index >= oldSize)
-          directionIndices.push_back(index);
-      }
-    }
-    else if (_result.isFeasible())
-    {
-      std::size_t oldSize = _points.size();
-      for (std::size_t i = 0; i < _result.points.size(); ++i)
-      {
-        std::size_t index = _result.points[i].index;
-        if (index >= oldSize)
-        {
-          if (_result.points[i].objectiveValue > rhs)
-            pointIndices.push_back(index);
-        }
-      }
-    }
-    else
-    {
-      throw std::runtime_error("Polar LP: Oracle claims infeasible.");
-    }
-  }
 
 } /* namespace ipo */

@@ -126,7 +126,8 @@ namespace ipo {
 
 //    int iteration;
 
-  private:
+  protected:
+//   private: TODO: for debugging only!
     struct RowInfo
     {
       char type;

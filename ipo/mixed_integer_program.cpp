@@ -320,10 +320,9 @@ namespace ipo {
         assert(_spx.upperRational(v) == _mip.columns().upper(v));
         continue;
       }
-      
+
       _spx.changeBoundsRational(v, Rational(0), Rational(0));
     }
-    
 
     /// Fix integers to point's values for its nonzeros.
 
