@@ -6,11 +6,21 @@
 #include <ipo/ipo.h>
 
 #ifdef WITH_SCIP
-#include <scip/scip.h>
-#include <scip/scipdefplugins.h>
-#include <scip/cons_linear.h>
-#include <ipo/scip_exception.hpp>
-#include <ipo/scip_oracles.h>
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include <ipo/scip_exception.hpp>
+  #include <ipo/scip_oracles.h>
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include <ipo/scip_exception.hpp>
+  #include <ipo/scip_oracles.h>
+#endif
 #endif
 
 #include "ipo/affine_hull.h"

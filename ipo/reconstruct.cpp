@@ -3,9 +3,6 @@
 #include <cmath>
 #include <cassert>
 
-#define SOPLEX_WITH_GMP
-#include <rational.h>
-
 namespace ipo {
 
   void reconstruct(double x, mpq_class& approx, double maxError)

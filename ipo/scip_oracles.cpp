@@ -4,9 +4,17 @@
 #include <unistd.h>
 #include <sys/stat.h>
 
-#include <scip/scipdefplugins.h>
-#include <scip/cons_linear.h>
-#include "scip_exception.hpp"
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include "scip_exception.hpp"
+  #define NDEBUG
+#else
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include "scip_exception.hpp"
+#endif
 
 #include "reconstruct.h"
 #include "cpu_timer.h"

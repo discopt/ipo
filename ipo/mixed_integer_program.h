@@ -7,8 +7,15 @@
 #include <vector>
 
 #ifdef WITH_SCIP
-#include <scip/scip.h>
-#include "scip_oracles.h"
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #include "scip_oracles.h"
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+  #include "scip_oracles.h"
+#endif
 #endif
 
 #include "oracles.h"

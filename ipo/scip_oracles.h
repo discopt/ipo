@@ -9,7 +9,13 @@
 #include "oracles.h"
 #include "mixed_integer_program.h"
 
-#include <scip/scip.h>
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+#endif
 
 
 namespace ipo {
