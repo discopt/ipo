@@ -946,7 +946,6 @@ namespace ipo {
     AffineHull::Result hull;
 
     LPRowSetRational faceEquations;
-
     LPRowSetRational* equations;
     if (face == NULL)
     {
@@ -958,32 +957,10 @@ namespace ipo {
     }
     else
     {
-      throw std::runtime_error("This should be reimplemented!");
-      /*
       orac->setFace(face);
-      FilteredUniqueRationalVectors filteredPoints(*_cachedPoints);
-      FilteredUniqueRationalVectors filteredDirections(*_cachedDirections);
-
-      /// Filter points and rays.
-
-      for (std::size_t p = _cachedPoints->first(); p < _cachedPoints->size(); p = _cachedPoints->next(p))
-      {
-        soplex::Rational activity = *(*_cachedPoints)[p] * face->denseNormal();
-        filteredPoints.set(p, activity == face->rhs());
-      }
-      for (std::size_t r = _cachedDirections->first(); r < _cachedDirections->size(); r = _cachedDirections->next(r))
-      {
-        soplex::Rational activity = *(*_cachedDirections)[r] * face->denseNormal();
-        filteredDirections.set(r, activity == 0);
-      }
-
-      faceEquations = LPRowSetRational(*_equations);
-      faceEquations.add(face->rhs(), face->sparseNormal(), face->rhs());
-
-      hull.run(filteredPoints, filteredDirections, faceEquations, orac, hullOutput, 0, true);
-
+      hull.run(*_cachedPoints, *_cachedDirections, faceEquations, orac, hullOutput, 1, true);
       equations = &faceEquations;
-      orac->setFace();*/
+      orac->setFace();
     }
 
     if (_taskDimension)
