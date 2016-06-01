@@ -988,7 +988,7 @@ namespace ipo {
   bool ConsoleApplicationBase::optimizeObjective(const SVectorRational* objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
-
+    
     OracleResult result;
     if (maximize)
       oracle()->maximize(result, *objective);
@@ -1014,12 +1014,18 @@ namespace ipo {
     else
     {
       space().printVector(std::cout, result.points.front().point);
-      std::cout << "\n" << std::flush;
+      std::cout << " (value: " << result.points.front().objectiveValue << ")\n" << std::flush;
     }
     for (std::size_t i = 0; i < result.points.size(); ++i)
-      delete result.points[i].point;
+    {
+      if (result.points[i].index == std::numeric_limits<std::size_t>::max())
+        delete result.points[i].point;
+    }
     for (std::size_t i = 0; i < result.directions.size(); ++i)
-      delete result.directions[i].direction;
+    {
+      if (result.directions[i].index == std::numeric_limits<std::size_t>::max())
+        delete result.directions[i].direction;
+    }
     return true;
   }
 
