@@ -666,7 +666,7 @@ namespace ipo {
   void LPInequalityParser::parseName()
   {
     assert(token().type == LPToken::NAME);
-    const std::string& name = getTokenName(token());
+    const std::string name = getTokenName(token());
     fetchNextNonWhite();
     if (token().type == ':')
     {
