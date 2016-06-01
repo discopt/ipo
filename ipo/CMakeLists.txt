@@ -48,7 +48,6 @@ set(IPO_INSTALL_HEADERS
   reconstruct.h
   spx_gmp.h
   vector_2d.h
-  wrapper_oracle.h
   console_app.h
   parser.h
   space.h

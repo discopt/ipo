@@ -64,7 +64,8 @@ namespace ipo {
   {
     const Rational& lhs = row.lhs();
     const Rational& rhs = row.rhs();
-    printRow(stream, lhs > -infinity ? &lhs : NULL, rhs < infinity ? &rhs : NULL, row.rowVector());
+    printRow(stream, lhs > -infinity/2 ? &lhs : NULL,
+      rhs < infinity / 2 ? &rhs : NULL, row.rowVector());
   }
 
   void Space::printRow(std::ostream& stream, const LPRowSetRational& rows, std::size_t index) const
@@ -72,8 +73,8 @@ namespace ipo {
     assert(index < rows.num());
     const Rational& lhs = rows.lhs(index);
     const Rational& rhs = rows.rhs(index);
-    printRow(stream, lhs > -infinity ? &lhs : NULL, rhs < infinity / 2 ? &rhs : NULL,
-      rows.rowVector(index));
+    printRow(stream, lhs > -infinity / 2 ? &lhs : NULL,
+      rhs < infinity / 2 ? &rhs : NULL, rows.rowVector(index));
   }
 
   void Space::printRows(std::ostream& stream, const LPRowSetRational& rows) const

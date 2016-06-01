@@ -260,6 +260,8 @@ public:
       throw std::runtime_error("Invalid option: --use-inequalities must be followed by either \"on\" or \"off\".");
     }
 
+//     std::cerr << "Extracting instance from remaining arguments..." << std::endl;
+
     /// Now the remaining arguments must be an instance.
 
     if (numArguments() > 1
@@ -297,6 +299,7 @@ public:
         }
 
         _scipSpace = new Space;
+//         std::cerr << "Creating MixedIntegerProgram instance." << std::endl;
         _scipMip = new MixedIntegerProgram(*_scipSpace, scip);
         SCIP_CALL_EXC(SCIPfree(&scip));
       }
@@ -321,6 +324,7 @@ public:
       _scipCorrectorOracle = new MixedIntegerProgramCorrectorOracle(firstArgument + "-corrected", *_scipMip,
         _scipOracle);
       oracle = _scipCorrectorOracle;
+//       oracle = _scipOracle;
     }
 #endif
 
