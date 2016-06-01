@@ -181,7 +181,18 @@ namespace ipo {
 
     // Sort it.
 
-    std::sort(_vectorStats.begin(), _vectorStats.end());
+    for (std::size_t i = 0; i < _vectorStats.size(); ++i)
+    {
+      std::size_t bestIndex = i;
+      for (std::size_t j = i + 1; j < _vectorStats.size(); ++j)
+      {
+        if (_vectorStats[j] < _vectorStats[bestIndex])
+          bestIndex = j;
+      }
+      if (bestIndex != i)
+        std::swap(_vectorStats[i], _vectorStats[bestIndex]);
+    }
+//    std::sort(_vectorStats.begin(), _vectorStats.end()); TODO: Why does std::sort fail?
 
     // Extract the top element from every exponent group.
 
