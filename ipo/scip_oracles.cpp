@@ -237,6 +237,7 @@ double(row.value(p))));
     if (currentFace() != NULL)
     {
       SCIP_CALL_EXC(SCIPdelCons(_scip, _faceConstraint));
+      SCIP_CALL_EXC(SCIPreleaseCons(_scip, &_faceConstraint));
     }
 
     OracleBase::setFace(newFace);
