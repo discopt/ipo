@@ -17,32 +17,37 @@ namespace ipo {
     _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0),
     _lastPenaltyCosts(0.0)
   {
+
     // TODO: have a temporary maxAge variable during each run which is increased if stuck.
 
     /// Main LP
 
-    _mainLP.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
-    _mainLP.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
-    _mainLP.setRealParam(SoPlex::FEASTOL, 0.0);
-    _mainLP.setBoolParam(SoPlex::RATREC, true);
-    _mainLP.setBoolParam(SoPlex::RATFAC, true);
-    _mainLP.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
-    _mainLP.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
-    _mainLP.setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
+//     std::cerr << "Creating new SoPlex instance mainLP." << std::endl;
+    _mainLP = new SoPlex;
+    _mainLP->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
+    _mainLP->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    _mainLP->setRealParam(SoPlex::FEASTOL, 0.0);
+    _mainLP->setBoolParam(SoPlex::RATREC, true);
+    _mainLP->setBoolParam(SoPlex::RATFAC, true);
+    _mainLP->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _mainLP->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+    _mainLP->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
 
     LPColSetRational cols(_d);
     DSVectorRational vector;
     for (std::size_t c = 0; c < _d; ++c)
       cols.add(Rational(0), -infinity, vector, infinity);
-    _mainLP.addColsRational(cols);
+    _mainLP->addColsRational(cols);
 
     /// Stabilization LP.
 
-    _stabLP.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
-    _stabLP.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
-    _stabLP.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
-    _stabLP.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
-    _stabLP.setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
+//     std::cerr << "Creating new SoPlex instance stabLP." << std::endl;
+    _stabLP = new SoPlex;
+    _stabLP->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_REAL);
+    _stabLP->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_ONLYREAL);
+    _stabLP->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _stabLP->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+    _stabLP->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
 
     _offsetStabilizationRows = 2 * _d;
     LPColSetReal stabCols(3 * _d);
@@ -51,7 +56,7 @@ namespace ipo {
       stabCols.add(0.0, -infinity, stabVector, infinity);
     for (std::size_t c = 0; c < 2 * _d; ++c)
       stabCols.add(0.0, 0.0, stabVector, infinity);
-    _stabLP.addColsReal(stabCols);
+    _stabLP->addColsReal(stabCols);
 
     _stabColInfos.resize(_d);
 
@@ -78,20 +83,21 @@ namespace ipo {
       RowInfo ri = { 's', std::numeric_limits<std::size_t>::max(), -1 };
       _stabRowInfos.push_back(ri);
     }
-    _stabLP.addRowsReal(stabRows);
+    _stabLP->addRowsReal(stabRows);
   }
 
   PolarLP::~PolarLP()
   {
-
+    delete _stabLP;
+    delete _mainLP;
   }
 
   void PolarLP::setBounds(std::size_t column, const Rational& lower, const Rational& upper)
   {
     assert(column <= n());
 
-    _mainLP.changeBoundsRational(column, lower, upper);
-    _stabLP.changeBoundsReal(column, double(lower), double(upper));
+    _mainLP->changeBoundsRational(column, lower, upper);
+    _stabLP->changeBoundsReal(column, double(lower), double(upper));
   }
 
   std::size_t PolarLP::addConstraint(const Rational& lhs, const SVectorRational& row, const
@@ -100,15 +106,15 @@ Rational& rhs)
     for (int p = row.size() - 1; p >= 0; --p)
       assert(row.index(p) <= _n);
 
-    _mainLP.addRowRational(LPRowRational(lhs, row, rhs));
+    _mainLP->addRowRational(LPRowRational(lhs, row, rhs));
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
     DSVectorReal realRow;
     for (int p = row.size() - 1; p >= 0; --p)
       realRow.add(row.index(p), double(row.value(p)));
-    _stabLP.addRowReal(LPRowReal(double(lhs), realRow, double(rhs)));
+    _stabLP->addRowReal(LPRowReal(double(lhs), realRow, double(rhs)));
     _stabRowInfos.push_back(ri);
 
     return _constraintsToRows.size() - 1;
@@ -121,14 +127,14 @@ Rational& rhs)
 
     assert(index < _constraintsToRows.size());
     std::size_t rowIndex = _constraintsToRows[index];
-    assert(rowIndex < _mainLP.numRowsRational());
+    assert(rowIndex < _mainLP->numRowsRational());
 
-    _mainLP.changeRowRational(rowIndex, row);
+    _mainLP->changeRowRational(rowIndex, row);
 
     DSVectorReal realVector;
     for (int p = row.rowVector().size() - 1; p >= 0; --p)
       realVector.add(row.rowVector().index(p), double(row.rowVector().value(p)));
-    _stabLP.changeRowReal(_offsetStabilizationRows + rowIndex,
+    _stabLP->changeRowReal(_offsetStabilizationRows + rowIndex,
         LPRowReal(double(row.lhs()), realVector, double(row.rhs())));
   }
 
@@ -158,11 +164,11 @@ soplex::VectorRational& normal,
 
     for (std::size_t c = 0; c < _d; ++c)
     {
-      if (_mainLP.objRational(c) == objective[c])
+      if (_mainLP->objRational(c) == objective[c])
         continue;
 
-      _mainLP.changeObjRational(c, objective[c]);
-      _stabLP.changeObjReal(c, double(objective[c]));
+      _mainLP->changeObjRational(c, objective[c]);
+      _stabLP->changeObjReal(c, double(objective[c]));
     }
   }
 
@@ -170,16 +176,16 @@ soplex::VectorRational& normal,
   {
     DSVectorRational vector = *_points[index];
     vector.add(_n, Rational(-1));
-    _mainLP.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
+    _mainLP->addRowRational(LPRowRational(-infinity, vector, Rational(0)));
 
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
     DSVectorReal realVector;
     for (int p = vector.size() - 1; p >= 0; --p)
       realVector.add(vector.index(p), double(vector.value(p)));
-    _stabLP.addRowReal(LPRowReal(-infinity, realVector, 0.0));
+    _stabLP->addRowReal(LPRowReal(-infinity, realVector, 0.0));
     _stabRowInfos.push_back(ri);
 
     return _constraintsToRows.size() - 1;
@@ -187,16 +193,16 @@ soplex::VectorRational& normal,
 
   std::size_t PolarLP::addRayContraint(std::size_t index)
   {
-    _mainLP.addRowRational(LPRowRational(-infinity, *_points[index], Rational(0)));
+    _mainLP->addRowRational(LPRowRational(-infinity, *_points[index], Rational(0)));
 
     RowInfo ri = { 'c', std::numeric_limits<std::size_t>::max(), -1 };
     _rowInfos.push_back(ri);
-    _constraintsToRows.push_back(_mainLP.numRowsRational() - 1);
+    _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
     DSVectorReal realVector;
     for (int p = _points[index]->size() - 1; p >= 0; --p)
       realVector.add(_points[index]->index(p), double(_points[index]->value(p)));
-    _stabLP.addRowReal(LPRowReal(-infinity, realVector, 0.0));
+    _stabLP->addRowReal(LPRowReal(-infinity, realVector, 0.0));
     _stabRowInfos.push_back(ri);
 
     return _constraintsToRows.size() - 1;
@@ -207,15 +213,15 @@ soplex::VectorRational& normal,
     assert(basis.columnStatus.size() == _n + 1);
     assert(basis.constraintStatus.size() == _constraintsToRows.size());
 
-    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
-    std::vector<SPxSolver::VarStatus> colStatus(_mainLP.numColsRational());
+    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP->numRowsRational());
+    std::vector<SPxSolver::VarStatus> colStatus(_mainLP->numColsRational());
     for (std::size_t c = 0; c <= _n; ++c)
       colStatus[c] = basis.columnStatus[c];
-    for (std::size_t c = _n + 1; c < _mainLP.numColsRational(); ++c)
+    for (std::size_t c = _n + 1; c < _mainLP->numColsRational(); ++c)
       colStatus[c] = SPxSolver::ON_LOWER;
     for (std::size_t i = 0; i < _constraintsToRows.size(); ++i)
       rowStatus[_constraintsToRows[i]] = basis.constraintStatus[i];
-    for (std::size_t r = 0; r < _mainLP.numRowsRational(); ++r)
+    for (std::size_t r = 0; r < _mainLP->numRowsRational(); ++r)
     {
       if (_rowInfos[r].type == 'c')
         continue;
@@ -229,17 +235,17 @@ soplex::VectorRational& normal,
       rowStatus[r] = tight ? SPxSolver::ON_UPPER : SPxSolver::BASIC;
     }
 
-    _mainLP.setBasis(&rowStatus[0], &colStatus[0]);
+    _mainLP->setBasis(&rowStatus[0], &colStatus[0]);
   }
 
   void PolarLP::getBasis(Basis& basis)
   {
-    assert(_mainLP.hasBasis());
+    assert(_mainLP->hasBasis());
 
-    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
-    std::vector<SPxSolver::VarStatus> colStatus(_mainLP.numColsRational());
+    std::vector<SPxSolver::VarStatus> rowStatus(_mainLP->numRowsRational());
+    std::vector<SPxSolver::VarStatus> colStatus(_mainLP->numColsRational());
 
-    _mainLP.getBasis(&rowStatus[0], &colStatus[0]);
+    _mainLP->getBasis(&rowStatus[0], &colStatus[0]);
     basis.columnStatus.resize(_n + 1);
     for (std::size_t c = 0; c <= _n; ++c)
       basis.columnStatus[c] = colStatus[c];
@@ -248,7 +254,7 @@ soplex::VectorRational& normal,
       basis.constraintStatus[i] = rowStatus[_constraintsToRows[i]];
     basis.tightPoints.clear();
     basis.tightRays.clear();
-    for (std::size_t r = 0; r < _mainLP.numRowsRational(); ++r)
+    for (std::size_t r = 0; r < _mainLP->numRowsRational(); ++r)
     {
       if (rowStatus[r] != SPxSolver::ON_UPPER)
         continue;
@@ -261,13 +267,13 @@ soplex::VectorRational& normal,
 
   Rational PolarLP::getObjectiveValue()
   {
-    return _mainLP.objValueRational();
+    return _mainLP->objValueRational();
   }
 
   void PolarLP::getPrimalSolution(VectorRational& solution)
   {
-    _currentPrimalSolution.reDim(_mainLP.numColsRational());
-    if (!_mainLP.getPrimalRational(_currentPrimalSolution))
+    _currentPrimalSolution.reDim(_mainLP->numColsRational());
+    if (!_mainLP->getPrimalRational(_currentPrimalSolution))
       throw std::runtime_error("PolarLP: No primal solution available.");
     for (std::size_t v = 0; v <= _n; ++v)
       solution[v] = _currentPrimalSolution[v];
@@ -275,8 +281,8 @@ soplex::VectorRational& normal,
 
   void PolarLP::getPrimalSolution(DSVectorRational& solution)
   {
-    _currentPrimalSolution.reDim(_mainLP.numColsRational());
-    assert(_mainLP.getPrimalRational(_currentPrimalSolution));
+    _currentPrimalSolution.reDim(_mainLP->numColsRational());
+    assert(_mainLP->getPrimalRational(_currentPrimalSolution));
     assert(solution.size() == 0);
     for (std::size_t v = 0; v <= _n; ++v)
     {
@@ -292,13 +298,13 @@ soplex::VectorRational& normal,
     /// Remove dynamic rows of exact LP.
 
     std::vector<int> rowPermutation;
-    rowPermutation.resize(_mainLP.numRowsRational());
-    for (std::size_t i = 0; i < _mainLP.numRowsRational(); ++i)
+    rowPermutation.resize(_mainLP->numRowsRational());
+    for (std::size_t i = 0; i < _mainLP->numRowsRational(); ++i)
     {
       rowPermutation[i] = (_rowInfos[i].type == 'p' || _rowInfos[i].type == 'r') ? -1 : 0;
     }
-    _mainLP.removeRowsRational(&rowPermutation[0]);
-    _rowInfos.resize(_mainLP.numRowsRational());
+    _mainLP->removeRowsRational(&rowPermutation[0]);
+    _rowInfos.resize(_mainLP->numRowsRational());
 
     /// Reset stabilization procedures.
 
@@ -315,10 +321,10 @@ soplex::VectorRational& normal,
       _stabColInfos[c].trustLower = 0.0;
       _stabColInfos[c].trustUpper = 0.0;
 
-      _stabLP.changeLhsReal(_stabColInfos[c].lowerRow, 0);
-      _stabLP.changeRhsReal(_stabColInfos[c].upperRow, 0);
-      _stabLP.changeObjReal(_offsetLower + c, -_stabPenalty);
-      _stabLP.changeObjReal(_offsetUpper + c, -_stabPenalty);
+      _stabLP->changeLhsReal(_stabColInfos[c].lowerRow, 0);
+      _stabLP->changeRhsReal(_stabColInfos[c].upperRow, 0);
+      _stabLP->changeObjReal(_offsetLower + c, -_stabPenalty);
+      _stabLP->changeObjReal(_offsetUpper + c, -_stabPenalty);
     }
 
     std::size_t numRows;
@@ -332,16 +338,16 @@ soplex::VectorRational& normal,
     DVectorReal dualSolution;
     primalSolution.reDim(3 * _d, false);
     std::vector<SPxSolver::VarStatus> rowStatus;
-    std::vector<SPxSolver::VarStatus> columnStatus(_stabLP.numColsReal());
+    std::vector<SPxSolver::VarStatus> columnStatus(_stabLP->numColsReal());
     bool firstRound = true; // Indicator telling us to remove all dynamic rows in the first round.
     double lastObjective = 0.0;
     while (true)
     {
-      assert(_stabLP.numRowsReal() == _stabRowInfos.size());
+      assert(_stabLP->numRowsReal() == _stabRowInfos.size());
 
       /// Perform cut aging
 
-      numRows = _stabLP.numRowsReal();
+      numRows = _stabLP->numRowsReal();
       rowPermutation.resize(numRows);
       for (std::size_t i = 0; i < numRows; ++i)
       {
@@ -369,7 +375,7 @@ soplex::VectorRational& normal,
         }
       }
 
-      _stabLP.removeRowsReal(&rowPermutation[0]);
+      _stabLP->removeRowsReal(&rowPermutation[0]);
       for (std::size_t i = 0; i < numRows; ++i)
       {
         if (rowPermutation[i] < 0)
@@ -378,16 +384,16 @@ soplex::VectorRational& normal,
         if (newRow >= 0 && newRow != i)
           _stabRowInfos[newRow] = _stabRowInfos[i];
       }
-      _stabRowInfos.resize(_stabLP.numRowsReal());
-      numRows = _stabLP.numRowsReal();
+      _stabRowInfos.resize(_stabLP->numRowsReal());
+      numRows = _stabLP->numRowsReal();
 
       /// Solve LP and evaluate result.
 
       onBeforeSolve(true);
-      SPxSolver::Status status = _stabLP.solve();
+      SPxSolver::Status status = _stabLP->solve();
       if (status != SPxSolver::OPTIMAL)
       {
-        assert(_stabLP.writeFileReal("stab.lp"));
+        assert(_stabLP->writeFileReal("stab.lp"));
 
         std::stringstream ss;
         ss << "PolarLP: Stabilization LP is " << status <<
@@ -396,19 +402,19 @@ soplex::VectorRational& normal,
       }
 
       rowStatus.resize(numRows);
-      _stabLP.getBasis(&rowStatus[0], &columnStatus[0]);
+      _stabLP->getBasis(&rowStatus[0], &columnStatus[0]);
       firstRound = false;
-      if (_stabLP.objValueReal() < lastObjective)
+      if (_stabLP->objValueReal() < lastObjective)
         numLastCacheRounds = 0;
-      lastObjective = _stabLP.objValueReal();
+      lastObjective = _stabLP->objValueReal();
 
-      if (!_stabLP.getPrimalReal(primalSolution))
+      if (!_stabLP->getPrimalReal(primalSolution))
         throw std::runtime_error("Stabilization: No primal solution available.");
       for (std::size_t v = 0; v < _n; ++v)
         inequalityApproxDenseNormal[v] = primalSolution[v];
       inequalityApproxRhs = primalSolution[_n];
       dualSolution.reDim(numRows, false);
-      if (!_stabLP.getDualReal(dualSolution))
+      if (!_stabLP->getDualReal(dualSolution))
         throw std::runtime_error("Stabilization: No dual solution available.");
 
       // TODO: SOLUTION DUMP
@@ -419,21 +425,21 @@ soplex::VectorRational& normal,
 
       _lastMainObjective = 0;
       for (std::size_t c = 0; c < _d; ++c)
-        _lastMainObjective += primalSolution[c] * _stabLP.objReal(c);
-      _lastPenaltyCosts = _lastMainObjective - _stabLP.objValueReal();
+        _lastMainObjective += primalSolution[c] * _stabLP->objReal(c);
+      _lastPenaltyCosts = _lastMainObjective - _stabLP->objValueReal();
       if (_lastPenaltyCosts < 0)
         _lastPenaltyCosts = 0;
       onAfterSolve(true);
 
       /// Stabilization.
 
-      if (_stabLP.objValueReal() <= _stabLP.realParam(SoPlex::OPTTOL) && _stabPenalty > 1.0e-6)
+      if (_stabLP->objValueReal() <= _stabLP->realParam(SoPlex::OPTTOL) && _stabPenalty > 1.0e-6)
       {
         _stabPenalty *= 0.5;
         for (std::size_t c = 0; c < _d; ++c)
         {
-          _stabLP.changeObjReal(_offsetLower + c, -_stabPenalty);
-          _stabLP.changeObjReal(_offsetUpper + c, -_stabPenalty);
+          _stabLP->changeObjReal(_offsetLower + c, -_stabPenalty);
+          _stabLP->changeObjReal(_offsetUpper + c, -_stabPenalty);
         }
         onPenaltyDecrease();
         numLastCacheRounds = 0;
@@ -452,7 +458,7 @@ soplex::VectorRational& normal,
       inequalityRoundedRhs = inequalityApproxRhs + APPROX_VIOLATION;
 
       onBeforeOracleCall();
-      _oracle->maximize(_result, inequalityRoundedDenseNormal, ObjectiveBound(inequalityRoundedRhs, 
+      _oracle->maximize(_result, inequalityRoundedDenseNormal, ObjectiveBound(inequalityRoundedRhs,
         true));
       onAfterOracleCall(_result.isFeasible(), _result.points.size(), _result.directions.size(),
         false);
@@ -495,8 +501,8 @@ soplex::VectorRational& normal,
         _stabPenalty *= 0.125;
         for (std::size_t c = 0; c < _d; ++c)
         {
-          _stabLP.changeObjReal(_offsetLower + c, -_stabPenalty);
-          _stabLP.changeObjReal(_offsetUpper + c, -_stabPenalty);
+          _stabLP->changeObjReal(_offsetLower + c, -_stabPenalty);
+          _stabLP->changeObjReal(_offsetUpper + c, -_stabPenalty);
         }
         onPenaltyDecrease();
         continue;
@@ -536,7 +542,7 @@ soplex::VectorRational& normal,
     DVectorRational dualSolution;
     Rational inequalityRhs;
     std::vector<SPxSolver::VarStatus> rowStatus;
-    std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
+    std::vector<SPxSolver::VarStatus> columnStatus(_mainLP->numColsRational());
     std::vector<int> rowPermutation;
 
     /// Extract objective and compute perturbed one.
@@ -549,12 +555,12 @@ soplex::VectorRational& normal,
       std::uniform_int_distribution<int> distribution(1,1024);
 
       objectiveVector.reDim(numColumns());
-      _mainLP.getObjRational(objectiveVector);
+      _mainLP->getObjRational(objectiveVector);
       perturbedVector = objectiveVector;
       LPRowRational row;
       for (std::size_t r = 0; r < numRows(); ++r)
       {
-        _mainLP.getRowRational(r, row);
+        _mainLP->getRowRational(r, row);
         int lhsLambda = (row.lhs() > -infinity) ? distribution(generator) : 0;
         int rhsLambda = (row.rhs() < infinity) ? distribution(generator) : 0;
         if (lhsLambda == rhsLambda)
@@ -566,7 +572,7 @@ soplex::VectorRational& normal,
           perturbedVector[rowVector.index(p)] += lambda * rowVector.value(p);
         }
       }
-      _mainLP.changeObjRational(perturbedVector);
+      _mainLP->changeObjRational(perturbedVector);
     }
 
     /// Main loop.
@@ -575,10 +581,10 @@ soplex::VectorRational& normal,
     {
       /// Perform cut aging
 
-      std::size_t numRows = _mainLP.numRowsRational();
+      std::size_t numRows = _mainLP->numRowsRational();
       rowStatus.resize(numRows);
       rowPermutation.resize(numRows);
-      _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+      _mainLP->getBasis(&rowStatus[0], &columnStatus[0]);
       std::size_t lastStatic = 0;
       for (std::size_t i = 0; i < numRows; ++i)
       {
@@ -608,7 +614,7 @@ soplex::VectorRational& normal,
         }
       }
 
-      _mainLP.removeRowsRational(&rowPermutation[0]);
+      _mainLP->removeRowsRational(&rowPermutation[0]);
       for (std::size_t i = 0; i < numRows; ++i)
       {
         if (rowPermutation[i] < 0)
@@ -617,13 +623,13 @@ soplex::VectorRational& normal,
         if (newRow >= 0)
           _rowInfos[newRow] = _rowInfos[i];
       }
-      _rowInfos.resize(_mainLP.numRowsRational());
-      numRows = _mainLP.numRowsRational();
+      _rowInfos.resize(_mainLP->numRowsRational());
+      numRows = _mainLP->numRowsRational();
 
       /// Solve LP and evaluate.
 
       onBeforeSolve(false);
-      SPxSolver::Status status = _mainLP.solve();
+      SPxSolver::Status status = _mainLP->solve();
       if (status != SPxSolver::OPTIMAL)
       {
         std::stringstream ss;
@@ -631,16 +637,16 @@ soplex::VectorRational& normal,
         throw std::runtime_error(ss.str());
       }
 
-      rowStatus.resize(_mainLP.numRowsRational());
-      _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+      rowStatus.resize(_mainLP->numRowsRational());
+      _mainLP->getBasis(&rowStatus[0], &columnStatus[0]);
 //       int numBasic = 0;
-//       for (int c = 0; c < _mainLP.numColsRational(); ++c)
+//       for (int c = 0; c < _mainLP->numColsRational(); ++c)
 //       {
 //         if (columnStatus[c] == SPxSolver::BASIC)
 //           numBasic++;
 //         std::cout << "Col " << c << " is " << columnStatus[c] << std::endl;
 //       }
-//       for (int r = 0; r < _mainLP.numRowsRational(); ++r)
+//       for (int r = 0; r < _mainLP->numRowsRational(); ++r)
 //       {
 //         if (rowStatus[r] == SPxSolver::ON_UPPER)
 //         {
@@ -654,17 +660,17 @@ soplex::VectorRational& normal,
 //       std::cout << "#basic cols: " << numBasic << std::endl;
 
       dualSolution.reDim(numRows, false);
-      if (!_mainLP.getDualRational(dualSolution))
+      if (!_mainLP->getDualRational(dualSolution))
         throw std::runtime_error("Optimization: No dual solution available.");
 
-      double obj = double(_mainLP.objValueRational());
+      double obj = double(_mainLP->objValueRational());
       _lastMainObjective = obj;
       onAfterSolve(false);
 
       /// Extract solution vector.
 
-      _currentPrimalSolution.reDim(_mainLP.numColsRational());
-      _mainLP.getPrimalRational(_currentPrimalSolution);
+      _currentPrimalSolution.reDim(_mainLP->numColsRational());
+      _mainLP->getPrimalRational(_currentPrimalSolution);
       inequalityExactSparseNormal.clear();
       inequalityExactDenseNormal.reDim(n());
       inequalityApproxDenseNormal.reDim(n());
@@ -679,7 +685,7 @@ soplex::VectorRational& normal,
 
       onBeforeOracleCall();
       _oracle->maximize(_result, inequalityExactDenseNormal, ObjectiveBound(inequalityRhs, true));
-      onAfterOracleCall(_result.isFeasible(), _result.points.size(), 
+      onAfterOracleCall(_result.isFeasible(), _result.points.size(),
         _result.directions.size(), false);
       _result.addToContainers(_points, _directions);
 
@@ -710,18 +716,17 @@ soplex::VectorRational& normal,
       {
         throw std::runtime_error("Polar LP: Oracle claims infeasible.");
       }
-      
 
       if (perturbeObjective)
       {
-        _mainLP.changeObjRational(objectiveVector);
+        _mainLP->changeObjRational(objectiveVector);
         perturbeObjective = false;
-        SPxSolver::Status status = _mainLP.solve();
+        SPxSolver::Status status = _mainLP->solve();
         if (status != SPxSolver::OPTIMAL)
           throw std::runtime_error("PolarLP: Main LP is not optimal.");
 
-        rowStatus.resize(_mainLP.numRowsRational());
-        _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+        rowStatus.resize(_mainLP->numRowsRational());
+        _mainLP->getBasis(&rowStatus[0], &columnStatus[0]);
       }
 
       break;
@@ -735,18 +740,18 @@ soplex::VectorRational& normal,
     std::default_random_engine generator;
     std::uniform_int_distribution<int> distribution(1,1024);
 
-//     Rational objectiveValue = _mainLP.objValueRational();
+//     Rational objectiveValue = _mainLP->objValueRational();
 //     std::cout << "Objective = " << objectiveValue << std::endl;
 
     DVectorRational objectiveVector(numColumns());
-    _mainLP.getObjRational(objectiveVector);
+    _mainLP->getObjRational(objectiveVector);
 
     DVectorRational perturbedVector(numColumns());
     perturbedVector = objectiveVector;
     LPRowRational row;
     for (std::size_t r = 0; r < numRows(); ++r)
     {
-      _mainLP.getRowRational(r, row);
+      _mainLP->getRowRational(r, row);
       int lhsLambda = (row.lhs() > -infinity) ? distribution(generator) : 0;
       int rhsLambda = (row.rhs() < infinity) ? distribution(generator) : 0;
       if (lhsLambda == rhsLambda)
@@ -764,9 +769,9 @@ soplex::VectorRational& normal,
 // std::endl;
 //     }
 
-    _mainLP.changeObjRational(perturbedVector);
+    _mainLP->changeObjRational(perturbedVector);
 
-    SPxSolver::Status status = _mainLP.solve();
+    SPxSolver::Status status = _mainLP->solve();
     if (status != SPxSolver::OPTIMAL)
     {
       std::stringstream ss;
@@ -775,11 +780,11 @@ soplex::VectorRational& normal,
     }
 
 
-//     std::vector<SPxSolver::VarStatus> rowStatus(_mainLP.numRowsRational());
-//     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP.numColsRational());
-//     _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+//     std::vector<SPxSolver::VarStatus> rowStatus(_mainLP->numRowsRational());
+//     std::vector<SPxSolver::VarStatus> columnStatus(_mainLP->numColsRational());
+//     _mainLP->getBasis(&rowStatus[0], &columnStatus[0]);
 //     int numBasic = 0;
-//     for (int c = 0; c < _mainLP.numColsRational(); ++c)
+//     for (int c = 0; c < _mainLP->numColsRational(); ++c)
 //     {
 //       if (columnStatus[c] == SPxSolver::BASIC)
 //         numBasic++;
@@ -787,8 +792,8 @@ soplex::VectorRational& normal,
 //     }
 //     std::cout << "Perturbed: #basic cols: " << numBasic << std::endl;
 
-    _mainLP.changeObjRational(objectiveVector);
-    status = _mainLP.solve();
+    _mainLP->changeObjRational(objectiveVector);
+    status = _mainLP->solve();
     if (status != SPxSolver::OPTIMAL)
     {
       std::stringstream ss;
@@ -796,22 +801,22 @@ soplex::VectorRational& normal,
       throw std::runtime_error(ss.str());
     }
 
-    _currentPrimalSolution.reDim(_mainLP.numColsRational());
-    _mainLP.getPrimalRational(_currentPrimalSolution);
+    _currentPrimalSolution.reDim(_mainLP->numColsRational());
+    _mainLP->getPrimalRational(_currentPrimalSolution);
     DSVectorRational sparsePrimal;
     sparsePrimal = _currentPrimalSolution;
 
-    std::cout << _mainLP.objValueRational() << std::endl;
+    std::cout << _mainLP->objValueRational() << std::endl;
     std::cout << sparsePrimal << std::endl;
     std::cout << std::endl;
 
-//     objectiveValue = _mainLP.objValueRational();
+//     objectiveValue = _mainLP->objValueRational();
 //     std::cout << "Objective = " << objectiveValue << std::endl;
 
 /*
-    _mainLP.getBasis(&rowStatus[0], &columnStatus[0]);
+    _mainLP->getBasis(&rowStatus[0], &columnStatus[0]);
     numBasic = 0;
-    for (int c = 0; c < _mainLP.numColsRational(); ++c)
+    for (int c = 0; c < _mainLP->numColsRational(); ++c)
     {
       if (columnStatus[c] == SPxSolver::BASIC)
         numBasic++;
@@ -887,12 +892,12 @@ soplex::VectorRational& normal,
       DSVectorReal realVector;
       for (int p = vector.size() - 1; p >= 0; --p)
         realVector.add(vector.index(p), double(vector.value(p)));
-      _stabLP.addRowReal(LPRowReal(-infinity, realVector, 0.0));
+      _stabLP->addRowReal(LPRowReal(-infinity, realVector, 0.0));
       _stabRowInfos.push_back(ri);
     }
     else
     {
-      _mainLP.addRowRational(LPRowRational(-infinity, vector, Rational(0)));
+      _mainLP->addRowRational(LPRowRational(-infinity, vector, Rational(0)));
       _rowInfos.push_back(ri);
     }
   }
@@ -905,12 +910,12 @@ soplex::VectorRational& normal,
       DSVectorReal realVector;
       for (int p = _points[index]->size() - 1; p >= 0; --p)
         realVector.add(_points[index]->index(p), double(_points[index]->value(p)));
-      _stabLP.addRowReal(LPRowReal(-infinity, realVector, 0.0));
+      _stabLP->addRowReal(LPRowReal(-infinity, realVector, 0.0));
       _stabRowInfos.push_back(ri);
     }
     else
     {
-      _mainLP.addRowRational(LPRowRational(-infinity, *_directions[index], Rational(0)));
+      _mainLP->addRowRational(LPRowRational(-infinity, *_directions[index], Rational(0)));
       _rowInfos.push_back(ri);
     }
   }

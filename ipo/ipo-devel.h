@@ -7,6 +7,7 @@
 
 #include <gmpxx.h>
 #define SOPLEX_WITH_GMP
+#define SOPLEX_WITH_RATIONALPARAM
 #include <soplex.h>
 
 #endif /* IPO_H_ */

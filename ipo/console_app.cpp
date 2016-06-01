@@ -822,8 +822,8 @@ namespace ipo {
 
     if (_numRandomObjectives > 0)
     {
-      std::random_device randomDevice;
-      std::default_random_engine generator(randomDevice());
+//       std::random_device randomDevice; // TODO: valgrind does not like random_device.
+      std::default_random_engine generator(0);
       std::normal_distribution<double> distribution;
       DVectorReal randomVector(n);
       for (std::size_t i = 0; i < _numRandomObjectives; ++i)
@@ -1052,23 +1052,25 @@ namespace ipo {
 
     /// Setup the LP.
 
-    SoPlex spx;
-    spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
-    spx.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
-    spx.setRealParam(SoPlex::FEASTOL, 0.0);
-    spx.setBoolParam(SoPlex::RATREC, true);
-    spx.setBoolParam(SoPlex::RATFAC, true);
-    spx.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
-    spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+//     std::cerr << "Creating new SoPlex instance for generateFacets." << std::endl;
+    SoPlex* spx = new SoPlex;
+    spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
+    spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    spx->setRealParam(SoPlex::FEASTOL, 0.0);
+    spx->setBoolParam(SoPlex::RATREC, true);
+    spx->setBoolParam(SoPlex::RATFAC, true);
+    spx->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
     LPColSetRational cols;
     cols = _relaxationColumns;
     cols.maxObj_w().assign(*objective);
-    spx.addColsRational(cols);
-    spx.addRowsRational(*_equations);
-    spx.addRowsRational(_relaxationRows);
+    spx->addColsRational(cols);
+    spx->addRowsRational(*_equations);
+    spx->addRowsRational(_relaxationRows);
 
     Separation::QuietOutput separateOutput;
-    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
+    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints,
+_spanningCachedDirections,
         _basicColumns, oracle());
 
     DVectorRational denseSolution;
@@ -1076,10 +1078,10 @@ namespace ipo {
     denseSolution.reDim(n);
     while (true)
     {
-      SPxSolver::Status status = spx.solve();
+      SPxSolver::Status status = spx->solve();
       if (status == SPxSolver::UNBOUNDED)
       {
-        spx.getPrimalRayRational(denseSolution);
+        spx->getPrimalRayRational(denseSolution);
         sparseSolution.clear();
         sparseSolution = denseSolution;
 
@@ -1093,13 +1095,13 @@ namespace ipo {
       }
       else if (status == SPxSolver::OPTIMAL)
       {
-        spx.getPrimalRational(denseSolution);
+        spx->getPrimalRational(denseSolution);
         sparseSolution.clear();
         sparseSolution = denseSolution;
 
 //        std::cout << "Relaxation LP is bounded with optimum ";
 //        oracle()->printVector(std::cout, &sparseSolution);
-//        std::cout << " of value " << spx.objValueRational() << "." << std::endl;
+//        std::cout << " of value " << spx->objValueRational() << "." << std::endl;
 
         separate.separatePoint(&sparseSolution, separateOutput);
         if (separate.violation() <= 0)
@@ -1118,7 +1120,7 @@ namespace ipo {
       Separation::Certificate certificate;
       separate.inequality(inequality);
       separate.certificate(certificate);
-      spx.addRowRational(inequality);
+      spx->addRowRational(inequality);
 
       /// If it should be reused, record the facet.
       if (_optionReuseFacets)
@@ -1162,6 +1164,8 @@ namespace ipo {
         std::cout << "\n" << std::flush;
       }
     }
+
+    delete spx;
 
     return true;
   }

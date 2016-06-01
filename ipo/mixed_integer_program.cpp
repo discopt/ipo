@@ -287,28 +287,30 @@ namespace ipo {
 
   MixedIntegerProgramCorrectorOracle::~MixedIntegerProgramCorrectorOracle()
   {
-
+    delete _spx;
   }
 
   void MixedIntegerProgramCorrectorOracle::initializeLP()
   {
-    _spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
-    _spx.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
-    _spx.setRealParam(SoPlex::FEASTOL, 0.0);
-    _spx.setBoolParam(SoPlex::RATREC, true);
-    _spx.setBoolParam(SoPlex::RATFAC, true);
-    _spx.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
-    _spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
-    _spx.setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
-    _spx.addColsRational(_mip.columns());
-    _spx.addRowsRational(_mip.rows());
+//     std::cerr << "Creating SoPlex instance for MixedIntegerProgramCorrectorOracle." << std::endl;
+    _spx = new SoPlex;
+    _spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
+    _spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    _spx->setRealParam(SoPlex::FEASTOL, 0.0);
+    _spx->setBoolParam(SoPlex::RATREC, true);
+    _spx->setBoolParam(SoPlex::RATFAC, true);
+    _spx->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+    _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
+    _spx->addColsRational(_mip.columns());
+    _spx->addRowsRational(_mip.rows());
   }
 
 
   DSVectorRational* MixedIntegerProgramCorrectorOracle::correctPoint(const SVectorRational* point,
       const VectorRational& objective)
   {
-    _spx.clearBasis(); // TODO: This should not be necessary, but produced a bug!
+    _spx->clearBasis(); // TODO: This should not be necessary, but produced a bug!
 
     /// Fix integers to zero.
 
@@ -316,12 +318,12 @@ namespace ipo {
     {
       if (!_mip.isIntegral(v))
       {
-        assert(_spx.lowerRational(v) == _mip.columns().lower(v));
-        assert(_spx.upperRational(v) == _mip.columns().upper(v));
+        assert(_spx->lowerRational(v) == _mip.columns().lower(v));
+        assert(_spx->upperRational(v) == _mip.columns().upper(v));
         continue;
       }
 
-      _spx.changeBoundsRational(v, Rational(0), Rational(0));
+      _spx->changeBoundsRational(v, Rational(0), Rational(0));
     }
 
     /// Fix integers to point's values for its nonzeros.
@@ -332,17 +334,17 @@ namespace ipo {
       const Rational& x = point->value(p);
       if (_mip.isIntegral(v))
       {
-        _spx.changeBoundsRational(v, x, x);
+        _spx->changeBoundsRational(v, x, x);
       }
     }
 
     /// Set objective.
 
-    _spx.changeObjRational(objective);
+    _spx->changeObjRational(objective);
 
     /// Solve LP.
 
-    SPxSolver::Status status = _spx.solve();
+    SPxSolver::Status status = _spx->solve();
     if (status != SPxSolver::OPTIMAL)
     {
       std::stringstream error;
@@ -354,7 +356,7 @@ namespace ipo {
     /// Extract solution.
 
     DSVectorRational* result = new DSVectorRational;
-    _spx.getPrimalRational(_denseVector);
+    _spx->getPrimalRational(_denseVector);
     (*result) = _denseVector;
     return result;
   }
@@ -368,20 +370,20 @@ namespace ipo {
     {
       if (!_mip.isIntegral(v))
       {
-        assert(_spx.lowerRational(v) == _mip.columns().lower(v));
-        assert(_spx.upperRational(v) == _mip.columns().upper(v));
+        assert(_spx->lowerRational(v) == _mip.columns().lower(v));
+        assert(_spx->upperRational(v) == _mip.columns().upper(v));
         continue;
       }
-      _spx.changeBoundsRational(v, _mip.columns().lower(v), _mip.columns().upper(v));
+      _spx->changeBoundsRational(v, _mip.columns().lower(v), _mip.columns().upper(v));
     }
 
     /// Set objective.
 
-    _spx.changeObjRational(objective);
+    _spx->changeObjRational(objective);
 
     /// Solve LP.
 
-    SPxSolver::Status status = _spx.solve();
+    SPxSolver::Status status = _spx->solve();
     if (status != SPxSolver::UNBOUNDED)
     {
       std::stringstream error;
@@ -393,7 +395,7 @@ namespace ipo {
     /// Extract direction.
 
     DSVectorRational* result = new DSVectorRational;
-    _spx.getPrimalRayRational(_denseVector);
+    _spx->getPrimalRayRational(_denseVector);
     (*result) = _denseVector;
     return result;
   }
@@ -404,7 +406,7 @@ namespace ipo {
       return;
 
     if (currentFace() != NULL)
-      _spx.removeRowRational(_spx.numRowsRational() - 1);
+      _spx->removeRowRational(_spx->numRowsRational() - 1);
 
     OracleBase::setFace(newFace);
     _approximateOracle->setFace(newFace);
@@ -412,7 +414,7 @@ namespace ipo {
 
     if (currentFace() != NULL)
     {
-      _spx.addRowRational(
+      _spx->addRowRational(
         LPRowRational(currentFace()->rhs(), currentFace()->sparseNormal(), currentFace()->rhs()));
     }
   }

@@ -354,7 +354,7 @@ namespace ipo {
 
     MixedIntegerProgram& _mip; // Associated mixed-integer program.
     OracleBase* _approximateOracle; // Approximate oracle.
-    soplex::SoPlex _spx; // LP solver
+    soplex::SoPlex* _spx; // LP solver
     soplex::DVectorRational _denseVector; // Temporary dense rational vector.
   };
 

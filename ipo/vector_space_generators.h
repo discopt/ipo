@@ -25,7 +25,7 @@ namespace ipo {
   protected:
     void checkVector(std::size_t index);
 
-    soplex::SoPlex _spx;
+    soplex::SoPlex* _spx;
     std::vector<std::size_t> _lazyVectors;
     bool _zeroRhs;
     soplex::DVectorRational _solution;
