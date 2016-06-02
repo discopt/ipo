@@ -158,10 +158,9 @@ The project is maintained by Matthias Walter.
 
 \section getting Getting it to work
 
-Either pull from the <a href="http://bitbucket.org/polyhedra-oracles/ipo/">git repository</a>
-or download a release:
-\li
-  <a href="ipo-1.0.tar.gz">ipo-1.0.tar.gz</a>
+Pull from the <a href="http://bitbucket.org/polyhedra-oracles/ipo/">git repository</a>.
+Note that IPO is not available as in a packaged form (i.e., a tar.gz archive) since it
+is still under heavy development. This will change once it reaches a more stable state.
 
 After unpacking the tarball simply follow the instructions in the INSTALL file.
 
