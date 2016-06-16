@@ -296,7 +296,7 @@ namespace ipo {
     bool _optionReadable;
     bool _optionCertificates;
     bool _optionReuseFacets;
-    bool _optionPrintRandom;
+    int _optionPrintRandom;
     bool _optionCache;
 
     Space _space;

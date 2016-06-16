@@ -183,7 +183,7 @@ namespace ipo {
     _optionReadable = true;
     _optionCertificates = false;
     _optionReuseFacets = true;
-    _optionPrintRandom = false;
+    _optionPrintRandom = 0;
     _optionCache = true;
 
     _oracle = NULL;
@@ -308,16 +308,20 @@ namespace ipo {
         if (_objectiveNames[i] == "")
           std::cout << "Objective";
         else if (_objectiveNames[i] == ":RANDOM:")
-          std::cout << "Random objective";
+        {
+          if (_optionPrintRandom > 0)
+            std::cout << "Random objective";
+        }
         else
           std::cout << "Objective <" << _objectiveNames[i] << ">";
-        bool print = (_objectiveNames[i] != ":RANDOM:") || _optionPrintRandom;
-        if (print)
+        int print = (_objectiveNames[i] != ":RANDOM:" ) ? 2 : _optionPrintRandom;
+        if (print >= 2)
         {
           std::cout << " ";
           space().printLinearForm(std::cout, objective(i));
         }
-        std::cout << ":\n" << std::flush;
+        if (print >= 1)
+          std::cout << ":\n" << std::flush;
 
         if (taskMaximize())
         {
@@ -480,8 +484,9 @@ namespace ipo {
     std::cerr << "      faces.\n";
     std::cerr << "  --reuse-facets on|off\n";
     std::cerr << "      If on (default), use computed facets for subsequent facet-generation.\n";
-    std::cerr << "  --print-random on|off\n";
-    std::cerr << "      If off (default), do not print the random objectives.\n";
+    std::cerr << "  --print-random long|short|none\n";
+    std::cerr << "      If none (default), do not print anything, if short, just print \"Random objective\", and if long,\n";
+    std::cerr << "      also print the andom objective vector1.\n";
     std::cerr << "  --progress stdout|stderr|off\n";
     std::cerr << "      If on, print progress output to stdout or stderr. Off by default.\n";
     std::cerr << "  --debug stdout|stderr|off\n";
@@ -764,14 +769,19 @@ namespace ipo {
     {
       if (numArguments() > 1)
       {
-        if (argument(1) == "on")
+        if (argument(1) == "yes" || argument(1) == "long" || argument(1) == "full")
         {
-          _optionPrintRandom = true;
+          _optionPrintRandom = 2;
           return 2;
         }
-        if (argument(1) == "off")
+        else if (argument(1) == "short" || argument(1) == "info")
         {
-          _optionPrintRandom = false;
+          _optionPrintRandom = 1;
+          return 2;
+        }
+        else if (argument(1) == "no" || argument(1) == "none" || argument(1) == "quiet")
+        {
+          _optionPrintRandom = 0;
           return 2;
         }
       }
@@ -991,14 +1001,16 @@ namespace ipo {
     
     OracleResult result;
     if (maximize)
-      oracle()->maximize(result, *objective);
+    {
+      oracle()->maximize(result, *objective, ObjectiveBound(), 0);
+    }
     else
     {
       DSVectorRational negated;
       negated = *objective;
       for (int p = negated.size() - 1; p >= 0; --p)
         negated.value(p) *= -1;
-      oracle()->maximize(result, negated);
+      oracle()->maximize(result, negated, ObjectiveBound(), 0);
     }
 
     if (result.isInfeasible())
