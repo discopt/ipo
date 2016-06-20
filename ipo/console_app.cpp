@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <random>
+#include <regex>
 
 #include "affine_hull.h"
 #include "min_norm_2d.h"
@@ -191,6 +192,8 @@ namespace ipo {
     _cachedDirections = NULL;
     _cachedPoints = NULL;
     _equations = NULL;
+    _projection = NULL;
+    _projectedOracle = NULL;
   }
 
   ConsoleApplicationBase::~ConsoleApplicationBase()
@@ -204,6 +207,10 @@ namespace ipo {
 
     if (_cacheOracle)
       delete _cacheOracle;
+    if (_projectedOracle)
+      delete _projectedOracle;
+    if (_projection)
+      delete _projection;
     for (std::size_t i = 0; i < numObjectives(); ++i)
       delete _objectives[i];
     for (std::size_t i = 0; i < numFaces(); ++i)
@@ -218,10 +225,31 @@ namespace ipo {
   {
     if (_oracle)
       throw std::runtime_error("Error in ConsoleApplicationBase::setBasicOracle: Oracle already set.");
-    if (_faceRestrictionArgument != "" || _projectionArgument != "")
+    if (_faceRestrictionArgument != "")
       throw std::runtime_error("Restricting to faces or projecting is not implemented, yet.");
 
-    _space = oracle->space();
+    if (_projectionArgument != "")
+    {
+      const Space& originalSpace = oracle->space();
+      std::regex re = std::regex(_projectionArgument);
+      std::vector<std::size_t> projectionVariables;
+      projectionVariables.reserve(originalSpace.dimension());
+      for (std::size_t v = 0; v < originalSpace.dimension(); ++v)
+      {
+        if (std::regex_match(originalSpace[v], re))
+          projectionVariables.push_back(v);
+      }
+      
+      _projection = new Projection(originalSpace, projectionVariables);
+      _projectedOracle =  new ProjectedOracle("projection of " + oracle->name(), *_projection, oracle);
+      _space = *_projection;
+      oracle = _projectedOracle;
+    }
+    else
+    {
+      _space = oracle->space();
+    }
+    
     _cachedPoints = new UniqueRationalVectors(space().dimension());
     _cachedDirections = new UniqueRationalVectors(space().dimension());
     if (_optionCache)
@@ -411,9 +439,9 @@ namespace ipo {
     std::cerr << "Options for defining the polyhedron P:\n";
     printAdditionalOptionsPolyhedron(std::cerr);
     std::cerr << "  --projection VARS\n";
-    std::cerr << "      Consider the orthogonal projection onto a subset of variables. VARS is either a comma-\n";
-    std::cerr << "      separated list of variables or a regular expression enclosed with ^ and $. In this case it\n";
-    std::cerr << "      defines the projection onto all variables matching it.\n";
+    std::cerr << "      Consider the orthogonal projection onto a subset of variables. VARS is a regular expression\n";
+    std::cerr << "      that defines the projection onto all variables matching it. Note that this way you can specify\n";
+    std::cerr << "      a list of variables using '|' as a separator.\n";
     std::cerr << "  --restrict-face INEQ\n";
     std::cerr << "      Restrict the oracle to the face specified by INEQ. See --face below.\n";
     std::cerr << "\n";
@@ -498,16 +526,30 @@ namespace ipo {
 
   void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds)
   {
-    assert(lowerBounds.dim() == _relaxationColumns.num());
-    assert(upperBounds.dim() == _relaxationColumns.num());
+    if (_projectedOracle)
+    {
+      // TODO: Some of the bounds may be used in case of projection!
+    }
+    else
+    {
+      assert(lowerBounds.dim() == _relaxationColumns.num());
+      assert(upperBounds.dim() == _relaxationColumns.num());
 
-    _relaxationColumns.lower_w() = lowerBounds;
-    _relaxationColumns.upper_w() = upperBounds;
+      _relaxationColumns.lower_w() = lowerBounds;
+      _relaxationColumns.upper_w() = upperBounds;
+    }
   }
 
   void ConsoleApplicationBase::addRelaxationRows(const soplex::LPRowSetRational& rows)
   {
-    _relaxationRows.add(rows);
+    if (_projectedOracle)
+    {
+      // TODO: Some of the rows may be used in case of projection!
+    }
+    else
+    {
+      _relaxationRows.add(rows);
+    }
   }
 
   void ConsoleApplicationBase::printAdditionalOptionsPolyhedron(std::ostream& stream)

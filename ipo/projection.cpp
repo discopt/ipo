@@ -4,7 +4,8 @@ using namespace soplex;
 
 namespace ipo {
 
-  Projection::Projection(const Space& sourceSpace): _sourceSpace(sourceSpace)
+  Projection::Projection(const Space& sourceSpace)
+    : _sourceSpace(sourceSpace)
   {
 
   }
@@ -17,6 +18,11 @@ namespace ipo {
     _shift.reserve(variableSubset.size());
     for (std::size_t i = 0; i < variableSubset.size(); ++i)
       addVariable(variableSubset[i]);
+  }
+  
+  Projection::~Projection()
+  {
+    
   }
 
   void Projection::addVariable(const std::string& variableName,

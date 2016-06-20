@@ -8,6 +8,7 @@
 #include "unique_rational_vectors.h"
 #include "oracles.h"
 #include "cache_oracle.h"
+#include "projection.h"
 
 namespace ipo {
 
@@ -266,6 +267,11 @@ namespace ipo {
     {
       return _oracle;
     }
+    
+    inline bool projectedSpace()
+    {
+      return _projectedOracle != NULL;
+    }
 
   private:
     std::string _program;
@@ -301,6 +307,8 @@ namespace ipo {
 
     Space _space;
     CacheOracle* _cacheOracle;
+    Projection* _projection;
+    ProjectedOracle* _projectedOracle;
     OracleBase* _oracle;
 
     std::vector<Face*> _faces;

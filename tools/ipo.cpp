@@ -350,7 +350,10 @@ public:
     if (!ConsoleApplicationBase::processArguments())
       return false;
 
-    /// TODO: Instance objective may be invalid if projection is enabled!
+    /// TODO: Instance objective may still be valid although projection is enabled!
+    if (projectedSpace())
+      _useInstanceObjective = false;
+    
     if (_useInstanceObjective)
     {
       soplex::DSVectorRational* obj = new soplex::DSVectorRational;
