@@ -45,6 +45,7 @@ set(IPO_INSTALL_HEADERS
   min_norm_2d.h
   oracles.h
   projection.h
+  cache_oracle.h
   reconstruct.h
   spx_gmp.h
   vector_2d.h
