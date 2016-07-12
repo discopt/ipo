@@ -207,7 +207,7 @@ namespace ipo {
       soplex::DSVectorRational const* point;
       std::size_t index;
 
-      inline bool operator<(const Point& other)
+      inline bool operator<(const Point& other) const
       {
         return objectiveValue > other.objectiveValue;
       }
