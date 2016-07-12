@@ -716,6 +716,8 @@ namespace ipo {
   void manhattanNormImproveInequality(std::size_t n, soplex::LPRowRational& inequality,
       const soplex::LPRowSetRational& equations)
   {
+    bool hasFiniteLhs = inequality.lhs() > -infinity/2;
+    bool hasFiniteRhs = inequality.rhs() < +infinity/2;
     scaleRowIntegral(inequality);
     soplex::DSVectorRational newTarget;
     bool improved = true;
@@ -737,6 +739,10 @@ namespace ipo {
         }
       }
     }
+    if (!hasFiniteLhs)
+      inequality.setLhs(-infinity);
+    if (!hasFiniteRhs)
+      inequality.setRhs(infinity);
   }
 
 }
