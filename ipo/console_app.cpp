@@ -239,7 +239,7 @@ namespace ipo {
         if (std::regex_match(originalSpace[v], re))
           projectionVariables.push_back(v);
       }
-      
+
       _projection = new Projection(originalSpace, projectionVariables);
       _projectedOracle =  new ProjectedOracle("projection of " + oracle->name(), *_projection, oracle);
       _space = *_projection;
@@ -249,7 +249,7 @@ namespace ipo {
     {
       _space = oracle->space();
     }
-    
+
     _cachedPoints = new UniqueRationalVectors(space().dimension());
     _cachedDirections = new UniqueRationalVectors(space().dimension());
     if (_optionCache)
@@ -1040,7 +1040,7 @@ namespace ipo {
   bool ConsoleApplicationBase::optimizeObjective(const SVectorRational* objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
-    
+
     OracleResult result;
     if (maximize)
     {

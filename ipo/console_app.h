@@ -267,7 +267,7 @@ namespace ipo {
     {
       return _oracle;
     }
-    
+
     inline bool projectedSpace()
     {
       return _projectedOracle != NULL;

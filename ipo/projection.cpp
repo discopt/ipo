@@ -19,10 +19,10 @@ namespace ipo {
     for (std::size_t i = 0; i < variableSubset.size(); ++i)
       addVariable(variableSubset[i]);
   }
-  
+
   Projection::~Projection()
   {
-    
+
   }
 
   void Projection::addVariable(const std::string& variableName,

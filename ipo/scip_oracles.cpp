@@ -273,7 +273,7 @@ double(row.value(p))));
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
   {
     /// TODO: forwarding?
-    
+
     std::size_t n = space().dimension();
     if (objective.dim() != n)
       throw std::runtime_error("Oracle called with objective vector of wrong dimension!");
