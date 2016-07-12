@@ -226,7 +226,7 @@ namespace ipo {
     if (_oracle)
       throw std::runtime_error("Error in ConsoleApplicationBase::setBasicOracle: Oracle already set.");
     if (_faceRestrictionArgument != "")
-      throw std::runtime_error("Restricting to faces or projecting is not implemented, yet.");
+      throw std::runtime_error("Restricting to faces is not implemented, yet.");
 
     if (_projectionArgument != "")
     {
