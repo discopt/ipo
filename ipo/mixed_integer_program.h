@@ -1,7 +1,7 @@
 #ifndef IPO_MIXED_INTEGER_PROGRAM_H_
 #define IPO_MIXED_INTEGER_PROGRAM_H_
 
-#include "ipo.h"
+#include "common.h"
 
 #include <string>
 #include <vector>

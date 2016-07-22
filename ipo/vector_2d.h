@@ -1,7 +1,7 @@
 #ifndef IPO_VECTOR_2D_H_
 #define IPO_VECTOR_2D_H_
 
-#include "ipo.h"
+#include "common.h"
 
 namespace ipo {
 

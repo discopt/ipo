@@ -4,7 +4,7 @@
 #include <vector>
 #include <limits>
 
-#include "ipo.h"
+#include "common.h"
 #include "rows.h"
 #include "space.h"
 #include "unique_rational_vectors.h"

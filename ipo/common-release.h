@@ -1,5 +1,5 @@
-#ifndef IPO_H_
-#define IPO_H_
+#ifndef IPO_COMMON_H_
+#define IPO_COMMON_H_
 
 #undef IPO_DEBUG
 
@@ -7,4 +7,4 @@
 #define SOPLEX_WITH_GMP
 #include <soplex.h>
 
-#endif /* IPO_H_ */
+#endif /* IPO_COMMON_H_ */

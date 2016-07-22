@@ -3,7 +3,7 @@
 
 #include <set>
 
-#include "ipo.h"
+#include "common.h"
 #include "spx_gmp.h"
 #include "cpu_timer.h"
 #include "unique_rational_vectors.h"

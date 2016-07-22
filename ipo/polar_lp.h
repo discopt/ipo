@@ -5,7 +5,7 @@
 #include <set>
 #include <map>
 
-#include "ipo.h"
+#include "common.h"
 #include "unique_rational_vectors.h"
 #include "oracles.h"
 

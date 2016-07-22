@@ -1,5 +1,5 @@
-#ifndef IPO_H_
-#define IPO_H_
+#ifndef COMMON_H_
+#define COMMON_H_
 
 #ifndef NDEBUG
 #define IPO_DEBUG
@@ -10,4 +10,4 @@
 #define SOPLEX_WITH_RATIONALPARAM
 #include <soplex.h>
 
-#endif /* IPO_H_ */
+#endif /* COMMON_H_ */

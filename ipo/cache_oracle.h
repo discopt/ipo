@@ -3,7 +3,7 @@
 
 #include <cmath>
 
-#include "ipo.h"
+#include "common.h"
 #include "oracles.h"
 #include "unique_rational_vectors.h"
 

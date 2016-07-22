@@ -1,7 +1,7 @@
 #ifndef IPO_CPU_TIMER_H_
 #define IPO_CPU_TIMER_H_
 
-#include "ipo.h"
+#include "common.h"
 
 #include <timer.h>
 

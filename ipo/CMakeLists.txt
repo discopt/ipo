@@ -55,11 +55,11 @@ set(IPO_INSTALL_HEADERS
 )
 
 set(IPO_OTHER_HEADERS
-  ipo-devel.h
-  ipo-release.h
-  ipo-debug.h
-  ipo-relwithdebinfo.h
-  ipo-minsizerel.h
+  common-devel.h
+  common-release.h
+  common-debug.h
+  common-relwithdebinfo.h
+  common-minsizerel.h
 )
 
 if (SCIP_FOUND)
@@ -83,9 +83,9 @@ endif()
 
 install(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
 
-install(FILES ${IPO_INSTALL_HEADERS}              DESTINATION include/ipo  COMPONENT headers)
-install(FILES ipo-debug.h           RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
-install(FILES ipo-release.h         RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
-install(FILES ipo-relwithdebinfo.h  RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
-install(FILES ipo-minsizerel.h      RENAME ipo.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
+install(FILES ${IPO_INSTALL_HEADERS}                    DESTINATION include/ipo  COMPONENT headers)
+install(FILES common-debug.h           RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
+install(FILES common-release.h         RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
+install(FILES common-relwithdebinfo.h  RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
+install(FILES common-minsizerel.h      RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
 

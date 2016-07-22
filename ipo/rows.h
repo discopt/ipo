@@ -1,7 +1,7 @@
 #ifndef IPO_ROWS_H_
 #define IPO_ROWS_H_
 
-#include "ipo.h"
+#include "common.h"
 
 namespace ipo {
 

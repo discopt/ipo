@@ -5,7 +5,7 @@
 #include <map>
 #include <limits>
 
-#include "ipo.h"
+#include "common.h"
 #include "oracles.h"
 #include "mixed_integer_program.h"
 

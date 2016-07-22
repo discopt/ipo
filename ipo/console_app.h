@@ -4,7 +4,7 @@
 #include <ostream>
 #include <deque>
 
-#include "ipo.h"
+#include "common.h"
 #include "unique_rational_vectors.h"
 #include "oracles.h"
 #include "cache_oracle.h"

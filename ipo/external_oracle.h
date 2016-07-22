@@ -1,7 +1,7 @@
 #ifndef EXTERNAL_ORACLE_H_
 #define EXTERNAL_ORACLE_H_
 
-#include "ipo.h"
+#include "common.h"
 #include "oracles.h"
 
 namespace ipo {

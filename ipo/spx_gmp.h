@@ -1,7 +1,7 @@
 #ifndef IPO_SPX_GMP_H_
 #define IPO_SPX_GMP_H_
 
-#include "ipo.h"
+#include "common.h"
 
 soplex::Rational mpq2rational(const mpq_class& x);
 soplex::Rational mpz2rational(const mpz_class& x);

@@ -1,7 +1,7 @@
 #ifndef IPO_AFFINE_HULL_H_
 #define IPO_AFFINE_HULL_H_
 
-#include "ipo.h"
+#include "common.h"
 #include "cpu_timer.h"
 #include "unique_rational_vectors.h"
 #include "oracles.h"

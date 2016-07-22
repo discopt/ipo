@@ -10,7 +10,7 @@
 #include "smallest_face.h"
 #include "spx_gmp.h"
 #include "parser.h"
-#include "ipo.h"
+#include "common.h"
 
 using namespace soplex;
 
