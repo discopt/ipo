@@ -235,8 +235,6 @@ namespace ipo {
 
     ~OracleResult();
 
-    // TODO: Call it heuristicLevel instead.
-
     /**
      * \brief Returns the heuristic level of the answer.
      *
@@ -244,9 +242,9 @@ namespace ipo {
      * then an optimum must be among them.
      */
 
-    inline std::size_t heuristic() const
+    inline std::size_t heuristicLevel() const
     {
-      return _heuristic;
+      return _heuristicLevel;
     }
 
     /**
@@ -316,13 +314,13 @@ namespace ipo {
      *
      * Finishes construction of oracle answer.
      *
-     * \param heuristic              Sets the heuristic level of the answer.
+     * \param heuristicLevel         Sets the heuristic level of the answer.
      * \param computeObjectiveValues Compute the objective values of all points.
      * \param sort                   Sorts the points in descending order of objective value.
      * \param removeDuplicates       Removes duplicate points and directions.
      */
 
-    void buildFinish(std::size_t heuristic, bool computeObjectiveValues, bool sort,
+    void buildFinish(std::size_t heuristicLevel, bool computeObjectiveValues, bool sort,
       bool removeDuplicates);
 
     /**
@@ -377,7 +375,7 @@ namespace ipo {
 
   protected:
     soplex::VectorRational const* _objective;
-    std::size_t _heuristic;
+    std::size_t _heuristicLevel;
   };
 
   struct ObjectiveBound
@@ -486,9 +484,9 @@ namespace ipo {
      * plus 1.
      */
 
-    inline std::size_t thisHeuristic() const
+    inline std::size_t heuristicLevel() const
     {
-      return _thisHeuristic;
+      return _heuristicLevel;
     }
 
     /**
@@ -658,7 +656,7 @@ namespace ipo {
     std::string _name; // Name of the oracle.
     const Space& _space; // Ambient space of the oracle.
     OracleBase* _nextOracle; // Next optimization oracle (or NULL if exact).
-    std::size_t _thisHeuristic; // Number of associated oracles.
+    std::size_t _heuristicLevel; // Number of associated oracles.
     Face* _currentFace; // Currently active face.
     soplex::DVectorRational _tempObjective; // Dense rational version of the current objective.
   };

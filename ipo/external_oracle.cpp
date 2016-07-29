@@ -94,12 +94,12 @@ namespace ipo {
     const ObjectiveBound& improveValue, const VectorRational& originalObjective,
     const ObjectiveBound& orginalObjectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
   {
-    assert((thisHeuristic() == 0 && _nextOracle == NULL)
-      || thisHeuristic() > 0 && _nextOracle != NULL);
+    assert((heuristicLevel() == 0 && _nextOracle == NULL)
+      || heuristicLevel() > 0 && _nextOracle != NULL);
 
     // Forward call if requested.
 
-    if (thisHeuristic() > maxHeuristic)
+    if (heuristicLevel() > maxHeuristic)
     {
       return _nextOracle->maximize(result, originalObjective, orginalObjectiveBound, maxHeuristic,
         minHeuristic);
@@ -125,17 +125,17 @@ namespace ipo {
     result.buildStart(objective);
     if (status == "infeasible")
     {
-      return result.buildFinish(thisHeuristic(), false, false, false);
+      return result.buildFinish(heuristicLevel(), false, false, false);
     }
     else if (status == "unbounded")
     {
       result.buildAddDirection(parseSolution(output));
-      return result.buildFinish(thisHeuristic(), false, false, false);
+      return result.buildFinish(heuristicLevel(), false, false, false);
     }
     else if (status == "optimal")
     {
       result.buildAddPoint(parseSolution(output));
-      return result.buildFinish(thisHeuristic(), true, true, true);
+      return result.buildFinish(heuristicLevel(), true, true, true);
     }
     else
     {

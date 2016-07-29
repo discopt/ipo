@@ -41,12 +41,12 @@ namespace ipo {
   void CacheOracle::maximize(OracleResult& result, const VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
   {
-    assert((thisHeuristic() == 0 && _nextOracle == NULL)
-      || thisHeuristic() > 0 && _nextOracle != NULL);
+    assert((heuristicLevel() == 0 && _nextOracle == NULL)
+      || heuristicLevel() > 0 && _nextOracle != NULL);
 
     // Forward call if requested.
 
-    if (thisHeuristic() > maxHeuristic)
+    if (heuristicLevel() > maxHeuristic)
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
 
     // Update face indices since in the meantime points / directions could have been added.
@@ -72,7 +72,7 @@ namespace ipo {
       result.directions.back().index = d;
     }
     if (!result.directions.empty())
-      return result.buildFinish(thisHeuristic(), false, false, false);
+      return result.buildFinish(heuristicLevel(), false, false, false);
 
     // Search points.
 
@@ -96,9 +96,9 @@ namespace ipo {
       }
     }
 
-    if (!result.points.empty() && (foundSatisfying || thisHeuristic() <= minHeuristic))
+    if (!result.points.empty() && (foundSatisfying || heuristicLevel() <= minHeuristic))
     {
-      return result.buildFinish(thisHeuristic(), false, true, true);
+      return result.buildFinish(heuristicLevel(), false, true, true);
     }
 
     // Forward call if no sufficiently good points were found.

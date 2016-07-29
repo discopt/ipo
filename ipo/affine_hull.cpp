@@ -846,7 +846,7 @@ namespace ipo {
               }
             }
           }
-          std::size_t maximizationHeuristicLevel = _result.heuristic();
+          std::size_t maximizationHeuristicLevel = _result.heuristicLevel();
 
           /// Minimize
 
@@ -897,7 +897,7 @@ namespace ipo {
             }
           }
 
-          std::size_t minimizationHeuristicLevel = _result.heuristic();
+          std::size_t minimizationHeuristicLevel = _result.heuristicLevel();
 
           _sparseDirectionVector *= -1;
           _commonValue *= -1;

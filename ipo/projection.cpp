@@ -146,7 +146,7 @@ namespace ipo {
         _projection.projectPoint(_liftedVector, *point);
         result.buildAddPoint(point);
       }
-      return result.buildFinish(sourceResult.heuristic(), true, false, true);
+      return result.buildFinish(sourceResult.heuristicLevel(), true, false, true);
     }
     else if (sourceResult.isUnbounded())
     {
@@ -159,13 +159,13 @@ namespace ipo {
         _projection.projectDirection(_liftedVector, *direction);
         result.buildAddDirection(direction);
       }
-      return result.buildFinish(sourceResult.heuristic(), true, false, true);
+      return result.buildFinish(sourceResult.heuristicLevel(), true, false, true);
     }
     else
     {
       assert(sourceResult.isInfeasible());
       result.buildStart(objective);
-      result.buildFinish(sourceResult.heuristic(), false, false, false);
+      result.buildFinish(sourceResult.heuristicLevel(), false, false, false);
     }
   }
 

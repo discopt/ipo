@@ -361,7 +361,7 @@ double(row.value(p))));
     // TODO: Currently needed for SCIPchgVarObj, but isn't there a warm-start for that?
     SCIP_CALL_EXC(SCIPfreeTransform(_scip));
 
-    result.buildFinish(thisHeuristic(), true, true, true);
+    result.buildFinish(heuristicLevel(), true, true, true);
   }
 
 //   ExactSCIPOptimizationOracle::ExactSCIPOptimizationOracle(const std::string& name, const std::string& exactBinary,

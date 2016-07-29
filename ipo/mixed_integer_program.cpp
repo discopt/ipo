@@ -423,19 +423,19 @@ namespace ipo {
     const VectorRational& objective, const ObjectiveBound& objectiveBound,
     std::size_t maxHeuristic, std::size_t minHeuristic)
   {
-    assert((thisHeuristic() == 0 && _nextOracle == NULL)
-      || thisHeuristic() > 0 && _nextOracle != NULL);
+    assert((heuristicLevel() == 0 && _nextOracle == NULL)
+      || heuristicLevel() > 0 && _nextOracle != NULL);
 
     // Forward call if requested.
 
-    if (thisHeuristic() > maxHeuristic)
+    if (heuristicLevel() > maxHeuristic)
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
 
     // Call approximate oracle with precisely its heuristic level to avoid forwarding there.
 
     OracleResult approximateResult;
     _approximateOracle->maximize(approximateResult, objective, objectiveBound,
-      _approximateOracle->thisHeuristic(), _approximateOracle->thisHeuristic());
+      _approximateOracle->heuristicLevel(), _approximateOracle->heuristicLevel());
 
     if (approximateResult.isFeasible())
     {
@@ -445,7 +445,7 @@ namespace ipo {
         result.buildAddPoint(correctPoint(approximateResult.points[i].point, objective));
         delete approximateResult.points[i].point;
       }
-      return result.buildFinish(thisHeuristic(), true, true, true);
+      return result.buildFinish(heuristicLevel(), true, true, true);
     }
     else if (approximateResult.isUnbounded())
     {
@@ -456,13 +456,13 @@ namespace ipo {
           objective));
         delete approximateResult.directions[i].direction;
       }
-      return result.buildFinish(thisHeuristic(), false, false, true);
+      return result.buildFinish(heuristicLevel(), false, false, true);
     }
     else
     {
       assert(approximateResult.isInfeasible());
       result.buildStart(objective);
-      return result.buildFinish(thisHeuristic(), false, false, false);
+      return result.buildFinish(heuristicLevel(), false, false, false);
     }
   }
 

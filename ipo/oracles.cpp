@@ -149,7 +149,7 @@ namespace ipo {
     }
   }
 
-  OracleResult::OracleResult() : _heuristic(0)
+  OracleResult::OracleResult() : _heuristicLevel(0)
   {
 
   }
@@ -178,10 +178,10 @@ namespace ipo {
     directions.push_back(dir);
   }
 
-  void OracleResult::buildFinish(std::size_t heuristic, bool computeObjectiveValues, bool sort,
+  void OracleResult::buildFinish(std::size_t heuristicLevel, bool computeObjectiveValues, bool sort,
     bool removeDups)
   {
-    _heuristic = heuristic;
+    _heuristicLevel = heuristicLevel;
 
     /// If objective is passed, recompute the objective values of all points.
 
@@ -298,14 +298,14 @@ namespace ipo {
   }
 
   OracleBase::OracleBase(const std::string& name, const Space& space) :
-      _name(name), _space(space), _nextOracle(NULL), _thisHeuristic(0), _currentFace(NULL)
+      _name(name), _space(space), _nextOracle(NULL), _heuristicLevel(0), _currentFace(NULL)
   {
 
   }
 
   OracleBase::OracleBase(const std::string& name,
     OracleBase* nextOracle) : _name(name), _space(nextOracle->space()),
-    _nextOracle(nextOracle), _thisHeuristic(nextOracle->thisHeuristic() + 1), _currentFace(NULL)
+    _nextOracle(nextOracle), _heuristicLevel(nextOracle->heuristicLevel() + 1), _currentFace(NULL)
   {
 
   }
@@ -333,7 +333,7 @@ namespace ipo {
     const VectorReal& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
     std::size_t minHeuristic)
   {
-    if (maxHeuristic < thisHeuristic())
+    if (maxHeuristic < heuristicLevel())
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
     _tempObjective = objective;
     return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
@@ -343,7 +343,7 @@ namespace ipo {
     const SVectorRational& objective, const ObjectiveBound& objectiveBound,
     std::size_t maxHeuristic, std::size_t minHeuristic)
   {
-    if (maxHeuristic < thisHeuristic())
+    if (maxHeuristic < heuristicLevel())
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
     _tempObjective.clear();
     _tempObjective.assign(objective);
@@ -354,7 +354,7 @@ namespace ipo {
     const SVectorReal& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
     std::size_t minHeuristic)
   {
-    if (maxHeuristic < thisHeuristic())
+    if (maxHeuristic < heuristicLevel())
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
     _tempObjective.clear();
     _tempObjective.assign(objective);
@@ -404,10 +404,10 @@ namespace ipo {
     const VectorRational& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
     std::size_t minHeuristic)
   {
-    assert((thisHeuristic() == 0 && _nextOracle == NULL)
-      || thisHeuristic() > 0 && _nextOracle != NULL);
+    assert((heuristicLevel() == 0 && _nextOracle == NULL)
+      || heuristicLevel() > 0 && _nextOracle != NULL);
 
-    if (thisHeuristic() > maxHeuristic)
+    if (heuristicLevel() > maxHeuristic)
       return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
 
     if (currentFace() == NULL)
@@ -482,7 +482,7 @@ namespace ipo {
         if (unrestrictedResult.isInfeasible())
         {
           result.buildStart(objective);
-          return result.buildFinish(unrestrictedResult.heuristic(), false, false, false);
+          return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
         }
         else if (unrestrictedResult.isUnbounded())
         {
@@ -527,7 +527,7 @@ namespace ipo {
 
           Rational bestValue = result.points.front().objectiveValue - modifiedObjectiveShift;
           if (objectiveBound.satisfiedBy(bestValue))
-            return result.buildFinish(unrestrictedResult.heuristic(), true, false, false);
+            return result.buildFinish(unrestrictedResult.heuristicLevel(), true, false, false);
         }
       }
       else if (unrestrictedResult.isUnbounded())
@@ -546,13 +546,13 @@ namespace ipo {
         // If a direction remains, return everything, otherwise increase M.
 
         if (!result.directions.empty())
-          return result.buildFinish(unrestrictedResult.heuristic(), false, false, false);
+          return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
       }
       else
       {
         assert(unrestrictedResult.isInfeasible());
         result.buildStart(objective);
-        return result.buildFinish(unrestrictedResult.heuristic(), false, false, false);
+        return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
       }
 
       _factor *= 2; // Increase current scaling.
