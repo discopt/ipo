@@ -20,7 +20,7 @@
 
 namespace ipo {
 
-  class MixedIntegerProgram;
+  class MIPOracleBase;
 
   /**
    * A map to associate SCIP variables with variable indices.
@@ -77,7 +77,7 @@ namespace ipo {
    * or from a \ref MixedIntegerProgram.
    */
 
-  class SCIPOracle: public OracleBase
+  class SCIPOracle: public MIPOracleBase
   {
   public:
      /**
@@ -87,7 +87,7 @@ namespace ipo {
      * calling SCIP on a copy of the given \p originalSCIP instance.
      */
 
-    SCIPOracle(const std::string& name, const Space& space, SCIP* originalSCIP);
+    SCIPOracle(const std::string& name, const Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP);
 
      /**
      * \brief Constructs a SCIP oracle with given \p name in given \p space.
@@ -97,7 +97,7 @@ namespace ipo {
      * it is augmented according to the variables of the SCIP instance.
      */
 
-    SCIPOracle(const std::string& name, Space& space, SCIP* originalSCIP);
+    SCIPOracle(const std::string& name, Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP);
 
     /**
      * \brief Constructs a heuristic SCIP oracle with given \p name associated to \p nextOracle.
@@ -107,7 +107,7 @@ namespace ipo {
      * SCIP on a copy of the given \p originalSCIP instance.
      */
 
-    SCIPOracle(const std::string& name, OracleBase* nextOracle, SCIP* originalSCIP);
+    SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip, SCIP* originalSCIP);
 
     /**
      * \brief Constructs a SCIP oracle with given \p name in given \p space.
@@ -146,29 +146,29 @@ namespace ipo {
 
     virtual void setFace(Face* newFace = NULL);
 
-    /**
-     * \brief Runs the oracle to maximize the dense rational \p objective.
-     *
-     * Runs the optimization oracle to maximize the given dense rational \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-     * next oracle.
-     *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
-     *
-     * This implementation calls SCIP and reconstructs rational solutions from the returned
-     * floating-point ones.
-     */
-
-    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
+//     /**
+//      * \brief Runs the oracle to maximize the dense rational \p objective.
+//      *
+//      * Runs the optimization oracle to maximize the given dense rational \p objective
+//      * over the current face \f$ F \f$ (see setFace()) and returns \p result.
+//      * If \p maxHeuristic is less than thisHeuristic() or if the objective value
+//      * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
+//      * next oracle.
+//      *
+//      * \param result         After the call, contains the oracle's answer.
+//      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+//      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+//      * \param maxHeuristic   Requested maximum heuristic level.
+//      * \param minHeuristic   Requested minimum heuristic level.
+//      *
+//      * This implementation calls SCIP and reconstructs rational solutions from the returned
+//      * floating-point ones.
+//      */
+// 
+//     virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
+//       const ObjectiveBound& objectiveBound = ObjectiveBound(),
+//       std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
+//       std::size_t minHeuristic = 0);
 
   protected:
 
@@ -176,21 +176,11 @@ namespace ipo {
 
     void initializeFromMIP(const MixedIntegerProgram& mip);
 
-    /**
-     * \brief Computes a scaling factor for the objective vector.
-     *
-     * Computes a scaling factor for the objective vector.
-     *
-     * \sa run()
-     */
-
-    soplex::Rational computeVectorScaling(const soplex::VectorRational& vector);
+    virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
+      std::vector<double*>& rays);
 
   protected:
     SCIP* _scip; // SCIP instance
-    soplex::Rational _maxLargestCoefficient; // Maximum largest coefficient we hand over to SCIP.
-    soplex::Rational _minLargestCoefficient; // Minimum largest coefficient we hand over to SCIP.
-    soplex::Rational _bestLargestCoefficient; // Best largest coefficient we hand over to SCIP.
     std::vector<SCIP_VAR*> _variables; // SCIP variables.
     SCIP_CONS* _faceConstraint; // Special equation constraint for optimizing over a face.
   };

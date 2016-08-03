@@ -29,6 +29,9 @@ namespace ipo {
 
   typedef std::vector<std::size_t> VectorSubset;
 
+  bool equal(const soplex::SVectorRational& a, const soplex::SVectorRational& b);
+  
+  
   // TODO: Remove inheritance and filtered version: Deprecated due to CacheOracle.
 
   /**

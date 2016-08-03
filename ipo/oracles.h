@@ -11,18 +11,6 @@
 
 namespace ipo {
 
-  class SparseVectorDuplicateChecker
-  {
-  public:
-    SparseVectorDuplicateChecker(std::size_t dimension);
-    ~SparseVectorDuplicateChecker();
-
-    bool operator()(const soplex::SVectorRational* first, const soplex::SVectorRational* second);
-
-  protected:
-    std::vector<soplex::Rational const*> _firstValues; // Dense first vector as entry-pointers.
-  };
-
   /**
    * \brief Defines a face of a polyhedron by a set of inequalities.
    *
@@ -207,6 +195,9 @@ namespace ipo {
       soplex::DSVectorRational const* point;
       std::size_t index;
 
+      Point(soplex::DSVectorRational const* pt);
+      Point(soplex::DSVectorRational const* pt, const soplex::Rational& value);
+
       inline bool operator<(const Point& other) const
       {
         return objectiveValue > other.objectiveValue;
@@ -217,6 +208,8 @@ namespace ipo {
     {
       soplex::DSVectorRational const* direction;
       std::size_t index;
+      
+      Direction(soplex::DSVectorRational const* dir);
     };
 
     /**
@@ -284,46 +277,6 @@ namespace ipo {
     }
 
     /**
-     * \brief Resets the status and removes all points and directions.
-     *
-     * Resets the status and removes all points and directions without freeing them.
-     *
-     * \param objective Objective vector of the current oracle call.
-     */
-
-    void buildStart(const soplex::VectorRational& objective);
-
-    /**
-     * \brief Adds the given \p point to the set of \c points.
-     *
-     * Adds the given \p point to the set of \c points without copying it.
-     */
-
-    void buildAddPoint(soplex::DSVectorRational const* point);
-
-    /**
-     * \brief Adds the given \p direction to the set of \c directions.
-     *
-     * Adds the given \p direction to the set of \c directions without copying it.
-     */
-
-    void buildAddDirection(soplex::DSVectorRational const* direction);
-
-    /**
-     * \brief Finishes construction of oracle answer.
-     *
-     * Finishes construction of oracle answer.
-     *
-     * \param heuristicLevel         Sets the heuristic level of the answer.
-     * \param computeObjectiveValues Compute the objective values of all points.
-     * \param sort                   Sorts the points in descending order of objective value.
-     * \param removeDuplicates       Removes duplicate points and directions.
-     */
-
-    void buildFinish(std::size_t heuristicLevel, bool computeObjectiveValues, bool sort,
-      bool removeDuplicates);
-
-    /**
      * \brief Adds all stored points and directions to the respective containers.
      *
      * Adds all stored points and directions to the respective containers. Updates the indices
@@ -341,6 +294,14 @@ namespace ipo {
      */
 
     void checkConsistent();
+    
+    /**
+     * \brief Computes all points' objective values.
+     * 
+     * Computes all points' objective values.
+     */
+    
+    void computeMissingObjectiveValues();
 
   protected:
 
@@ -352,6 +313,8 @@ namespace ipo {
      */
 
     bool removeDuplicates(bool abort);
+    
+    friend class OracleBase;
 
   public:
 
@@ -402,9 +365,6 @@ namespace ipo {
     }
   };
 
-  // TODO: Change interface such that default heuristicLevel pre- and postprocessing during the call
-  // does not need to be implemented for each oracle.
-
   /**
    * \brief Base class for an optimization oracle.
    *
@@ -429,21 +389,21 @@ namespace ipo {
    * \f$ S \subseteq F \f$ and \f$ R \subseteq \text{recc}(P) \f$ the sets of returned \c points
    * and \c directions, respectively. The returned \ref OracleResult is denoted by \c result.
    *
-   * \li \c result.heuristic must be at least \c minHeuristic and at most \c maxHeuristic.
+   * \li \c result.heuristic must be at least \c minHeuristic and at most \c maxHeuristic, or equal to 0.
    * \li One of \f$ S \f$ and \f$ R \f$ (or both) must be empty.
-   * \li If \f$ S = R = \emptyset \f$, then \c result.heuristic must be equal to \c minHeuristic.
-   *     In particular, if \c minHeuristic is 0, then \f$P = \emptyset\f$ must hold.
+   * \li If \f$ S = R = \emptyset \f$, then \c result.heuristic must be equal to 0 and \f$F = \emptyset\f$ must hold.
    * \li Every \f$ r \in R\f$ satisfies \f$\left<c,r\right> > 0\f$.
-   * \li If \c result.heuristic is equal to zero, then \f$ R \neq \emptyset \f$ holds if and only
+   * \li If \c result.heuristic is equal to 0, then \f$ R \neq \emptyset \f$ holds if and only
    *     if there exists a direction \f$r \in \text{recc}(F)\f$ with \f$\left<c,r\right> > 0\f$
-   *     (given \f$P \neq \emptyset\f$).
-   * \li If \c result.heuristic is equal to zero and \f$P \neq \emptyset\f$ holds,
-   *     then \f$ P \neq \emptyset\f$ or \f$ R \neq \emptyset \f$ must hold.
+   *     (given \f$F \neq \emptyset\f$).
+   * \li If \c result.heuristic is equal to 0 and \f$F \neq \emptyset\f$ holds,
+   *     then \f$S \neq \emptyset\f$ or \f$ R \neq \emptyset \f$ must hold.
    * \li If \f$ S \neq \emptyset \f$ and \c result.heuristic is equal to zero, then
-   *     \f$ \max\{ \left<c,x\right> \mid x \in P\} = \{ \left<c,s\right> \mid s \in S\} \f$
+   *     \f$ \max\{ \left<c,x\right> \mid x \in F\} = \{ \left<c,s\right> \mid s \in S\} \f$
    *     must hold.
    * \li If \f$ S \neq \emptyset \f$ and \c result.heuristic is positive, then
-   *     \f$ \max\{ \left<c,s\right> \mid s \in S\} > \gamma \f$ must hold.
+   *     \f$ \max\{ \left<c,s\right> \mid s \in S\} > \gamma \f$ must hold or \f$S\f$ must contain at most one element
+   *     (to certify feasibility).
    **/
 
   class OracleBase
@@ -490,18 +450,6 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the current face.
-     *
-     * Returns the current face.
-     * \sa setFace()
-     */
-
-    inline Face* currentFace()
-    {
-      return _currentFace;
-    }
-
-    /**
      * \brief Restricts the oracle to the face defined by \p newFace.
      *
      * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
@@ -513,107 +461,51 @@ namespace ipo {
 
     virtual void setFace(Face* newFace = NULL);
 
-
     /**
      * \brief Runs the oracle to maximize the dense rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given dense rational \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-     * next oracle.
+     * Runs the optimization oracle to maximize the given dense rational \p objective over the current face \f$ F \f$ (see 
+     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by 
+     * \p objectiveBound is not exceeded, then the call must be forwarded to the next oracle.
+     * 
+     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
+     * objective vector), and finally postprocesses the result object.
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
      * \param minHeuristic   Requested minimum heuristic level.
+     * \param maxHeuristic   Requested maximum heuristic level.
      *
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0) = 0;
-
-    /**
-     * \brief Runs the oracle to maximize the dense real \p objective.
-     *
-     * Runs the optimization oracle to maximize the given dense real \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p improveValue is not exceeded, then the call must be forwarded to the next
-     * oracle.
-     *
-     * This default implementation directly forwards to the next oracle or calls the maximize()
-     * method for dense rational objectives.
-     *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{F}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
-     *
-     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
-     */
-
-    virtual void maximize(OracleResult& result, const soplex::VectorReal& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
+    void maximize(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
+      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
 
     /**
      * \brief Runs the oracle to maximize the sparse rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given dense real \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p improveValue is not exceeded, then the call must be forwarded to the next
-     * oracle.
-     *
-     * This default implementation directly forwards to the next oracle or calls the maximize()
-     * method for dense rational objectives.
+     * Runs the optimization oracle to maximize the given sparse rational \p objective over the current face \f$ F \f$ (see 
+     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by 
+     * \p objectiveBound is not exceeded, then the call must be forwarded to the next oracle.
+     * 
+     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
+     * objective vector), and finally postprocesses the result object.
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
      * \param minHeuristic   Requested minimum heuristic level.
+     * \param maxHeuristic   Requested maximum heuristic level.
      *
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual void maximize(OracleResult& result, const soplex::SVectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
-
-    /**
-     * \brief Runs the oracle to maximize the sparse real \p objective.
-     *
-     * Runs the optimization oracle to maximize the given dense real \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p improveValue is not exceeded, then the call must be forwarded to the next
-     * oracle.
-     *
-     * This default implementation directly forwards to the next oracle or calls the maximize()
-     * method for dense rational objectives.
-     *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{F}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
-     *
-     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
-     */
-
-    virtual void maximize(OracleResult& result, const soplex::SVectorReal& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
+    void maximize(OracleResult& result, const soplex::SVectorRational& objective,
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
+      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
 
   protected:
 
@@ -643,6 +535,49 @@ namespace ipo {
 
     void initializedSpace();
 
+    /**
+     * \brief Wrapper method that calls the oracle's implementation.
+     *
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
+     *
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
+     *
+     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
+     */
+
+    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
+
+    /**
+     * \brief Oracle's implementation to maximize the dense rational \p objective.
+     *
+     * This method is called by maximizeController() and contains the implementation of the oracle. 
+     *
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
+     *
+     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
+     */
+
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups) = 0;
+
+    /**
+     * \brief Returns the current face.
+     *
+     * Returns the current face. \sa setFace()
+     */
+
+    virtual Face* currentFace();
+
   private:
     /**
      * \brief Default constructor is disabled.
@@ -651,13 +586,16 @@ namespace ipo {
      */
 
     OracleBase();
+    
+    Face* _currentFace; // Currently active face.
 
   protected:
+    friend class FaceOracleBase;
+    
     std::string _name; // Name of the oracle.
     const Space& _space; // Ambient space of the oracle.
     OracleBase* _nextOracle; // Next optimization oracle (or NULL if exact).
     std::size_t _heuristicLevel; // Number of associated oracles.
-    Face* _currentFace; // Currently active face.
     soplex::DVectorRational _tempObjective; // Dense rational version of the current objective.
   };
 
@@ -665,11 +603,10 @@ namespace ipo {
    * \brief Base class for an optimization oracle without direct handling of faces.
    *
    * This class adds the ability to optimize over faces of \f$ P \f$ by tilting objective vectors.
-   * If \f$ \left<a,x\right> \leq \beta \f$ defines the face, then this implementation
-   * attempts to optimize a given objective vector \f$ \left<c,x\right> \f$ over \f$ F \f$ by
-   * optimizing
+   * If \f$ \left<a,x\right> \leq \beta \f$ defines the face, then this implementation attempts to optimize a given objective 
+   * vector \f$ \left<c,x\right> \f$ over \f$ F \f$ by optimizing
    * \f$ \left<c + M \dfrac{ ||a||_{\infty} }{ ||c||_{\infty} } a,x\right> \f$ over \f$ P \f$
-   * for sufficiently large \f$ M \in \mathbb{Q} \f$, increasing \f$ M \f$ as long as necessary.
+   * for sufficiently large \f$ M \in \mathbb{Q} \f$, doubling \f$ M \f$ a certain nummber of times before giving up.
    */
 
   class FaceOracleBase: public OracleBase
@@ -692,48 +629,22 @@ namespace ipo {
      */
 
     virtual void setFace(Face* newFace = NULL);
-
-    /**
-     * \brief Runs the oracle to maximize the dense rational \p objective.
-     *
-     * Runs the face optimization oracle to maximize the given dense rational \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p improveValue is not exceeded, then the call must be forwarded to the next
-     * oracle.
-     *
-     * This method directly forwards to the next oracle or calls the unrestrictedMaximize()
-     * method with a modified objective vector.
-     *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
-     *
-     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
-     */
-
-    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveValue = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
-
+    
   protected:
+
     /**
      * \brief Constructs an oracle with given \p name in given \p space.
      *
      * Constructs an exact face optimization oracle with given \p name in given \p space.
      *
-     * \param name               Name of the oracle.
-     * \param space              Ambient space.
-     * \param numBlindIterations Number of times, \f$ M \f$ is increased, before testing whether
-     *                           \f$ F = \emptyset \f$ holds.
-     * \param initialM           Initial value of \f$ M \f$.
+     * \param name                      Name of the oracle.
+     * \param space                     Ambient space.
+     * \param maxInfeasibleIterations   Maximum number of iterations before (heuristically) checking if the face is empty.
+     * \param initialM                  Initial value of \f$ M \f$.
      */
 
-    FaceOracleBase(const std::string& name, const Space& space,
-      std::size_t numBlindIterations = 2, double initialM = 16);
+    FaceOracleBase(const std::string& name, const Space& space, std::size_t maxInfeasibleIterations = 4,
+      double initialM = 16);
 
     /**
      * \brief Constructs a heuristic with given \p name associated to \p nextOracle.
@@ -743,13 +654,12 @@ namespace ipo {
      *
      * \param name               Name of the oracle.
      * \param nextOracle         Next oracle to forward calls to.
-     * \param numBlindIterations Number of times, \f$ M \f$ is increased, before testing whether
-     *                           \f$ F = \emptyset \f$ holds.
+     * \param maxInfeasibleIterations   Maximum number of iterations before (heuristically) checking if the face is empty.
      * \param initialM           Initial value of \f$ M \f$.
      */
 
-    FaceOracleBase(const std::string& name, OracleBase* nextOracle,
-      std::size_t numBlindIterations = 2, double initialM = 16);
+    FaceOracleBase(const std::string& name, OracleBase* nextOracle, std::size_t maxInfeasibleIterations = 4,
+      double initialM = 16);
 
     /**
      * \brief Initializes datastructures that require the space.
@@ -759,38 +669,38 @@ namespace ipo {
      */
 
     void initializedSpace();
-
+    
     /**
-     * \brief Implementation of the oracle.
+     * \brief Wrapper method that calls the oracle's implementation.
      *
-     * Implements the optimization oracle to maximize the given dense rational \p objective over
-     * the whole polyhedron \f$ P \f$ (in contrast to the maximize() methods) and returns \p result.
-     * If the objective value requested by \p improveValue is not exceeded, then the call must be
-     * forwarded to the next oracle using \p originalObjective and \p originalImproveValue to allow
-     * the next oracle to use (potentially more efficient) handling of face optimization.
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
      *
-     * \param result               After the call, contains the oracle's answer.
-     * \param objective            Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized over
-     *                             \f$ P \f$.
-     * \param objectiveBound       Objective value \f$ \gamma \in \mathbb{Q} \f$ that should be
-     *                             exceeded.
-     * \param originalObjective    Objective vector \f$ c' \in \mathbb{Q}^n \f$ to be maximized
-     *                             over \f$ F \f$.
-     * \param originalImproveValue Objective value \f$ \gamma' \in \mathbb{Q} \f$ that should be
-     *                             exceeded when optimizing \f$ c' \f$ over \f$ F \f$.
-     * \param maxHeuristic         Requested maximum heuristic level.
-     * \param minHeuristic         Requested minimum heuristic level.
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
      *
-     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
+     * The maximizeImplementation() function is called repeatedly with titled objective vectors (see \ref FaceOracleBase).
      */
 
-    virtual void unrestrictedMaximize(OracleResult& result,
-      const soplex::VectorRational& objective, const ObjectiveBound& improveValue,
-      const soplex::VectorRational& originalObjective, const ObjectiveBound& orginalObjectiveBound,
-      std::size_t maxHeuristic, std::size_t minHeuristic) = 0;
+    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
 
+    /**
+     * \brief Returns the current face.
+     *
+     * Returns the current face. \sa setFace(). Since handling of faces is done via modifications of the objective vector, this 
+     * implementation always returns NULL in order to remove face-handling from maximizeImplementation()'s requirements. To 
+     * actually access the current face, call OracleBase::currentFace().
+     */
+
+    virtual Face* currentFace();
+    
+      
   protected:
-    std::size_t _numBlindIterations; // Number of iterations assuming that the face is non-empty.
+    std::size_t _maxInfeasibleIterations; // Maximum number of iterations before (heuristically) checking if the face is empty.
     soplex::Rational _M; // Dynamic constant for modifying objective.
     soplex::Rational _factor; // Cachable part of the constant for modifying objective.
     soplex::DVectorRational _modifiedObjective; // Modified objective.

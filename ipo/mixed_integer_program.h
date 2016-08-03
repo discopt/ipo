@@ -10,11 +10,9 @@
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
-  #include "scip_oracles.h"
   #define NDEBUG
 #else
   #include <scip/scip.h>
-  #include "scip_oracles.h"
 #endif
 #endif
 
@@ -235,46 +233,46 @@ namespace ipo {
   };
 
   /**
-   * \brief An oracle that postprocesses floating-point solutions from an approximate oracle.
+   * \brief Base oracle for oracles based on approximate mixed-integer-programming solvers.
    *
-   * An oracle that can postprocess floating-point solutions
-   * of a mixed-integer program to get correct rational ones.
+   * Base oracle for oracles based on approximate mixed-integer-programming solvers.
+   * It postprocesses the returned floating-point solutions to get feasible rational ones.
    */
 
-  class MixedIntegerProgramCorrectorOracle: public OracleBase
+  class MIPOracleBase: public OracleBase
   {
-  public:
+  protected:
 
     /**
-     * \brief Constructs an oracle that postprocesses floating-point solutions to make them exact.
+     * \brief Constructs the oracle.
      *
-     * Constructs an oracle that postprocesses floating-point solutions to make them exact for the
-     * given \c mip. It calls the \c approximateOracle and then solves an LP to recompute the
-     * continuous part.
+     * Constructs the oracle based on the MIP that is passed. The latter need not be complete, i.e., there may be inequalities
+     * missing. In this case, the separate() method should be implemented by the inheriting class, which is then queried with
+     * a potential solution and must produce additional inequalities. Not that this is only required to complete the continuous
+     * part of a solution, i.e., the integer variables of the solution will remain fixed until the completion is finished.
+     * The actual MIP solver oracle is provided by inheriting from this class.
      *
      * \param name              Name of the oracle.
      * \param mip               Associated mixed-integer program.
-     * \param approximateOracle Approximate oracle whose solutions are postprocessed.
      */
 
-    MixedIntegerProgramCorrectorOracle(const std::string& name, MixedIntegerProgram& mip,
-      OracleBase* approximateOracle);
+    MIPOracleBase(const std::string& name, const Space& space, const MixedIntegerProgram& mip);
 
     /**
-     * \brief Constructs a heuristic oracle that postprocesses floating-point solutions.
+     * \brief Constructs the oracle.
      *
-     * Constructs an oracle that postprocesses floating-point solutions to make them exact for the
-     * given \c mip. It calls the \c approximateOracle and then solves an LP to recompute the
-     * continuous part.
+     * Constructs the oracle based on the MIP that is passed. The latter need not be complete, i.e., there may be inequalities
+     * missing. In this case, the separate() method should be implemented by the inheriting class, which is then queried with
+     * a potential solution and must produce additional inequalities. Not that this is only required to complete the continuous
+     * part of a solution, i.e., the integer variables of the solution will remain fixed until the completion is finished.
+     * The actual MIP solver oracle is provided by inheriting from this class.
      *
      * \param name              Name of the oracle.
      * \param mip               Associated mixed-integer program.
-     * \param approximateOracle Approximate oracle whose solutions are postprocessed.
      * \param nextOracle        Next associated oracle.
      */
 
-    MixedIntegerProgramCorrectorOracle(const std::string& name, MixedIntegerProgram& mip,
-      OracleBase* approximateOracle, OracleBase* nextOracle);
+    MIPOracleBase(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip);
 
     /**
      * \brief Destructor.
@@ -282,7 +280,7 @@ namespace ipo {
      * Destructor.
      */
 
-    virtual ~MixedIntegerProgramCorrectorOracle();
+    virtual ~MIPOracleBase();
 
     /**
      * \brief Restricts the oracle to the face defined by \p newFace.
@@ -296,66 +294,138 @@ namespace ipo {
 
     virtual void setFace(Face* newFace = NULL);
 
+  protected:
+    
+    struct Column
+    {
+      bool integral;
+      soplex::Rational upper;
+      soplex::Rational lower;
+    };
+
+    void initializeLP(const MixedIntegerProgram& mip);
+    
+//     /**
+//      * \brief Initializes the LP and solver.
+//      *
+//      * Initializes the LP and solver.
+//      */
+// 
+//     void initializeLP();
+// 
+//     /**
+//      * \brief Corrects a given point.
+//      *
+//      * Corrects a given point by rounding integer variables
+//      * and solving an LP for the continuous ones.
+//      */
+// 
+//     soplex::DSVectorRational* correctPoint(const soplex::SVectorRational* point,
+//         const soplex::VectorRational& objective);
+// 
+//     /**
+//      * \brief Corrects a given ray.
+//      *
+//      * Corrects a given ray (unbounded direction)
+//      * by solving an LP.
+//      */
+// 
+//     soplex::DSVectorRational* correctDirection(const soplex::SVectorRational* direction,
+//       const soplex::VectorRational& objective);
+//     
+//     /**
+//      * \brief Oracle's implementation to maximize the dense rational \p objective.
+//      *
+//      * This method is called by maximizeController() and contains the implementation of the oracle.
+//      * 
+//      *
+//      * \param result         After the call, contains the oracle's answer.
+//      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+//      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+//      * \param sort           Set this variable to true if points must be sorted.
+//      * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
+//      *
+//      * This implementation 
+//      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
+//      */
+// 
+//     virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+//       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups) 
+// = 0;
+
+
     /**
-     * \brief Runs the oracle to maximize the dense rational \p objective.
+     * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given dense rational \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-     * next oracle.
+     * This method is called by maximizeController() and contains the implementation of the oracle.
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
      *
-     * This implementation forwards the call to the oracle and then solves an LP for every
-     * solution that is returned.
-     */
+     * This implementation calls the virtual method solverMaximize() which is supposed to return a set of floating-point 
+     * solutions, which are then postprocessed.
+     */    
 
-    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
-
-  protected:
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
     /**
-     * \brief Initializes the LP and solver.
+     * \brief Solver-specific maximization method.
      *
-     * Initializes the LP and solver.
+     * Solver-specific maximization method.
+     * 
+     * \param objective Objective vector to be maximized.
+     * \param points    Returned set of points (each entry is an array of length \c n \c that is free'd by the caller.
+     * \param rays      Returned set of rays (each entry is an array of length \c n \c that is free'd by the caller.
      */
 
-    void initializeLP();
+    virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
+      std::vector<double*>& rays) = 0;
 
     /**
-     * \brief Corrects a given point.
-     *
-     * Corrects a given point by rounding integer variables
-     * and solving an LP for the continuous ones.
+     * \brief Method that can add lazy inequalities that cut off a given point.
+     * 
+     * Method that can add lazy inequalities that cut off a given \p point. If not implemented, it is assumed that the MIP is
+     * exactly the one passed to the constructor of the class.
      */
 
-    soplex::DSVectorRational* correctPoint(const soplex::SVectorRational* point,
-        const soplex::VectorRational& objective);
+    virtual void separatePoint(const soplex::VectorRational& point, soplex::LPRowSetRational& cuts);
 
     /**
-     * \brief Corrects a given ray.
-     *
-     * Corrects a given ray (unbounded direction)
-     * by solving an LP.
+     * \brief Method that can add lazy inequalities that cut off a given ray.
+     * 
+     * Method that can add lazy inequalities that cut off a given \p ray. If not implemented, it is assumed that the MIP's
+     * unbounded directions are exactly the ones induced by the MIP that was passed to the constructor of the class.
      */
 
-    soplex::DSVectorRational* correctDirection(const soplex::SVectorRational* direction,
-      const soplex::VectorRational& objective);
+    virtual void separateRay(const soplex::VectorRational& ray, soplex::LPRowSetRational& cuts);
 
-  protected:
+  private:
+    
+    void prepareSolver(const soplex::VectorRational& objective);
+    
+    void restoreSolver();
 
-    MixedIntegerProgram& _mip; // Associated mixed-integer program.
-    OracleBase* _approximateOracle; // Approximate oracle.
-    soplex::SoPlex* _spx; // LP solver
-    soplex::DVectorRational _denseVector; // Temporary dense rational vector.
+    soplex::DSVectorRational* findPoint(double* point, soplex::Rational& objectiveValue);
+    
+    soplex::DSVectorRational* findRay();
+
+    soplex::SoPlex* _spx; // LP solver with the correction LP.
+    std::vector<Column> _columns;
+    std::size_t _numRows;
+    double* _objective;
+    soplex::DVectorRational _lpResult;
+    std::vector<int> _lpRowPermutation;
+    soplex::LPRowSetRational _separateResult;
+    std::vector<double*> _points;
+    std::vector<double*> _rays;
+
+//     MixedIntegerProgram& _mip; // Associated mixed-integer program.
+//     OracleBase* _approximateOracle; // Approximate oracle.
+//     soplex::DVectorRational _denseVector; // Temporary dense rational vector.
   };
 
 } /* namespace ipo */

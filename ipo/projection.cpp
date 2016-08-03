@@ -49,6 +49,7 @@ namespace ipo {
       if (x != 0)
         projectedPoint.add(v, x);
     }
+    projectedPoint.sort();
   }
 
   void Projection::projectDirection(const VectorRational& direction,
@@ -61,6 +62,7 @@ namespace ipo {
       if (x != 0)
         projectedDirection.add(v, x);
     }
+    projectedDirection.sort();
   }
 
   void Projection::liftHyperplane(const VectorRational& normal, const Rational& rhs,
@@ -102,7 +104,8 @@ namespace ipo {
     if (newFace == currentFace())
       return;
 
-    _currentFace = newFace;
+    OracleBase::setFace(newFace);
+
     if (_liftedFace)
       delete _liftedFace;
 
@@ -122,50 +125,39 @@ namespace ipo {
 
     _oracle->setFace(_liftedFace);
   }
-
-  void ProjectedOracle::maximize(OracleResult& result, const VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
+  
+  std::size_t ProjectedOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     _liftedVector.clear();
     ObjectiveBound liftedObjectiveBound;
     liftedObjectiveBound.strict = objectiveBound.strict;
-       _projection.liftHyperplane(objective, objectiveBound.value, _liftedVector,
-      liftedObjectiveBound.value);
-
+    _projection.liftHyperplane(objective, objectiveBound.value, _liftedVector, liftedObjectiveBound.value);
+    
     OracleResult sourceResult;
-    _oracle->maximize(sourceResult, _liftedVector, liftedObjectiveBound, maxHeuristic,
-      minHeuristic);
+    _oracle->maximize(sourceResult, _liftedVector, liftedObjectiveBound, minHeuristic, maxHeuristic);
     if (sourceResult.isFeasible())
     {
-      result.buildStart(objective);
       for (std::size_t i = 0; i < sourceResult.points.size(); ++i)
       {
         _liftedVector.clear();
         _liftedVector.assign(*sourceResult.points[i].point);
         DSVectorRational* point = new DSVectorRational;
         _projection.projectPoint(_liftedVector, *point);
-        result.buildAddPoint(point);
+        result.points.push_back(OracleResult::Point(point));
       }
-      return result.buildFinish(sourceResult.heuristicLevel(), true, false, true);
+      checkDups = true;
     }
     else if (sourceResult.isUnbounded())
     {
-      result.buildStart(objective);
       for (std::size_t i = 0; i < sourceResult.directions.size(); ++i)
       {
         _liftedVector.clear();
         _liftedVector.assign(*sourceResult.directions[i].direction);
         DSVectorRational* direction = new DSVectorRational;
         _projection.projectDirection(_liftedVector, *direction);
-        result.buildAddDirection(direction);
+        result.directions.push_back(OracleResult::Direction(direction));
       }
-      return result.buildFinish(sourceResult.heuristicLevel(), true, false, true);
-    }
-    else
-    {
-      assert(sourceResult.isInfeasible());
-      result.buildStart(objective);
-      result.buildFinish(sourceResult.heuristicLevel(), false, false, false);
     }
   }
 

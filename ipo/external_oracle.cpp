@@ -10,11 +10,9 @@ using namespace soplex;
 
 namespace ipo {
 
-  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program,
-    const std::string& instance, const Space& space, std::size_t numBlindIterations,
-    double initialM)
-    : FaceOracleBase(name, space, numBlindIterations, initialM), _program(program),
-    _instance(instance)
+  ExternalOracle::ExternalOracle(const std::string& name, const Space& space, const std::string& program,
+    const std::string& instance, std::size_t maxInfeasibleIterations, double initialM)
+    : FaceOracleBase(name, space, maxInfeasibleIterations, initialM)
   {
     Space externalSpace;
     initialize(externalSpace);
@@ -24,11 +22,9 @@ namespace ipo {
     FaceOracleBase::initializedSpace();
   }
 
-  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program,
-    const std::string& instance, Space& space, std::size_t numBlindIterations,
-    double initialM)
-    : FaceOracleBase(name, space, numBlindIterations, initialM), _program(program),
-    _instance(instance)
+  ExternalOracle::ExternalOracle(const std::string& name, Space& space, const std::string& program, const std::string& instance, 
+    std::size_t maxInfeasibleIterations, double initialM)
+    : FaceOracleBase(name, space, maxInfeasibleIterations, initialM)
   {
     Space externalSpace;
     initialize(externalSpace);
@@ -39,12 +35,10 @@ namespace ipo {
 
     FaceOracleBase::initializedSpace();
   }
-
-  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program,
-    const std::string& instance, OracleBase* nextOracle,
-    std::size_t numBlindIterations, double initialM)
-    : FaceOracleBase(name, nextOracle, numBlindIterations, initialM),
-    _program(program), _instance(instance)
+  
+  ExternalOracle::ExternalOracle(const std::string& name, OracleBase* nextOracle, const std::string& program,
+    const std::string& instance, std::size_t maxInfeasibleIterations, double initialM)
+    : FaceOracleBase(name, nextOracle, maxInfeasibleIterations, initialM)
   {
     Space externalSpace;
     initialize(externalSpace);
@@ -89,22 +83,10 @@ namespace ipo {
           "Error in ~ExternalOracle: Temporary directory \"" + _path + "\" is not in /tmp/.");
     int status = system(("rm -r " + _path).c_str());
   }
-
-  void ExternalOracle::unrestrictedMaximize(OracleResult& result, const VectorRational& objective,
-    const ObjectiveBound& improveValue, const VectorRational& originalObjective,
-    const ObjectiveBound& orginalObjectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
+  
+  std::size_t ExternalOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    assert((heuristicLevel() == 0 && _nextOracle == NULL)
-      || heuristicLevel() > 0 && _nextOracle != NULL);
-
-    // Forward call if requested.
-
-    if (heuristicLevel() > maxHeuristic)
-    {
-      return _nextOracle->maximize(result, originalObjective, orginalObjectiveBound, maxHeuristic,
-        minHeuristic);
-    }
-
     DVectorRational scaledObjective;
     scaleVectorIntegral(objective, scaledObjective);
 
@@ -122,26 +104,75 @@ namespace ipo {
 
     std::string status;
     output >> status;
-    result.buildStart(objective);
-    if (status == "infeasible")
+
+    if (status == "unbounded")
     {
-      return result.buildFinish(heuristicLevel(), false, false, false);
-    }
-    else if (status == "unbounded")
-    {
-      result.buildAddDirection(parseSolution(output));
-      return result.buildFinish(heuristicLevel(), false, false, false);
+      result.directions.push_back(OracleResult::Direction(parseSolution(output)));  
     }
     else if (status == "optimal")
     {
-      result.buildAddPoint(parseSolution(output));
-      return result.buildFinish(heuristicLevel(), true, true, true);
+      result.points.push_back(OracleResult::Point(parseSolution(output)));
+      sort = true;
+      checkDups = true;
     }
-    else
-    {
+    else if (status != "infeasible")
       throw std::runtime_error("ExternalOracle: Invalid status \"" + status + "\".");
-    }
+    
+    return heuristicLevel();
   }
+
+//   void ExternalOracle::unrestrictedMaximize(OracleResult& result, const VectorRational& objective,
+//     const ObjectiveBound& improveValue, const VectorRational& originalObjective,
+//     const ObjectiveBound& orginalObjectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
+//   {
+//     assert((heuristicLevel() == 0 && _nextOracle == NULL)
+//       || heuristicLevel() > 0 && _nextOracle != NULL);
+// 
+//     // Forward call if requested.
+// 
+//     if (heuristicLevel() > maxHeuristic)
+//     {
+//       return _nextOracle->maximize(result, originalObjective, orginalObjectiveBound, maxHeuristic,
+//         minHeuristic);
+//     }
+// 
+//     DVectorRational scaledObjective;
+//     scaleVectorIntegral(objective, scaledObjective);
+// 
+//     std::stringstream param, output;
+//     param << "--maximize \"";
+//     for (std::size_t v = 0; v < space().dimension(); ++v)
+//     {
+//       if (v > 0)
+//         param << ' ';
+//       param << scaledObjective[v];
+//     }
+//     param << "\"";
+// 
+//     call(param.str(), output);
+// 
+//     std::string status;
+//     output >> status;
+//     result.buildStart(objective);
+//     if (status == "infeasible")
+//     {
+//       return result.buildFinish(heuristicLevel(), false, false, false);
+//     }
+//     else if (status == "unbounded")
+//     {
+//       result.buildAddDirection(parseSolution(output));
+//       return result.buildFinish(heuristicLevel(), false, false, false);
+//     }
+//     else if (status == "optimal")
+//     {
+//       result.buildAddPoint(parseSolution(output));
+//       return result.buildFinish(heuristicLevel(), true, true, true);
+//     }
+//     else
+//     {
+//       throw std::runtime_error("ExternalOracle: Invalid status \"" + status + "\".");
+//     }
+//   }
 
   DSVectorRational* ExternalOracle::parseSolution(std::stringstream& stream)
   {

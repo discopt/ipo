@@ -190,8 +190,7 @@ namespace ipo {
   /**
    * \brief An oracle for the projection of a polyhedron defined by another oracle.
    *
-   * Defines an optimization oracle for the projection \f$ \pi(P) \f$
-   * of a polyhedron \f$ P \f$ defined by another oracle
+   * Defines an optimization oracle for the projection \f$ \pi(P) \f$ of a polyhedron \f$ P \f$ defined by another oracle
    * for given affine projection map \f$ \pi \f$.
    *
    * \sa Projection
@@ -231,30 +230,28 @@ namespace ipo {
 
     virtual void setFace(Face* newFace = NULL);
 
+  protected:
+
     /**
-     * \brief Runs the oracle to maximize the dense rational \p objective.
+     * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given dense rational \p objective
-     * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-     * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-     * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-     * next oracle.
+     * This method is called by maximizeController() and contains the implementation of the oracle.
+     * 
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param maxHeuristic   Requested maximum heuristic level.
-     * \param minHeuristic   Requested minimum heuristic level.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
      *
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(),
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-      std::size_t minHeuristic = 0);
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
   protected:
+
     const Projection& _projection; // Projection.
     OracleBase* _oracle; // Source oracle.
     soplex::DVectorRational _projectedVector; // Projected point or direction.

@@ -5,6 +5,7 @@
 
 #ifdef WITH_SCIP
 #include <scip/cons_linear.h>
+#include "scip_oracles.h"
 #endif
 
 using namespace soplex;
@@ -255,44 +256,33 @@ namespace ipo {
         names->push_back("fixed-" + space()[c]);
     }
   }
-
-  MixedIntegerProgramCorrectorOracle::MixedIntegerProgramCorrectorOracle(const std::string& name,
-    MixedIntegerProgram& mip, OracleBase* approximateOracle)
-    : OracleBase(name, mip.space()), _mip(mip), _approximateOracle(approximateOracle),
-    _denseVector(mip.space().dimension())
+  
+  MIPOracleBase::MIPOracleBase(const std::string& name, const Space& space, const MixedIntegerProgram& mip)
+    : OracleBase(name, space)
   {
-    if (_mip.space() != _approximateOracle->space())
-      throw std::runtime_error("Spaces of MixedIntegerProgram and approximate oracle differ.");
-
     OracleBase::initializedSpace();
-
-    initializeLP();
+    
+    initializeLP(mip);
   }
 
-  MixedIntegerProgramCorrectorOracle::MixedIntegerProgramCorrectorOracle(const std::string& name,
-    MixedIntegerProgram& mip, OracleBase* approximateOracle,
-    OracleBase* nextOracle)
-    : OracleBase(name, nextOracle), _mip(mip), _approximateOracle(approximateOracle),
-    _denseVector(mip.space().dimension())
+  MIPOracleBase::MIPOracleBase(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip)
+    : OracleBase(name, nextOracle)
   {
-    if (_mip.space() != _approximateOracle->space())
-      throw std::runtime_error("Spaces of MixedIntegerProgram and approximate oracle differ.");
-    if (_mip.space() != _nextOracle->space())
-      throw std::runtime_error("Spaces of MixedIntegerProgram and next oracle differ.");
-
     OracleBase::initializedSpace();
-
-    initializeLP();
+    
+    initializeLP(mip);
   }
 
-  MixedIntegerProgramCorrectorOracle::~MixedIntegerProgramCorrectorOracle()
+  MIPOracleBase::~MIPOracleBase()
   {
+    delete _objective;
     delete _spx;
   }
-
-  void MixedIntegerProgramCorrectorOracle::initializeLP()
+  
+  void MIPOracleBase::initializeLP(const MixedIntegerProgram& mip)
   {
-//     std::cerr << "Creating SoPlex instance for MixedIntegerProgramCorrectorOracle." << std::endl;
+    assert(space().dimension() == mip.numColumns());
+
     _spx = new SoPlex;
     _spx->setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
     _spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
@@ -302,169 +292,242 @@ namespace ipo {
     _spx->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
     _spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
     _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
-    _spx->addColsRational(_mip.columns());
-    _spx->addRowsRational(_mip.rows());
+    _spx->addColsRational(mip.columns());
+    _spx->addRowsRational(mip.rows());
+    _numRows = _spx->numRowsRational();
+
+    // Initialize column data.
+
+    _columns.resize(mip.numColumns());
+    for (std::size_t v = 0; v < _columns.size(); ++v)
+    {
+      _columns[v].integral = mip.isIntegral(v);
+      _columns[v].upper = mip.columns().upper(v);
+      _columns[v].lower = mip.columns().lower(v);
+    }
+    
+    _objective = new double[space().dimension()];
+    _lpResult.reDim(space().dimension());
   }
 
-
-  DSVectorRational* MixedIntegerProgramCorrectorOracle::correctPoint(const SVectorRational* point,
-      const VectorRational& objective)
+  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    _spx->clearBasis(); // TODO: This should not be necessary, but produced a bug!
+    std::size_t n = space().dimension();
 
-    /// Fix integers to zero.
-
-    for (std::size_t v = 0; v < space().dimension(); ++v)
+    // Scale objective vector.
+    
+    Rational largest = 0;
+    for (std::size_t v = 0; v < n; ++v)
     {
-      if (!_mip.isIntegral(v))
+      if (objective[v] > 0)
       {
-        assert(_spx->lowerRational(v) == _mip.columns().lower(v));
-        assert(_spx->upperRational(v) == _mip.columns().upper(v));
-        continue;
+        if (objective[v] > largest)
+          largest = objective[v];
       }
-
-      _spx->changeBoundsRational(v, Rational(0), Rational(0));
-    }
-
-    /// Fix integers to point's values for its nonzeros.
-
-    for (int p = point->size() - 1; p >= 0; --p)
-    {
-      std::size_t v = point->index(p);
-      const Rational& x = point->value(p);
-      if (_mip.isIntegral(v))
+      else
       {
-        _spx->changeBoundsRational(v, x, x);
+        if (-objective[v] > largest)
+          largest = -objective[v];
       }
     }
 
-    /// Set objective.
+    // Convert exact objective to floating-point one.
 
-    _spx->changeObjRational(objective);
-
-    /// Solve LP.
-
-    SPxSolver::Status status = _spx->solve();
-    if (status != SPxSolver::OPTIMAL)
+    double factor = 1.0;
+    if (largest > 0 && (largest > 1024 || largest < 1))
     {
-      std::stringstream error;
-      error << "MIP corrector: Unexpected LP status ";
-      error << status << " while correcting point.";
-      throw std::runtime_error(error.str());
+      factor = 1024.0 / double(largest);
     }
+    for (std::size_t v = 0; v < n; ++v)
+      _objective[v] = factor * objective[v];
 
-    /// Extract solution.
+    // Call the solver's method.
+    
+    assert(_points.empty());
+    assert(_rays.empty());
 
-    DSVectorRational* result = new DSVectorRational;
-    _spx->getPrimalRational(_denseVector);
-    (*result) = _denseVector;
-    return result;
+    solverMaximize(_objective, infinity, _points, _rays);
+
+    if (!_points.empty())
+    {
+      sort = true;
+      checkDups = true;
+      result.points.reserve(_points.size());
+      prepareSolver(objective);
+
+      for (std::size_t i = 0; i < _points.size(); ++i)
+      {
+        Rational objValue;
+        DSVectorRational* pt = findPoint(_points[i], objValue);
+        if (pt != NULL)
+          result.points.push_back(OracleResult::Point(pt, objValue));
+        delete[] _points[i];
+      }
+
+      restoreSolver();
+      _points.clear();
+    }
+    else if (!_rays.empty())
+    {
+      for (std::size_t i = 0; i < _rays.size(); ++i)
+      {
+        if (_rays[i] != NULL)
+          delete[] _rays[i];
+      }
+      _rays.clear();
+
+      prepareSolver(objective);
+      soplex::DSVectorRational* ray = findRay();
+      restoreSolver();
+      
+      if (ray)
+        result.directions.push_back(OracleResult::Direction(ray));
+      else if (heuristicLevel() == 0)
+        throw std::runtime_error("MIPOracle: Ray search failed.");
+
+      // If no ray could be found and heuristicLevel is positive, then we force forwarding by claiming infeasibility.
+    }
+    return heuristicLevel();
   }
 
-  DSVectorRational* MixedIntegerProgramCorrectorOracle::correctDirection(
-    const SVectorRational* direction, const VectorRational& objective)
+  void MIPOracleBase::separatePoint(const VectorRational& point, LPRowSetRational& cuts)
   {
-    /// Relax integers to original bounds.
-
-    for (std::size_t v = 0; v < space().dimension(); ++v)
-    {
-      if (!_mip.isIntegral(v))
-      {
-        assert(_spx->lowerRational(v) == _mip.columns().lower(v));
-        assert(_spx->upperRational(v) == _mip.columns().upper(v));
-        continue;
-      }
-      _spx->changeBoundsRational(v, _mip.columns().lower(v), _mip.columns().upper(v));
-    }
-
-    /// Set objective.
-
-    _spx->changeObjRational(objective);
-
-    /// Solve LP.
-
-    SPxSolver::Status status = _spx->solve();
-    if (status != SPxSolver::UNBOUNDED)
-    {
-      std::stringstream error;
-      error << "MIP corrector: Unexpected LP status ";
-      error << status << " while correcting direction.";
-      throw std::runtime_error(error.str());
-    }
-
-    /// Extract direction.
-
-    DSVectorRational* result = new DSVectorRational;
-    _spx->getPrimalRayRational(_denseVector);
-    (*result) = _denseVector;
-    return result;
+    
+  }
+  
+  void MIPOracleBase::separateRay(const VectorRational& ray, LPRowSetRational& cuts)
+  {
+    
   }
 
-  void MixedIntegerProgramCorrectorOracle::setFace(Face* newFace)
+  void MIPOracleBase::setFace(Face* newFace)
   {
-    if (newFace == currentFace())
-      return;
-
-    if (currentFace() != NULL)
-      _spx->removeRowRational(_spx->numRowsRational() - 1);
-
     OracleBase::setFace(newFace);
-    _approximateOracle->setFace(newFace);
-    _mip.setFace(newFace);
-
-    if (currentFace() != NULL)
-    {
-      _spx->addRowRational(
-        LPRowRational(currentFace()->rhs(), currentFace()->sparseNormal(), currentFace()->rhs()));
-    }
+    
+    throw std::runtime_error("MIPOracleBase::setFace not implemented, yet!");
   }
 
-  void MixedIntegerProgramCorrectorOracle::maximize(OracleResult& result,
-    const VectorRational& objective, const ObjectiveBound& objectiveBound,
-    std::size_t maxHeuristic, std::size_t minHeuristic)
+  void MIPOracleBase::prepareSolver(const VectorRational& objective)
   {
-    assert((heuristicLevel() == 0 && _nextOracle == NULL)
-      || heuristicLevel() > 0 && _nextOracle != NULL);
-
-    // Forward call if requested.
-
-    if (heuristicLevel() > maxHeuristic)
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
-
-    // Call approximate oracle with precisely its heuristic level to avoid forwarding there.
-
-    OracleResult approximateResult;
-    _approximateOracle->maximize(approximateResult, objective, objectiveBound,
-      _approximateOracle->heuristicLevel(), _approximateOracle->heuristicLevel());
-
-    if (approximateResult.isFeasible())
-    {
-      result.buildStart(objective);
-      for (std::size_t i = 0; i < approximateResult.points.size(); ++i)
-      {
-        result.buildAddPoint(correctPoint(approximateResult.points[i].point, objective));
-        delete approximateResult.points[i].point;
-      }
-      return result.buildFinish(heuristicLevel(), true, true, true);
-    }
-    else if (approximateResult.isUnbounded())
-    {
-      result.buildStart(objective);
-      for (std::size_t i = 0; i < approximateResult.directions.size(); ++i)
-      {
-        result.buildAddDirection(correctDirection(approximateResult.directions[i].direction,
-          objective));
-        delete approximateResult.directions[i].direction;
-      }
-      return result.buildFinish(heuristicLevel(), false, false, true);
-    }
-    else
-    {
-      assert(approximateResult.isInfeasible());
-      result.buildStart(objective);
-      return result.buildFinish(heuristicLevel(), false, false, false);
-    }
+    _spx->changeObjRational(objective);
   }
 
+  void MIPOracleBase::restoreSolver()
+  {
+    // Remove all added rows.
+
+    _lpRowPermutation.resize(_spx->numRowsRational());
+    for (std::size_t i = 0; i < _numRows; ++i)
+      _lpRowPermutation[i] = 0;
+    for (std::size_t i = _numRows; i < _spx->numRowsRational(); ++i)
+      _lpRowPermutation[i] = -1;
+    _spx->removeRowsRational(&_lpRowPermutation[0]);    
+  }
+
+  DSVectorRational* MIPOracleBase::findPoint(double* approxPoint, Rational& objectiveValue)
+  {
+    std::size_t n = space().dimension();
+    
+    // Fix variable bounds for the integer variables.
+
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_columns[v].integral)
+      {
+        Rational value = Rational(int(approxPoint[v] + 0.5));
+        _spx->changeBoundsRational(v, value, value);
+      }
+      else
+      {
+        assert(_columns[v].lower == _spx->lowerRational(v));
+        assert(_columns[v].upper == _spx->upperRational(v));
+      }
+    }
+
+    while (true)
+    {
+      SPxSolver::Status status = _spx->solve();
+      
+      if (status == SPxSolver::UNBOUNDED)
+      {
+        _spx->getPrimalRayRational(_lpResult);
+        _separateResult.clear();
+        separateRay(_lpResult, _separateResult);
+        if (_separateResult.num() == 0)
+          throw std::runtime_error("MIPOracle: Claim is bounded, but candidate ray is not separated.");
+
+        _spx->addRowsRational(_separateResult);  
+      }
+      else if (status != SPxSolver::OPTIMAL)
+        return NULL;
+
+      _spx->getPrimalRational(_lpResult);
+      _separateResult.clear();
+      separatePoint(_lpResult, _separateResult);
+      if (_separateResult.num() == 0)
+        break;
+
+      _spx->addRowsRational(_separateResult);
+    }
+
+    // Create point as sparse vector.
+
+    DSVectorRational* point = new DSVectorRational;
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_lpResult[v] != 0)
+        point->add(v, _lpResult[v]);
+    }
+    point->sort();
+    objectiveValue = _spx->objValueRational();
+    return point;
+  }
+
+  DSVectorRational* MIPOracleBase::findRay()
+  {
+    std::size_t n = space().dimension();
+
+    // Set original variable bounds for the integer variables.
+
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_columns[v].integral)
+      {
+        _spx->changeBoundsRational(v, _columns[v].lower, _columns[v].upper);
+      }
+      else
+      {
+        assert(_columns[v].lower == _spx->lowerRational(v));
+        assert(_columns[v].upper == _spx->upperRational(v));
+      }
+    }
+
+    while (true)
+    {
+      SPxSolver::Status status = _spx->solve();
+      if (status != SPxSolver::UNBOUNDED)
+        return NULL;
+     
+      _spx->getPrimalRayRational(_lpResult);
+      _separateResult.clear();
+      separateRay(_lpResult, _separateResult);
+      if (_separateResult.num() == 0)
+        break;
+
+      _spx->addRowsRational(_separateResult);
+    }
+
+    // Create ray as sparse vector.
+
+    DSVectorRational* ray = new DSVectorRational;
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_lpResult[v] != 0)
+        ray->add(v, _lpResult[v]);
+    }
+    ray->sort();
+    return ray;
+  }
 
 } /* namespace ipo */

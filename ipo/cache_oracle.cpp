@@ -37,24 +37,15 @@ namespace ipo {
     _faceDirections.clear();
     _endFaceDirections = 0;
   }
-
-  void CacheOracle::maximize(OracleResult& result, const VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
+  
+  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    assert((heuristicLevel() == 0 && _nextOracle == NULL)
-      || heuristicLevel() > 0 && _nextOracle != NULL);
-
-    // Forward call if requested.
-
-    if (heuristicLevel() > maxHeuristic)
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
-
     // Update face indices since in the meantime points / directions could have been added.
 
     updateFaceIndices(_points, _facePoints, _endFacePoints, true);
     updateFaceIndices(_directions, _faceDirections, _endFaceDirections, false);
 
-    result.buildStart(objective);
     DVectorReal approxObjective(objective.dim());
     approxObjective = objective;
     std::vector<std::size_t> searchResult;
@@ -68,11 +59,11 @@ namespace ipo {
       Rational activity = *_directions.vector(d) * objective;
       if (activity <= 0)
         continue;
-      result.buildAddDirection(_directions.vector(d));
+      result.directions.push_back(OracleResult::Direction(_directions.vector(d)));
       result.directions.back().index = d;
     }
     if (!result.directions.empty())
-      return result.buildFinish(heuristicLevel(), false, false, false);
+      return heuristicLevel();
 
     // Search points.
 
@@ -88,22 +79,13 @@ namespace ipo {
       bool satisfied = objectiveBound.satisfiedBy(activity);
       if (i == 0 || satisfied)
       {
-        result.buildAddPoint(_points.vector(p));
+        result.points.push_back(OracleResult::Point(_points.vector(p)));
         result.points.back().index = p;
         result.points.back().objectiveValue = activity;
-        if (satisfied)
-          foundSatisfying = true;
       }
     }
 
-    if (!result.points.empty() && (foundSatisfying || heuristicLevel() <= minHeuristic))
-    {
-      return result.buildFinish(heuristicLevel(), false, true, true);
-    }
-
-    // Forward call if no sufficiently good points were found.
-
-    _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
+    return heuristicLevel();
   }
 
   CacheOracle::VectorStats::VectorStats()

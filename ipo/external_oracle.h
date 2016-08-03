@@ -32,55 +32,48 @@ namespace ipo {
      *
      * Creates an instance together with a temporary working directory.
      *
-     * \param name               Name of the oracle.
-     * \param program            Location of the external program.
-     * \param instance           Specification of the instance.
-     * \param space              Ambient space.
-     * \param numBlindIterations Number of times, \f$ M \f$ is increased, before testing whether
-     *                           \f$ F = \emptyset \f$ holds.
-     * \param initialM           Initial value of \f$ M \f$.
+     * \param name                    Name of the oracle.
+     * \param program                 Location of the external program.
+     * \param instance                Specification of the instance.
+     * \param space                   Ambient space.
+     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
+     * \param initialM                Initial value of \f$ M \f$.
      */
 
-    ExternalOracle(const std::string& name, const std::string& program,
-      const std::string& instance, const Space& space, std::size_t numBlindIterations = 2,
-      double initialM = 16);
+    ExternalOracle(const std::string& name, const Space& space, const std::string& program, const std::string& instance, 
+      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
 
     /**
      * \brief Creates an instance.
      *
      * Creates an instance together with a temporary working directory.
      *
-     * \param name               Name of the oracle.
-     * \param program            Location of the external program.
-     * \param instance           Specification of the instance.
-     * \param space              Reference to ambient space that is defined by the oracle.
-     * \param numBlindIterations Number of times, \f$ M \f$ is increased, before testing whether
-     *                           \f$ F = \emptyset \f$ holds.
-     * \param initialM           Initial value of \f$ M \f$.
+     * \param name                    Name of the oracle.
+     * \param program                 Location of the external program.
+     * \param instance                Specification of the instance.
+     * \param space                   Reference to ambient space that is defined by the oracle.
+     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
+     * \param initialM                Initial value of \f$ M \f$.
      */
 
-    ExternalOracle(const std::string& name, const std::string& program,
-      const std::string& instance, Space& space, std::size_t numBlindIterations = 2,
-      double initialM = 16);
+    ExternalOracle(const std::string& name, Space& space, const std::string& program, const std::string& instance, 
+      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
 
     /**
      * \brief Creates an instance associated to \p nextOracle.
      *
      * Creates an instance associated to \p nextOracle together with a temporary working directory.
      *
-     * \param name               Name of the oracle.
-     * \param program            Location of the external program.
-     * \param instance           Specification of the instance.
-     * \param nextOracle         Next oracle to forward calls to.
-     * \param numBlindIterations Number of times, \f$ M \f$ is increased, before testing whether
-     *                           \f$ F = \emptyset \f$ holds.
-     * \param initialM           Initial value of \f$ M \f$.
-
+     * \param name                    Name of the oracle.
+     * \param program                 Location of the external program.
+     * \param instance                Specification of the instance.
+     * \param nextOracle              Next oracle to forward calls to.
+     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
+     * \param initialM                Initial value of \f$ M \f$.
      */
 
-    ExternalOracle(const std::string& name, const std::string& program,
-      const std::string& instance, OracleBase* nextOracle,
-      std::size_t numBlindIterations = 2, double initialM = 16);
+    ExternalOracle(const std::string& name, OracleBase* nextOracle, const std::string& program, const std::string& instance, 
+      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
 
     /**
      * \brief Destructor.
@@ -93,33 +86,21 @@ namespace ipo {
   protected:
 
     /**
-     * \brief Implementation of the oracle.
+     * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
-     * Implements the optimization oracle to maximize the given dense rational \p objective over
-     * the whole polyhedron \f$ P \f$ (in contrast to the maximize() methods) and returns \p result.
-     * If the objective value requested by \p improveValue is not exceeded, then the call must be
-     * forwarded to the next oracle using \p originalObjective and \p originalImproveValue to allow
-     * the next oracle to use (potentially more efficient) handling of face optimization.
+     * This method is called by maximizeController() and contains the implementation of the oracle.
      *
-     * \param result               After the call, contains the oracle's answer.
-     * \param objective            Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized over
-     *                             \f$ P \f$.
-     * \param objectiveBound       Objective value \f$ \gamma \in \mathbb{Q} \f$ that should be
-     *                             exceeded.
-     * \param originalObjective    Objective vector \f$ c' \in \mathbb{Q}^n \f$ to be maximized
-     *                             over \f$ F \f$.
-     * \param originalImproveValue Objective value \f$ \gamma' \in \mathbb{Q} \f$ that should be
-     *                             exceeded when optimizing \f$ c' \f$ over \f$ F \f$.
-     * \param maxHeuristic         Requested maximum heuristic level.
-     * \param minHeuristic         Requested minimum heuristic level.
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
      *
-     * This implementation calls the external program and reads back its output.
+     * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual void unrestrictedMaximize(OracleResult& result,
-      const soplex::VectorRational& objective, const ObjectiveBound& improveValue,
-      const soplex::VectorRational& originalObjective, const ObjectiveBound& orginalObjectiveBound,
-      std::size_t maxHeuristic, std::size_t minHeuristic);
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
   private:
 

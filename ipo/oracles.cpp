@@ -8,44 +8,6 @@ using namespace soplex;
 
 namespace ipo {
 
-  SparseVectorDuplicateChecker::SparseVectorDuplicateChecker(std::size_t dimension)
-  {
-    _firstValues.resize(dimension, NULL);
-  }
-
-
-  SparseVectorDuplicateChecker::~SparseVectorDuplicateChecker()
-  {
-
-  }
-
-  bool SparseVectorDuplicateChecker::operator()(const SVectorRational* first,
-    const SVectorRational* second)
-  {
-    if (first->size() != second->size())
-      return false;
-
-    bool result = true;
-
-    for (int p = first->size() - 1; p >= 0; --p)
-      _firstValues[first->index(p)] = &(first->value(p));
-
-    for (int p = second->size() - 1; p >= 0; --p)
-    {
-      int index = second->index(p);
-      if ((_firstValues[index] == NULL) || (*_firstValues[index] != second->value(p)))
-      {
-        result = false;
-        break;
-      }
-    }
-
-    for (int p = first->size() - 1; p >= 0; --p)
-      _firstValues[first->index(p)] = NULL;
-
-    return result;
-  }
-
   Face::Face(const Space& space) : _synced(false), _denseNormal(space.dimension())
   {
 
@@ -149,6 +111,27 @@ namespace ipo {
     }
   }
 
+  OracleResult::Point::Point(soplex::DSVectorRational const* pt)
+  {
+    this->point = pt;
+    this->index = std::numeric_limits<std::size_t>::max();
+    this->objectiveValue = -soplex::infinity;
+  }
+  
+  OracleResult::Point::Point(const DSVectorRational* pt, const Rational& value)
+  {
+    this->point = pt;
+    this->index = std::numeric_limits<std::size_t>::max();
+    this->objectiveValue = value;
+  }
+
+
+  OracleResult::Direction::Direction(soplex::DSVectorRational const* dir)
+  {
+    this->direction = dir;
+    this->index = std::numeric_limits<std::size_t>::max();
+  }
+
   OracleResult::OracleResult() : _heuristicLevel(0)
   {
 
@@ -157,49 +140,6 @@ namespace ipo {
   OracleResult::~OracleResult()
   {
 
-  }
-
-  void OracleResult::buildStart(const VectorRational& objective)
-  {
-    _objective = &objective;
-    points.clear();
-    directions.clear();
-  }
-
-  void OracleResult::buildAddPoint(DSVectorRational const* point)
-  {
-    Point pt = { 0, point, std::numeric_limits<std::size_t>::max() };
-    points.push_back(pt);
-  }
-
-  void OracleResult::buildAddDirection(DSVectorRational const* direction)
-  {
-    Direction dir = { direction, std::numeric_limits<std::size_t>::max() };
-    directions.push_back(dir);
-  }
-
-  void OracleResult::buildFinish(std::size_t heuristicLevel, bool computeObjectiveValues, bool sort,
-    bool removeDups)
-  {
-    _heuristicLevel = heuristicLevel;
-
-    /// If objective is passed, recompute the objective values of all points.
-
-    if (computeObjectiveValues)
-    {
-      for (std::size_t i = 0; i < points.size(); ++i)
-        points[i].objectiveValue = *_objective * *(points[i].point);
-    }
-
-    /// If requested, sort all points by objective value.
-
-    if (sort)
-      std::sort(points.begin(), points.end());
-
-    /// If requested, remove duplicates.
-
-    if (removeDups)
-      removeDuplicates(false);
   }
 
   void OracleResult::addToContainers(UniqueRationalVectorsBase& pointContainer,
@@ -241,24 +181,34 @@ namespace ipo {
     if (removeDuplicates(true))
       throw std::runtime_error("Inconsistent OracleResult: Duplicate point or direction found.");
   }
+  
+  void OracleResult::computeMissingObjectiveValues()
+  {
+    for (std::size_t i = 0; i < points.size(); ++i)
+    {
+      if (points[i].objectiveValue == -soplex::infinity)
+      {
+        points[i].objectiveValue = *_objective * *points[i].point;
+      }
+    }
+  }
 
   bool OracleResult::removeDuplicates(bool abort)
   {
-    SparseVectorDuplicateChecker dup(_objective->dim());
-
     /// Check points.
 
     bool found = false;
     for (std::size_t i = 0; i < points.size(); ++i)
     {
       const Rational& firstObjective = points[i].objectiveValue;
+      
       for (std::size_t j = i + 1; j < points.size(); ++j)
       {
         const Rational& secondObjective = points[j].objectiveValue;
         if (secondObjective != firstObjective)
           break;
 
-        if (!dup(points[i].point, points[j].point))
+        if (equal(*points[i].point, *points[j].point))
           continue;
 
         if (abort)
@@ -279,7 +229,7 @@ namespace ipo {
     {
       for (std::size_t j = i + 1; j < directions.size(); ++j)
       {
-        if (!dup(directions[i].direction, directions[j].direction))
+        if (equal(*directions[i].direction, *directions[j].direction))
           continue;
 
         if (abort)
@@ -329,49 +279,127 @@ namespace ipo {
       _nextOracle->setFace(newFace);
   }
 
-  void OracleBase::maximize(OracleResult& result,
-    const VectorReal& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
-    std::size_t minHeuristic)
+  void OracleBase::maximize(OracleResult& result, const SVectorRational& objective, const ObjectiveBound& objectiveBound,
+    std::size_t minHeuristic, std::size_t maxHeuristic)
   {
-    if (maxHeuristic < heuristicLevel())
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
-    _tempObjective = objective;
-    return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
-  }
-
-  void OracleBase::maximize(OracleResult& result,
-    const SVectorRational& objective, const ObjectiveBound& objectiveBound,
-    std::size_t maxHeuristic, std::size_t minHeuristic)
-  {
-    if (maxHeuristic < heuristicLevel())
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
     _tempObjective.clear();
     _tempObjective.assign(objective);
     return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
-  void OracleBase::maximize(OracleResult& result,
-    const SVectorReal& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
-    std::size_t minHeuristic)
+  void OracleBase::maximize(OracleResult& result, const VectorRational& objective, const ObjectiveBound& objectiveBound, 
+    std::size_t minHeuristic, std::size_t maxHeuristic)
   {
-    if (maxHeuristic < heuristicLevel())
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
-    _tempObjective.clear();
-    _tempObjective.assign(objective);
-    return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
+    // Initialize result.
+
+    result._objective = &objective;
+    result.points.clear();
+    result.directions.clear();
+
+    bool sort = false;
+    bool checkDuplicates = false;
+
+//     std::cerr << "Oracle(" << heuristicLevel() <<") <" << name() << "> called for objective: " << objective << std::endl;
+
+    result._heuristicLevel = maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, 
+      checkDuplicates);
+
+    // Compute missing objective values.
+
+    for (std::size_t i = 0; i < result.points.size(); ++i)
+    {
+      if (result.points[i].objectiveValue == -soplex::infinity)
+      {
+        result.points[i].objectiveValue = objective * *result.points[i].point;
+      }
+    }
+
+    // If requested, sort all points by objective value.
+
+    if (sort)
+      std::sort(result.points.begin(), result.points.end());
+
+    // If requested, remove duplicates.
+
+    if (checkDuplicates)
+      result.removeDuplicates(false);
+
+//     std::cerr << "Oracle(" << heuristicLevel() <<") <" << name() << ">";
+//     if (result.isFeasible())
+//       std::cerr << " returned " << result.points.size() << " points, maximum = " << result.points.front().objectiveValue;
+//     else if (result.isUnbounded())
+//       std::cerr << " returned " << result.directions.size() << " rays.";
+//     else
+//       std::cerr << " claims infeasible." << std::endl;
+//     std::cerr << std::endl;
   }
 
-  FaceOracleBase::FaceOracleBase(const std::string& name,
-    OracleBase* nextOracle, std::size_t numBlindIterations, double initialM)
-    : OracleBase(name, nextOracle), _numBlindIterations(numBlindIterations),
-    _M(initialM)
+  std::size_t OracleBase::maximizeController(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
+  {
+    assert((heuristicLevel() == 0 && _nextOracle == NULL)
+      || heuristicLevel() > 0 && _nextOracle != NULL);
+
+    // If requested, forward to next oracle.
+    
+    if (heuristicLevel() > maxHeuristic)
+    {
+      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+    }
+
+    // Call implementation and check whether results are satisfactory.
+
+    maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
+    if (heuristicLevel() == 0 || !result.directions.empty())
+      return heuristicLevel();
+
+    if (!result.points.empty())
+    {
+      result.computeMissingObjectiveValues();
+
+      // Check if one of them satisfies the objective bound.
+      
+      bool satisfied = false;
+      for (std::size_t i = 0; i < result.points.size(); ++i)
+      {
+        if (objectiveBound.satisfiedBy(result.points[i].objectiveValue))
+        {
+          satisfied = true;
+          break;
+        }
+      }
+
+      if (satisfied)
+        return heuristicLevel();
+    }
+
+    // Answer not satisfactory.
+
+    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.directions.empty()))
+    {
+      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+    }
+    else
+    {
+      return heuristicLevel();
+    }
+  }
+
+  Face* OracleBase::currentFace()
+  {
+    return _currentFace;
+  }
+
+  FaceOracleBase::FaceOracleBase(const std::string& name, OracleBase* nextOracle, std::size_t maxInfeasibleIterations,
+    double initialM)
+    : OracleBase(name, nextOracle), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM)
   {
 
   }
 
-  FaceOracleBase::FaceOracleBase(const std::string& name,
-    const Space& space, std::size_t numBlindIterations, double initialM)
-    : OracleBase(name, space), _numBlindIterations(numBlindIterations), _M(initialM)
+  FaceOracleBase::FaceOracleBase(const std::string& name, const Space& space, std::size_t maxInfeasibleIterations,
+    double initialM)
+    : OracleBase(name, space), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM)
   {
 
   }
@@ -394,169 +422,187 @@ namespace ipo {
       return;
 
     OracleBase::setFace(newFace);
-    assert(newFace == currentFace());
+    assert(newFace == OracleBase::currentFace());
 
     if (newFace != NULL)
       _factor = _M / newFace->maxNorm();
   }
 
-  void FaceOracleBase::maximize(OracleResult& result,
-    const VectorRational& objective, const ObjectiveBound& objectiveBound, std::size_t maxHeuristic,
-    std::size_t minHeuristic)
+  Face* FaceOracleBase::currentFace()
+  {
+    return NULL;
+  }
+
+  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const VectorRational& objective,
+    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
 
+    // If requested, forward to next oracle.
+
     if (heuristicLevel() > maxHeuristic)
-      return _nextOracle->maximize(result, objective, objectiveBound, maxHeuristic, minHeuristic);
-
-    if (currentFace() == NULL)
-      return unrestrictedMaximize(result, objective, objectiveBound, objective, objectiveBound,
-        maxHeuristic, minHeuristic);
-
-    // Compute max-norm of c.
-
-    Rational maxObjectiveCoefficient = 0;
-    for (int v = 0; v < space().dimension(); ++v)
     {
-      if (objective[v] >= 0)
+      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+    }
+    
+    // Get face (note that currentFace() always yields NULL.
+    
+    Face* face = OracleBase::currentFace();
+    if (face == NULL)
+    {
+      maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
+    }
+    else // We have a face and must tilt the objective vector.
+    {
+      // Compute max-norm of c.
+
+      Rational maxObjectiveCoefficient = 0;
+      for (int v = 0; v < space().dimension(); ++v)
       {
-        if (objective[v] > maxObjectiveCoefficient)
-          maxObjectiveCoefficient = objective[v];
+        if (objective[v] >= 0)
+        {
+          if (objective[v] > maxObjectiveCoefficient)
+            maxObjectiveCoefficient = objective[v];
+        }
+        else
+        {
+          if (-objective[v] > maxObjectiveCoefficient)
+            maxObjectiveCoefficient = -objective[v];
+        }
+      }
+      
+      // Check if c is the zero vector.
+
+      if (maxObjectiveCoefficient == 0) 
+      {
+        maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
       }
       else
       {
-        if (-objective[v] > maxObjectiveCoefficient)
-          maxObjectiveCoefficient = -objective[v];
-      }
-    }
-
-    // Zero vector does not need change.
-
-    if (maxObjectiveCoefficient == 0)
-    {
-      return unrestrictedMaximize(result, objective, objectiveBound, objective, objectiveBound,
-        maxHeuristic, minHeuristic);
-    }
-
-    // Copy objective since modification might only affect a subset of the coordinates.
-
-    for (std::size_t v = 0; v < space().dimension(); ++v)
-    {
-      _modifiedObjective[v] = objective[v];
-    }
-    const VectorRational& denseNormal = currentFace()->denseNormal();
-    const SVectorRational& sparseNormal = currentFace()->sparseNormal();
-
-    // Loop that increases _M as long as results are invalid for current face.
-    OracleResult unrestrictedResult;
-    bool verifiedProperFace = false;
-    ObjectiveBound modifiedObjectiveBound;
-    Rational modifiedObjectiveShift;
-    for (std::size_t iteration = 0; true; ++iteration)
-    {
-      /// So far no point in the face was found, so we check whether it is empty.
-
-      if (iteration == _numBlindIterations)
-      {
-        /// Setup objective via face's normal vector.
+        // Copy objective since modification might only affect a subset of the coordinates.
 
         for (std::size_t v = 0; v < space().dimension(); ++v)
-          _modifiedObjective[v] = 0;
-        for (int p = sparseNormal.size() - 1; p >= 0; --p)
-          _modifiedObjective[sparseNormal.index(p)] = sparseNormal.value(p);
-        modifiedObjectiveBound.value = currentFace()->rhs();
-        modifiedObjectiveBound.strict = false;
-
-        unrestrictedMaximize(unrestrictedResult, _modifiedObjective, modifiedObjectiveBound,
-          _modifiedObjective, modifiedObjectiveBound, maxHeuristic, minHeuristic);
-
-        /*
-          * The following happens after maximizing F's normal:
-          *
-          * infeasible: Return infeasible which (heuristically) proves that F is empty.
-          * unbounded: Raise an error.
-          * feasible: Continue as usual.
-          */
-
-        if (unrestrictedResult.isInfeasible())
         {
-          result.buildStart(objective);
-          return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
+          _modifiedObjective[v] = objective[v];
         }
-        else if (unrestrictedResult.isUnbounded())
+        const VectorRational& denseNormal = face->denseNormal();
+        const SVectorRational& sparseNormal = face->sparseNormal();
+        
+        // Loop that increases M as long as results are not feasible.
+
+        OracleResult unrestrictedResult;
+        bool verifiedNonEmpty = false;
+        ObjectiveBound modifiedObjectiveBound;
+        Rational modifiedObjectiveShift;
+        for (std::size_t iteration = 0; iteration <= _maxInfeasibleIterations; ++iteration)
         {
-          for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
-            delete unrestrictedResult.directions[i].direction;
-          throw std::runtime_error(
-            "Error in FaceOracleBase::maximize: Maximizing F's normal is unbounded.");
-        }
+          if (iteration == _maxInfeasibleIterations)
+          {
+            // Setup objective via face's normal vector.
 
-        continue;
-      }
-
-      Rational scaling = _factor / maxObjectiveCoefficient;
-      modifiedObjectiveShift = scaling * currentFace()->rhs();
-      modifiedObjectiveBound.value = objectiveBound.value + modifiedObjectiveShift;
-      modifiedObjectiveBound.strict = objectiveBound.strict;
-      for (int p = sparseNormal.size() - 1; p >= 0; --p)
-      {
-        int v = sparseNormal.index(p);
-        _modifiedObjective[v] = objective[v] + scaling * sparseNormal.value(p);
-      }
-
-      unrestrictedMaximize(unrestrictedResult, _modifiedObjective, modifiedObjectiveBound,
-        objective, objectiveBound, maxHeuristic, minHeuristic);
-
-      if (unrestrictedResult.isFeasible())
-      {
-        // Remove points that do not lie in F.
-
-        result.buildStart(objective);
-        for (std::size_t i = 0; i < unrestrictedResult.points.size(); ++i)
-        {
-          if (currentFace()->containsPoint(*unrestrictedResult.points[i].point))
-            result.buildAddPoint(unrestrictedResult.points[i].point);
+            for (std::size_t v = 0; v < space().dimension(); ++v)
+              _modifiedObjective[v] = 0;
+            for (int p = sparseNormal.size() - 1; p >= 0; --p)
+              _modifiedObjective[sparseNormal.index(p)] = sparseNormal.value(p);
+            modifiedObjectiveBound.value = face->rhs();
+            modifiedObjectiveBound.strict = false;
+          }
           else
-            delete unrestrictedResult.points[i].point;
-        }
+          {
+            // Setup objective via tilting.
 
-        if (!result.points.empty())
-        {
-          // If best point satisfied objective bound, return everything, otherwise increase M.
+            Rational scaling = _factor / maxObjectiveCoefficient;
+            modifiedObjectiveShift = scaling * face->rhs();
+            modifiedObjectiveBound.value = objectiveBound.value + modifiedObjectiveShift;
+            modifiedObjectiveBound.strict = objectiveBound.strict;
+            for (int p = sparseNormal.size() - 1; p >= 0; --p)
+            {
+              int v = sparseNormal.index(p);
+              _modifiedObjective[v] = objective[v] + scaling * sparseNormal.value(p);
+            }
+          }
+          
+          // Carry out the optimization over P.
+          
+          maximizeImplementation(unrestrictedResult, _modifiedObjective, modifiedObjectiveBound, minHeuristic, maxHeuristic, 
+            sort, checkDups);
 
-          Rational bestValue = result.points.front().objectiveValue - modifiedObjectiveShift;
-          if (objectiveBound.satisfiedBy(bestValue))
-            return result.buildFinish(unrestrictedResult.heuristicLevel(), true, false, false);
-        }
-      }
-      else if (unrestrictedResult.isUnbounded())
-      {
-        // Remove directions that do not lie in F.
+          // Check results.
+          
+          if (!unrestrictedResult.points.empty())
+          {
+            bool satisfied = false;
+            std::size_t bestIndex = std::numeric_limits<std::size_t>::max();
+            Rational bestValue = -infinity;
+            for (std::size_t i = 0; i < unrestrictedResult.points.size(); ++i)
+            {
+              DSVectorRational const* pt = unrestrictedResult.points[i].point;
+              if (!face->containsPoint(*pt))
+                continue;
+              
+              Rational objectiveValue = objective * *pt;
+              if (objectiveBound.satisfiedBy(objectiveValue))
+              {
+                result.points.push_back(OracleResult::Point(pt, objectiveValue));
+                satisfied = true;
+              }
+              else if (objectiveValue > bestValue)
+              {
+                bestIndex = i;
+                bestValue = objectiveValue;
+              }
+            }
 
-        result.buildStart(objective);
-        for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
-        {
-          if (currentFace()->containsDirection(*unrestrictedResult.directions[i].direction))
-            result.buildAddDirection(unrestrictedResult.directions[i].direction);
+            // If we found a good feasible point, we can return.
+
+            if (satisfied)
+              return heuristicLevel();
+
+            // If feasible points were found, but they were too bad, we still add the best for feasibility, aborting the loop.
+
+            if (bestIndex < std::numeric_limits<std::size_t>::max())
+            {
+              result.points.push_back(OracleResult::Point(unrestrictedResult.points[bestIndex].point, bestValue));
+              break;
+            }
+          }
+          else if (!unrestrictedResult.directions.empty())
+          {
+            for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
+            {
+              DSVectorRational const* dir = unrestrictedResult.directions[i].direction;
+              if (!face->containsDirection(*dir))
+                continue;
+
+              result.directions.push_back(OracleResult::Direction(dir));
+            }
+            
+            if (!result.directions.empty())
+              return heuristicLevel();
+          }
           else
-            delete unrestrictedResult.directions[i].direction;
+          {
+            // Infeasible: Forward to next oracle.
+            
+            break;
+          }
+
+          _factor *= 2; // Increase current scaling.
+          _M *= 2; // Increase scaling for future calls.
         }
-
-        // If a direction remains, return everything, otherwise increase M.
-
-        if (!result.directions.empty())
-          return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
       }
-      else
-      {
-        assert(unrestrictedResult.isInfeasible());
-        result.buildStart(objective);
-        return result.buildFinish(unrestrictedResult.heuristicLevel(), false, false, false);
-      }
+    }
 
-      _factor *= 2; // Increase current scaling.
-      _M *= 2; // Increase scaling for future calls.
+    // Answer not satisfactory.
+
+    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.directions.empty()))
+    {
+      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+    }
+    else
+    {
+      return heuristicLevel();
     }
   }
 

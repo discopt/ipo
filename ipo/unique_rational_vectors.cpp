@@ -58,6 +58,25 @@ namespace ipo {
       bPos++;
     }
   }
+  
+  bool equal(const SVectorRational& a, const SVectorRational& b)
+  {
+    if (a.size() != b.size())
+      return false;
+
+    for (int p = 0; p < a.size(); ++p)
+    {
+      if (a.index(p) != b.index(p))
+        return false;
+    }
+    for (int p = 0; p < a.size(); ++p)
+    {
+      if (a.value(p) != b.value(p))
+        return false;
+    }
+
+    return true;
+  }
 
   UniqueRationalVectorsBase::UniqueRationalVectorsBase(std::size_t numVariables) :
       _numVariables(numVariables)

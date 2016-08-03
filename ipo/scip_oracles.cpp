@@ -57,9 +57,8 @@ namespace ipo {
     }
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, const Space& space, SCIP* originalSCIP)
-    : OracleBase(name, space), _maxLargestCoefficient(1000), _minLargestCoefficient(1),
-    _bestLargestCoefficient(1000)
+  SCIPOracle::SCIPOracle(const std::string& name, const Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP)
+    : MIPOracleBase(name, space, mip)
   {
     Space scipSpace;
     copySCIP(originalSCIP, scipSpace);
@@ -69,9 +68,8 @@ namespace ipo {
     initializedSpace();
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, Space& space, SCIP* originalSCIP)
-    : OracleBase(name, space), _maxLargestCoefficient(1000), _minLargestCoefficient(1),
-    _bestLargestCoefficient(1000)
+  SCIPOracle::SCIPOracle(const std::string& name, Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP)
+    : MIPOracleBase(name, space, mip)
   {
     Space scipSpace;
     copySCIP(originalSCIP, scipSpace);
@@ -83,30 +81,27 @@ namespace ipo {
     initializedSpace();
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle, SCIP* originalSCIP)
-    : OracleBase(name, nextOracle), _maxLargestCoefficient(1000), _minLargestCoefficient(1),
-    _bestLargestCoefficient(1000)
+  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip, SCIP* originalSCIP)
+    : MIPOracleBase(name, nextOracle, mip)
   {
     Space scipSpace;
     copySCIP(originalSCIP, scipSpace);
     if (_space != scipSpace)
       throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
 
-    initializedSpace();
+    initializedSpace(); 
   }
 
   SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip)
-    : OracleBase(name, mip.space()), _maxLargestCoefficient(1000), _minLargestCoefficient(1),
-    _bestLargestCoefficient(1000)
+    : MIPOracleBase(name, mip.space(), mip)
   {
     initializeFromMIP(mip);
 
     initializedSpace();
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle,
-    const MixedIntegerProgram& mip)
-    : OracleBase(name, nextOracle)
+  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip)
+    : MIPOracleBase(name, nextOracle, mip)
   {
     if (mip.space() != nextOracle->space())
       throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
@@ -209,26 +204,6 @@ double(row.value(p))));
     }
   }
 
-  Rational SCIPOracle::computeVectorScaling(const VectorRational& vector)
-  {
-    assert(vector.dim() == space().dimension());
-    Rational largest = 0;
-    for (std::size_t v = 0; v < space().dimension(); ++v)
-    {
-      if (vector[v] > 0 && vector[v] > largest)
-        largest = vector[v];
-      else if (vector[v] < 0 && vector[v] < -largest)
-        largest = -vector[v];
-    }
-    if (largest > 0 && (largest > _maxLargestCoefficient
-      || largest < _minLargestCoefficient))
-    {
-      return _bestLargestCoefficient / largest;
-    }
-    else
-      return 1;
-  }
-
   void SCIPOracle::setFace(Face* newFace)
   {
     if (newFace == currentFace())
@@ -247,11 +222,14 @@ double(row.value(p))));
       DSVectorRational normalCopy;
       const Rational& largest = currentFace()->maxNorm();
       Rational scaling = 1;
-      if (largest != 0 && (largest < _minLargestCoefficient || largest > _maxLargestCoefficient))
-      {
-        scaling = _bestLargestCoefficient / largest;
-        normalCopy = currentFace()->sparseNormal() * scaling;
-      }
+      
+      // TODO: Scale currentFace()->sparseNormal properly!
+
+//       if (largest != 0 && (largest < _minLargestCoefficient || largest > _maxLargestCoefficient))
+//       {
+//         scaling = _bestLargestCoefficient / largest;
+//         normalCopy = currentFace()->sparseNormal() * scaling;
+//       }
       const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
       Rational rhs = currentFace()->rhs() * scaling;
 
@@ -269,26 +247,19 @@ double(row.value(p))));
     }
   }
 
-  void SCIPOracle::maximize(OracleResult& result, const VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic)
+  void SCIPOracle::solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
+    std::vector<double*>& rays)
   {
-    /// TODO: forwarding?
-
     std::size_t n = space().dimension();
-    if (objective.dim() != n)
-      throw std::runtime_error("Oracle called with objective vector of wrong dimension!");
 
-    /// Set SCIP objective to scaled objective vector.
-
-    Rational scalingFactor = computeVectorScaling(objective);
     for (std::size_t v = 0; v < n; ++v)
     {
-      SCIP_CALL_EXC(SCIPchgVarObj(_scip, _variables[v], double(scalingFactor * objective[v])));
+      SCIP_CALL_EXC(SCIPchgVarObj(_scip, _variables[v], objective[v]));
     }
 
-    result.buildStart(objective);
     int oldMaxRounds;
     SCIP_CALL_EXC(SCIPgetIntParam(_scip, "presolving/maxrounds", &oldMaxRounds));
+
     for (int attempt = 1; attempt <= 2; ++attempt)
     {
       try
@@ -305,18 +276,7 @@ double(row.value(p))));
       bool hasRay = SCIPhasPrimalRay(_scip);
       if (hasRay)
       {
-        DSVectorRational* direction = new DSVectorRational;
-        for (std::size_t v = 0; v < n; ++v)
-        {
-          double apxCoeff = SCIPgetPrimalRayVal(_scip, _variables[v]);
-          if (SCIPisZero(_scip, apxCoeff))
-            continue;
-          Rational exCoeff;
-          reconstruct(apxCoeff, exCoeff, 10 * SCIPfeastol(_scip));
-          if (exCoeff != 0)
-            direction->add(v, exCoeff);
-        }
-        result.buildAddDirection(direction);
+        rays.push_back(NULL);
         break;
       }
 
@@ -328,19 +288,10 @@ double(row.value(p))));
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
           SCIP_SOL* sol = solutions[solIndex];
-          DSVectorRational* point = new DSVectorRational;
+          double* point = new double[n];
           for (std::size_t v = 0; v < n; ++v)
-          {
-            double apxValue = SCIPgetSolVal(_scip, sol, _variables[v]);
-            Rational exValue;
-            if (SCIPvarIsIntegral(_variables[v]))
-              exValue = int(apxValue + 0.5);
-            else
-              reconstruct(apxValue, exValue, SCIPfeastol(_scip));
-            if (exValue != 0)
-              point->add(v, exValue);
-          }
-          result.buildAddPoint(point);
+            point[v] = SCIPgetSolVal(_scip, sol, _variables[v]);
+          points.push_back(point);
         }
 
         /// TODO: Use exact primal SCIP functionality instead of reconstruction.
@@ -349,7 +300,6 @@ double(row.value(p))));
       }
 
       // Disable presolving for the second round.
-
       SCIP_CALL_EXC(SCIPsetIntParam(_scip, "presolving/maxrounds", 0));
       SCIP_CALL_EXC(SCIPfreeSolve(_scip, true));
       SCIP_CALL_EXC(SCIPfreeTransform(_scip));
@@ -357,11 +307,7 @@ double(row.value(p))));
 
     SCIP_CALL_EXC(SCIPsetIntParam(_scip, "presolving/maxrounds", oldMaxRounds));
     SCIP_CALL_EXC(SCIPfreeSolve(_scip, true));
-
-    // TODO: Currently needed for SCIPchgVarObj, but isn't there a warm-start for that?
     SCIP_CALL_EXC(SCIPfreeTransform(_scip));
-
-    result.buildFinish(heuristicLevel(), true, true, true);
   }
 
 //   ExactSCIPOptimizationOracle::ExactSCIPOptimizationOracle(const std::string& name, const std::string& exactBinary,

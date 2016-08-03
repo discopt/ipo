@@ -60,7 +60,6 @@ public:
     _scipSpace = NULL;
     _scipMip = NULL;
     _scipOracle = NULL;
-    _scipCorrectorOracle = NULL;
 #endif
   }
 
@@ -73,8 +72,6 @@ public:
       delete _scipMip;
     if (_scipOracle)
       delete _scipOracle;
-    if (_scipCorrectorOracle)
-      delete _scipCorrectorOracle;
     if (_scipSpace)
       delete _scipSpace;
 #endif
@@ -321,10 +318,7 @@ public:
       }
 
       _scipOracle = new SCIPOracle(firstArgument, *_scipMip);
-      _scipCorrectorOracle = new MixedIntegerProgramCorrectorOracle(firstArgument + "-corrected", *_scipMip,
-        _scipOracle);
-      oracle = _scipCorrectorOracle;
-//       oracle = _scipOracle;
+      oracle = _scipOracle;
     }
 #endif
 
@@ -401,7 +395,6 @@ protected:
   Space* _scipSpace;
   MixedIntegerProgram* _scipMip;
   SCIPOracle* _scipOracle;
-  MixedIntegerProgramCorrectorOracle* _scipCorrectorOracle;
 #endif
   soplex::DSVectorRational _instanceObjective;
 };
