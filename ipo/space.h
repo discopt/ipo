@@ -2,9 +2,10 @@
 #define IPO_SPACE_H_
 
 #include <vector>
+#include <string>
 
 #include "common.h"
-
+#include "rational.h"
 
 namespace ipo {
 

@@ -2,6 +2,7 @@
 #define IPO_ROWS_H_
 
 #include "common.h"
+#include "rational.h"
 
 namespace ipo {
 

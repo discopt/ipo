@@ -8,6 +8,7 @@
 #include <string>
 
 #include "common.h"
+#include "rational.h"
 
 namespace ipo {
 

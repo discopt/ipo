@@ -4,6 +4,7 @@
 #include <vector>
 
 #include "common.h"
+#include "rational.h"
 
 namespace ipo {
 

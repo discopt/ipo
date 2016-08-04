@@ -2,6 +2,7 @@
 #define IPO_MIN_NORM_2D_H_
 
 #include "common.h"
+#include "rational.h"
 
 namespace ipo {
 
