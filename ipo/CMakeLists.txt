@@ -9,7 +9,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(Doxygen)
 
-set(IPO_SOURCES rational.cpp
+set(IPO_SOURCES vectors.cpp rational.cpp
   spx_gmp.cpp
   space.cpp
   oracles.cpp
