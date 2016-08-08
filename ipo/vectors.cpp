@@ -3,6 +3,137 @@
 #include <iostream>
 
 namespace ipo {
+
+  VectorData::Nonzero::Nonzero(std::size_t idx, const Rational& val)
+    : index(idx), value(val)
+  {
+    approximation = (double)val;
+  }
+
+  VectorData::Nonzero::~Nonzero()
+  {
+
+  }
+
+  bool VectorData::Nonzero::operator<(const VectorData::Nonzero& other) const
+  {
+    return index < other.index;
+  }
+
+  VectorData::VectorData()
+    : _mutableUsage(0), _immutableUsage(0)
+  {
+
+  }
+
+  VectorData::VectorData(std::size_t initialMemory)
+    : _mutableUsage(0), _immutableUsage(0)
+  {
+    _nonzeros.reserve(initialMemory);
+  }
+
+  VectorData::VectorData(const VectorData& other)
+    : _nonzeros(other._nonzeros), _mutableUsage(0), _immutableUsage(0)
+  {
+
+  }
+
+  VectorData::~VectorData()
+  {
+
+  }
+
+  VectorData& VectorData::operator=(const VectorData& other)
+  {
+    _nonzeros = other._nonzeros;
+  }
+
+  bool VectorData::operator==(const VectorData& other) const
+  {
+    if (_nonzeros.size() != other._nonzeros.size())
+      return false;
+
+    for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+    {
+      if (_nonzeros[i].index != other._nonzeros[i].index)
+        return false;
+      if (_nonzeros[i].approximation != other._nonzeros[i].approximation)
+        return false;
+    }
+
+    for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+    {
+      if (_nonzeros[i].value != other._nonzeros[i].value)
+        return false;
+    }
+
+    return true;
+  }
+
+  bool VectorData::operator<(const VectorData& other) const
+  {
+    if (_nonzeros.size() < other._nonzeros.size())
+      return true;
+    else if (_nonzeros.size() > other._nonzeros.size())
+      return false;
+
+    for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+    {
+      if (_nonzeros[i].index < other._nonzeros[i].index)
+        return true;
+      if (_nonzeros[i].index > other._nonzeros[i].index)
+        return false;
+      if (_nonzeros[i].approximation < other._nonzeros[i].approximation)
+        return true;
+      if (_nonzeros[i].approximation > other._nonzeros[i].approximation)
+        return false;
+    }
+
+    for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+    {
+      if (_nonzeros[i].value < other._nonzeros[i].value)
+        return true;
+      if (_nonzeros[i].value > other._nonzeros[i].value)
+        return false;
+    }
+
+    return false;
+  }
+
+  void VectorData::add(std::size_t index, const Rational& value)
+  {
+    assert(_immutableUsage == 0);
+    _nonzeros.push_back(Nonzero(index, value));
+  }
+
+  void VectorData::sort()
+  {
+    assert(_immutableUsage == 0);
+    std::sort(_nonzeros.begin(), _nonzeros.end());
+  }
+
+  bool VectorData::isSorted() const
+  {
+    if (_nonzeros.size() <= 1)
+      return true;
+
+    std::size_t max = _nonzeros.size() - 1;
+    for (std::size_t i = 0; i < max; ++i)
+    {
+      if (_nonzeros[i].index >= _nonzeros[i+1].index)
+        return false;
+    }
+    return true;
+  }
+  
+  void VectorData::deleteIfUnused()
+  {
+    if (_mutableUsage == 0 && _immutableUsage == 0)
+      delete this;
+  }
+
+  
+  
   
   bool SparseVector::Nonzero::operator<(const SparseVector::Nonzero& other) const
   {
