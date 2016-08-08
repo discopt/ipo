@@ -5,8 +5,6 @@
 
 #include "common.h"
 #include "oracles.h"
-#include "unique_rational_vectors.h"
-
 
 namespace ipo {
 
@@ -20,8 +18,7 @@ namespace ipo {
      * explicitly. The storage is external via the const references \p points and \p directions.
      */
 
-    CacheOracle(const std::string& name, const Space& space,
-      const UniqueRationalVectorsBase& points, const UniqueRationalVectorsBase& directions);
+    CacheOracle(const std::string& name, const Space& space);
 
     /**
      * \brief Constructs an oracle that stores points and directions explicitly.
@@ -31,8 +28,7 @@ namespace ipo {
      * references \p points and \p directions.
      */
 
-    CacheOracle(const std::string& name, OracleBase* nextOracle,
-      const UniqueRationalVectorsBase& points, const UniqueRationalVectorsBase& directions);
+    CacheOracle(const std::string& name, OracleBase* nextOracle);
 
     /**
      * \brief Destructor.
@@ -55,28 +51,23 @@ namespace ipo {
 
     virtual void setFace(Face* newFace = NULL);
 
-//     /**
-//      * \brief Runs the oracle to maximize the dense rational \p objective.
-//      *
-//      * Runs the optimization oracle to maximize the given dense rational \p objective
-//      * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-//      * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-//      * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-//      * next oracle.
-//      *
-//      * \param result         After the call, contains the oracle's answer.
-//      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-//      * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-//      * \param maxHeuristic   Requested maximum heuristic level.
-//      * \param minHeuristic   Requested minimum heuristic level.
-//      *
-//      * This implementation searches in the associated point / direction storage.
-//      */
-// 
-//     virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-//       const ObjectiveBound& objectiveBound = ObjectiveBound(),
-//       std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-//       std::size_t minHeuristic = 0);
+    /**
+     * \brief Wrapper method that calls the oracle's implementation.
+     *
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
+     *
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
+     *
+     * This implementation calls the standard implementation from \ref OracleBase and adds new points and rays to the cache.
+     */
+
+    virtual std::size_t maximizeController(OracleResult& result, const DenseVector& objective,
+      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
     
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.
@@ -91,44 +82,68 @@ namespace ipo {
      *
      * This implementation searches in the point / ray storage for suitable results.
      */
-    
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+
+    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
-  protected:
-    struct VectorStats
+    bool addPoint(SparseVector& point);
+
+    bool addRay(SparseVector& ray);
+    
+    inline std::size_t numPoints() const
     {
+      return _uniquePoints.size();
+    }
+
+    inline std::size_t numRays() const
+    {
+      return _uniqueDirections.size();
+    }
+
+  protected:
+    struct Data
+    {
+      SparseVector vector;
+
       int valueExponent;
       double valueMantissa;
-      std::size_t sparsity;
-      std::size_t index;
 
-      double value; // TODO: remove
+      Data(SparseVector& vector);
+      ~Data();
 
-      VectorStats();
-      VectorStats(double theObjectiveValue, std::size_t theSparsity, std::size_t theIndex);
-      VectorStats& operator=(const VectorStats& other);
-      bool operator<(const VectorStats& other) const;
+      void updateObjective(const DenseVectorApproximation& approximateObjective, double approximateObjectiveBound);
+      bool operator<(const Data& other) const;
     };
+    
+    void search(std::vector<Data>& vectors, const DenseVectorApproximation& approximateObjective,
+      double approximateObjectiveBound, bool handlingPoints, std::vector<SparseVector>& result);
+    
+//     struct VectorStats
+//     {
+//       
+// 
+//       double value; // TODO: remove
+// 
+//       VectorStats();
+//       VectorStats(double theObjectiveValue, std::size_t theSparsity, std::size_t theIndex);
+//       VectorStats& operator=(const VectorStats& other);
+//       bool operator<(const VectorStats& other) const;
+//     };
+// 
+//     typedef std::vector<std::size_t> FaceIndices;
+// 
+//     void updateFaceIndices(const UniqueRationalVectorsBase& vectors, FaceIndices& faceIndices,
+//       std::size_t& end, bool handlingPoints);
+// 
+//     void search(const UniqueRationalVectorsBase& vectors, const FaceIndices& faceIndices,
+//       const soplex::VectorReal& approxObjective, double approxObjectiveBound, bool handlingPoints,
+//       std::vector<std::size_t>& result);
 
-    typedef std::vector<std::size_t> FaceIndices;
-
-    void updateFaceIndices(const UniqueRationalVectorsBase& vectors, FaceIndices& faceIndices,
-      std::size_t& end, bool handlingPoints);
-
-    void search(const UniqueRationalVectorsBase& vectors, const FaceIndices& faceIndices,
-      const soplex::VectorReal& approxObjective, double approxObjectiveBound, bool handlingPoints,
-      std::vector<std::size_t>& result);
-
-    const UniqueRationalVectorsBase& _points;
-    FaceIndices _facePoints;
-    std::size_t _endFacePoints;
-
-    const UniqueRationalVectorsBase& _directions;
-    FaceIndices _faceDirections;
-    std::size_t _endFaceDirections;
-
-    std::vector<VectorStats> _vectorStats;
+  protected:
+    UniqueSparseVectors _uniquePoints;
+    UniqueSparseVectors _uniqueDirections;
+    std::vector<Data> _facePoints;
+    std::vector<Data> _faceDirections;
   };
 
 } /* namespace ipo */

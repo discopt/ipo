@@ -6,6 +6,7 @@
 
 #include "common.h"
 #include "rational.h"
+#include "vectors.h"
 
 namespace ipo {
 
@@ -102,6 +103,24 @@ namespace ipo {
     void printLinearForm(std::ostream& stream, const soplex::SVectorRational* coefficients) const;
 
     /**
+     * \brief Prints the linear form with these \c coefficients to \c stream.
+     *
+     * Prints the linear form with theses \c coefficients to \c stream using the variable names.
+     * Does not emit a newline character.
+     */
+
+    void printLinearForm(std::ostream& stream, const SparseVector& coefficients) const;
+
+    /**
+     * \brief Prints the linear form with these \c coefficients to \c stream.
+     *
+     * Prints the linear form with theses \c coefficients to \c stream using the variable names.
+     * Does not emit a newline character.
+     */
+
+    void printLinearForm(std::ostream& stream, const DenseVector* coefficients) const;
+
+    /**
      * \brief Prints the \c row (inequality / equation) to \c stream.
      *
      * Prints the \c row (inequality / equation) to \c stream using the variable names. Does not
@@ -137,6 +156,15 @@ namespace ipo {
      */
 
     void printVector(std::ostream& stream, const soplex::SVectorRational* vector) const;
+
+    /**
+     * \brief Prints \c vector to \c stream.
+     *
+     * Prints \c vector to \c stream using the variable names of the oracle.
+     * Does not emit a newline character.
+     */
+
+    void printVector(std::ostream& stream, const SparseVector& vector) const;
 
     /**
      * \brief Returns \c true iff spaces are equal.

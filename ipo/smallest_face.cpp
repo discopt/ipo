@@ -5,6 +5,7 @@
 #include <map>
 
 #include "polar_lp.h"
+#include "cache_oracle.h"
 
 using namespace soplex;
 
@@ -15,11 +16,10 @@ namespace ipo {
     class NormalConeOracle: public OracleBase, public PolarLP
     {
     public:
-      NormalConeOracle(Space& space, UniqueRationalVectorsBase& originalPoints,
-        UniqueRationalVectorsBase& originalRays, OracleBase* originalOracle,
-        const SVectorRational* target, OutputBase* output)
+      NormalConeOracle(Space& space, OracleBase* originalOracle,
+        const SparseVector& target, OutputBase* output)
         : OracleBase("normal cone of " + originalOracle->name(), space),
-        PolarLP(originalPoints, originalRays, originalOracle, 1024.0, 1000), _output(output)
+        PolarLP(originalOracle, 1024.0, 1000), _output(output)
       {
         if (space.dimension() == 0)
         {
@@ -38,7 +38,8 @@ namespace ipo {
         /// Initialize Polar LP.
 
         DSVectorRational vector;
-        vector = *target;
+        for (std::size_t p = 0; p < target.size(); ++p)
+          vector.add(target.index(p), target.value(p));
         vector.add(n(), Rational(-1));
         _pointConstraint = addConstraint(Rational(0), vector, Rational(0));
         for (std::size_t v = 0; v < n(); ++v)
@@ -110,7 +111,6 @@ namespace ipo {
 //         return result.buildAddPoint(solution);
 //       }
 
-
       /**
        * \brief Oracle's implementation to maximize the dense rational \p objective.
        *
@@ -125,8 +125,8 @@ namespace ipo {
        *
        * This implementation solves the polar LP to optimize over the normal cone at a point.
        */
-
-      virtual std::size_t maximizeImplementation(OracleResult& result, const VectorRational& objective,
+      
+      virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
         const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
       {
         updateObjective(objective);
@@ -139,10 +139,9 @@ namespace ipo {
 
         optimize(false);
 
-        DSVectorRational* solution = new DSVectorRational;
-        getPrimalSolution(*solution);
+        SparseVector solution = getPrimalSolution();
 
-        if (*solution * objective == 0)
+        if (scalarProduct(solution, objective) == 0)
           result.points.push_back(OracleResult::Point(solution));
         else
           result.directions.push_back(OracleResult::Direction(solution));
@@ -220,11 +219,8 @@ std::size_t numRays,
     class Implementation
     {
     public:
-      Implementation(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-OracleBase* oracle) :
-          _originalPoints(points), _originalDirections(directions), _originalOracle(oracle),
-_output(NULL), _normalConeOracle(
-          NULL), _dimension(-2)
+      Implementation(OracleBase* oracle)
+        : _originalOracle(oracle), _output(NULL), _normalConeOracle(NULL), _dimension(-2)
       {
         _maximizingObjective.reDim(_originalOracle->space().dimension() + 1);
       }
@@ -234,21 +230,15 @@ _output(NULL), _normalConeOracle(
 
       }
 
-      bool verifyNormalConeElements(OracleResult& result, const SVectorRational& objective,
-        const VectorRational& target)
+      bool verifyNormalConeDirection(OracleResult& result, const SparseVector& targetPoint, const SparseVector& direction)
       {
-        Rational product = objective * target;
-        _originalOracle->maximize(result, objective, ObjectiveBound());
-        result.addToContainers(_originalPoints, _originalDirections);
-        if (result.isFeasible() && result.points.front().objectiveValue == product)
-          return true;
-        else
-          return false;
+        Rational product = scalarProduct(direction, targetPoint);
+        _originalOracle->maximize(result, direction, ObjectiveBound());
+        return result.isFeasible() && result.points.front().objectiveValue == product;
       }
 
-      int run(const Point* target, OutputBase& output, LPRowSetRational& coneEquations,
-          const std::vector<DSVectorRational*>& freeNormalConeElements,
-          const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
+      int run(const SparseVector& targetPoint, OutputBase& output, LPRowSetRational& coneEquations,
+        const std::vector<SparseVector>& normalConeDirections, bool verifyDirections)
       {
         std::size_t n = _originalOracle->space().dimension();
         _output = &output;
@@ -258,83 +248,75 @@ _output(NULL), _normalConeOracle(
         _output->onStart();
 
         Space normaleConeSpace;
-        NormalConeOracle normalConeOracle(normaleConeSpace, _originalPoints,
-          _originalDirections, _originalOracle, target, _output);
-        _normalConeOracle = &normalConeOracle;
-        UniqueRationalVectors conePoints(n + 1);
-        UniqueRationalVectors coneRays(n + 1);
+        NormalConeOracle definitionOracle(normaleConeSpace, _originalOracle, targetPoint, _output);
+        CacheOracle cacheOracle("cached " + definitionOracle.name(), &definitionOracle);
+        
+        _normalConeDefinitionOracle = &definitionOracle;
+        _normalConeOracle = &cacheOracle;
 
         /// Initialize points and directions.
+        SparseVector zeroVector(0);
+        cacheOracle.addPoint(zeroVector);
 
-        conePoints.insertFree(new Point);
-
-        DVectorRational denseTarget;
+//         DVectorRational denseTarget;
         OracleResult verifyResult;
-        std::size_t numElements = freeNormalConeElements.size() + copyNormalConeElements.size();
-        if (verifyElements)
+        if (verifyDirections)
         {
-          denseTarget.reDim(n, true);
-          denseTarget.assign(*target);
-          if (verifyElements)
-            _output->onBeforeVerifyElements(numElements);
+//           denseTarget.reDim(n, true);
+//           denseTarget.assign(*target);
+          if (verifyDirections)
+            _output->onBeforeVerifyElements(normalConeDirections.size());
         }
-        for (std::size_t i = 0; i < numElements; ++i)
+        for (std::size_t i = 0; i < normalConeDirections.size(); ++i)
         {
-          bool free = i < freeNormalConeElements.size();
-          std::size_t index = free ? i : i - freeNormalConeElements.size();
-          const SVectorRational& element = free ? *freeNormalConeElements[index] :
-*copyNormalConeElements[index];
-
-          if (verifyElements)
+          if (verifyDirections)
           {
             _output->onBeforeOracleVerifyElement(i);
-            bool verified = verifyNormalConeElements(verifyResult, element, denseTarget);
-            _output->onAfterOracleVerifyElement(verifyResult.points.size(),
-verifyResult.directions.size(), verified);
+            bool verified = verifyNormalConeDirection(verifyResult, targetPoint, normalConeDirections[i]);
+            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.directions.size(), verified);
             if (!verified)
               continue;
           }
 
-          Direction* ray;
-          if (free)
-            ray = freeNormalConeElements[i];
-          else
-          {
-            ray = new Direction;
-            *ray = *copyNormalConeElements[i];
-          }
-          Rational rhs = *ray * *target;
+          std::size_t size = normalConeDirections.size() + 1; // maximum size of (a,beta).
+          Rational rhs = scalarProduct(normalConeDirections[i], targetPoint);
           if (rhs != 0)
-            ray->add(n, rhs);
+            ++size;
+          SparseVector ray(size);
+          for (std::size_t p = 0; p < normalConeDirections[i].size(); ++p)
+            ray.add(normalConeDirections[i].index(p), normalConeDirections[p].value(p));
+          if (rhs != 0)
+            ray.add(n, rhs);
 
-          coneRays.insertFree(ray);
+          cacheOracle.addRay(ray);
         }
-        if (verifyElements)
-          _output->onAfterVerifyElements(numElements);
+        if (verifyDirections)
+          _output->onAfterVerifyElements(normalConeDirections.size());
 
         /// Initialize equations.
 
         DSVectorRational vector;
-        vector = *target;
+        for (std::size_t p = 0; p < targetPoint.size(); ++p)
+          vector.add(targetPoint.index(p), targetPoint.value(p));
         vector.add(n, Rational(-1));
         coneEquations.add(Rational(0), vector, Rational(0));
 
-        _output->onAddedInitials(conePoints.size(), coneRays.size(), coneEquations.num());
+        _output->onAddedInitials(cacheOracle.numPoints(), cacheOracle.numRays(), coneEquations.num());
 
         /// Start affine hull algorithm.
 
         AffineHull::OutputBase& hullOutput = output.normalConeHullOutput();
         AffineHull::Result hull;
-        hull.run(conePoints, coneRays, coneEquations, &normalConeOracle, hullOutput);
+        hull.run(coneEquations, _normalConeOracle, hullOutput);
         _dimension = n - hull.dimension();
 
         /// Extract ray.
 
         _maximizingObjective.clear();
         for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)
-          _maximizingObjective += *conePoints[hull.spanningPoints()[i]];
-        for (std::size_t i = 0; i < hull.numSpanningDirections(); ++i)
-          _maximizingObjective += *coneRays[hull.spanningDirections()[i]];
+          add(_maximizingObjective, hull.spanningPoint(i));
+        for (std::size_t i = 0; i < hull.numSpanningRays(); ++i)
+          add(_maximizingObjective, hull.spanningRay(i));
 
         _output->onEnd();
         _output->_implementation = NULL;
@@ -343,56 +325,54 @@ verifyResult.directions.size(), verified);
         return _dimension;
       }
 
-      int runAdjacency(const Point* first, const Point* second, OutputBase& output,
-          const std::vector<DSVectorRational*>& freeNormalConeElements,
-          const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
+      int runAdjacency(const SparseVector& first, const SparseVector& second, OutputBase& output,
+          const std::vector<SparseVector>& normalConeElements, bool verifyRays)
       {
+        // Auxiliary vector.
+
         DVectorRational dense;
-        dense.reDim(_originalOracle->space().dimension(), true);
-        Point sparse;
+        dense.reDim(_originalOracle->space().dimension(), true);        
 
-        /// Compute difference and create equation valid for normal cone.
+        // Compute difference and create equation valid for normal cone.
 
+        DSVectorRational vector;
         LPRowSetRational coneEquations;
-        dense.assign(*first);
-        dense -= *second;
-        sparse = dense;
-        coneEquations.add(Rational(0), sparse, Rational(0));
+        assign(dense, first);
+        subtract(dense, second);
+        vector = dense;
+        coneEquations.add(Rational(0), vector, Rational(0));
 
-        /// Compute barycenter.
+        // Compute barycenter.
 
-        dense.clear();
-        dense.assign(*first);
-        dense += *second;
-        sparse.clear();
+        SparseVector targetPoint(_originalOracle->space().dimension());
+        assign(dense, first);
+        add(dense, second);
+
         for (std::size_t v = 0; v < _originalOracle->space().dimension(); ++v)
         {
           if (dense[v] != 0)
-            sparse.add(v, dense[v] / 2);
+            targetPoint.add(v, dense[v] / 2);
         }
 
-        return run(&sparse, output, coneEquations, freeNormalConeElements, copyNormalConeElements,
-verifyElements);
+        return run(targetPoint, output, coneEquations, normalConeElements, verifyRays);
       }
 
       friend class InformationBase;
       friend class Result;
 
     protected:
-      UniqueRationalVectorsBase& _originalPoints;
-      UniqueRationalVectorsBase& _originalDirections;
       OracleBase* _originalOracle;
       OutputBase* _output;
-      NormalConeOracle* _normalConeOracle;
+      NormalConeOracle* _normalConeDefinitionOracle;
+      CacheOracle* _normalConeOracle;
 
       int _dimension;
-      DVectorRational _maximizingObjective;
+      DenseVector _maximizingObjective;
     };
 
-    Result::Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-OracleBase* oracle)
+    Result::Result(OracleBase* oracle)
     {
-      _implementation = new Implementation(points, directions, oracle);
+      _implementation = new Implementation(oracle);
     }
 
     Result::~Result()
@@ -409,7 +389,7 @@ OracleBase* oracle)
       return _implementation->_dimension;
     }
 
-    void Result::getMaximizingObjective(soplex::DSVectorRational& maximizingObjective) const
+    SparseVector Result::getMaximizingObjective() const
     {
       assert(hasImplementation());
       if (_implementation->_dimension < -1)
@@ -417,103 +397,96 @@ OracleBase* oracle)
 
       /// Copy maximizing objective by hand since the implementation variable has dimension n+1.
 
-      maximizingObjective.clear();
+      SparseVector result(numVariables());
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
         const Rational& x = _implementation->_maximizingObjective[v];
         if (x != 0)
-          maximizingObjective.add(v, x);
+          result.add(v, x);
       }
+      return result;
     }
 
-    int Result::run(const Point* target, OutputBase& output,
-        const std::vector<const soplex::SVectorRational*>& normalConeElements, bool verifyElements)
+    int Result::run(const SparseVector& targetPoint, OutputBase& output,
+        const std::vector<SparseVector>& normalConeRays, bool verifyRays)
     {
       LPRowSetRational coneEquations;
-      std::vector<DSVectorRational*> freeNormalConeElements;
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
-normalConeElements,
-          verifyElements);
+      return _implementation->run(targetPoint, output, coneEquations, normalConeRays, verifyRays);
     }
 
-    int Result::run(const Point* target, OutputBase& output, const LPRowSetRational&
-affineHullEquations)
+    int Result::run(const SparseVector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
     {
       LPRowSetRational coneEquations;
-      std::vector<DSVectorRational*> freeNormalConeElements;
-      std::vector<const SVectorRational*> copyNormalConeElements;
+      std::vector<SparseVector> normalConeRays;
       for (int i = affineHullEquations.num() - 1; i >= 0; --i)
       {
-        DSVectorRational* positiveNormal = new DSVectorRational;
-        *positiveNormal = affineHullEquations.rowVector(i);
-        DSVectorRational* negativeNormal = new DSVectorRational;
-        *negativeNormal = affineHullEquations.rowVector(i);
-        *negativeNormal *= -1;
-        freeNormalConeElements.push_back(positiveNormal);
-        freeNormalConeElements.push_back(negativeNormal);
+        const SVectorRational& normal = affineHullEquations.rowVector(i);
+        SparseVector positiveRay(normal.size());
+        SparseVector negativeRay(normal.size());
+        for (std::size_t p = 0; p < normal.size(); ++p)
+        {
+          positiveRay.add(normal.index(p), normal.value(p));
+          negativeRay.add(normal.index(p), -normal.value(p));
+        }
+        normalConeRays.push_back(positiveRay);
+        normalConeRays.push_back(negativeRay);
       }
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
-copyNormalConeElements, false);
+      return _implementation->run(targetPoint, output, coneEquations, normalConeRays, false);
     }
 
-    int Result::run(const Point* target, OutputBase& output)
+    int Result::run(const SparseVector& targetPoint, OutputBase& output)
     {
       LPRowSetRational coneEquations;
-      std::vector<DSVectorRational*> freeNormalConeElements;
-      std::vector<const SVectorRational*> copyNormalConeElements;
-      return _implementation->run(target, output, coneEquations, freeNormalConeElements,
-copyNormalConeElements, false);
+      std::vector<SparseVector> normalConeRays;
+      return _implementation->run(targetPoint, output, coneEquations, normalConeRays, false);
     }
 
-    bool Result::isVertex(const Point* target, OutputBase& output,
-        const std::vector<const SVectorRational*>& normalConeElements, bool verifyElements)
+    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output, const std::vector<SparseVector>& normalConeRays,
+      bool verifyRays)
     {
-      return run(target, output, normalConeElements, verifyElements) == 0;
+      return run(targetPoint, output, normalConeRays, verifyRays) == 0;
     }
 
-    bool Result::isVertex(const Point* target, OutputBase& output, const LPRowSetRational&
-affineHullEquations)
+    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
     {
-      return run(target, output, affineHullEquations) == 0;
+      return run(targetPoint, output, affineHullEquations) == 0;
     }
 
-    bool Result::isVertex(const Point* target, OutputBase& output)
+    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output)
     {
-      return run(target, output) == 0;
+      return run(targetPoint, output) == 0;
     }
 
-    bool Result::areAdjacent(const Point* first, const Point* second, OutputBase& output,
-        const std::vector<const SVectorRational*>& copyNormalConeElements, bool verifyElements)
+    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output,
+      const std::vector<SparseVector>& normalConeRays, bool verifyRays)
     {
-      std::vector<DSVectorRational*> freeNormalConeElements;
-      return _implementation->runAdjacency(first, second, output, freeNormalConeElements,
-copyNormalConeElements,
-          verifyElements);
+      return _implementation->runAdjacency(firstPoint, secondPoint, output, normalConeRays, verifyRays);
     }
 
-    bool Result::areAdjacent(const Point* first, const Point* second, OutputBase& output,
-        const LPRowSetRational& affineHullEquations)
+    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output,
+      const LPRowSetRational& affineHullEquations)
     {
-      std::vector<DSVectorRational*> freeNormalConeElements;
-      std::vector<const SVectorRational*> copyNormalConeElements;
+      std::vector<SparseVector> normalConeRays;
       for (int i = affineHullEquations.num() - 1; i >= 0; --i)
       {
-        DSVectorRational* positiveNormal = new DSVectorRational;
-        *positiveNormal = affineHullEquations.rowVector(i);
-        DSVectorRational* negativeNormal = new DSVectorRational;
-        *negativeNormal = affineHullEquations.rowVector(i);
-        *negativeNormal *= -1;
-        freeNormalConeElements.push_back(positiveNormal);
-        freeNormalConeElements.push_back(negativeNormal);
+        const SVectorRational& normal = affineHullEquations.rowVector(i);
+        SparseVector positiveRay(normal.size());
+        SparseVector negativeRay(normal.size());
+        for (std::size_t p = 0; p < normal.size(); ++p)
+        {
+          positiveRay.add(normal.index(p), normal.value(p));
+          negativeRay.add(normal.index(p), -normal.value(p));
+        }
+        normalConeRays.push_back(positiveRay);
+        normalConeRays.push_back(negativeRay);
       }
-      return _implementation->runAdjacency(first, second, output, freeNormalConeElements,
-copyNormalConeElements, false);
+      return _implementation->runAdjacency(firstPoint, secondPoint, output, normalConeRays, false);
     }
 
-    bool Result::areAdjacent(const Point* first, const Point* second, OutputBase& output)
+    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output)
     {
-      std::vector<const SVectorRational*> copyNormalConeElements;
-      return areAdjacent(first, second, output, copyNormalConeElements, false);
+      std::vector<SparseVector> normalConeRays;
+      return areAdjacent(firstPoint, secondPoint, output, normalConeRays, false);
     }
 
     InformationBase::InformationBase() :
@@ -542,19 +515,19 @@ copyNormalConeElements, false);
     std::size_t InformationBase::numRowsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOracle->numRows();
+      return _implementation->_normalConeDefinitionOracle->numRows();
     }
 
     std::size_t InformationBase::numColumnsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOracle->numColumns();
+      return _implementation->_normalConeDefinitionOracle->numColumns();
     }
 
     std::size_t InformationBase::numNonzerosLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeOracle->numNonzeros();
+      return _implementation->_normalConeDefinitionOracle->numNonzeros();
     }
 
     bool InformationBase::hasImplementation() const
@@ -825,9 +798,8 @@ std::flush;
     void ProgressOutput::AffineHullOutput::onProgress()
     {
       assert(dimensionSafeUpperBound() == dimensionUnsafeUpperBound());
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " <<
-numSpanningDirections() << ",  "
-          << dimensionLowerBound() << " <= dim <= " << dimensionSafeUpperBound();
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  " 
+        << dimensionLowerBound() << " <= dim <= " << dimensionSafeUpperBound();
       std::cout << ",  Norm. cone opts: " << numHeuristicCalls() << ".\n" << std::flush;
     }
 

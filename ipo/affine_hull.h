@@ -1,9 +1,10 @@
 #ifndef IPO_AFFINE_HULL_H_
 #define IPO_AFFINE_HULL_H_
 
+#include <map>
+
 #include "common.h"
 #include "cpu_timer.h"
-#include "unique_rational_vectors.h"
 #include "oracles.h"
 
 namespace ipo {
@@ -54,14 +55,14 @@ namespace ipo {
       int dimensionLowerBound() const;
       int dimensionUnsafeUpperBound() const;
       int dimensionSafeUpperBound() const;
-      const VectorSubset& spanningPoints() const;
+      const SparseVector& spanningPoint(std::size_t i) const;
       std::size_t numSpanningPoints() const;
-      const VectorSubset& spanningDirections() const;
-      std::size_t numSpanningDirections() const;
-      const VectorSubset& basicColumns() const;
-      const VectorSubset& irredundantEquations() const;
+      const SparseVector& spanningRay(std::size_t i) const;
+      std::size_t numSpanningRays() const;
+      const std::vector<std::size_t>& basicColumns() const;
+      const std::vector<std::size_t>& irredundantEquations() const;
       std::size_t numIrredundantEquations() const;
-      const VectorSubset& potentialEquations() const;
+      const std::vector<std::size_t>& potentialEquations() const;
       std::size_t numPotentialEquations() const;
       std::size_t numCacheQueries() const;
       std::size_t numCacheHits() const;
@@ -253,16 +254,13 @@ namespace ipo {
 
       int dimension() const;
 
-      int run(UniqueRationalVectorsBase& points,
-        UniqueRationalVectorsBase& directions,soplex::LPRowSetRational& equations,
-        OracleBase* oracle, OutputBase& output,
+      int run(soplex::LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
       friend class Implementation;
     };
 
-    int run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions, soplex::LPRowSetRational& equations,
-        OracleBase* oracle, OutputBase& output,
+    int run(soplex::LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
   } /* namespace AffineHull */

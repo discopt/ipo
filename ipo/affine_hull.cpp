@@ -4,6 +4,7 @@
 
 #include "reconstruct.h"
 #include "vector_space_generators.h"
+#include "vectors.h"
 
 using namespace soplex;
 
@@ -106,9 +107,9 @@ namespace ipo {
         }
       }
 
-      void computeKernelVector(std::size_t columnIndex, DSVectorRational& result) const
+      void computeKernelVector(std::size_t columnIndex, DenseVector& result) const
       {
-        DVectorRational rhs;
+        DenseVector rhs;
         rhs.reDim(numRows(), true);
         const SVectorRational& col = _columnVectors[columnIndex];
         for (int p = col.size() - 1; p >= 0; --p)
@@ -117,16 +118,20 @@ namespace ipo {
         solveLeftFactor(rhs);
         solveRightFactor(rhs);
 
-        result.clear();
-        result.add(columnIndex, Rational(1));
+        std::size_t size = 1;
         for (std::size_t b = 0; b < _basicColumns.size(); ++b)
         {
           if (rhs[b] != 0)
-            result.add(_basicColumns[b], rhs[b]);
+            ++size;
         }
+        result.reDim(numColumns(), false);
+        result.clear();
+        for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+          result[_basicColumns[b]] = rhs[b];
+        result[columnIndex] = Rational(1);
       }
 
-      void computeApproximateKernelVector(std::size_t columnIndex, DSVectorReal& result, double epsilon) const
+      void computeApproximateKernelVector(std::size_t columnIndex, DenseVectorApproximation& result, double epsilon) const
       {
         DVectorReal rhs;
         rhs.reDim(numRows(), true);
@@ -137,13 +142,14 @@ namespace ipo {
         solveLeftApproximateFactor(rhs);
         solveRightApproximateFactor(rhs);
 
+        result.reDim(numColumns());
         result.clear();
-        result.add(columnIndex, 1.0);
         for (std::size_t b = 0; b < _basicColumns.size(); ++b)
         {
           if (fabs(rhs[b]) > epsilon)
-            result.add(_basicColumns[b], rhs[b]);
+            result[_basicColumns[b]] = rhs[b];
         }
+        result[columnIndex] = 1.0;
       }
 
       void dump()
@@ -185,7 +191,7 @@ namespace ipo {
 
       }
 
-      void addRow(const SVectorRational& row, const Rational& last, std::size_t newBasicColumnIndex)
+      void addRow(const SparseVector& row, const Rational& last, std::size_t newBasicColumnIndex)
       {
         assert(_columnBasics[newBasicColumnIndex] == std::numeric_limits<std::size_t>::max());
 
@@ -308,19 +314,22 @@ namespace ipo {
     struct NonbasicColumn
     {
       bool exactValid;
-      DSVectorRational exactDirection;
+      DenseVector exactDirection;
       Rational exactRhs;
       bool approxValid;
-      DSVectorReal approxDirection;
+      DenseVectorApproximation approxDirection;
+      std::size_t sparsity;
       bool definesEquation;
       bool avoid;
 
       NonbasicColumn()
+        : exactDirection(0)
       {
         exactValid = false;
         approxValid = false;
         definesEquation = false;
         avoid = false;
+        sparsity = 0;
       }
 
       bool operator<(const NonbasicColumn& other) const
@@ -335,7 +344,7 @@ namespace ipo {
         if (other.avoid)
           return true;
 
-        return approxDirection.size() < other.approxDirection.size();
+        return sparsity < other.sparsity;
       }
     };
 
@@ -343,8 +352,7 @@ namespace ipo {
     {
     public:
       Implementation()
-        : _points(NULL), _directions(NULL), _equations(NULL), _oracle(NULL), _output(NULL),
-        _factorization(NULL)
+        : _equations(NULL), _oracle(NULL), _output(NULL), _factorization(NULL)
       {
         _directionColumn = std::numeric_limits<std::size_t>::max();
         _commonValue = infinity;
@@ -469,7 +477,7 @@ namespace ipo {
 
       void oracleMaximize(std::size_t minHeuristic)
       {
-        _oracle->maximize(_result, _sparseDirectionVector, _objectiveBound,
+        _oracle->maximize(_result, _directionVector, _objectiveBound,
           std::numeric_limits<std::size_t>::max(), minHeuristic);
 
         if (_result.isInfeasible())
@@ -484,11 +492,11 @@ namespace ipo {
         }
       }
 
-      void addPoint(std::size_t pointIndex, std::size_t column, bool invalidate)
+      void addPoint(SparseVector& point, std::size_t column, bool invalidate)
       {
-        _spanningPoints.push_back(pointIndex);
+        _spanningPoints.push_back(point);
         _basicColumns.push_back(column);
-        _factorization->addRow(*_points->vector(pointIndex), Rational(-1), column);
+        _factorization->addRow(point, Rational(-1), column);
 
         if (invalidate)
         {
@@ -502,7 +510,7 @@ namespace ipo {
             _columns[c].approxValid = false;
             if (_columns[c].exactValid)
             {
-              Rational product = _columns[c].exactDirection * lastRow;
+              Rational product = scalarProduct(_columns[c].exactDirection, lastRow);
               product -= _columns[c].exactRhs;
               if (product != 0)
               {
@@ -514,11 +522,11 @@ namespace ipo {
         }
       }
 
-      void addDirection(std::size_t directionIndex, std::size_t column, bool invalidate)
+      void addDirection(SparseVector& direction, std::size_t column, bool invalidate)
       {
-        _spanningDirections.push_back(directionIndex);
+        _spanningDirections.push_back(direction);
         _basicColumns.push_back(column);
-        _factorization->addRow(*_directions->vector(directionIndex), Rational(0), column);
+        _factorization->addRow(direction, Rational(0), column);
 
         if (invalidate)
         {
@@ -532,7 +540,7 @@ namespace ipo {
             _columns[c].approxValid = false;
             if (_columns[c].exactValid)
             {
-              Rational product = _columns[c].exactDirection * lastRow;
+              Rational product = scalarProduct(_columns[c].exactDirection, lastRow);
               if (product != 0)
               {
                 _columns[c].exactValid = false;
@@ -545,11 +553,11 @@ namespace ipo {
 
       void findLastPoint()
       {
-        _sparseDirectionVector.clear();
+        _directionVector.clear();
 
         _output->onBeforeOracleZero();
 
-        _oracle->maximize(_result, _sparseDirectionVector);
+        _oracle->maximize(_result, _directionVector);
 
         _output->onAfterOracleZero(_result.points.size());
 
@@ -568,10 +576,8 @@ namespace ipo {
         {
           assert(_result.isFeasible());
 
-          _result.addToContainers(*_points, *_directions);
-
           _output->onBeforePoint(false);
-          addPoint(_result.points.front().index, n(), false);
+          addPoint(_result.points.front().vector, n(), false);
           _output->onAfterPoint(false);
 
           return;
@@ -639,17 +645,7 @@ namespace ipo {
         NonbasicColumn& col = _columns[column];
         _factorization->computeKernelVector(column, col.exactDirection);
 
-        col.exactDirection.sort();
-        col.exactRhs = 0;
-        if (col.exactDirection.size() > 0)
-        {
-          int pos = col.exactDirection.size() - 1;
-          if (col.exactDirection.index(pos) == n())
-          {
-            col.exactRhs = col.exactDirection.value(pos);
-            col.exactDirection.remove(pos);
-          }
-        }
+        col.exactRhs = col.exactDirection[n()];
         col.exactValid = true;
 
         /// Also update approximate direction.
@@ -666,30 +662,6 @@ namespace ipo {
           return true;
         }
         return false;
-      }
-
-      std::size_t findPointsDifferingVariable(std::size_t firstPointIndex,
-        std::size_t secondPointIndex)
-      {
-        const DSVectorRational& firstPoint = *_points->vector(firstPointIndex);
-        const DSVectorRational& secondPoint = *_points->vector(secondPointIndex);
-
-        DVectorRational difference;
-        difference.reDim(n(), true);
-        difference.assign(firstPoint);
-        for (int p = secondPoint.size() - 1; p >= 0; --p)
-          difference[secondPoint.index(p)] -= secondPoint.value(p);
-        for (std::size_t v = 0; v < n(); ++v)
-        {
-          if (_factorization->isBasic(v))
-            continue;
-          if (difference[v] != 0)
-          {
-            return v;
-          }
-        }
-
-        return std::numeric_limits<std::size_t>::max();
       }
 
       int getUpperBound(int minHeuristic)
@@ -733,23 +705,23 @@ namespace ipo {
           }
           while (checkDirectionDepends());
 
-          _sparseDirectionVector = _columns[_directionColumn].exactDirection;
-          _denseDirectionVector.clear();
-          _denseDirectionVector.assign(_sparseDirectionVector);
+          // We obtain the direction vector from a nonbasic column.
+          _lastDirectionBitsize = 0;
           for (std::size_t v = 0; v < n(); ++v)
-            _denseApproximateDirectionVector[v] = double(_denseDirectionVector[v]);
-          if (_spanningPoints.empty())
-            _commonValue = infinity;
-          else
           {
-            _commonValue = *_points->vector(*_spanningPoints.begin()) * _denseDirectionVector;
+            _directionVector[v] = _columns[_directionColumn].exactDirection[v];
+            _approximateDirectionVector[v] = double(_directionVector[v]);
+            if (_directionVector[v] != 0)
+              _lastDirectionBitsize += _directionVector[v].sizeInBase(2);
           }
 
-          /// Measure bitsize.
+          if (_spanningPoints.empty())
+            _commonValue = plusInfinity;
+          else
+            _commonValue = scalarProduct(*_spanningPoints.begin(), _directionVector);
 
-          _lastDirectionBitsize = 0;
-          for (int p = _sparseDirectionVector.size() - 1; p >= 0; --p)
-            _lastDirectionBitsize += _sparseDirectionVector.value(p).sizeInBase(2);
+          // Measure bitsize.
+
           _maxDirectionBitsize = std::max(_maxDirectionBitsize, _lastDirectionBitsize);
           _output->onAfterExactDirections(_numExactDirectionSolves - oldNumExactDirectionSolves);
 
@@ -766,8 +738,6 @@ namespace ipo {
           oracleMaximize(minHeuristic);
           _output->onAfterOracleMaximize(_result.points.size(), _result.directions.size());
 
-          _result.addToContainers(*_points, *_directions);
-
           if (_result.isInfeasible())
           {
             if (!_spanningPoints.empty() || !_spanningDirections.empty())
@@ -780,7 +750,7 @@ namespace ipo {
           else if (_result.isUnbounded())
           {
             _output->onBeforeDirection();
-            addDirection(_result.directions.front().index, _directionColumn, true);
+            addDirection(_result.directions.front().vector, _directionColumn, true);
             _output->onAfterDirection();
             continue;
           }
@@ -793,33 +763,31 @@ namespace ipo {
               // Case |S| = 0: We might add two points.
 
               const Rational& firstObjectiveValue = _result.points.front().objectiveValue;
-              std::size_t secondPoint = 0;
+              SparseVector* firstPoint = &_result.points.front().vector;
+              SparseVector* secondPoint = NULL;
               for (std::size_t i = 1; i < _result.points.size(); ++i)
               {
                 if (_result.points[i].objectiveValue != firstObjectiveValue)
                 {
-                  secondPoint = i;
+                  secondPoint = &_result.points[i].vector;
                   break;
                 }
               }
-              std::size_t firstIndex = _result.points.front().index;
 
               // We always add the maximizer.
 
               _output->onBeforePoint(secondPoint > 0);
-              addPoint(firstIndex, n(), true);
-              if (secondPoint > 0)
+              addPoint(*firstPoint, n(), true);
+              if (secondPoint != NULL)
               {
-                // If there exist a point with different objective value, we add it as well.
+                // If there exists a point with different objective value, we add it as well.
 
-                 std::size_t secondIndex = _result.points[secondPoint].index;
-                 std::size_t differingVariable = findPointsDifferingVariable(firstIndex,
-                   secondIndex);
+                 std::size_t differingVariable = differingIndex(*firstPoint, *secondPoint);
                  assert(differingVariable != std::numeric_limits<std::size_t>::max());
-                 addPoint(secondIndex, differingVariable, true);
+                 addPoint(*secondPoint, differingVariable, true);
               }
-              _output->onAfterPoint(secondPoint > 0);
-              if (secondPoint > 0)
+              _output->onAfterPoint(secondPoint != NULL);
+              if (secondPoint != NULL)
                 continue;
               else
                 _commonValue = _result.points.front().objectiveValue;
@@ -828,19 +796,19 @@ namespace ipo {
             {
               // We add any point that has objective different from common value.
 
-              std::size_t index = std::numeric_limits<std::size_t>::max();
+              SparseVector* differentObjectiveVector = NULL;
               for (std::size_t i = 0; i < _result.points.size(); ++i)
               {
                 if (_result.points[i].objectiveValue != _commonValue)
                 {
-                  index = _result.points[i].index;
+                  differentObjectiveVector = &_result.points[i].vector;
                   break;
                 }
               }
-              if (index != std::numeric_limits<std::size_t>::max())
+              if (differentObjectiveVector != NULL)
               {
                 _output->onBeforePoint(false);
-                addPoint(index, _directionColumn, true);
+                addPoint(*differentObjectiveVector, _directionColumn, true);
                 _output->onAfterPoint(false);
                 continue;
               }
@@ -850,15 +818,13 @@ namespace ipo {
 
           /// Minimize
 
-          _sparseDirectionVector *= -1;
+          _directionVector *= -1;
           _commonValue *= -1;
 
           _objectiveBound.value = _commonValue;
           _output->onBeforeOracleMinimize();
           oracleMaximize(minHeuristic);
           _output->onAfterOracleMinimize(_result.points.size(), _result.directions.size());
-
-          _result.addToContainers(*_points, *_directions);
 
           if (_result.isInfeasible())
           {
@@ -872,26 +838,26 @@ namespace ipo {
           else if (_result.isUnbounded())
           {
             _output->onBeforeDirection();
-            addDirection(_result.points.front().index, _directionColumn, true);
+            addDirection(_result.points.front().vector, _directionColumn, true);
             _output->onAfterDirection();
             continue;
           }
           else
           {
-            std::size_t index = std::numeric_limits<std::size_t>::max();
+            SparseVector* differentObjectiveVector = NULL;
             for (std::size_t i = 0; i < _result.points.size(); ++i)
             {
               if (_result.points[i].objectiveValue != _commonValue)
               {
-                index = _result.points[i].index;
+                differentObjectiveVector = &_result.points[i].vector;
                 break;
               }
             }
 
-            if (index != std::numeric_limits<std::size_t>::max())
+            if (differentObjectiveVector != NULL)
             {
               _output->onBeforePoint(false);
-              addPoint(index, _directionColumn, true);
+              addPoint(*differentObjectiveVector, _directionColumn, true);
               _output->onAfterPoint(false);
               continue;
             }
@@ -899,11 +865,18 @@ namespace ipo {
 
           std::size_t minimizationHeuristicLevel = _result.heuristicLevel();
 
-          _sparseDirectionVector *= -1;
+          _directionVector *= -1;
           _commonValue *= -1;
+          
+          DSVectorRational sparseDirectionVector;
+          for (std::size_t v = 0; v < n(); ++v)
+          {
+            if (_directionVector[v] != 0)
+              sparseDirectionVector.add(v, _directionVector[v]);
+          }
 
-          _espace->add(_sparseDirectionVector, false);
-          _equations->add(_commonValue, _sparseDirectionVector, _commonValue);
+          _espace->add(sparseDirectionVector, false);
+          _equations->add(_commonValue, sparseDirectionVector, _commonValue);
           _columns[_directionColumn].definesEquation = true;
 
           if (minimizationHeuristicLevel > 0 || maximizationHeuristicLevel > 0)
@@ -919,9 +892,8 @@ namespace ipo {
         }
       }
 
-      int run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-        LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
-        std::size_t minHeuristicBeforeVerification, bool removeRedundantEqns)
+      int run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output, std::size_t minHeuristicBeforeVerification, 
+        bool removeRedundantEqns)
       {
         /// Free data from previous run.
 
@@ -930,8 +902,6 @@ namespace ipo {
 
         /// Reset data.
 
-        _points = &points;
-        _directions = &directions;
         _equations = &equations;
         _oracle = oracle;
         _output = &output;
@@ -945,8 +915,8 @@ namespace ipo {
         _columns.resize(n() + 1);
         _columns[n()].avoid = true;
         _directionColumn = std::numeric_limits<std::size_t>::max();
-        _denseDirectionVector.reDim(n(), false);
-        _denseApproximateDirectionVector.reDim(n(), false);
+        _directionVector.reDim(n(), false);
+        _approximateDirectionVector.reDim(n(), false);
         _commonValue = infinity;
         _numCacheQueries = 0;
         _numCacheHits = 0;
@@ -983,12 +953,13 @@ namespace ipo {
           bool failure = false;
           for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
           {
-            _sparseDirectionVector = _equations->rowVector(_potentialEquations[i]);
+            _directionVector.clear();
+            _directionVector.assign(_equations->rowVector(_potentialEquations[i]));
             const Rational& rhs = _equations->rhs(_potentialEquations[i]);
-            objectiveSum += _sparseDirectionVector;
+            objectiveSum += _directionVector;
             rhsSum += rhs;
 
-            _sparseDirectionVector *= -1;
+            _directionVector *= -1;
 
             _output->onBeforeOracleVerify(i);
             _objectiveBound.value = -rhs;
@@ -996,7 +967,6 @@ namespace ipo {
             oracleMaximize(0);
             ++_numOracleCalls;
             _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
-            _result.addToContainers(*_points, *_directions);
 
             if (_result.isFeasible())
             {
@@ -1015,15 +985,13 @@ namespace ipo {
 
           if (!failure)
           {
-            _sparseDirectionVector.clear();
-            _sparseDirectionVector = objectiveSum;
+            _directionVector = objectiveSum;
             _objectiveBound.value = rhsSum;
             _objectiveBound.strict = true;
             _output->onBeforeOracleVerify(_potentialEquations.size());
             oracleMaximize(0);
             ++_numOracleCalls;
             _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
-            _result.addToContainers(*_points, *_directions);
 
             failure = !_result.isFeasible() || _result.points.front().objectiveValue != rhsSum;
           }
@@ -1089,25 +1057,22 @@ namespace ipo {
       }
 
     protected:
-      UniqueRationalVectorsBase* _points;
-      UniqueRationalVectorsBase* _directions;
       LPRowSetRational* _equations;
       OracleBase* _oracle;
       OutputBase* _output;
-      VectorSubset _spanningPoints;
-      VectorSubset _spanningDirections;
-      VectorSubset _basicColumns;
-      VectorSubset _irredundantEquations;
-      VectorSubset _potentialEquations;
+      std::vector<SparseVector> _spanningPoints;
+      std::vector<SparseVector> _spanningDirections;
+      std::vector<std::size_t> _basicColumns;
+      std::vector<std::size_t> _irredundantEquations;
+      std::vector<std::size_t> _potentialEquations;
       VectorSpaceGenerators *_espace;
       Factorization* _factorization;
       std::vector<NonbasicColumn> _columns;
       OracleResult _result;
       std::size_t _directionColumn;
       ObjectiveBound _objectiveBound;
-      DSVectorRational _sparseDirectionVector;
-      DVectorRational _denseDirectionVector;
-      DVectorReal _denseApproximateDirectionVector;
+      DenseVector _directionVector;
+      DenseVectorApproximation _approximateDirectionVector;
       Rational _commonValue;
       std::size_t _numCacheQueries;
       std::size_t _numCacheHits;
@@ -1141,21 +1106,17 @@ namespace ipo {
       return lower;
     }
 
-    int Result::run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-        LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
+    int Result::run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification, bool removeRedundantEquations)
     {
-      return _implementation->run(points, directions, equations, oracle, output,
-        minHeuristicBeforeVerification, removeRedundantEquations);
+      return _implementation->run(equations, oracle, output, minHeuristicBeforeVerification, removeRedundantEquations);
     }
 
-    int run(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-      LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
-      std::size_t minHeuristicBeforeVerification, bool removeRedundantEquations)
+    int run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output, std::size_t minHeuristicBeforeVerification,
+      bool removeRedundantEquations)
     {
       Implementation implementation;
-      return implementation.run(points, directions, equations, oracle, output,
-        minHeuristicBeforeVerification, removeRedundantEquations);
+      return implementation.run(equations, oracle, output, minHeuristicBeforeVerification, removeRedundantEquations);
     }
 
     InformationBase::InformationBase() :
@@ -1199,35 +1160,37 @@ namespace ipo {
       return _implementation->dimensionSafeUpperBound();
     }
 
-    const VectorSubset& InformationBase::spanningPoints() const
+    const SparseVector& InformationBase::spanningPoint(std::size_t i) const
     {
       ensureImplementation();
-      return _implementation->_spanningPoints;
+      return _implementation->_spanningPoints[i];
     }
 
     std::size_t InformationBase::numSpanningPoints() const
     {
-      return spanningPoints().size();
+      ensureImplementation();
+      return _implementation->_spanningPoints.size();
     }
 
-    const VectorSubset& InformationBase::spanningDirections() const
+    const SparseVector& InformationBase::spanningRay(std::size_t i) const
     {
       ensureImplementation();
-      return _implementation->_spanningDirections;
+      return _implementation->_spanningDirections[i];
     }
 
-    std::size_t InformationBase::numSpanningDirections() const
+    std::size_t InformationBase::numSpanningRays() const
     {
-      return spanningDirections().size();
+      ensureImplementation();
+      return _implementation->_spanningDirections.size();
     }
 
-    const VectorSubset& InformationBase::basicColumns() const
+    const std::vector<std::size_t>& InformationBase::basicColumns() const
     {
       ensureImplementation();
       return _implementation->_basicColumns;
     }
 
-    const VectorSubset& InformationBase::irredundantEquations() const
+    const std::vector<std::size_t>& InformationBase::irredundantEquations() const
     {
       ensureImplementation();
       return _implementation->_irredundantEquations;
@@ -1238,7 +1201,7 @@ namespace ipo {
       return irredundantEquations().size();
     }
 
-    const VectorSubset& InformationBase::potentialEquations() const
+    const std::vector<std::size_t>& InformationBase::potentialEquations() const
     {
       return _implementation->_potentialEquations;
     }
@@ -1502,7 +1465,7 @@ namespace ipo {
 
     void ProgressOutput::onProgress()
     {
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningDirections() << ",  "
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  "
           << dimensionLowerBound() << " <= dim <= ";
       if (dimensionUnsafeUpperBound() < dimensionSafeUpperBound())
         std::cout << dimensionUnsafeUpperBound() << " (heuristic)";
@@ -1683,7 +1646,7 @@ namespace ipo {
 
     void DebugOutput::printStatus()
     {
-      std::cout << "n=" << numVariables() << ", |S|=" << numSpanningPoints() << ", |R|=" << numSpanningDirections()
+      std::cout << "n=" << numVariables() << ", |S|=" << numSpanningPoints() << ", |R|=" << numSpanningRays()
           << ", n-eqs=" << dimensionSafeUpperBound() << " (n-unsafe.eqs=" << dimensionUnsafeUpperBound() << "), #calls="
           << numHeuristicCalls() << "/" << numOracleCalls() << ", cache=" << numCacheHits() << "/" << numCacheQueries()
           << ", #dirs=" << numApproximateDirectionSolves() << "/" << numExactDirectionSolves() << ", bitsize="

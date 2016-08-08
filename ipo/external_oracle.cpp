@@ -107,11 +107,13 @@ namespace ipo {
 
     if (status == "unbounded")
     {
-      result.directions.push_back(OracleResult::Direction(parseSolution(output)));  
+      SparseVector solution = parseSolution(output);
+      result.directions.push_back(OracleResult::Direction(solution));  
     }
     else if (status == "optimal")
     {
-      result.points.push_back(OracleResult::Point(parseSolution(output)));
+      SparseVector solution = parseSolution(output);
+      result.points.push_back(OracleResult::Point(solution));
       sort = true;
       checkDups = true;
     }
@@ -174,21 +176,18 @@ namespace ipo {
 //     }
 //   }
 
-  DSVectorRational* ExternalOracle::parseSolution(std::stringstream& stream)
+  SparseVector ExternalOracle::parseSolution(std::stringstream& stream)
   {
-    DSVectorRational* solution = new DSVectorRational;
+    SparseVector solution(space().dimension());
     for (std::size_t v = 0; v < space().dimension(); ++v)
     {
       Rational x;
       std::string value;
       stream >> value;
       if (!x.readString(value.c_str()))
-      {
-        delete solution;
         throw std::runtime_error("ExternalOracle: Error while parsing solution vector.");
-      }
       if (x != 0)
-        solution->add(v, x);
+        solution.add(v, x);
     }
     return solution;
   }

@@ -5,7 +5,6 @@
 #include <deque>
 
 #include "common.h"
-#include "unique_rational_vectors.h"
 #include "oracles.h"
 #include "cache_oracle.h"
 #include "projection.h"
@@ -151,11 +150,11 @@ namespace ipo {
     virtual bool printAmbientDimension();
     virtual bool printVariables();
     virtual bool computeAffineHull(Face* face, const std::string& faceName);
-    virtual bool optimizeObjective(const soplex::SVectorRational* objective, bool maximize);
-    virtual bool generateFacets(const soplex::SVectorRational* objective, bool print);
-    virtual bool separateDirectionFacet(const Direction* direction, bool& isFeasible);
-    virtual bool separatePointFacet(const Point* point, bool& isFeasible);
-    virtual bool computeSmallestFace(const Point* point);
+    virtual bool optimizeObjective(const DenseVector* objective, bool maximize);
+    virtual bool generateFacets(const DenseVector* objective, bool print);
+    virtual bool separateRayFacet(const SparseVector& direction, bool& isFeasible);
+    virtual bool separatePointFacet(const SparseVector& point, bool& isFeasible);
+    virtual bool computeSmallestFace(const SparseVector& point);
     virtual bool printCached();
 
     void setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds);
@@ -227,25 +226,25 @@ namespace ipo {
       return _objectives.size();
     }
 
-    inline const soplex::SVectorRational* objective(std::size_t index) const
+    inline const DenseVector* objective(std::size_t index) const
     {
       return _objectives[index];
     }
 
-    inline void addObjective(soplex::DSVectorRational* objective, const std::string& name)
+    inline void addObjective(DenseVector* objective, const std::string& name)
     {
       _objectives.push_back(objective);
       _objectiveNames.push_back(name);
     }
 
-    inline std::size_t numDirections() const
+    inline std::size_t numRays() const
     {
-      return _directions.size();
+      return _rays.size();
     }
 
-    inline const Direction* directions(std::size_t index) const
+    inline const SparseVector& ray(std::size_t index) const
     {
-      return _directions[index];
+      return _rays[index];
     }
 
     inline std::size_t numPoints() const
@@ -253,7 +252,7 @@ namespace ipo {
       return _points.size();
     }
 
-    inline const Point* points(std::size_t index) const
+    inline const SparseVector& point(std::size_t index) const
     {
       return _points[index];
     }
@@ -271,6 +270,11 @@ namespace ipo {
     inline bool projectedSpace()
     {
       return _projectedOracle != NULL;
+    }
+
+    inline ProjectedOracle* projectedOracle()
+    {
+      return _projectedOracle;
     }
 
   private:
@@ -313,21 +317,19 @@ namespace ipo {
 
     std::vector<Face*> _faces;
     std::vector<std::string> _faceNames;
-    std::vector<soplex::DSVectorRational*> _objectives;
+    std::vector<DenseVector*> _objectives;
     std::vector<std::string> _objectiveNames;
-    std::vector<Direction*> _directions;
-    std::vector<std::string> _directionNames;
-    std::vector<Point*> _points;
+    std::vector<SparseVector> _rays;
+    std::vector<std::string> _rayNames;
+    std::vector<SparseVector> _points;
     std::vector<std::string> _pointNames;
     soplex::LPColSetRational _relaxationColumns;
     soplex::LPRowSetRational _relaxationRows;
 
-    UniqueRationalVectors* _cachedPoints;
-    UniqueRationalVectors* _cachedDirections;
     soplex::LPRowSetRational* _equations;
-    VectorSubset _spanningCachedPoints;
-    VectorSubset _spanningCachedDirections;
-    VectorSubset _basicColumns;
+    std::vector<SparseVector> _spanningPoints;
+    std::vector<SparseVector> _spanningRays;
+    std::vector<std::size_t> _basicColumns;
   };
 
 } /* namespace ipo */

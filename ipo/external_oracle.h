@@ -112,7 +112,7 @@ namespace ipo {
      * Parses the output of the external program.
      */
 
-    soplex::DSVectorRational* parseSolution(std::stringstream& stream);
+    SparseVector parseSolution(std::stringstream& stream);
 
     /**
      * \brief Calls the external program.

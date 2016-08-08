@@ -19,7 +19,6 @@ set(IPO_SOURCES vectors.cpp rational.cpp
   reconstruct.cpp
   vector_2d.cpp
   min_norm_2d.cpp
-  unique_rational_vectors.cpp
   rows.cpp
   mixed_integer_program.cpp
   facets.cpp

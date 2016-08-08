@@ -309,7 +309,14 @@ public:
 
       /// Extract instance objective.
 
-      assert(_instanceObjective.size() == 0);
+      std::size_t size = 0;
+      for (std::size_t i = 0; i < _scipSpace->dimension(); ++i)
+      {
+        const soplex::Rational& x = _scipMip->columns().maxObj(i);
+        if (x != 0)
+          ++size;
+      }
+      _instanceObjective = SparseVector(size);
       for (std::size_t i = 0; i < _scipSpace->dimension(); ++i)
       {
         const soplex::Rational& x = _scipMip->columns().maxObj(i);
@@ -344,15 +351,22 @@ public:
     if (!ConsoleApplicationBase::processArguments())
       return false;
 
-    /// TODO: Instance objective may still be valid although projection is enabled!
-    if (projectedSpace())
-      _useInstanceObjective = false;
-    
     if (_useInstanceObjective)
     {
-      soplex::DSVectorRational* obj = new soplex::DSVectorRational;
-      *obj = _instanceObjective;
-      addObjective(obj, "instance");
+      DenseVector* objective = new DenseVector(space().dimension());
+      bool add = true;
+      if (projectedSpace())
+      {
+        DenseVector denseInstanceObjective(projectedOracle()->space().sourceSpace().dimension());
+        assign(denseInstanceObjective, _instanceObjective);
+        Rational projectedRhs;
+        add = projectedOracle()->space().projectHyperplane(denseInstanceObjective, Rational(0), *objective, projectedRhs);
+      }
+      else
+        assign(*objective, _instanceObjective);
+
+      if (add)
+        addObjective(objective, "instance");
     }
 
 #ifdef WITH_SCIP
@@ -377,7 +391,7 @@ protected:
   virtual bool printInstanceObjective()
   {
     std::cout << "Instance objective:\n ";
-    space().printLinearForm(std::cout, &_instanceObjective);
+    space().printLinearForm(std::cout, _instanceObjective);
     std::cout << "\n" << std::flush;
     return true;
   }
@@ -396,7 +410,7 @@ protected:
   MixedIntegerProgram* _scipMip;
   SCIPOracle* _scipOracle;
 #endif
-  soplex::DSVectorRational _instanceObjective;
+  SparseVector _instanceObjective;
 };
 
 int main(int argc, char** argv)

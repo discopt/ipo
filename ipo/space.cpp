@@ -36,14 +36,61 @@ namespace ipo {
     _variables.push_back(name);
   }
 
-  void Space::printLinearForm(std::ostream& stream, const SVectorRational* coefficients)
-    const
+  void Space::printLinearForm(std::ostream& stream, const SVectorRational* coefficients) const
   {
     bool first = true;
     for (std::size_t i = 0; i < coefficients->size(); ++i)
     {
       std::size_t v = coefficients->index(i);
       const Rational& x = coefficients->value(i);
+      if (x < 0)
+        stream << (first ? "-" : " - ");
+      else if (!first)
+        stream << " + ";
+      if (x != 1 && x != -1)
+      {
+        if (x > 0)
+          stream << x << ' ';
+        else
+          stream << (-x) << ' ';
+      }
+      stream << variable(v);
+      first = false;
+    }
+  }
+
+  void Space::printLinearForm(std::ostream& stream, const SparseVector& coefficients) const
+  {
+    bool first = true;
+    for (std::size_t i = 0; i < coefficients.size(); ++i)
+    {
+      std::size_t v = coefficients.index(i);
+      const Rational& x = coefficients.value(i);
+      if (x < 0)
+        stream << (first ? "-" : " - ");
+      else if (!first)
+        stream << " + ";
+      if (x != 1 && x != -1)
+      {
+        if (x > 0)
+          stream << x << ' ';
+        else
+          stream << (-x) << ' ';
+      }
+      stream << variable(v);
+      first = false;
+    }
+  }
+
+
+  void Space::printLinearForm(std::ostream& stream, const DenseVector* coefficients) const
+  {
+    bool first = true;
+    for (std::size_t v = 0; v < dimension(); ++v)
+    {
+      const Rational& x = (*coefficients)[v];
+      if (x == 0)
+        continue;
       if (x < 0)
         stream << (first ? "-" : " - ");
       else if (!first)
@@ -106,6 +153,22 @@ namespace ipo {
     {
       std::size_t v = vector->index(i);
       const soplex::Rational& x = vector->value(i);
+      stream << (delimit ? ", " : "(") << variable(v) << "=" << x;
+      delimit = true;
+    }
+    if (delimit)
+      stream << ")";
+    else
+      stream << "()";
+  }
+
+  void Space::printVector(std::ostream& stream, const ipo::SparseVector& vector) const
+  {
+    bool delimit = false;
+    for (std::size_t i = 0; i < vector.size(); ++i)
+    {
+      std::size_t v = vector.index(i);
+      const soplex::Rational& x = vector.value(i);
       stream << (delimit ? ", " : "(") << variable(v) << "=" << x;
       delimit = true;
     }

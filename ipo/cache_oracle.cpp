@@ -3,19 +3,53 @@
 using namespace soplex;
 
 namespace ipo {
+  
+  CacheOracle::Data::Data(SparseVector& vec)
+    : vector(vec)
+  {
 
-  CacheOracle::CacheOracle(const std::string& name, const Space& space,
-    const UniqueRationalVectorsBase& points, const UniqueRationalVectorsBase& directions)
-    : OracleBase(name, space), _points(points), _directions(directions),
-    _endFacePoints(0), _endFaceDirections(0)
+  }
+
+  CacheOracle::Data::~Data()
+  {
+
+  }
+
+  void CacheOracle::Data::updateObjective(const DenseVectorApproximation& approximateObjective, double approximateObjectiveBound)
+  {
+    double approximateObjectiveValue = 0.0;
+    for (std::size_t p = 0; p < vector.size(); ++p)
+      approximateObjectiveValue += approximateObjective[vector.index(p)] * vector.approximation(p);
+
+    valueMantissa = frexp(approximateObjectiveValue, &valueExponent);
+  }
+
+  bool CacheOracle::Data::operator<(const CacheOracle::Data& other) const
+  {
+    if (valueMantissa > 0 && other.valueMantissa <= 0)
+      return true;
+    if (valueMantissa >= 0 && other.valueMantissa > 0)
+      return false;
+    if (valueExponent > other.valueExponent)
+      return true;
+    if (valueExponent < other.valueExponent)
+      return false;
+    if (vector.size()  < other.vector.size())
+      return true;
+    if (vector.size() > other.vector.size())
+      return false;
+    return valueMantissa > other.valueMantissa;
+  }
+
+  CacheOracle::CacheOracle(const std::string& name, const Space& space)
+    : OracleBase(name, space), _uniquePoints(space.dimension()), _uniqueDirections(space.dimension())
   {
     OracleBase::initializedSpace();
   }
 
-  CacheOracle::CacheOracle(const std::string& name, OracleBase* nextOracle,
-    const UniqueRationalVectorsBase& points, const UniqueRationalVectorsBase& directions)
-    : OracleBase(name, nextOracle), _points(points), _directions(directions),
-    _endFacePoints(0), _endFaceDirections(0)
+  CacheOracle::CacheOracle(const std::string& name, OracleBase* nextOracle)
+    : OracleBase(name, nextOracle), _uniquePoints(nextOracle->space().dimension()), 
+    _uniqueDirections(nextOracle->space().dimension())
   {
     OracleBase::initializedSpace();
   }
@@ -33,54 +67,85 @@ namespace ipo {
     OracleBase::setFace(newFace);
 
     _facePoints.clear();
-    _endFacePoints = 0;
     _faceDirections.clear();
-    _endFaceDirections = 0;
+    if (currentFace() != NULL)
+    {
+      for (UniqueSparseVectors::Iterator iter = _uniquePoints.begin(); iter != _uniquePoints.end(); ++iter)
+      {
+        if (currentFace()->containsPoint(*iter))
+          _facePoints.push_back(Data(*iter));
+      }
+      for (UniqueSparseVectors::Iterator iter = _uniqueDirections.begin(); iter != _uniqueDirections.end(); ++iter)
+      {
+        if (currentFace()->containsDirection(*iter))
+          _faceDirections.push_back(Data(*iter));
+      }
+    }
   }
-  
-  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+
+  std::size_t CacheOracle::maximizeController(OracleResult& result, const DenseVector& objective,
+    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
+  {
+    std::size_t level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
+      checkDups);
+
+    if (level < heuristicLevel())
+    {
+      // Result was not produced by the cache.
+
+      std::size_t numAddedPoints = 0;
+      for (std::size_t i = 0; i < result.points.size(); ++i)
+      {
+        if (addPoint(result.points[i].vector))
+          ++numAddedPoints;
+      }
+      std::size_t numAddedRays = 0;
+      for (std::size_t i = 0; i < result.directions.size(); ++i)
+      {
+        if (addRay(result.directions[i].vector))
+          ++numAddedRays;
+      }
+//       std::cerr << "CacheOracle: added " << numAddedPoints << " of " << result.points.size() << " points and "
+//         << numAddedRays << " of " << result.directions.size() << " rays to cache." << std::endl;
+    }
+
+    return level;
+  }
+
+  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const DenseVector& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    // Update face indices since in the meantime points / directions could have been added.
-
-    updateFaceIndices(_points, _facePoints, _endFacePoints, true);
-    updateFaceIndices(_directions, _faceDirections, _endFaceDirections, false);
-
-    DVectorReal approxObjective(objective.dim());
-    approxObjective = objective;
-    std::vector<std::size_t> searchResult;
+    DenseVectorApproximation approximateObjective(objective.dim());
+    assign(approximateObjective, objective);
+    std::vector<SparseVector> searchResult;
 
     // Search directions.
 
-    search(_directions, _faceDirections, approxObjective, 0.0, false, searchResult);
+    search(_faceDirections, approximateObjective, 0.0, false, searchResult);
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
-      std::size_t d = _faceDirections[searchResult[i]];
-      Rational activity = *_directions.vector(d) * objective;
+      Rational activity = scalarProduct(objective, searchResult[i]);
       if (activity <= 0)
         continue;
-      result.directions.push_back(OracleResult::Direction(_directions.vector(d)));
-      result.directions.back().index = d;
+      result.directions.push_back(OracleResult::Direction(searchResult[i]));
     }
     if (!result.directions.empty())
       return heuristicLevel();
 
     // Search points.
 
-    search(_points, _facePoints, approxObjective,
-      objectiveBound.value > -infinity ? double(objectiveBound.value) : 0.0, true, searchResult);
+    search(_facePoints, approximateObjective, objectiveBound.value > minusInfinity ? double(objectiveBound.value) : 0.0, true, 
+      searchResult);
 
     bool foundSatisfying = false;
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
-      std::size_t p = _facePoints[searchResult[i]];
-      Rational activity = *_points.vector(p) * objective;
+      Rational activity = scalarProduct(objective, searchResult[i]);
 
       bool satisfied = objectiveBound.satisfiedBy(activity);
       if (i == 0 || satisfied)
       {
-        result.points.push_back(OracleResult::Point(_points.vector(p)));
-        result.points.back().index = p;
+        result.points.push_back(OracleResult::Point(searchResult[i]));
         result.points.back().objectiveValue = activity;
       }
     }
@@ -88,6 +153,34 @@ namespace ipo {
     return heuristicLevel();
   }
 
+  bool CacheOracle::addPoint(SparseVector& point)
+  {
+    if (!_uniquePoints.insert(point))
+      return false;
+
+    if (currentFace() != NULL)
+    {
+      if (currentFace()->containsPoint(point))
+        _facePoints.push_back(Data(point));
+    }
+    return true;
+  }
+
+  bool CacheOracle::addRay(SparseVector& ray)
+  {
+    if (!_uniqueDirections.insert(ray))
+      return false;
+
+    if (currentFace() != NULL)
+    {
+      if (currentFace()->containsDirection(ray))
+        _faceDirections.push_back(Data(ray));
+    }
+    return true;
+  }
+
+  
+/*
   CacheOracle::VectorStats::VectorStats()
   {
 
@@ -144,35 +237,30 @@ namespace ipo {
       }
       faceIndices.push_back(end);
     }
-  }
+  }*/
 
-  void CacheOracle::search(const UniqueRationalVectorsBase& vectors,
-    const FaceIndices& faceIndices, const VectorReal& approxObjective, double approxObjectiveBound,
-    bool handlingPoints, std::vector<std::size_t>& result)
+  void CacheOracle::search(std::vector<Data>& vectors, const DenseVectorApproximation& approximateObjective,
+    double approximateObjectiveBound, bool handlingPoints, std::vector<SparseVector>& result)
   {
     // Fill stats vector.
 
-    _vectorStats.resize(faceIndices.size());
-    for (std::size_t i = 0; i < faceIndices.size(); ++i)
+    for (std::size_t i = 0; i < vectors.size(); ++i)
     {
-      const SVectorReal& approxVector = *vectors.approximation(faceIndices[i]);
-      double approxActivity = approxVector * approxObjective;
-      _vectorStats[i] = VectorStats(approxActivity - approxObjectiveBound,
-        approxVector.size(), faceIndices[i]);
+      vectors[i].updateObjective(approximateObjective, approximateObjectiveBound);
     }
 
     // Sort it.
 
-    for (std::size_t i = 0; i < _vectorStats.size(); ++i)
+    for (std::size_t i = 0; i < vectors.size(); ++i)
     {
       std::size_t bestIndex = i;
-      for (std::size_t j = i + 1; j < _vectorStats.size(); ++j)
+      for (std::size_t j = i + 1; j < vectors.size(); ++j)
       {
-        if (_vectorStats[j] < _vectorStats[bestIndex])
+        if (vectors[j] < vectors[bestIndex])
           bestIndex = j;
       }
       if (bestIndex != i)
-        std::swap(_vectorStats[i], _vectorStats[bestIndex]);
+        std::swap(vectors[i], vectors[bestIndex]);
     }
 //    std::sort(_vectorStats.begin(), _vectorStats.end()); TODO: Why does std::sort fail?
 
@@ -180,14 +268,14 @@ namespace ipo {
 
     int lastSign = 2;
     int lastExponent = std::numeric_limits<int>::min();
-    for (std::size_t i = 0; i < _vectorStats.size(); ++i)
+    for (std::size_t i = 0; i < vectors.size(); ++i)
     {
-      const VectorStats& stats = _vectorStats[i];
-      int sign = (stats.valueMantissa > 0 ? 1 : 0) - (stats.valueMantissa < 0 ? 1 : 0);
-      if (sign != lastSign || stats.valueExponent != lastExponent)
+      const Data& data = vectors[i];
+      int sign = (data.valueMantissa > 0 ? 1 : 0) - (data.valueMantissa < 0 ? 1 : 0);
+      if (sign != lastSign || data.valueExponent != lastExponent)
       {
         lastSign = sign;
-        lastExponent = stats.valueExponent;
+        lastExponent = data.valueExponent;
         result.push_back(i);
       }
     }

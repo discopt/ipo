@@ -4,7 +4,6 @@
 #include <set>
 
 #include "common.h"
-#include "unique_rational_vectors.h"
 #include "oracles.h"
 #include "affine_hull.h"
 
@@ -259,29 +258,28 @@ numEquations);
     class Result: public InformationBase
     {
     public:
-      Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-        OracleBase* oracle);
+      Result(OracleBase* oracle);
       virtual ~Result();
 
-      void getMaximizingObjective(soplex::DSVectorRational& maximizingObjective) const;
+      SparseVector getMaximizingObjective() const;
 
       int dimension() const;
 
-      int run(const Point* target, OutputBase& output,
-          const std::vector<const soplex::SVectorRational*>& normalConeElements, bool verifyElements);
-      int run(const Point* target, OutputBase& output, const soplex::LPRowSetRational& affineHullEquations);
-      int run(const Point* target, OutputBase& output);
+      int run(const SparseVector& targetPoint, OutputBase& output, const std::vector<SparseVector>& normalConeElements,
+        bool verifyElements);
+      int run(const SparseVector& targetPoint, OutputBase& output, const soplex::LPRowSetRational& affineHullEquations);
+      int run(const SparseVector& targetPoint, OutputBase& output);
 
-      bool isVertex(const Point* target, OutputBase& output,
-          const std::vector<const soplex::SVectorRational*>& normalConeElements, bool verifyElements);
-      bool isVertex(const Point* target, OutputBase& output, const soplex::LPRowSetRational& affineHullEquations);
-      bool isVertex(const Point* target, OutputBase& output);
+      bool isVertex(const SparseVector& targetPoint, OutputBase& output, const std::vector<SparseVector>& normalConeElements,
+        bool verifyElements);
+      bool isVertex(const SparseVector& targetPoint, OutputBase& output, const soplex::LPRowSetRational& affineHullEquations);
+      bool isVertex(const SparseVector& targetPoint, OutputBase& output);
 
-      bool areAdjacent(const Point* first, const Point* second, OutputBase& output,
-          const std::vector<const soplex::SVectorRational*>& normalConeElements, bool verifyElements);
-      bool areAdjacent(const Point* first, const Point* second, OutputBase& output,
+      bool areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output, 
+        const std::vector<SparseVector>& normalConeElements, bool verifyElements);
+      bool areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output,
           const soplex::LPRowSetRational& affineHullEquations);
-      bool areAdjacent(const Point* first, const Point* second, OutputBase& output);
+      bool areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output);
 
       friend class Implementation;
     };

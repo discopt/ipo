@@ -2,25 +2,24 @@
 
 #include <cassert>
 
-#include "unique_rational_vectors.h"
-
 using namespace soplex;
 
 namespace ipo {
 
-  Face::Face(const Space& space) : _synced(false), _denseNormal(space.dimension())
+  Face::Face(const Space& space) 
+    : _synced(false), _denseNormal(space.dimension()), _sparseNormal(space.dimension())
   {
 
   }
 
   Face::Face(const Space& space, const LPRowRational& inequality) : _synced(false),
-    _denseNormal(space.dimension())
+    _denseNormal(space.dimension()), _sparseNormal(space.dimension())
   {
     add(inequality);
   }
 
   Face::Face(const Space& space, const LPRowSetRational& inequalities) : _synced(false),
-    _denseNormal(space.dimension())
+    _denseNormal(space.dimension()), _sparseNormal(space.dimension())
   {
     add(inequalities);
   }
@@ -57,16 +56,16 @@ namespace ipo {
     _synced = false;
   }
 
-  bool Face::containsPoint(const SVectorRational& point)
+  bool Face::containsPoint(const SparseVector& point)
   {
     ensureSync();
-    return _denseNormal * point == _rhs;
+    return scalarProduct(_denseNormal, point) == _rhs;
   }
 
-  bool Face::containsDirection(const SVectorRational& direction)
+  bool Face::containsDirection(const SparseVector& direction)
   {
     ensureSync();
-    return _denseNormal * direction == 0;
+    return scalarProduct(_denseNormal, direction) == 0;
   }
 
   void Face::ensureSync()
@@ -98,10 +97,10 @@ namespace ipo {
       }
     }
 
-    _sparseNormal.clear();
-    _sparseNormal = _denseNormal;
+    _sparseNormal = SparseVector(_denseNormal.dim());
+    assign(_sparseNormal, _denseNormal);
     _maximumNorm = 0;
-    for (int p = _sparseNormal.size() - 1; p >= 0; --p)
+    for (std::size_t p = 0; p < _sparseNormal.size(); ++p)
     {
       const Rational& x = _sparseNormal.value(p);
       if (x > 0 && x > _maximumNorm)
@@ -111,25 +110,22 @@ namespace ipo {
     }
   }
 
-  OracleResult::Point::Point(soplex::DSVectorRational const* pt)
+  OracleResult::Point::Point(SparseVector& vec)
+    : vector(vec)
   {
-    this->point = pt;
-    this->index = std::numeric_limits<std::size_t>::max();
-    this->objectiveValue = -soplex::infinity;
+    this->objectiveValue = minusInfinity;
   }
   
-  OracleResult::Point::Point(const DSVectorRational* pt, const Rational& value)
+  OracleResult::Point::Point(SparseVector& vec, const Rational& value)
+    : vector(vec)
   {
-    this->point = pt;
-    this->index = std::numeric_limits<std::size_t>::max();
     this->objectiveValue = value;
   }
 
-
-  OracleResult::Direction::Direction(soplex::DSVectorRational const* dir)
+  OracleResult::Direction::Direction(SparseVector& vec)
+    : vector(vec)
   {
-    this->direction = dir;
-    this->index = std::numeric_limits<std::size_t>::max();
+    
   }
 
   OracleResult::OracleResult() : _heuristicLevel(0)
@@ -142,34 +138,6 @@ namespace ipo {
 
   }
 
-  void OracleResult::addToContainers(UniqueRationalVectorsBase& pointContainer,
-    UniqueRationalVectorsBase& directionContainer)
-  {
-    for (std::size_t i = 0; i < points.size(); ++i)
-    {
-      if (points[i].index == std::numeric_limits<std::size_t>::max())
-      {
-        points[i].index = pointContainer.insertFree(points[i].point);
-      }
-      else
-      {
-        assert(pointContainer.vector(points[i].index) == points[i].point);
-      }
-    }
-    for (std::size_t i = 0; i < directions.size(); ++i)
-    {
-      if (directions[i].index == std::numeric_limits<std::size_t>::max())
-      {
-        directions[i].index = directionContainer.insertFree(directions[i].direction);
-      }
-      else
-      {
-        assert(directionContainer.vector(directions[i].index) == directions[i].direction);
-      }
-    }
-  }
-
-
   void OracleResult::checkConsistent()
   {
     for (std::size_t i = 1; i < points.size(); ++i)
@@ -177,74 +145,52 @@ namespace ipo {
       if (points[i-1].objectiveValue < points[i].objectiveValue)
         throw std::runtime_error("Inconsistent OracleResult: Points are not sorted.");
     }
-
-    if (removeDuplicates(true))
-      throw std::runtime_error("Inconsistent OracleResult: Duplicate point or direction found.");
   }
   
   void OracleResult::computeMissingObjectiveValues()
   {
     for (std::size_t i = 0; i < points.size(); ++i)
     {
-      if (points[i].objectiveValue == -soplex::infinity)
+      if (points[i].objectiveValue == minusInfinity)
       {
-        points[i].objectiveValue = *_objective * *points[i].point;
+        points[i].objectiveValue = scalarProduct(*_objective, points[i].vector);
       }
     }
   }
 
-  bool OracleResult::removeDuplicates(bool abort)
+  void OracleResult::removeDuplicates()
   {
-    /// Check points.
-
-    bool found = false;
-    for (std::size_t i = 0; i < points.size(); ++i)
+    // Check points.
+    
+    UniqueSparseVectors usv(_objective->dim());
+    std::size_t write = 0;
+    for (std::size_t read = 0; read < points.size(); ++read)
     {
-      const Rational& firstObjective = points[i].objectiveValue;
-      
-      for (std::size_t j = i + 1; j < points.size(); ++j)
+      if (usv.insert(points[read].vector))
       {
-        const Rational& secondObjective = points[j].objectiveValue;
-        if (secondObjective != firstObjective)
-          break;
-
-        if (equal(*points[i].point, *points[j].point))
-          continue;
-
-        if (abort)
-          return true;
-
-        found = true;
-        delete points[j].point;
-        for (std::size_t k = j + 1; k < points.size(); ++k)
-          points[k-1] = points[k];
-        points.pop_back();
-        --j;
+        if (write != read)
+          points[write] = points[read];
+        ++write;
       }
     }
+    while (points.size() > write)
+      points.pop_back();
 
-    /// Check directions.
+    // Check rays.
 
-    for (std::size_t i = 0; i < directions.size(); ++i)
+    usv.clear();
+    write = 0;
+    for (std::size_t read = 0; read < directions.size(); ++read)
     {
-      for (std::size_t j = i + 1; j < directions.size(); ++j)
+      if (usv.insert(directions[read].vector))
       {
-        if (equal(*directions[i].direction, *directions[j].direction))
-          continue;
-
-        if (abort)
-          return true;
-
-        found = true;
-        delete directions[j].direction;
-        for (std::size_t k = j + 1; k < directions.size(); ++k)
-          directions[k-1] = directions[k];
-        directions.pop_back();
-        --j;
+        if (write != read)
+          directions[write] = directions[read];
+        ++write;
       }
     }
-
-    return found;
+    while (directions.size() > write)
+      directions.pop_back();
   }
 
   OracleBase::OracleBase(const std::string& name, const Space& space) :
@@ -279,15 +225,15 @@ namespace ipo {
       _nextOracle->setFace(newFace);
   }
 
-  void OracleBase::maximize(OracleResult& result, const SVectorRational& objective, const ObjectiveBound& objectiveBound,
+  void OracleBase::maximize(OracleResult& result, const SparseVector& objective, const ObjectiveBound& objectiveBound,
     std::size_t minHeuristic, std::size_t maxHeuristic)
   {
     _tempObjective.clear();
-    _tempObjective.assign(objective);
+    assign(_tempObjective, objective);
     return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
-  void OracleBase::maximize(OracleResult& result, const VectorRational& objective, const ObjectiveBound& objectiveBound, 
+  void OracleBase::maximize(OracleResult& result, const DenseVector& objective, const ObjectiveBound& objectiveBound, 
     std::size_t minHeuristic, std::size_t maxHeuristic)
   {
     // Initialize result.
@@ -305,12 +251,13 @@ namespace ipo {
       checkDuplicates);
 
     // Compute missing objective values.
+    // TODO: Code duplication?
 
     for (std::size_t i = 0; i < result.points.size(); ++i)
     {
-      if (result.points[i].objectiveValue == -soplex::infinity)
+      if (result.points[i].objectiveValue == minusInfinity)
       {
-        result.points[i].objectiveValue = objective * *result.points[i].point;
+        result.points[i].objectiveValue = scalarProduct(objective, result.points[i].vector);
       }
     }
 
@@ -322,7 +269,7 @@ namespace ipo {
     // If requested, remove duplicates.
 
     if (checkDuplicates)
-      result.removeDuplicates(false);
+      result.removeDuplicates();
 
 //     std::cerr << "Oracle(" << heuristicLevel() <<") <" << name() << ">";
 //     if (result.isFeasible())
@@ -334,7 +281,7 @@ namespace ipo {
 //     std::cerr << std::endl;
   }
 
-  std::size_t OracleBase::maximizeController(OracleResult& result, const VectorRational& objective,
+  std::size_t OracleBase::maximizeController(OracleResult& result, const DenseVector& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
@@ -433,7 +380,7 @@ namespace ipo {
     return NULL;
   }
 
-  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const VectorRational& objective,
+  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const DenseVector& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
@@ -486,9 +433,9 @@ namespace ipo {
         {
           _modifiedObjective[v] = objective[v];
         }
-        const VectorRational& denseNormal = face->denseNormal();
-        const SVectorRational& sparseNormal = face->sparseNormal();
-        
+        const DenseVector& denseNormal = face->denseNormal();
+        const SparseVector& sparseNormal = face->sparseNormal();
+
         // Loop that increases M as long as results are not feasible.
 
         OracleResult unrestrictedResult;
@@ -537,14 +484,14 @@ namespace ipo {
             Rational bestValue = -infinity;
             for (std::size_t i = 0; i < unrestrictedResult.points.size(); ++i)
             {
-              DSVectorRational const* pt = unrestrictedResult.points[i].point;
-              if (!face->containsPoint(*pt))
+              SparseVector& vector = unrestrictedResult.points[i].vector;
+              if (!face->containsPoint(vector))
                 continue;
               
-              Rational objectiveValue = objective * *pt;
+              Rational objectiveValue = scalarProduct(objective, vector);
               if (objectiveBound.satisfiedBy(objectiveValue))
               {
-                result.points.push_back(OracleResult::Point(pt, objectiveValue));
+                result.points.push_back(OracleResult::Point(vector, objectiveValue));
                 satisfied = true;
               }
               else if (objectiveValue > bestValue)
@@ -563,7 +510,7 @@ namespace ipo {
 
             if (bestIndex < std::numeric_limits<std::size_t>::max())
             {
-              result.points.push_back(OracleResult::Point(unrestrictedResult.points[bestIndex].point, bestValue));
+              result.points.push_back(OracleResult::Point(unrestrictedResult.points[bestIndex].vector, bestValue));
               break;
             }
           }
@@ -571,11 +518,11 @@ namespace ipo {
           {
             for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
             {
-              DSVectorRational const* dir = unrestrictedResult.directions[i].direction;
-              if (!face->containsDirection(*dir))
+              SparseVector& vector = unrestrictedResult.directions[i].vector;
+              if (!face->containsDirection(vector))
                 continue;
 
-              result.directions.push_back(OracleResult::Direction(dir));
+              result.directions.push_back(OracleResult::Direction(vector));
             }
             
             if (!result.directions.empty())

@@ -6,7 +6,7 @@
 #include <map>
 
 #include "common.h"
-#include "unique_rational_vectors.h"
+#include "vectors.h"
 #include "oracles.h"
 
 #define IPO_POLAR_STABIL_HIST_SIZE 2
@@ -22,12 +22,11 @@ namespace ipo {
     {
       std::vector<soplex::SPxSolver::VarStatus> columnStatus;
       std::vector<soplex::SPxSolver::VarStatus> constraintStatus;
-      std::set<std::size_t> tightPoints;
-      std::set<std::size_t> tightRays;
+      std::vector<SparseVector> tightPoints;
+      std::vector<SparseVector> tightRays;
     };
 
-    PolarLP(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& directions,
-      OracleBase* oracle, double initialPenalty = 1024.0, int maxAge = 30);
+    PolarLP(OracleBase* oracle, double initialPenalty = 1024.0, int maxAge = 30);
     virtual ~PolarLP();
 
   protected:
@@ -79,15 +78,16 @@ namespace ipo {
         const soplex::Rational& rhs);
     void updateConstraint(std::size_t index, const soplex::Rational& lhs, const soplex::VectorRational& normal,
         const soplex::Rational& rhs);
-    void updateObjective(const soplex::VectorRational& objective);
-    std::size_t addPointContraint(std::size_t index);
-    std::size_t addRayContraint(std::size_t index);
+    void updateObjective(const DenseVector& objective);
+    std::size_t addPointConstraint(const SparseVector& point);
+    std::size_t addRayConstraint(const SparseVector& ray);
 
     void setBasis(const Basis& basis);
     void getBasis(Basis& basis);
     soplex::Rational getObjectiveValue();
     void getPrimalSolution(soplex::VectorRational& solution);
-    void getPrimalSolution(soplex::DSVectorRational& solution);
+    void getPrimalSolution(soplex::DSVectorRational& solution); // TODO: all versions useful?
+    SparseVector getPrimalSolution();
     void stabilizedPresolve();
     void optimize(bool perturbeObjective);
     void reoptimizePerturbed();
@@ -108,20 +108,11 @@ namespace ipo {
     virtual void onAfterAddRay();
 
   private:
-    bool addPointsAndRays(VectorSubset& pointIndices, VectorSubset& rayIndices, bool stabLP);
-    void addPointRow(std::size_t index, bool stabLP);
-    void addRayRow(std::size_t index, bool stabLP);
-    void searchCacheApproximate(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
-        const soplex::VectorReal& approxObjective, double approxRhs, std::size_t maxAdd, double epsilon);
-    void searchCache(VectorSubset& indices, UniqueRationalVectorsBase& objects, bool points,
-        const soplex::VectorReal& approxObjective, const soplex::VectorRational& exactObjective,
-        const soplex::Rational& rhs, std::size_t maxAdd);
-    void maximizeOracle(VectorSubset& pointIndices, VectorSubset& directionIndices,
-        const soplex::VectorRational& exactObjective, const soplex::Rational& rhs);
+    bool addPointsAndRays(std::vector<SparseVector>& pointIndices, std::vector<SparseVector>& rayIndices, bool stabLP);
+    void addPointRow(SparseVector& point, bool stabLP);
+    void addRayRow(SparseVector& ray, bool stabLP);
 
   protected:
-    UniqueRationalVectorsBase& _points;
-    UniqueRationalVectorsBase& _directions;
     OracleBase* _oracle;
 
 //    int iteration;
@@ -131,7 +122,7 @@ namespace ipo {
     struct RowInfo
     {
       char type;
-      std::size_t index;
+      SparseVector vector;
       int age;
     };
 

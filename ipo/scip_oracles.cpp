@@ -230,17 +230,18 @@ double(row.value(p))));
 //         scaling = _bestLargestCoefficient / largest;
 //         normalCopy = currentFace()->sparseNormal() * scaling;
 //       }
-      const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
+//       const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
+      const SparseVector& normal = currentFace()->sparseNormal();
       Rational rhs = currentFace()->rhs() * scaling;
 
       /// Add constraint to SCIP.
 
       SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &_faceConstraint, "face", 0, 0, 0,
         double(rhs),   double(rhs)));
-      for (int p = normal.size() - 1; p >= 0; --p)
+      for (std::size_t p = 0; p < normal.size(); ++p)
       {
         SCIP_CALL_EXC(SCIPaddCoefLinear(_scip, _faceConstraint, _variables[normal.index(p)],
-          double(normal.value(p))));
+          normal.approximation(p)));
       }
 
       SCIP_CALL_EXC(SCIPaddCons(_scip, _faceConstraint));

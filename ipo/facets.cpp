@@ -15,11 +15,9 @@ namespace ipo {
     class Implementation: public PolarLP
     {
     public:
-      Implementation(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays,
-          const VectorSubset& spanningPoints, const VectorSubset& spanningRays, const VectorSubset& columnBasis,
-          OracleBase* oracle) :
-          PolarLP(points, rays, oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(
-              false)
+      Implementation(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays,
+        const std::vector<std::size_t>& columnBasis, OracleBase* oracle) 
+        : PolarLP(oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(false)
       {
         SVectorRational vector;
         _normalizationConstraint = addConstraint(-infinity, vector, Rational(0));
@@ -30,11 +28,8 @@ namespace ipo {
         _interiorPoint.reDim(n(), true);
         for (std::size_t i = 0; i < spanningPoints.size(); ++i)
         {
-          std::size_t index = spanningPoints[i];
-          _basisConstraints.push_back(addPointContraint(index));
-          _basisConstraintTypes.push_back('p');
-          _basisConstraintIndices.push_back(index);
-          _interiorPoint += *_points[index];
+          addPointConstraint(spanningPoints[i]);
+          add(_interiorPoint, spanningPoints[i]);
         }
         for (std::size_t v = 0; v < n(); ++v)
           _interiorPoint[v] /= int(spanningPoints.size());
@@ -44,12 +39,9 @@ namespace ipo {
         _interiorRay.reDim(n(), true);
         for (std::size_t i = 0; i < spanningRays.size(); ++i)
         {
-          std::size_t index = spanningRays[i];
-          _basisConstraints.push_back(addRayContraint(index));
-          _basisConstraintTypes.push_back('r');
-          _basisConstraintIndices.push_back(index);
-          _interiorPoint += *_directions[index];
-          _interiorRay += *_directions[index];
+          addRayConstraint(spanningRays[i]);
+          add(_interiorPoint, spanningRays[i]);
+          add(_interiorRay, spanningRays[i]);
         }
 
         /// Set initial basis.
@@ -123,7 +115,7 @@ namespace ipo {
         _output->onAfterAddRay();
       }
 
-      bool run(const SVectorRational* target, bool separatingPoint, OutputBase& output)
+      bool run(const SparseVector& target, bool separatingPoint, OutputBase& output)
       {
         _output = &output;
         _output->_implementation = this;
@@ -137,8 +129,8 @@ namespace ipo {
 
         DVectorRational dense;
         dense.reDim(n() + 1, true);
-        for (int p = target->size() - 1; p >= 0; --p)
-          dense[target->index(p)] = target->value(p);
+        for (std::size_t p = 0; p < target.size(); ++p)
+          dense[target.index(p)] = target.value(p);
         if (separatingPoint)
           dense[n()] = -1;
         updateObjective(dense);
@@ -153,15 +145,15 @@ namespace ipo {
 
         updateConstraint(_normalizationConstraint, -infinity, dense, 1);
 
-        /// Perform stabilization.
+        // Perform stabilization.
 
         stabilizedPresolve();
 
-        /// Reset basis.
+        // Reset basis to the one with maximum size basis matrix.
 
         setBasis(_basis);
 
-        /// Optimize
+        // Optimize
 
         optimize(true);
 
@@ -184,24 +176,14 @@ namespace ipo {
 
         Basis basis;
         getBasis(basis);
-        _certificate.pointIndices.clear();
-        std::copy(basis.tightPoints.begin(), basis.tightPoints.end(), std::back_inserter(_certificate.pointIndices));
-        _certificate.directionIndices.clear();
-        std::copy(basis.tightRays.begin(), basis.tightRays.end(), std::back_inserter(_certificate.directionIndices));
-        for (std::size_t i = 0; i < _basisConstraints.size(); ++i)
-        {
-          std::size_t constraint = _basisConstraints[i];
-          if (basis.constraintStatus[constraint] != SPxSolver::ON_UPPER)
-            continue;
-          if (_basisConstraintTypes[i] == 'p')
-            _certificate.pointIndices.push_back(_basisConstraintIndices[i]);
-          else
-            _certificate.directionIndices.push_back(_basisConstraintIndices[i]);
-        }
+        _certificate.points.clear();
+        std::copy(basis.tightPoints.begin(), basis.tightPoints.end(), std::back_inserter(_certificate.points));
+        _certificate.rays.clear();
+        std::copy(basis.tightRays.begin(), basis.tightRays.end(), std::back_inserter(_certificate.rays));
 
         /// Based on certificate we know what we separated.
 
-        if (_certificate.pointIndices.size() + _certificate.directionIndices.size() == _dimension + 1)
+        if (_certificate.points.size() + _certificate.rays.size() == _dimension + 1)
         {
           _separatedEquation = true;
           _inequality.setLhs(_inequality.rhs());
@@ -209,7 +191,7 @@ namespace ipo {
         else
         {
           _inequality.setLhs(-infinity);
-          if (_certificate.pointIndices.size() + _certificate.directionIndices.size() == _dimension)
+          if (_certificate.points.size() + _certificate.rays.size() == _dimension)
             _separatedFacet = true;
           else
           {
@@ -238,12 +220,9 @@ namespace ipo {
       bool _separatingPoint;
       OutputBase* _output;
       int _dimension;
-      DVectorRational _interiorPoint;
-      DVectorRational _interiorRay;
+      DenseVector _interiorPoint;
+      DenseVector _interiorRay;
       std::size_t _normalizationConstraint;
-      std::vector<std::size_t> _basisConstraints;
-      std::vector<char> _basisConstraintTypes;
-      std::vector<std::size_t> _basisConstraintIndices;
       Basis _basis;
 
       /// Result.
@@ -255,11 +234,10 @@ namespace ipo {
       bool _separatedEquation;
     };
 
-    Result::Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays,
-        const VectorSubset& spanningPoints, const VectorSubset& spanningRays, const VectorSubset& columnBasis,
-        OracleBase* oracle)
+    Result::Result(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays, 
+      const std::vector<std::size_t>& columnBasis, OracleBase* oracle)
     {
-      _implementation = new Implementation(points, rays, spanningPoints, spanningRays, columnBasis, oracle);
+      _implementation = new Implementation(spanningPoints, spanningRays, columnBasis, oracle);
     }
 
     Result::~Result()
@@ -288,18 +266,18 @@ namespace ipo {
       return _implementation->_violation;
     }
 
-    bool Result::separatePoint(const Point* targetPoint, OutputBase& output)
+    bool Result::separatePoint(const SparseVector& targetPoint, OutputBase& output)
     {
       return _implementation->run(targetPoint, true, output);
     }
 
-    bool Result::separateRay(const Point* targetRay, OutputBase& output)
+    bool Result::separateRay(const SparseVector& targetRay, OutputBase& output)
     {
       return _implementation->run(targetRay, false, output);
     }
 
-    InformationBase::InformationBase() :
-        _implementation(NULL)
+    InformationBase::InformationBase() 
+      : _implementation(NULL)
     {
 
     }

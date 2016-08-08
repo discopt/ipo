@@ -20,6 +20,8 @@ namespace ipo {
       std::size_t index;
       Rational value;
       double approximation;
+
+      bool operator<(const Nonzero& other) const;
     };
 
     struct Implementation
@@ -31,11 +33,12 @@ namespace ipo {
     };
 
   public:
+    SparseVector();
     SparseVector(std::size_t capacity);
-    SparseVector(SparseVector& other);
+    SparseVector(const SparseVector& other);
     ~SparseVector();
 
-    SparseVector& operator=(SparseVector& other);
+    SparseVector& operator=(const SparseVector& other);
 
     inline std::size_t size() const
     {
@@ -60,9 +63,13 @@ namespace ipo {
       return impl->nonzeros[position].approximation;
     }
 
+    bool operator==(const SparseVector& other) const;
+
     bool operator<(const SparseVector& other) const;
 
     void add(std::size_t index, const Rational& value);
+
+    void sort();
 
     bool isSorted() const;
 
@@ -77,6 +84,20 @@ namespace ipo {
   {
     u.swap(v);
   }
+
+  SparseVector denseToSparseVector(const DenseVector& source);
+  void assign(DenseVectorApproximation& target, const DenseVector& source);
+  void assign(DenseVector& target, const DenseVector& source);
+  void assign(DenseVector& target, const SparseVector& source);
+  void assign(SparseVector& target, const DenseVector& source);
+  void assign(SparseVector& target, const SparseVector& source);
+  Rational scalarProduct(const DenseVector& a, const DenseVector& b);
+  Rational scalarProduct(const DenseVector& a, const SparseVector& b);
+  Rational scalarProduct(const SparseVector& a, const DenseVector& b);
+  Rational scalarProduct(const SparseVector& a, const SparseVector& b);
+  std::size_t differingIndex(const SparseVector& a, const SparseVector& b);
+  void add(DenseVector& target, const SparseVector& source);
+  void subtract(DenseVector& target, const SparseVector& source);
 
   class UniqueSparseVectors
   {
@@ -113,6 +134,16 @@ namespace ipo {
         return const_cast<SparseVector&>(_iter->vector);
       }
       
+      inline bool operator==(const Iterator& other) const
+      {
+        return _iter == other._iter;
+      }
+
+      inline bool operator!=(const Iterator& other) const
+      {
+        return ! (*this == other);
+      }
+      
     private:
       std::set<Data>::iterator _iter;
     };
@@ -120,7 +151,24 @@ namespace ipo {
     UniqueSparseVectors(std::size_t ambientDimension);
     ~UniqueSparseVectors();
 
+    inline std::size_t size() const
+    {
+      return _data.size();
+    }
+
+    void clear();
+    
     bool insert(SparseVector& vector);
+
+    inline Iterator begin()
+    {
+      return Iterator(_data.begin());
+    }
+
+    inline Iterator end()
+    {
+      return Iterator(_data.end());
+    }
 
   private:
     std::set<Data> _data;

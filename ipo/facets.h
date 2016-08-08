@@ -6,7 +6,6 @@
 #include "common.h"
 #include "spx_gmp.h"
 #include "cpu_timer.h"
-#include "unique_rational_vectors.h"
 #include "oracles.h"
 
 namespace ipo {
@@ -66,13 +65,13 @@ namespace ipo {
     /**
      * \brief A certificate structure for faces.
      *
-     * Structure containing indices of points and directions that span a face.
+     * Structure containing points and rays that span a face.
      */
 
     struct Certificate
     {
-      VectorSubset pointIndices;
-      VectorSubset directionIndices;
+      std::vector<SparseVector> points;
+      std::vector<SparseVector> rays;
     };
 
     class Implementation;
@@ -228,17 +227,17 @@ namespace ipo {
     class Result: public InformationBase
     {
     public:
-      Result(UniqueRationalVectorsBase& points, UniqueRationalVectorsBase& rays, const VectorSubset& spanningPoints,
-          const VectorSubset& spanningRays, const VectorSubset& columnBasis, OracleBase* oracle);
+      Result(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays, 
+        const std::vector<std::size_t>& columnBasis, OracleBase* oracle);
       virtual ~Result();
 
       void inequality(soplex::LPRowRational& inequality) const;
       void inequality(soplex::LPRowSetRational& inequalities) const;
       void certificate(Certificate& certificate) const;
-      const soplex::Rational& violation() const;
+      const Rational& violation() const;
 
-      bool separatePoint(const Point* targetPoint, OutputBase& output);
-      bool separateRay(const Direction* targetRay, OutputBase& output);
+      bool separatePoint(const SparseVector& targetPoint, OutputBase& output);
+      bool separateRay(const SparseVector& targetRay, OutputBase& output);
 
       friend class Implementation;
     };

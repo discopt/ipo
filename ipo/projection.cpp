@@ -39,34 +39,41 @@ namespace ipo {
     _map.push_back(DSVectorRational(UnitVectorRational(sourceVariable)));
     _shift.push_back(shift);
   }
-
-  void Projection::projectPoint(const VectorRational& point, DSVectorRational& projectedPoint) const
+  
+  SparseVector Projection::projectPoint(const VectorRational& point) const
   {
-    projectedPoint.clear();
+    SparseVector result(dimension());
     for (std::size_t v = 0; v < dimension(); ++v)
     {
       Rational x = _shift[v] + _map[v] * point;
       if (x != 0)
-        projectedPoint.add(v, x);
+        result.add(v, x);
     }
-    projectedPoint.sort();
+    return result;
   }
 
-  void Projection::projectDirection(const VectorRational& direction,
-    DSVectorRational& projectedDirection) const
+  SparseVector Projection::projectDirection(const VectorRational& direction) const
   {
-    projectedDirection.clear();
+    SparseVector result(dimension());
     for (std::size_t v = 0; v < dimension(); ++v)
     {
       Rational x = _map[v] * direction;
       if (x != 0)
-        projectedDirection.add(v, x);
+        result.add(v, x);
     }
-    projectedDirection.sort();
+    return result;
+  }
+  
+  bool Projection::projectHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& projectedNormal,
+    Rational& projectedRhs) const
+  {
+    std::cerr << "Projection of hyperplanes not implemented - claiming not projectible!" << std::endl;
+
+    return false;
   }
 
-  void Projection::liftHyperplane(const VectorRational& normal, const Rational& rhs,
-    DVectorRational& liftedNormal, Rational& liftedRhs) const
+  void Projection::liftHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& liftedNormal, Rational& 
+    liftedRhs) const
   {
     liftedNormal.reDim(sourceSpace().dimension());
     liftedNormal.clear();
@@ -126,7 +133,7 @@ namespace ipo {
     _oracle->setFace(_liftedFace);
   }
   
-  std::size_t ProjectedOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+  std::size_t ProjectedOracle::maximizeImplementation(OracleResult& result, const DenseVector& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     _liftedVector.clear();
@@ -140,11 +147,9 @@ namespace ipo {
     {
       for (std::size_t i = 0; i < sourceResult.points.size(); ++i)
       {
-        _liftedVector.clear();
-        _liftedVector.assign(*sourceResult.points[i].point);
-        DSVectorRational* point = new DSVectorRational;
-        _projection.projectPoint(_liftedVector, *point);
-        result.points.push_back(OracleResult::Point(point));
+        assign(_liftedVector, sourceResult.points[i].vector);
+        SparseVector projectedPoint = _projection.projectPoint(_liftedVector);
+        result.points.push_back(OracleResult::Point(projectedPoint));
       }
       checkDups = true;
     }
@@ -152,11 +157,9 @@ namespace ipo {
     {
       for (std::size_t i = 0; i < sourceResult.directions.size(); ++i)
       {
-        _liftedVector.clear();
-        _liftedVector.assign(*sourceResult.directions[i].direction);
-        DSVectorRational* direction = new DSVectorRational;
-        _projection.projectDirection(_liftedVector, *direction);
-        result.directions.push_back(OracleResult::Direction(direction));
+        assign(_liftedVector,  sourceResult.directions[i].vector);
+        SparseVector projectedDirection = _projection.projectDirection(_liftedVector);
+        result.directions.push_back(OracleResult::Direction(projectedDirection));
       }
     }
   }

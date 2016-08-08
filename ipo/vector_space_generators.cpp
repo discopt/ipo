@@ -133,7 +133,8 @@ namespace ipo {
   bool VectorSpaceGenerators::isDependent(const VectorRational& vector)
   {
     _zeroRhs = false;
-    _spx->changeRangeRational(vector, vector);
+    for (std::size_t r = 0; r < _spx->numRowsRational(); ++r)
+      _spx->changeRangeRational(r, vector[r], vector[r]); // Change entry-wise since vector may be longer than dimension.
     SPxSolver::Status status = _spx->solve();
     if (status == SPxSolver::OPTIMAL)
       return true;

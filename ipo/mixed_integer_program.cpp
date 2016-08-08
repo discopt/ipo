@@ -198,7 +198,13 @@ namespace ipo {
     _currentFace = newFace;
 
     if (_currentFace != NULL)
-      _rows.add(_currentFace->rhs(), _currentFace->sparseNormal(), _currentFace->rhs());
+    {
+      DSVectorRational vector;
+      const SparseVector& normal = _currentFace->sparseNormal();
+      for (std::size_t p = 0; p < normal.size(); ++p)
+        vector.add(normal.index(p), normal.value(p));
+      _rows.add(_currentFace->rhs(), vector, _currentFace->rhs());
+    }
   }
 
   void MixedIntegerProgram::getConstraints(LPRowSetRational& rows, bool inequalities, bool equations,
@@ -275,7 +281,7 @@ namespace ipo {
 
   MIPOracleBase::~MIPOracleBase()
   {
-    delete _objective;
+    delete[] _objective;
     delete _spx;
   }
   
@@ -310,7 +316,7 @@ namespace ipo {
     _lpResult.reDim(space().dimension());
   }
 
-  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const VectorRational& objective,
+  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const DenseVector& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     std::size_t n = space().dimension();
@@ -359,9 +365,8 @@ namespace ipo {
       for (std::size_t i = 0; i < _points.size(); ++i)
       {
         Rational objValue;
-        DSVectorRational* pt = findPoint(_points[i], objValue);
-        if (pt != NULL)
-          result.points.push_back(OracleResult::Point(pt, objValue));
+        SparseVector vector = extendPoint(_points[i], objValue);
+        result.points.push_back(OracleResult::Point(vector, objValue));
         delete[] _points[i];
       }
 
@@ -378,13 +383,10 @@ namespace ipo {
       _rays.clear();
 
       prepareSolver(objective);
-      soplex::DSVectorRational* ray = findRay();
+      SparseVector vector = computeRay();
       restoreSolver();
       
-      if (ray)
-        result.directions.push_back(OracleResult::Direction(ray));
-      else if (heuristicLevel() == 0)
-        throw std::runtime_error("MIPOracle: Ray search failed.");
+      result.directions.push_back(OracleResult::Direction(vector));
 
       // If no ray could be found and heuristicLevel is positive, then we force forwarding by claiming infeasibility.
     }
@@ -425,7 +427,7 @@ namespace ipo {
     _spx->removeRowsRational(&_lpRowPermutation[0]);    
   }
 
-  DSVectorRational* MIPOracleBase::findPoint(double* approxPoint, Rational& objectiveValue)
+  SparseVector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue)
   {
     std::size_t n = space().dimension();
     
@@ -460,7 +462,7 @@ namespace ipo {
         _spx->addRowsRational(_separateResult);  
       }
       else if (status != SPxSolver::OPTIMAL)
-        return NULL;
+        throw std::runtime_error("MIPOracle: Claim is bounded, point could not be extended.");
 
       _spx->getPrimalRational(_lpResult);
       _separateResult.clear();
@@ -473,18 +475,24 @@ namespace ipo {
 
     // Create point as sparse vector.
 
-    DSVectorRational* point = new DSVectorRational;
+    std::size_t size = 0;
     for (std::size_t v = 0; v < n; ++v)
     {
       if (_lpResult[v] != 0)
-        point->add(v, _lpResult[v]);
+        ++size;
     }
-    point->sort();
+    SparseVector result(size);
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_lpResult[v] != 0)
+        result.add(v, _lpResult[v]);
+    }
+    assert(result.isSorted());
     objectiveValue = _spx->objValueRational();
-    return point;
+    return result;
   }
 
-  DSVectorRational* MIPOracleBase::findRay()
+  SparseVector MIPOracleBase::computeRay()
   {
     std::size_t n = space().dimension();
 
@@ -507,8 +515,8 @@ namespace ipo {
     {
       SPxSolver::Status status = _spx->solve();
       if (status != SPxSolver::UNBOUNDED)
-        return NULL;
-     
+        throw std::runtime_error("MIPOracle: Claim is unbounded, no ray found.");
+
       _spx->getPrimalRayRational(_lpResult);
       _separateResult.clear();
       separateRay(_lpResult, _separateResult);
@@ -520,14 +528,20 @@ namespace ipo {
 
     // Create ray as sparse vector.
 
-    DSVectorRational* ray = new DSVectorRational;
+    std::size_t size = 0;
     for (std::size_t v = 0; v < n; ++v)
     {
       if (_lpResult[v] != 0)
-        ray->add(v, _lpResult[v]);
+        ++size;
     }
-    ray->sort();
-    return ray;
+    SparseVector result(size);
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (_lpResult[v] != 0)
+        result.add(v, _lpResult[v]);
+    }
+    assert(result.isSorted());
+    return result;
   }
 
 } /* namespace ipo */

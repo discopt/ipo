@@ -19,8 +19,8 @@ namespace ipo {
   class ConsoleApplicationObjectiveParser : public LPObjectiveParser
   {
   public:
-    ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space,
-      std::vector<DSVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
+    ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space, std::vector<DenseVector*>& objectives, 
+      std::vector<std::string>& objectiveNames)
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -34,14 +34,12 @@ namespace ipo {
 
     virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& coefficients)
     {
-      DSVectorRational* vector = new DSVectorRational;
+      DenseVector* vector = new DenseVector(_oracleVariables.size());
       for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
-        {
-          vector->add(varIter->second, iter->second);
-        }
+          (*vector)[varIter->second] = iter->second;
         else
         {
           std::cerr << "Skipping objective: Unknown variable <" << iter->first << ">.\n" << std::endl;
@@ -54,7 +52,7 @@ namespace ipo {
     }
 
   private:
-    std::vector<DSVectorRational*>& _objectives;
+    std::vector<DenseVector*>& _objectives;
     std::vector<std::string>& _objectiveNames;
     std::map<std::string, std::size_t> _oracleVariables;
   };
@@ -122,7 +120,7 @@ namespace ipo {
   {
   public:
     ConsoleApplicationPointParser(std::istream& stream, const Space& space,
-      std::vector<Point*>&points, std::vector<std::string>& pointNames)
+      std::vector<SparseVector>& points, std::vector<std::string>& pointNames)
       : PointParser(stream), _points(points), _pointNames(pointNames)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -136,18 +134,17 @@ namespace ipo {
 
     virtual void handlePoint(const std::string& name, const std::map< std::string, Rational >& values)
     {
-      DSVectorRational* point = new DSVectorRational;
+      SparseVector point(values.size());
       for (std::map<std::string, Rational>::const_iterator iter = values.begin(); iter != values.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
         {
-          point->add(varIter->second, iter->second);
+          point.add(varIter->second, iter->second);
         }
         else
         {
           std::cerr << "Skipping point: Unknown variable <" << iter->first << ">.\n" << std::endl;
-          delete point;
           return;
         }
       }
@@ -158,7 +155,7 @@ namespace ipo {
 
   private:
     std::map<std::string, std::size_t> _oracleVariables;
-    std::vector<Point*>& _points;
+    std::vector<SparseVector>& _points;
     std::vector<std::string>& _pointNames;
   };
 
@@ -189,8 +186,6 @@ namespace ipo {
 
     _oracle = NULL;
     _cacheOracle = NULL;
-    _cachedDirections = NULL;
-    _cachedPoints = NULL;
     _equations = NULL;
     _projection = NULL;
     _projectedOracle = NULL;
@@ -198,10 +193,6 @@ namespace ipo {
 
   ConsoleApplicationBase::~ConsoleApplicationBase()
   {
-    if (_cachedDirections)
-      delete _cachedDirections;
-    if (_cachedPoints)
-      delete _cachedPoints;
     if (_equations)
       delete _equations;
 
@@ -215,10 +206,6 @@ namespace ipo {
       delete _objectives[i];
     for (std::size_t i = 0; i < numFaces(); ++i)
       delete _faces[i];
-    for (std::size_t i = 0; i < numDirections(); ++i)
-      delete _directions[i];
-    for (std::size_t i = 0; i < numPoints(); ++i)
-      delete _points[i];
   }
 
   void ConsoleApplicationBase::setBasicOracle(OracleBase* oracle)
@@ -250,12 +237,9 @@ namespace ipo {
       _space = oracle->space();
     }
 
-    _cachedPoints = new UniqueRationalVectors(space().dimension());
-    _cachedDirections = new UniqueRationalVectors(space().dimension());
     if (_optionCache)
     {
-      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle, *_cachedPoints,
-        *_cachedDirections);
+      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle);
       _oracle = _cacheOracle;
     }
     else
@@ -371,15 +355,15 @@ namespace ipo {
 
     if (taskFacet())
     {
-      for (std::size_t i = 0; i < numDirections(); ++i)
+      for (std::size_t i = 0; i < numRays(); ++i)
       {
         std::cout << "Point";
-        if (_directionNames[i] != "")
-          std::cout << " " << _directionNames[i];
+        if (_rayNames[i] != "")
+          std::cout << " " << _rayNames[i];
         std::cout << std::flush;
 
         bool isFeasible = true;
-        if (!separateDirectionFacet(directions(i), isFeasible))
+        if (!separateRayFacet(ray(i), isFeasible))
           return false;
       }
     }
@@ -396,7 +380,7 @@ namespace ipo {
         bool isFeasible = true;
         if (taskFacet())
         {
-          if (!separatePointFacet(_points[i], isFeasible))
+          if (!separatePointFacet(point(i), isFeasible))
             return false;
         }
         else
@@ -405,7 +389,7 @@ namespace ipo {
         }
         if (taskSmallestFace() && isFeasible)
         {
-          if (!computeSmallestFace(points(i)))
+          if (!computeSmallestFace(point(i)))
             return false;
         }
       }
@@ -844,8 +828,6 @@ namespace ipo {
 
     std::size_t n = space().dimension();
 
-    assert(_cachedPoints != NULL);
-    assert(_cachedDirections != NULL);
     _equations = new LPRowSetRational;
     _relaxationColumns.clear();
     DSVectorRational zeroVector;
@@ -890,12 +872,9 @@ namespace ipo {
         if (norm > 0)
         {
           norm = std::sqrt(norm);
-          DSVectorRational* objectiveVector = new DSVectorRational;
+          DenseVector* objectiveVector = new DenseVector(n);
           for (std::size_t c = 0; c < n; ++c)
-          {
-            if (randomVector[c] != 0.0)
-              objectiveVector->add(c, Rational(randomVector[c] / norm));
-          }
+            (*objectiveVector)[c] = Rational(randomVector[c] / norm);
           _objectives.push_back(objectiveVector);
           _objectiveNames.push_back(":RANDOM:");
         }
@@ -920,12 +899,12 @@ namespace ipo {
       parser.run();
     }
 
-    /// Add specified directions.
+    /// Add specified rays.
 
     for (std::size_t i = 0; i < _directionArguments.size(); ++i)
     {
       std::istringstream stream(_directionArguments[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _directions, _directionNames);
+      ConsoleApplicationPointParser parser(stream, space(), _rays, _rayNames);
       parser.run();
     }
 
@@ -934,7 +913,7 @@ namespace ipo {
     for (std::size_t i = 0; i < _directionFiles.size(); ++i)
     {
       std::ifstream stream(_directionFiles[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _directions, _directionNames);
+      ConsoleApplicationPointParser parser(stream, space(), _rays, _rayNames);
       parser.run();
     }
 
@@ -1001,16 +980,20 @@ namespace ipo {
     LPRowSetRational* equations;
     if (face == NULL)
     {
-      hull.run(*_cachedPoints, *_cachedDirections, *_equations, orac, hullOutput, 1, true);
+      hull.run(*_equations, orac, hullOutput, 1, true);
       _basicColumns = hull.basicColumns();
-      _spanningCachedDirections = hull.spanningDirections();
-      _spanningCachedPoints = hull.spanningPoints();
+      _spanningPoints.reserve(hull.numSpanningPoints());
+      for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)
+        _spanningPoints.push_back(hull.spanningPoint(i));
+      _spanningRays.reserve(hull.numSpanningRays());
+      for (std::size_t i = 0; i < hull.numSpanningRays(); ++i)
+        _spanningRays.push_back(hull.spanningRay(i));
       equations = _equations;
     }
     else
     {
       orac->setFace(face);
-      hull.run(*_cachedPoints, *_cachedDirections, faceEquations, orac, hullOutput, 1, true);
+      hull.run(faceEquations, orac, hullOutput, 1, true);
       equations = &faceEquations;
       orac->setFace();
     }
@@ -1037,7 +1020,7 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::optimizeObjective(const SVectorRational* objective, bool maximize)
+  bool ConsoleApplicationBase::optimizeObjective(const DenseVector* objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
 
@@ -1048,10 +1031,9 @@ namespace ipo {
     }
     else
     {
-      DSVectorRational negated;
+      DVectorRational negated;
       negated = *objective;
-      for (int p = negated.size() - 1; p >= 0; --p)
-        negated.value(p) *= -1;
+      negated *= -1;
       oracle()->maximize(result, negated, ObjectiveBound(), 0);
     }
 
@@ -1062,28 +1044,18 @@ namespace ipo {
     else if (result.isUnbounded())
     {
       std::cout << "unbounded direction ";
-      space().printVector(std::cout, result.directions.front().direction);
+      space().printVector(std::cout, result.directions.front().vector);
       std::cout << "\n" << std::flush;
     }
     else
     {
-      space().printVector(std::cout, result.points.front().point);
+      space().printVector(std::cout, result.points.front().vector);
       std::cout << " (value: " << result.points.front().objectiveValue << ")\n" << std::flush;
-    }
-    for (std::size_t i = 0; i < result.points.size(); ++i)
-    {
-      if (result.points[i].index == std::numeric_limits<std::size_t>::max())
-        delete result.points[i].point;
-    }
-    for (std::size_t i = 0; i < result.directions.size(); ++i)
-    {
-      if (result.directions[i].index == std::numeric_limits<std::size_t>::max())
-        delete result.directions[i].direction;
     }
     return true;
   }
 
-  bool ConsoleApplicationBase::generateFacets(const SVectorRational* objective, bool print)
+  bool ConsoleApplicationBase::generateFacets(const DenseVector* objective, bool print)
   {
     std::size_t n = space().dimension();
 
@@ -1100,15 +1072,13 @@ namespace ipo {
     spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
     LPColSetRational cols;
     cols = _relaxationColumns;
-    cols.maxObj_w().assign(*objective);
+    cols.maxObj_w() = *objective;
     spx->addColsRational(cols);
     spx->addRowsRational(*_equations);
     spx->addRowsRational(_relaxationRows);
 
     Separation::QuietOutput separateOutput;
-    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints,
-_spanningCachedDirections,
-        _basicColumns, oracle());
+    Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
 
     DVectorRational denseSolution;
     DSVectorRational sparseSolution;
@@ -1119,28 +1089,26 @@ _spanningCachedDirections,
       if (status == SPxSolver::UNBOUNDED)
       {
         spx->getPrimalRayRational(denseSolution);
-        sparseSolution.clear();
-        sparseSolution = denseSolution;
+        SparseVector ray = denseToSparseVector(denseSolution);
 
 //        std::cout << "Relaxation LP is unbounded with ray ";
 //        oracle()->printVector(std::cout, &sparseSolution);
 //        std::cout << std::endl;
 
-        separate.separateRay(&sparseSolution, separateOutput);
+        separate.separateRay(ray, separateOutput);
         if (separate.violation() <= 0)
           break;
       }
       else if (status == SPxSolver::OPTIMAL)
       {
         spx->getPrimalRational(denseSolution);
-        sparseSolution.clear();
-        sparseSolution = denseSolution;
+        SparseVector point = denseToSparseVector(denseSolution);
 
 //        std::cout << "Relaxation LP is bounded with optimum ";
 //        oracle()->printVector(std::cout, &sparseSolution);
 //        std::cout << " of value " << spx->objValueRational() << "." << std::endl;
 
-        separate.separatePoint(&sparseSolution, separateOutput);
+        separate.separatePoint(point, separateOutput);
         if (separate.violation() <= 0)
           break;
       }
@@ -1180,18 +1148,18 @@ _spanningCachedDirections,
 
       if (_optionCertificates)
       {
-        std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-            << certificate.directionIndices.size() << " rays.\n" << std::endl;
-        for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
+        std::cout << ", certified by " << certificate.points.size() << " points and "
+            << certificate.rays.size() << " rays.\n" << std::endl;
+        for (std::size_t i = 0; i < certificate.points.size(); ++i)
         {
           std::cout << "  Certifying point: ";
-          space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+          space().printVector(std::cout, certificate.points[i]);
           std::cout << "\n";
         }
-        for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
+        for (std::size_t i = 0; i < certificate.rays.size(); ++i)
         {
           std::cout << "  Certifying ray: ";
-          space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+          space().printVector(std::cout, certificate.rays[i]);
           std::cout << "\n";
         }
         std::cout << "\n" << std::flush;
@@ -1207,13 +1175,12 @@ _spanningCachedDirections,
     return true;
   }
 
-  bool ConsoleApplicationBase::separateDirectionFacet(const Direction* direction, bool& isFeasible)
+  bool ConsoleApplicationBase::separateRayFacet(const SparseVector& direction, bool& isFeasible)
   {
     std::size_t n = space().dimension();
 
     Separation::QuietOutput separateOutput;
-    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
-        _basicColumns, oracle());
+    Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
     separate.separateRay(direction, separateOutput);
     if (separate.violation() <= 0)
     {
@@ -1245,18 +1212,18 @@ _spanningCachedDirections,
 
     if (_optionCertificates)
     {
-      std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-          << certificate.directionIndices.size() << " rays.\n" << std::flush;
-      for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
+      std::cout << ", certified by " << certificate.points.size() << " points and "
+          << certificate.rays.size() << " rays.\n" << std::flush;
+      for (std::size_t i = 0; i < certificate.points.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        space().printVector(std::cout, certificate.points[i]);
         std::cout << "\n";
       }
-      for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
+      for (std::size_t i = 0; i < certificate.rays.size(); ++i)
       {
         std::cout << "  Certifying direction: ";
-        space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        space().printVector(std::cout, certificate.rays[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1269,13 +1236,12 @@ _spanningCachedDirections,
     return true;
   }
 
-  bool ConsoleApplicationBase::separatePointFacet(const Point* point, bool& isFeasible)
+  bool ConsoleApplicationBase::separatePointFacet(const SparseVector& point, bool& isFeasible)
   {
     std::size_t n = space().dimension();
 
     Separation::QuietOutput separateOutput;
-    Separation::Result separate(*_cachedPoints, *_cachedDirections, _spanningCachedPoints, _spanningCachedDirections,
-        _basicColumns, oracle());
+    Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
     separate.separatePoint(point, separateOutput);
     if (separate.violation() <= 0)
     {
@@ -1306,18 +1272,18 @@ _spanningCachedDirections,
 
     if (_optionCertificates)
     {
-      std::cout << ", certified by " << certificate.pointIndices.size() << " points and "
-          << certificate.directionIndices.size() << " rays.\n" << std::flush;
-      for (std::size_t i = 0; i < certificate.pointIndices.size(); ++i)
+      std::cout << ", certified by " << certificate.points.size() << " points and "
+          << certificate.rays.size() << " rays.\n" << std::flush;
+      for (std::size_t i = 0; i < certificate.points.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        space().printVector(std::cout, (*_cachedPoints)[certificate.pointIndices[i]]);
+        space().printVector(std::cout, certificate.points[i]);
         std::cout << "\n";
       }
-      for (std::size_t i = 0; i < certificate.directionIndices.size(); ++i)
+      for (std::size_t i = 0; i < certificate.rays.size(); ++i)
       {
         std::cout << "  Certifying direction: ";
-        space().printVector(std::cout, (*_cachedDirections)[certificate.directionIndices[i]]);
+        space().printVector(std::cout, certificate.rays[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1330,17 +1296,16 @@ _spanningCachedDirections,
     return true;
   }
 
-  bool ConsoleApplicationBase::computeSmallestFace(const Point* point)
+  bool ConsoleApplicationBase::computeSmallestFace(const SparseVector& point)
   {
     SmallestFace::QuietOutput smallestFaceOutput;
-    SmallestFace::Result smallestFace(*_cachedPoints, *_cachedDirections, oracle());
+    SmallestFace::Result smallestFace(oracle());
     smallestFace.run(point, smallestFaceOutput);
 
     std::cout << " Dimension: " << smallestFace.dimension() << std::endl;
-    Point maximizingObjective;
-    smallestFace.getMaximizingObjective(maximizingObjective);
+    SparseVector maximizingObjective = smallestFace.getMaximizingObjective();
     std::cout << " Objective : ";
-    space().printVector(std::cout, &maximizingObjective);
+    space().printVector(std::cout, maximizingObjective);
     std::cout << "\n" << std::flush;
 
     return true;
@@ -1348,20 +1313,20 @@ _spanningCachedDirections,
 
   bool ConsoleApplicationBase::printCached()
   {
-    std::cout << "Cached points: " << _cachedPoints->size() << "\n";
-    for (std::size_t i = _cachedPoints->first(); i < _cachedPoints->size(); i = _cachedPoints->next(i))
-    {
-      std::cout << ' ';
-      space().printVector(std::cout, _cachedPoints->get(i));
-      std::cout << '\n';
-    }
-    std::cout << "Cached directions: " << _cachedDirections->size() << "\n";
-    for (std::size_t i = _cachedDirections->first(); i < _cachedDirections->size(); i = _cachedDirections->next(i))
-    {
-      std::cout << ' ';
-      space().printVector(std::cout, _cachedDirections->get(i));
-      std::cout << '\n';
-    }
+    std::cout << "Cached points: " << _cacheOracle->numPoints() << "\n";
+//     for (std::size_t i = _cachedPoints->first(); i < _cachedPoints->size(); i = _cachedPoints->next(i))
+//     {
+//       std::cout << ' ';
+//       space().printVector(std::cout, _cachedPoints->get(i));
+//       std::cout << '\n';
+//     }
+    std::cout << "Cached rays: " << _cacheOracle->numRays() << "\n";
+//     for (std::size_t i = _cachedDirections->first(); i < _cachedDirections->size(); i = _cachedDirections->next(i))
+//     {
+//       std::cout << ' ';
+//       space().printVector(std::cout, _cachedDirections->get(i));
+//       std::cout << '\n';
+//     }
     std::cout << std::flush;
     return true;
   }

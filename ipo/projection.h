@@ -88,8 +88,7 @@ namespace ipo {
      * Projects a \c point.
      */
 
-    void projectPoint(const soplex::VectorRational& point,
-      soplex::DSVectorRational& projectedPoint) const;
+    SparseVector projectPoint(const soplex::VectorRational& point) const;
 
     /**
      * \brief Projects a \c direction.
@@ -97,23 +96,39 @@ namespace ipo {
      * Projects a \c direction.
      */
 
-    void projectDirection(const soplex::VectorRational& direction,
-      soplex::DSVectorRational& projectedDirection) const;
+    SparseVector projectDirection(const soplex::VectorRational& direction) const;
+
+    /**
+     * \brief Projects a hyperplane if possible.
+     *
+     * If possible, projects a hyperplane defined by \p normal and \p rhs into the projected space. The projected hyperplane is
+     * defined by \p projectedNormal and \p projectedRhs. Details are as follows.
+     *
+     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,x\right> = \beta \f$ be the equation defining the 
+     * hyperplane. The hyperplane defined by \f$ \left<c,x\right> = \delta \f$ is its projection if
+     * \f$ c^\intercal A  = a^\intercal \f$ and \f$\delta - c^\intercal b = \beta\f$ hold.
+     * 
+     * \param normal          Normal vector of given hyperplane in source space.
+     * \param rhs             Right-hand side of given hyperplane in source space.
+     * \param projectedNormal Normal vector of resulting hyperplane in projected space.
+     * \param projectedRhs    Right-hand side of resulting hyperplane in projected space.
+     * \return                true iff hyperplane can be projected.
+     */
+
+    bool projectHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& projectedNormal, Rational& projectedRhs) 
+      const;
 
     /**
      * \brief Lifts a hyperplane into the source space.
      *
-     * Lifts a hyperplane defined by \p normal and \r rhs into the source space. The lifted
-     * hyperplane is defined by \p liftedNormal and \p liftedRhs. Details are as follows.
+     * Lifts a hyperplane defined by \p normal and \p rhs into the source space. The lifted hyperplane is defined by 
+     * \p liftedNormal and \p liftedRhs. Details are as follows.
      *
-     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,y\right> = \beta \f$ be the
-     * equation defining the hyperplane. Its lifted version is then defined by
-     * \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
+     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,y\right> = \beta \f$ be the equation defining the 
+     * hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
      */
 
-    void liftHyperplane(const soplex::VectorRational& normal, const soplex::Rational& rhs,
-      soplex::DVectorRational& liftedNormal, soplex::Rational& liftedRhs) const;
-
+    void liftHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& liftedNormal, Rational& liftedRhs) const;
 
     /**
      * \brief Returns the dimension of the image space.
@@ -229,6 +244,17 @@ namespace ipo {
      */
 
     virtual void setFace(Face* newFace = NULL);
+    
+    /**
+     * \brief Returns the ambient \c space.
+     *
+     * Returns a reference to the ambient \c space.
+     */
+
+    inline const Projection& space() const
+    {
+      return _projection;
+    }
 
   protected:
 
@@ -247,7 +273,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
   protected:
