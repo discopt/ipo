@@ -3,6 +3,7 @@
 #include <cassert>
 #include <random>
 #include <regex>
+#include <cmath>
 
 #include "affine_hull.h"
 #include "min_norm_2d.h"

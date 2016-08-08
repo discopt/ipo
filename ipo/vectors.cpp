@@ -1,6 +1,7 @@
 #include "vectors.h"
 
 #include <iostream>
+#include <cmath>
 
 namespace ipo {
 
@@ -197,6 +198,7 @@ namespace ipo {
     }
     else
       impl = NULL;
+    return *this;
   }
 
   bool SparseVector::operator==(const SparseVector& other) const
