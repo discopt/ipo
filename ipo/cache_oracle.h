@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "oracles.h"
+#include "unique_vectors.h"
 
 namespace ipo {
 

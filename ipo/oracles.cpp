@@ -2,6 +2,8 @@
 
 #include <cassert>
 
+#include "unique_vectors.h"
+
 using namespace soplex;
 
 namespace ipo {
