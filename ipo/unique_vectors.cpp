@@ -1,5 +1,8 @@
 #include "unique_vectors.h"
 
+#include <vector>
+#include <random>
+
 namespace ipo {
 
   UniqueSparseVectors::Data::Data(double hsh, SparseVector& vec)

@@ -2,6 +2,7 @@
 
 #include <cassert>
 #include <random>
+#include <vector>
 #include <regex>
 #include <cmath>
 
