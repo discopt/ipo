@@ -3,7 +3,7 @@
 #include <sstream>
 #include <map>
 
-#include <ipo/ipo.h>
+#include <ipo/common.h>
 
 #ifdef WITH_SCIP
 #ifdef NDEBUG
