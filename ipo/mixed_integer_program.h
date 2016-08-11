@@ -369,7 +369,7 @@ namespace ipo {
      * solutions, which are then postprocessed.
      */    
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
     /**
@@ -409,9 +409,9 @@ namespace ipo {
     
     void restoreSolver();
 
-    SparseVector extendPoint(double* point, soplex::Rational& objectiveValue);
+    Vector extendPoint(double* point, soplex::Rational& objectiveValue);
     
-    SparseVector computeRay();
+    Vector computeRay();
 
     soplex::SoPlex* _spx; // LP solver with the correction LP.
     std::vector<Column> _columns;

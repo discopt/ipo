@@ -316,13 +316,17 @@ public:
         if (x != 0)
           ++size;
       }
-      _instanceObjective = SparseVector(size);
+
+      VectorData* data = new VectorData(size);
+      
+//       _instanceObjective = Vector(size);
       for (std::size_t i = 0; i < _scipSpace->dimension(); ++i)
       {
         const soplex::Rational& x = _scipMip->columns().maxObj(i);
         if (x != 0)
-          _instanceObjective.add(i, x);
+          data->add(i, x);
       }
+      _instanceObjective = Vector(data);
 
       _scipOracle = new SCIPOracle(firstArgument, *_scipMip);
       oracle = _scipOracle;
@@ -353,17 +357,17 @@ public:
 
     if (_useInstanceObjective)
     {
-      DenseVector* objective = new DenseVector(space().dimension());
+      soplex::DVectorRational* objective = new soplex::DVectorRational(space().dimension());
       bool add = true;
       if (projectedSpace())
       {
-        DenseVector denseInstanceObjective(projectedOracle()->space().sourceSpace().dimension());
-        assign(denseInstanceObjective, _instanceObjective);
+        soplex::DVectorRational denseInstanceObjective(projectedOracle()->space().sourceSpace().dimension());
+        vectorToDense(_instanceObjective, denseInstanceObjective);
         Rational projectedRhs;
         add = projectedOracle()->space().projectHyperplane(denseInstanceObjective, Rational(0), *objective, projectedRhs);
       }
       else
-        assign(*objective, _instanceObjective);
+        vectorToDense(_instanceObjective, *objective);
 
       if (add)
         addObjective(objective, "instance");
@@ -410,7 +414,7 @@ protected:
   MixedIntegerProgram* _scipMip;
   SCIPOracle* _scipOracle;
 #endif
-  SparseVector _instanceObjective;
+  Vector _instanceObjective;
 };
 
 int main(int argc, char** argv)

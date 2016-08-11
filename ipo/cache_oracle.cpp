@@ -4,7 +4,7 @@ using namespace soplex;
 
 namespace ipo {
   
-  CacheOracle::Data::Data(SparseVector& vec)
+  CacheOracle::Data::Data(Vector& vec)
     : vector(vec)
   {
 
@@ -15,7 +15,7 @@ namespace ipo {
 
   }
 
-  void CacheOracle::Data::updateObjective(const DenseVectorApproximation& approximateObjective, double approximateObjectiveBound)
+  void CacheOracle::Data::updateObjective(const soplex::VectorReal& approximateObjective, double approximateObjectiveBound)
   {
     double approximateObjectiveValue = 0.0;
     for (std::size_t p = 0; p < vector.size(); ++p)
@@ -70,12 +70,12 @@ namespace ipo {
     _faceDirections.clear();
     if (currentFace() != NULL)
     {
-      for (UniqueSparseVectors::Iterator iter = _uniquePoints.begin(); iter != _uniquePoints.end(); ++iter)
+      for (UniqueVectors::Iterator iter = _uniquePoints.begin(); iter != _uniquePoints.end(); ++iter)
       {
         if (currentFace()->containsPoint(*iter))
           _facePoints.push_back(Data(*iter));
       }
-      for (UniqueSparseVectors::Iterator iter = _uniqueDirections.begin(); iter != _uniqueDirections.end(); ++iter)
+      for (UniqueVectors::Iterator iter = _uniqueDirections.begin(); iter != _uniqueDirections.end(); ++iter)
       {
         if (currentFace()->containsDirection(*iter))
           _faceDirections.push_back(Data(*iter));
@@ -83,7 +83,7 @@ namespace ipo {
     }
   }
 
-  std::size_t CacheOracle::maximizeController(OracleResult& result, const DenseVector& objective,
+  std::size_t CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     std::size_t level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
@@ -112,19 +112,20 @@ namespace ipo {
     return level;
   }
 
-  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const DenseVector& objective,
+  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    DenseVectorApproximation approximateObjective(objective.dim());
-    assign(approximateObjective, objective);
-    std::vector<SparseVector> searchResult;
+    soplex::DVectorReal approximateObjective(objective.dim());
+    for (std::size_t i = 0; i < approximateObjective.dim(); ++i)
+      approximateObjective[i] = double(objective[i]);
+    std::vector<Vector> searchResult;
 
     // Search directions.
 
     search(_faceDirections, approximateObjective, 0.0, false, searchResult);
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
-      Rational activity = scalarProduct(objective, searchResult[i]);
+      Rational activity = objective * searchResult[i];
       if (activity <= 0)
         continue;
       result.directions.push_back(OracleResult::Direction(searchResult[i]));
@@ -140,7 +141,7 @@ namespace ipo {
     bool foundSatisfying = false;
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
-      Rational activity = scalarProduct(objective, searchResult[i]);
+      Rational activity = objective * searchResult[i];
 
       bool satisfied = objectiveBound.satisfiedBy(activity);
       if (i == 0 || satisfied)
@@ -153,28 +154,30 @@ namespace ipo {
     return heuristicLevel();
   }
 
-  bool CacheOracle::addPoint(SparseVector& point)
+  bool CacheOracle::addPoint(const Vector& point)
   {
-    if (!_uniquePoints.insert(point))
+    Vector p = point;
+    if (!_uniquePoints.insert(p))
       return false;
 
     if (currentFace() != NULL)
     {
-      if (currentFace()->containsPoint(point))
-        _facePoints.push_back(Data(point));
+      if (currentFace()->containsPoint(p))
+        _facePoints.push_back(Data(p));
     }
     return true;
   }
 
-  bool CacheOracle::addRay(SparseVector& ray)
+  bool CacheOracle::addRay(const Vector& ray)
   {
-    if (!_uniqueDirections.insert(ray))
+    Vector r = ray;
+    if (!_uniqueDirections.insert(r))
       return false;
 
     if (currentFace() != NULL)
     {
-      if (currentFace()->containsDirection(ray))
-        _faceDirections.push_back(Data(ray));
+      if (currentFace()->containsDirection(r))
+        _faceDirections.push_back(Data(r));
     }
     return true;
   }
@@ -239,8 +242,8 @@ namespace ipo {
     }
   }*/
 
-  void CacheOracle::search(std::vector<Data>& vectors, const DenseVectorApproximation& approximateObjective,
-    double approximateObjectiveBound, bool handlingPoints, std::vector<SparseVector>& result)
+  void CacheOracle::search(std::vector<Data>& vectors, const soplex::VectorReal& approximateObjective,
+    double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result)
   {
     // Fill stats vector.
 
@@ -276,7 +279,7 @@ namespace ipo {
       {
         lastSign = sign;
         lastExponent = data.valueExponent;
-        result.push_back(i);
+        result.push_back(vectors[i].vector);
       }
     }
   }

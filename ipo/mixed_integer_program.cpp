@@ -200,7 +200,7 @@ namespace ipo {
     if (_currentFace != NULL)
     {
       DSVectorRational vector;
-      const SparseVector& normal = _currentFace->sparseNormal();
+      const Vector& normal = _currentFace->sparseNormal();
       for (std::size_t p = 0; p < normal.size(); ++p)
         vector.add(normal.index(p), normal.value(p));
       _rows.add(_currentFace->rhs(), vector, _currentFace->rhs());
@@ -297,7 +297,7 @@ namespace ipo {
     _spx->setBoolParam(SoPlex::RATFAC, true);
     _spx->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
     _spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
-    _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
+//     _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_OFF);
     _spx->addColsRational(mip.columns());
     _spx->addRowsRational(mip.rows());
     _numRows = _spx->numRowsRational();
@@ -316,7 +316,7 @@ namespace ipo {
     _lpResult.reDim(space().dimension());
   }
 
-  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const DenseVector& objective,
+  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     std::size_t n = space().dimension();
@@ -365,7 +365,7 @@ namespace ipo {
       for (std::size_t i = 0; i < _points.size(); ++i)
       {
         Rational objValue;
-        SparseVector vector = extendPoint(_points[i], objValue);
+        Vector vector = extendPoint(_points[i], objValue);
         result.points.push_back(OracleResult::Point(vector, objValue));
         delete[] _points[i];
       }
@@ -383,7 +383,7 @@ namespace ipo {
       _rays.clear();
 
       prepareSolver(objective);
-      SparseVector vector = computeRay();
+      Vector vector = computeRay();
       restoreSolver();
       
       result.directions.push_back(OracleResult::Direction(vector));
@@ -427,7 +427,7 @@ namespace ipo {
     _spx->removeRowsRational(&_lpRowPermutation[0]);    
   }
 
-  SparseVector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue)
+  Vector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue)
   {
     std::size_t n = space().dimension();
     
@@ -447,9 +447,49 @@ namespace ipo {
       }
     }
 
+//     for (int r = 0; r < _spx->numRowsRational(); ++r)
+//     {
+//       const SVectorRational& rowVector = _spx->rowVectorRational(r);
+//       std::cout << "// Row " << r << std::endl;
+//       std::cout << "row.clear();\n";
+//       for (int p = 0; p < rowVector.size(); ++p)
+//         std::cout << "row.add(" << rowVector.index(p) << ", Rational(" << rowVector.value(p) << "));" << std::endl;
+//       if (_spx->lhsRational(r) <= -infinity)
+//       {
+//         if (_spx->rhsRational(r) >= infinity)
+//         {
+//           std::cout << "spx.addRowRational(LPRowRational(-infinity, row, infinity));\n";
+//         }
+//         else
+//         {
+//           std::cout << "spx.addRowRational(LPRowRational(-infinity, row, Rational(" << _spx->rhsRational(r) << ")));\n";
+//         }
+//       }
+//       else
+//       {
+//         if (_spx->rhsRational(r) >= infinity)
+//         {
+//           std::cout << "spx.addRowRational(LPRowRational(Rational(" << _spx->lhsRational(r) << "), row, infinity));\n";
+//         }
+//         else
+//         {
+//           std::cout << "spx.addRowRational(LPRowRational(Rational(" << _spx->lhsRational(r) << "), row, Rational("
+//         << _spx->rhsRational(r) << ")));\n";
+//         }
+//       }
+//     }
+//     
+//     _spx->clearBasis();
+
     while (true)
     {
+//      _spx->clearBasis();
+//       _spx->writeBasisFile("extend.bas");
+//      _spx->writeFileRational("extend.lp");
+      
+//      std::cerr << "Calling solve." << std::endl;
       SPxSolver::Status status = _spx->solve();
+//      std::cerr << "Called solve: " << status << std::endl;
       
       if (status == SPxSolver::UNBOUNDED)
       {
@@ -481,18 +521,18 @@ namespace ipo {
       if (_lpResult[v] != 0)
         ++size;
     }
-    SparseVector result(size);
+    VectorData* data = new VectorData(size);
     for (std::size_t v = 0; v < n; ++v)
     {
       if (_lpResult[v] != 0)
-        result.add(v, _lpResult[v]);
+        data->add(v, _lpResult[v]);
     }
-    assert(result.isSorted());
+    assert(data->isSorted());
     objectiveValue = _spx->objValueRational();
-    return result;
+    return Vector(data);
   }
 
-  SparseVector MIPOracleBase::computeRay()
+  Vector MIPOracleBase::computeRay()
   {
     std::size_t n = space().dimension();
 
@@ -534,14 +574,14 @@ namespace ipo {
       if (_lpResult[v] != 0)
         ++size;
     }
-    SparseVector result(size);
+    VectorData* data = new VectorData(size);
     for (std::size_t v = 0; v < n; ++v)
     {
       if (_lpResult[v] != 0)
-        result.add(v, _lpResult[v]);
+        data->add(v, _lpResult[v]);
     }
-    assert(result.isSorted());
-    return result;
+    assert(data->isSorted());
+    return Vector(data);
   }
 
 } /* namespace ipo */

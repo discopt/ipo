@@ -150,11 +150,11 @@ namespace ipo {
     virtual bool printAmbientDimension();
     virtual bool printVariables();
     virtual bool computeAffineHull(Face* face, const std::string& faceName);
-    virtual bool optimizeObjective(const DenseVector* objective, bool maximize);
-    virtual bool generateFacets(const DenseVector* objective, bool print);
-    virtual bool separateRayFacet(const SparseVector& direction, bool& isFeasible);
-    virtual bool separatePointFacet(const SparseVector& point, bool& isFeasible);
-    virtual bool computeSmallestFace(const SparseVector& point);
+    virtual bool optimizeObjective(const soplex::VectorRational* objective, bool maximize);
+    virtual bool generateFacets(const soplex::VectorRational* objective, bool print);
+    virtual bool separateRayFacet(const Vector& direction, bool& isFeasible);
+    virtual bool separatePointFacet(const Vector& point, bool& isFeasible);
+    virtual bool computeSmallestFace(const Vector& point);
     virtual bool printCached();
 
     void setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds);
@@ -226,12 +226,12 @@ namespace ipo {
       return _objectives.size();
     }
 
-    inline const DenseVector* objective(std::size_t index) const
+    inline const soplex::DVectorRational* objective(std::size_t index) const
     {
       return _objectives[index];
     }
 
-    inline void addObjective(DenseVector* objective, const std::string& name)
+    inline void addObjective(soplex::DVectorRational* objective, const std::string& name)
     {
       _objectives.push_back(objective);
       _objectiveNames.push_back(name);
@@ -242,7 +242,7 @@ namespace ipo {
       return _rays.size();
     }
 
-    inline const SparseVector& ray(std::size_t index) const
+    inline const Vector& ray(std::size_t index) const
     {
       return _rays[index];
     }
@@ -252,7 +252,7 @@ namespace ipo {
       return _points.size();
     }
 
-    inline const SparseVector& point(std::size_t index) const
+    inline const Vector& point(std::size_t index) const
     {
       return _points[index];
     }
@@ -317,18 +317,18 @@ namespace ipo {
 
     std::vector<Face*> _faces;
     std::vector<std::string> _faceNames;
-    std::vector<DenseVector*> _objectives;
+    std::vector<soplex::DVectorRational*> _objectives;
     std::vector<std::string> _objectiveNames;
-    std::vector<SparseVector> _rays;
+    std::vector<Vector> _rays;
     std::vector<std::string> _rayNames;
-    std::vector<SparseVector> _points;
+    std::vector<Vector> _points;
     std::vector<std::string> _pointNames;
     soplex::LPColSetRational _relaxationColumns;
     soplex::LPRowSetRational _relaxationRows;
 
     soplex::LPRowSetRational* _equations;
-    std::vector<SparseVector> _spanningPoints;
-    std::vector<SparseVector> _spanningRays;
+    std::vector<Vector> _spanningPoints;
+    std::vector<Vector> _spanningRays;
     std::vector<std::size_t> _basicColumns;
   };
 

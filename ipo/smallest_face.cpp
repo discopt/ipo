@@ -17,7 +17,7 @@ namespace ipo {
     {
     public:
       NormalConeOracle(Space& space, OracleBase* originalOracle,
-        const SparseVector& target, OutputBase* output)
+        const Vector& target, OutputBase* output)
         : OracleBase("normal cone of " + originalOracle->name(), space),
         PolarLP(originalOracle, 1024.0, 1000), _output(output)
       {
@@ -126,7 +126,7 @@ namespace ipo {
        * This implementation solves the polar LP to optimize over the normal cone at a point.
        */
       
-      virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
+      virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
         const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
       {
         updateObjective(objective);
@@ -139,9 +139,9 @@ namespace ipo {
 
         optimize(false);
 
-        SparseVector solution = getPrimalSolution();
+        Vector solution = getPrimalSolution();
 
-        if (scalarProduct(solution, objective) == 0)
+        if (solution * objective == 0)
           result.points.push_back(OracleResult::Point(solution));
         else
           result.directions.push_back(OracleResult::Direction(solution));
@@ -230,15 +230,15 @@ std::size_t numRays,
 
       }
 
-      bool verifyNormalConeDirection(OracleResult& result, const SparseVector& targetPoint, const SparseVector& direction)
+      bool verifyNormalConeDirection(OracleResult& result, const Vector& targetPoint, const Vector& direction)
       {
-        Rational product = scalarProduct(direction, targetPoint);
+        Rational product = direction * targetPoint;
         _originalOracle->maximize(result, direction, ObjectiveBound());
         return result.isFeasible() && result.points.front().objectiveValue == product;
       }
 
-      int run(const SparseVector& targetPoint, OutputBase& output, LPRowSetRational& coneEquations,
-        const std::vector<SparseVector>& normalConeDirections, bool verifyDirections)
+      int run(const Vector& targetPoint, OutputBase& output, LPRowSetRational& coneEquations,
+        const std::vector<Vector>& normalConeDirections, bool verifyDirections)
       {
         std::size_t n = _originalOracle->space().dimension();
         _output = &output;
@@ -255,7 +255,7 @@ std::size_t numRays,
         _normalConeOracle = &cacheOracle;
 
         /// Initialize points and directions.
-        SparseVector zeroVector(0);
+        Vector zeroVector(0);
         cacheOracle.addPoint(zeroVector);
 
 //         DVectorRational denseTarget;
@@ -279,16 +279,16 @@ std::size_t numRays,
           }
 
           std::size_t size = normalConeDirections.size() + 1; // maximum size of (a,beta).
-          Rational rhs = scalarProduct(normalConeDirections[i], targetPoint);
+          Rational rhs = normalConeDirections[i] * targetPoint;
           if (rhs != 0)
             ++size;
-          SparseVector ray(size);
+          VectorData* rayData = new VectorData(size);
           for (std::size_t p = 0; p < normalConeDirections[i].size(); ++p)
-            ray.add(normalConeDirections[i].index(p), normalConeDirections[p].value(p));
+            rayData->add(normalConeDirections[i].index(p), normalConeDirections[p].value(p));
           if (rhs != 0)
-            ray.add(n, rhs);
+            rayData->add(n, rhs);
 
-          cacheOracle.addRay(ray);
+          cacheOracle.addRay(Vector(rayData));
         }
         if (verifyDirections)
           _output->onAfterVerifyElements(normalConeDirections.size());
@@ -314,9 +314,9 @@ std::size_t numRays,
 
         _maximizingObjective.clear();
         for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)
-          add(_maximizingObjective, hull.spanningPoint(i));
+          _maximizingObjective += hull.spanningPoint(i);
         for (std::size_t i = 0; i < hull.numSpanningRays(); ++i)
-          add(_maximizingObjective, hull.spanningRay(i));
+          _maximizingObjective += hull.spanningRay(i);
 
         _output->onEnd();
         _output->_implementation = NULL;
@@ -325,8 +325,8 @@ std::size_t numRays,
         return _dimension;
       }
 
-      int runAdjacency(const SparseVector& first, const SparseVector& second, OutputBase& output,
-          const std::vector<SparseVector>& normalConeElements, bool verifyRays)
+      int runAdjacency(const Vector& first, const Vector& second, OutputBase& output,
+          const std::vector<Vector>& normalConeElements, bool verifyRays)
       {
         // Auxiliary vector.
 
@@ -337,24 +337,24 @@ std::size_t numRays,
 
         DSVectorRational vector;
         LPRowSetRational coneEquations;
-        assign(dense, first);
-        subtract(dense, second);
+        vectorToDense(first, dense);
+        dense -= second;
         vector = dense;
         coneEquations.add(Rational(0), vector, Rational(0));
 
         // Compute barycenter.
 
-        SparseVector targetPoint(_originalOracle->space().dimension());
-        assign(dense, first);
-        add(dense, second);
+        VectorData* targetPointData = new VectorData(_originalOracle->space().dimension());
+        vectorToDense(first, dense);
+        dense += second;
 
         for (std::size_t v = 0; v < _originalOracle->space().dimension(); ++v)
         {
           if (dense[v] != 0)
-            targetPoint.add(v, dense[v] / 2);
+            targetPointData->add(v, dense[v] / 2);
         }
 
-        return run(targetPoint, output, coneEquations, normalConeElements, verifyRays);
+        return run(Vector(targetPointData), output, coneEquations, normalConeElements, verifyRays);
       }
 
       friend class InformationBase;
@@ -367,7 +367,7 @@ std::size_t numRays,
       CacheOracle* _normalConeOracle;
 
       int _dimension;
-      DenseVector _maximizingObjective;
+      soplex::DVectorRational _maximizingObjective;
     };
 
     Result::Result(OracleBase* oracle)
@@ -389,7 +389,7 @@ std::size_t numRays,
       return _implementation->_dimension;
     }
 
-    SparseVector Result::getMaximizingObjective() const
+    Vector Result::getMaximizingObjective() const
     {
       assert(hasImplementation());
       if (_implementation->_dimension < -1)
@@ -397,95 +397,95 @@ std::size_t numRays,
 
       /// Copy maximizing objective by hand since the implementation variable has dimension n+1.
 
-      SparseVector result(numVariables());
+      VectorData* data = new VectorData(numVariables());
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
         const Rational& x = _implementation->_maximizingObjective[v];
         if (x != 0)
-          result.add(v, x);
+          data->add(v, x);
       }
-      return result;
+      return Vector(data);
     }
 
-    int Result::run(const SparseVector& targetPoint, OutputBase& output,
-        const std::vector<SparseVector>& normalConeRays, bool verifyRays)
+    int Result::run(const Vector& targetPoint, OutputBase& output,
+        const std::vector<Vector>& normalConeRays, bool verifyRays)
     {
       LPRowSetRational coneEquations;
       return _implementation->run(targetPoint, output, coneEquations, normalConeRays, verifyRays);
     }
 
-    int Result::run(const SparseVector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
+    int Result::run(const Vector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
     {
       LPRowSetRational coneEquations;
-      std::vector<SparseVector> normalConeRays;
+      std::vector<Vector> normalConeRays;
       for (int i = affineHullEquations.num() - 1; i >= 0; --i)
       {
         const SVectorRational& normal = affineHullEquations.rowVector(i);
-        SparseVector positiveRay(normal.size());
-        SparseVector negativeRay(normal.size());
+        VectorData* positiveRayData = new VectorData(normal.size());
+        VectorData* negativeRayData = new VectorData(normal.size());
         for (std::size_t p = 0; p < normal.size(); ++p)
         {
-          positiveRay.add(normal.index(p), normal.value(p));
-          negativeRay.add(normal.index(p), -normal.value(p));
+          positiveRayData->add(normal.index(p), normal.value(p));
+          negativeRayData->add(normal.index(p), -normal.value(p));
         }
-        normalConeRays.push_back(positiveRay);
-        normalConeRays.push_back(negativeRay);
+        normalConeRays.push_back(Vector(positiveRayData));
+        normalConeRays.push_back(Vector(negativeRayData));
       }
       return _implementation->run(targetPoint, output, coneEquations, normalConeRays, false);
     }
 
-    int Result::run(const SparseVector& targetPoint, OutputBase& output)
+    int Result::run(const Vector& targetPoint, OutputBase& output)
     {
       LPRowSetRational coneEquations;
-      std::vector<SparseVector> normalConeRays;
+      std::vector<Vector> normalConeRays;
       return _implementation->run(targetPoint, output, coneEquations, normalConeRays, false);
     }
 
-    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output, const std::vector<SparseVector>& normalConeRays,
+    bool Result::isVertex(const Vector& targetPoint, OutputBase& output, const std::vector<Vector>& normalConeRays,
       bool verifyRays)
     {
       return run(targetPoint, output, normalConeRays, verifyRays) == 0;
     }
 
-    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
+    bool Result::isVertex(const Vector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
     {
       return run(targetPoint, output, affineHullEquations) == 0;
     }
 
-    bool Result::isVertex(const SparseVector& targetPoint, OutputBase& output)
+    bool Result::isVertex(const Vector& targetPoint, OutputBase& output)
     {
       return run(targetPoint, output) == 0;
     }
 
-    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output,
-      const std::vector<SparseVector>& normalConeRays, bool verifyRays)
+    bool Result::areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output,
+      const std::vector<Vector>& normalConeRays, bool verifyRays)
     {
       return _implementation->runAdjacency(firstPoint, secondPoint, output, normalConeRays, verifyRays);
     }
 
-    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output,
+    bool Result::areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output,
       const LPRowSetRational& affineHullEquations)
     {
-      std::vector<SparseVector> normalConeRays;
+      std::vector<Vector> normalConeRays;
       for (int i = affineHullEquations.num() - 1; i >= 0; --i)
       {
         const SVectorRational& normal = affineHullEquations.rowVector(i);
-        SparseVector positiveRay(normal.size());
-        SparseVector negativeRay(normal.size());
+        VectorData* positiveRayData = new VectorData(normal.size());
+        VectorData* negativeRayData = new VectorData(normal.size());
         for (std::size_t p = 0; p < normal.size(); ++p)
         {
-          positiveRay.add(normal.index(p), normal.value(p));
-          negativeRay.add(normal.index(p), -normal.value(p));
+          positiveRayData->add(normal.index(p), normal.value(p));
+          negativeRayData->add(normal.index(p), -normal.value(p));
         }
-        normalConeRays.push_back(positiveRay);
-        normalConeRays.push_back(negativeRay);
+        normalConeRays.push_back(Vector(positiveRayData));
+        normalConeRays.push_back(Vector(negativeRayData));
       }
       return _implementation->runAdjacency(firstPoint, secondPoint, output, normalConeRays, false);
     }
 
-    bool Result::areAdjacent(const SparseVector& firstPoint, const SparseVector& secondPoint, OutputBase& output)
+    bool Result::areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output)
     {
-      std::vector<SparseVector> normalConeRays;
+      std::vector<Vector> normalConeRays;
       return areAdjacent(firstPoint, secondPoint, output, normalConeRays, false);
     }
 

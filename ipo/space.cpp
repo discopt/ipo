@@ -59,7 +59,7 @@ namespace ipo {
     }
   }
 
-  void Space::printLinearForm(std::ostream& stream, const SparseVector& coefficients) const
+  void Space::printLinearForm(std::ostream& stream, const Vector& coefficients) const
   {
     bool first = true;
     for (std::size_t i = 0; i < coefficients.size(); ++i)
@@ -83,7 +83,7 @@ namespace ipo {
   }
 
 
-  void Space::printLinearForm(std::ostream& stream, const DenseVector* coefficients) const
+  void Space::printLinearForm(std::ostream& stream, const soplex::VectorRational* coefficients) const
   {
     bool first = true;
     for (std::size_t v = 0; v < dimension(); ++v)
@@ -162,7 +162,7 @@ namespace ipo {
       stream << "()";
   }
 
-  void Space::printVector(std::ostream& stream, const ipo::SparseVector& vector) const
+  void Space::printVector(std::ostream& stream, const Vector& vector) const
   {
     bool delimit = false;
     for (std::size_t i = 0; i < vector.size(); ++i)

@@ -112,7 +112,7 @@ namespace ipo {
      * Parses the output of the external program.
      */
 
-    SparseVector parseSolution(std::stringstream& stream);
+    Vector parseSolution(std::stringstream& stream);
 
     /**
      * \brief Calls the external program.

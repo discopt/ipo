@@ -67,7 +67,7 @@ namespace ipo {
      * This implementation calls the standard implementation from \ref OracleBase and adds new points and rays to the cache.
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
     
     /**
@@ -84,12 +84,12 @@ namespace ipo {
      * This implementation searches in the point / ray storage for suitable results.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
-    bool addPoint(SparseVector& point);
+    bool addPoint(const Vector& point);
 
-    bool addRay(SparseVector& ray);
+    bool addRay(const Vector& ray);
     
     inline std::size_t numPoints() const
     {
@@ -104,20 +104,20 @@ namespace ipo {
   protected:
     struct Data
     {
-      SparseVector vector;
+      Vector vector;
 
       int valueExponent;
       double valueMantissa;
 
-      Data(SparseVector& vector);
+      Data(Vector& vector);
       ~Data();
 
-      void updateObjective(const DenseVectorApproximation& approximateObjective, double approximateObjectiveBound);
+      void updateObjective(const soplex::VectorReal& approximateObjective, double approximateObjectiveBound);
       bool operator<(const Data& other) const;
     };
     
-    void search(std::vector<Data>& vectors, const DenseVectorApproximation& approximateObjective,
-      double approximateObjectiveBound, bool handlingPoints, std::vector<SparseVector>& result);
+    void search(std::vector<Data>& vectors, const soplex::VectorReal& approximateObjective,
+      double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result);
     
 //     struct VectorStats
 //     {
@@ -141,8 +141,8 @@ namespace ipo {
 //       std::vector<std::size_t>& result);
 
   protected:
-    UniqueSparseVectors _uniquePoints;
-    UniqueSparseVectors _uniqueDirections;
+    UniqueVectors _uniquePoints;
+    UniqueVectors _uniqueDirections;
     std::vector<Data> _facePoints;
     std::vector<Data> _faceDirections;
   };

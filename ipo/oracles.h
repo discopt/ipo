@@ -96,7 +96,7 @@ namespace ipo {
      * \sa sparseNormal()
      */
 
-    inline const DenseVector& denseNormal()
+    inline const soplex::VectorRational& denseNormal()
     {
       ensureSync();
       return _denseNormal;
@@ -111,7 +111,7 @@ namespace ipo {
      * \sa denseNormal()
      */
 
-    inline const SparseVector& sparseNormal()
+    inline const Vector& sparseNormal()
     {
       ensureSync();
       return _sparseNormal;
@@ -148,7 +148,7 @@ namespace ipo {
      * Returns true iff the \p point lies in the face.
      */
 
-    bool containsPoint(const SparseVector& point);
+    bool containsPoint(const Vector& point);
 
     /**
      * \brief Checks whether the given \p direcvtion lies in the recession cone of the face.
@@ -156,7 +156,7 @@ namespace ipo {
      * Returns true iff the \p direction lies in the recession cone of the face.
      */
 
-    bool containsDirection(const SparseVector& direction);
+    bool containsDirection(const Vector& direction);
 
   protected:
 
@@ -171,8 +171,8 @@ namespace ipo {
 
     soplex::LPRowSetRational _inequalities; // Set of inequalities defining this face.
     bool _synced; // Whether \c _inequalities is in sync with the remaining variables.
-    DenseVector _denseNormal; // Dense normal vector of representing inequality.
-    SparseVector _sparseNormal; // Sparse normal vector of representing inequality.
+    soplex::DVectorRational _denseNormal; // Dense normal vector of representing inequality.
+    Vector _sparseNormal; // Sparse normal vector of representing inequality.
     Rational _maximumNorm; // Largest absolute number occuring in _normal.
     Rational _rhs; // Right-hand side of representing inequality.
   };
@@ -191,11 +191,11 @@ namespace ipo {
   public:
     struct Point
     {
-      soplex::Rational objectiveValue;
-      SparseVector vector;
+      Rational objectiveValue;
+      Vector vector;
 
-      Point(SparseVector& vector);
-      Point(SparseVector& vector, const soplex::Rational& value);
+      Point(Vector& vector);
+      Point(Vector& vector, const soplex::Rational& value);
 
       inline bool operator<(const Point& other) const
       {
@@ -205,9 +205,9 @@ namespace ipo {
 
     struct Direction
     {
-      SparseVector vector;
+      Vector vector;
 
-      Direction(SparseVector& vector);
+      Direction(Vector& vector);
     };
 
     /**
@@ -324,7 +324,7 @@ namespace ipo {
     std::vector<Direction> directions;
 
   protected:
-    DenseVector const* _objective;
+    soplex::VectorRational const* _objective;
     std::size_t _heuristicLevel;
   };
 
@@ -467,7 +467,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    void maximize(OracleResult& result, const DenseVector& objective,
+    void maximize(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
       std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
 
@@ -490,7 +490,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    void maximize(OracleResult& result, const SparseVector& objective,
+    void maximize(OracleResult& result, const Vector& objective,
       const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
       std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
 
@@ -537,7 +537,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
 
     /**
@@ -554,7 +554,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups) = 0;
 
     /**
@@ -583,7 +583,7 @@ namespace ipo {
     const Space& _space; // Ambient space of the oracle.
     OracleBase* _nextOracle; // Next optimization oracle (or NULL if exact).
     std::size_t _heuristicLevel; // Number of associated oracles.
-    DenseVector _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
+    soplex::DVectorRational _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
   };
 
   /**
@@ -672,7 +672,7 @@ namespace ipo {
      * The maximizeImplementation() function is called repeatedly with titled objective vectors (see \ref FaceOracleBase).
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
 
     /**

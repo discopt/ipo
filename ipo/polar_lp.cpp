@@ -10,6 +10,24 @@ using namespace soplex;
 
 namespace ipo {
 
+  PolarLP::RowInfo::RowInfo()
+    : type(' '), age(std::numeric_limits<int>::min())
+  {
+    
+  }
+
+  PolarLP::RowInfo::RowInfo(char t, int a)
+    : type(t), age(a)
+  {
+
+  }
+  
+  PolarLP::RowInfo::RowInfo(char t, const Vector& vec, int a)
+    : type(t), vector(vec), age(a)
+  {
+
+  }
+
   PolarLP::PolarLP(OracleBase* oracle, double initialPenalty, int maxAge) 
     : _oracle(oracle), _n(oracle->space().dimension()), _d(oracle->space().dimension() + 1), 
     _offsetLower(oracle->space().dimension() + 1), _offsetUpper(2 * (oracle->space().dimension() + 1)), _stabilizing(false),
@@ -68,7 +86,7 @@ namespace ipo {
       stabVector.add(c, 1);
       stabVector.add(_offsetLower + c, 1.0);
       stabRows.add(0, stabVector, infinity);
-      RowInfo ri = { 's', SparseVector(), -1 };
+      RowInfo ri('s');
       _stabRowInfos.push_back(ri);
     }
     for (std::size_t c = 0; c < _d; ++c)
@@ -78,7 +96,7 @@ namespace ipo {
       stabVector.add(c, 1.0);
       stabVector.add(_offsetUpper + c, -1.0);
       stabRows.add(-infinity, stabVector, 0);
-      RowInfo ri = { 's', SparseVector(), -1 };
+      RowInfo ri('s');
       _stabRowInfos.push_back(ri);
     }
     _stabLP->addRowsReal(stabRows);
@@ -104,7 +122,7 @@ namespace ipo {
       assert(row.index(p) <= _n);
 
     _mainLP->addRowRational(LPRowRational(lhs, row, rhs));
-    RowInfo ri = { 'C', SparseVector(), -1 };
+    RowInfo ri('C');
     _rowInfos.push_back(ri);
     _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
@@ -155,7 +173,7 @@ soplex::VectorRational& normal,
     updateConstraint(index, LPRowRational(lhs, sparseNormal, rhs));
   }
 
-  void PolarLP::updateObjective(const DenseVector& objective)
+  void PolarLP::updateObjective(const soplex::VectorRational& objective)
   {
     assert(objective.dim() == _d);
 
@@ -169,7 +187,7 @@ soplex::VectorRational& normal,
     }
   }
 
-  std::size_t PolarLP::addPointConstraint(const SparseVector& point)
+  std::size_t PolarLP::addPointConstraint(const Vector& point)
   {
     DSVectorRational exactVector;
     for (std::size_t p = 0; p < point.size(); ++p)
@@ -177,7 +195,7 @@ soplex::VectorRational& normal,
     exactVector.add(_n, Rational(-1));
     _mainLP->addRowRational(LPRowRational(-infinity, exactVector, Rational(0)));
 
-    RowInfo ri = { 'P', point, -1 };
+    RowInfo ri('P', point);
     _rowInfos.push_back(ri);
     _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
@@ -191,14 +209,14 @@ soplex::VectorRational& normal,
     return _constraintsToRows.size() - 1;
   }
 
-  std::size_t PolarLP::addRayConstraint(const SparseVector& ray)
+  std::size_t PolarLP::addRayConstraint(const Vector& ray)
   {
     DSVectorRational exactVector;
     for (std::size_t p = 0; p < ray.size(); ++p)
       exactVector.add(ray.index(p), ray.value(p));
     _mainLP->addRowRational(LPRowRational(-infinity, exactVector, Rational(0)));
 
-    RowInfo ri = { 'R', ray, -1 };
+    RowInfo ri('R', ray);
     _rowInfos.push_back(ri);
     _constraintsToRows.push_back(_mainLP->numRowsRational() - 1);
 
@@ -299,7 +317,7 @@ soplex::VectorRational& normal,
     }
   }
   
-  SparseVector PolarLP::getPrimalSolution()
+  Vector PolarLP::getPrimalSolution()
   {
     _currentPrimalSolution.reDim(_mainLP->numColsRational());
     assert(_mainLP->getPrimalRational(_currentPrimalSolution));
@@ -310,12 +328,13 @@ soplex::VectorRational& normal,
       if (_currentPrimalSolution[v] != 0)
         ++size;
     }
-    SparseVector result(size);
+    VectorData* data = new VectorData(size);
     for (std::size_t v = 0; v <= _n; ++v)
     {
       if (_currentPrimalSolution[v] != 0)
-        result.add(v, _currentPrimalSolution[v]);
+        data->add(v, _currentPrimalSolution[v]);
     }
+    return Vector(data);
   }
 
   void PolarLP::stabilizedPresolve()
@@ -907,13 +926,13 @@ soplex::VectorRational& normal,
 
   }
 
-  void PolarLP::addPointRow(SparseVector& point, bool stabLP)
+  void PolarLP::addPointRow(Vector& point, bool stabLP)
   {
     DSVectorRational vector;
     for (std::size_t p = 0; p < point.size(); ++p)
       vector.add(point.index(p), point.value(p));
     vector.add(_n, Rational(-1));
-    RowInfo ri = { 'p', point, 0 };
+    RowInfo ri('p', point);
 
     if (stabLP)
     {
@@ -930,9 +949,9 @@ soplex::VectorRational& normal,
     }
   }
 
-  void PolarLP::addRayRow(SparseVector& ray, bool stabLP)
+  void PolarLP::addRayRow(Vector& ray, bool stabLP)
   {
-    RowInfo ri = { 'r', ray, 0 };
+    RowInfo ri('r', ray);
     if (stabLP)
     {
       DSVectorReal vector;
@@ -950,6 +969,5 @@ soplex::VectorRational& normal,
       _rowInfos.push_back(ri);
     }
   }
-
 
 } /* namespace ipo */

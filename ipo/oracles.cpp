@@ -9,19 +9,19 @@ using namespace soplex;
 namespace ipo {
 
   Face::Face(const Space& space) 
-    : _synced(false), _denseNormal(space.dimension()), _sparseNormal(space.dimension())
+    : _synced(false), _denseNormal(space.dimension()), _sparseNormal()
   {
 
   }
 
   Face::Face(const Space& space, const LPRowRational& inequality) : _synced(false),
-    _denseNormal(space.dimension()), _sparseNormal(space.dimension())
+    _denseNormal(space.dimension()), _sparseNormal()
   {
     add(inequality);
   }
 
   Face::Face(const Space& space, const LPRowSetRational& inequalities) : _synced(false),
-    _denseNormal(space.dimension()), _sparseNormal(space.dimension())
+    _denseNormal(space.dimension()), _sparseNormal()
   {
     add(inequalities);
   }
@@ -58,16 +58,16 @@ namespace ipo {
     _synced = false;
   }
 
-  bool Face::containsPoint(const SparseVector& point)
+  bool Face::containsPoint(const Vector& point)
   {
     ensureSync();
-    return scalarProduct(_denseNormal, point) == _rhs;
+    return _denseNormal * point == _rhs;
   }
 
-  bool Face::containsDirection(const SparseVector& direction)
+  bool Face::containsDirection(const Vector& direction)
   {
     ensureSync();
-    return scalarProduct(_denseNormal, direction) == 0;
+    return _denseNormal * direction == 0;
   }
 
   void Face::ensureSync()
@@ -99,8 +99,7 @@ namespace ipo {
       }
     }
 
-    _sparseNormal = SparseVector(_denseNormal.dim());
-    assign(_sparseNormal, _denseNormal);
+    _sparseNormal = denseToVector(_denseNormal);
     _maximumNorm = 0;
     for (std::size_t p = 0; p < _sparseNormal.size(); ++p)
     {
@@ -112,19 +111,19 @@ namespace ipo {
     }
   }
 
-  OracleResult::Point::Point(SparseVector& vec)
+  OracleResult::Point::Point(Vector& vec)
     : vector(vec)
   {
     this->objectiveValue = minusInfinity;
   }
   
-  OracleResult::Point::Point(SparseVector& vec, const Rational& value)
+  OracleResult::Point::Point(Vector& vec, const Rational& value)
     : vector(vec)
   {
     this->objectiveValue = value;
   }
 
-  OracleResult::Direction::Direction(SparseVector& vec)
+  OracleResult::Direction::Direction(Vector& vec)
     : vector(vec)
   {
     
@@ -155,7 +154,7 @@ namespace ipo {
     {
       if (points[i].objectiveValue == minusInfinity)
       {
-        points[i].objectiveValue = scalarProduct(*_objective, points[i].vector);
+        points[i].objectiveValue = *_objective * points[i].vector;
       }
     }
   }
@@ -164,7 +163,7 @@ namespace ipo {
   {
     // Check points.
     
-    UniqueSparseVectors usv(_objective->dim());
+    UniqueVectors usv(_objective->dim());
     std::size_t write = 0;
     for (std::size_t read = 0; read < points.size(); ++read)
     {
@@ -227,15 +226,14 @@ namespace ipo {
       _nextOracle->setFace(newFace);
   }
 
-  void OracleBase::maximize(OracleResult& result, const SparseVector& objective, const ObjectiveBound& objectiveBound,
+  void OracleBase::maximize(OracleResult& result, const Vector& objective, const ObjectiveBound& objectiveBound,
     std::size_t minHeuristic, std::size_t maxHeuristic)
   {
-    _tempObjective.clear();
-    assign(_tempObjective, objective);
+    vectorToDense(objective, _tempObjective);
     return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
-  void OracleBase::maximize(OracleResult& result, const DenseVector& objective, const ObjectiveBound& objectiveBound, 
+  void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, 
     std::size_t minHeuristic, std::size_t maxHeuristic)
   {
     // Initialize result.
@@ -259,7 +257,7 @@ namespace ipo {
     {
       if (result.points[i].objectiveValue == minusInfinity)
       {
-        result.points[i].objectiveValue = scalarProduct(objective, result.points[i].vector);
+        result.points[i].objectiveValue = objective * result.points[i].vector;
       }
     }
 
@@ -283,7 +281,7 @@ namespace ipo {
 //     std::cerr << std::endl;
   }
 
-  std::size_t OracleBase::maximizeController(OracleResult& result, const DenseVector& objective,
+  std::size_t OracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
@@ -382,7 +380,7 @@ namespace ipo {
     return NULL;
   }
 
-  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const DenseVector& objective,
+  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
@@ -435,8 +433,8 @@ namespace ipo {
         {
           _modifiedObjective[v] = objective[v];
         }
-        const DenseVector& denseNormal = face->denseNormal();
-        const SparseVector& sparseNormal = face->sparseNormal();
+        const soplex::VectorRational& denseNormal = face->denseNormal();
+        const Vector& sparseNormal = face->sparseNormal();
 
         // Loop that increases M as long as results are not feasible.
 
@@ -486,11 +484,11 @@ namespace ipo {
             Rational bestValue = -infinity;
             for (std::size_t i = 0; i < unrestrictedResult.points.size(); ++i)
             {
-              SparseVector& vector = unrestrictedResult.points[i].vector;
+              Vector& vector = unrestrictedResult.points[i].vector;
               if (!face->containsPoint(vector))
                 continue;
               
-              Rational objectiveValue = scalarProduct(objective, vector);
+              Rational objectiveValue = objective * vector;
               if (objectiveBound.satisfiedBy(objectiveValue))
               {
                 result.points.push_back(OracleResult::Point(vector, objectiveValue));
@@ -520,7 +518,7 @@ namespace ipo {
           {
             for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
             {
-              SparseVector& vector = unrestrictedResult.directions[i].vector;
+              Vector& vector = unrestrictedResult.directions[i].vector;
               if (!face->containsDirection(vector))
                 continue;
 

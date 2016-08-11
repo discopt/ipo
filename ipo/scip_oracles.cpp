@@ -231,7 +231,7 @@ double(row.value(p))));
 //         normalCopy = currentFace()->sparseNormal() * scaling;
 //       }
 //       const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
-      const SparseVector& normal = currentFace()->sparseNormal();
+      const Vector& normal = currentFace()->sparseNormal();
       Rational rhs = currentFace()->rhs() * scaling;
 
       /// Add constraint to SCIP.

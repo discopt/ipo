@@ -55,9 +55,9 @@ namespace ipo {
       int dimensionLowerBound() const;
       int dimensionUnsafeUpperBound() const;
       int dimensionSafeUpperBound() const;
-      const SparseVector& spanningPoint(std::size_t i) const;
+      const Vector& spanningPoint(std::size_t i) const;
       std::size_t numSpanningPoints() const;
-      const SparseVector& spanningRay(std::size_t i) const;
+      const Vector& spanningRay(std::size_t i) const;
       std::size_t numSpanningRays() const;
       const std::vector<std::size_t>& basicColumns() const;
       const std::vector<std::size_t>& irredundantEquations() const;

@@ -15,7 +15,7 @@ namespace ipo {
     class Implementation: public PolarLP
     {
     public:
-      Implementation(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays,
+      Implementation(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays,
         const std::vector<std::size_t>& columnBasis, OracleBase* oracle) 
         : PolarLP(oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(false)
       {
@@ -29,7 +29,7 @@ namespace ipo {
         for (std::size_t i = 0; i < spanningPoints.size(); ++i)
         {
           addPointConstraint(spanningPoints[i]);
-          add(_interiorPoint, spanningPoints[i]);
+          _interiorPoint += spanningPoints[i];
         }
         for (std::size_t v = 0; v < n(); ++v)
           _interiorPoint[v] /= int(spanningPoints.size());
@@ -40,9 +40,9 @@ namespace ipo {
         for (std::size_t i = 0; i < spanningRays.size(); ++i)
         {
           addRayConstraint(spanningRays[i]);
-          add(_interiorPoint, spanningRays[i]);
-          add(_interiorRay, spanningRays[i]);
+          _interiorRay += _interiorRay, spanningRays[i];
         }
+        _interiorPoint += _interiorRay;
 
         /// Set initial basis.
 
@@ -115,7 +115,7 @@ namespace ipo {
         _output->onAfterAddRay();
       }
 
-      bool run(const SparseVector& target, bool separatingPoint, OutputBase& output)
+      bool run(const Vector& target, bool separatingPoint, OutputBase& output)
       {
         _output = &output;
         _output->_implementation = this;
@@ -220,8 +220,8 @@ namespace ipo {
       bool _separatingPoint;
       OutputBase* _output;
       int _dimension;
-      DenseVector _interiorPoint;
-      DenseVector _interiorRay;
+      soplex::DVectorRational _interiorPoint;
+      soplex::DVectorRational _interiorRay;
       std::size_t _normalizationConstraint;
       Basis _basis;
 
@@ -234,7 +234,7 @@ namespace ipo {
       bool _separatedEquation;
     };
 
-    Result::Result(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays, 
+    Result::Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
       const std::vector<std::size_t>& columnBasis, OracleBase* oracle)
     {
       _implementation = new Implementation(spanningPoints, spanningRays, columnBasis, oracle);
@@ -266,12 +266,12 @@ namespace ipo {
       return _implementation->_violation;
     }
 
-    bool Result::separatePoint(const SparseVector& targetPoint, OutputBase& output)
+    bool Result::separatePoint(const Vector& targetPoint, OutputBase& output)
     {
       return _implementation->run(targetPoint, true, output);
     }
 
-    bool Result::separateRay(const SparseVector& targetRay, OutputBase& output)
+    bool Result::separateRay(const Vector& targetRay, OutputBase& output)
     {
       return _implementation->run(targetRay, false, output);
     }

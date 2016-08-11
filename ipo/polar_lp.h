@@ -22,8 +22,8 @@ namespace ipo {
     {
       std::vector<soplex::SPxSolver::VarStatus> columnStatus;
       std::vector<soplex::SPxSolver::VarStatus> constraintStatus;
-      std::vector<SparseVector> tightPoints;
-      std::vector<SparseVector> tightRays;
+      std::vector<Vector> tightPoints;
+      std::vector<Vector> tightRays;
     };
 
     PolarLP(OracleBase* oracle, double initialPenalty = 1024.0, int maxAge = 30);
@@ -78,16 +78,16 @@ namespace ipo {
         const soplex::Rational& rhs);
     void updateConstraint(std::size_t index, const soplex::Rational& lhs, const soplex::VectorRational& normal,
         const soplex::Rational& rhs);
-    void updateObjective(const DenseVector& objective);
-    std::size_t addPointConstraint(const SparseVector& point);
-    std::size_t addRayConstraint(const SparseVector& ray);
+    void updateObjective(const soplex::VectorRational& objective);
+    std::size_t addPointConstraint(const Vector& point);
+    std::size_t addRayConstraint(const Vector& ray);
 
     void setBasis(const Basis& basis);
     void getBasis(Basis& basis);
     soplex::Rational getObjectiveValue();
     void getPrimalSolution(soplex::VectorRational& solution);
     void getPrimalSolution(soplex::DSVectorRational& solution); // TODO: all versions useful?
-    SparseVector getPrimalSolution();
+    Vector getPrimalSolution();
     void stabilizedPresolve();
     void optimize(bool perturbeObjective);
     void reoptimizePerturbed();
@@ -108,9 +108,9 @@ namespace ipo {
     virtual void onAfterAddRay();
 
   private:
-    bool addPointsAndRays(std::vector<SparseVector>& pointIndices, std::vector<SparseVector>& rayIndices, bool stabLP);
-    void addPointRow(SparseVector& point, bool stabLP);
-    void addRayRow(SparseVector& ray, bool stabLP);
+    bool addPointsAndRays(std::vector<Vector>& pointIndices, std::vector<Vector>& rayIndices, bool stabLP);
+    void addPointRow(Vector& point, bool stabLP);
+    void addRayRow(Vector& ray, bool stabLP);
 
   protected:
     OracleBase* _oracle;
@@ -122,8 +122,12 @@ namespace ipo {
     struct RowInfo
     {
       char type;
-      SparseVector vector;
+      Vector vector;
       int age;
+
+      RowInfo();
+      RowInfo(char type, int age = -1);
+      RowInfo(char type, const Vector& vector, int age = -1);
     };
 
     const std::size_t _n;

@@ -107,9 +107,9 @@ namespace ipo {
         }
       }
 
-      void computeKernelVector(std::size_t columnIndex, DenseVector& result) const
+      void computeKernelVector(std::size_t columnIndex, soplex::DVectorRational& result) const
       {
-        DenseVector rhs;
+        soplex::DVectorRational rhs;
         rhs.reDim(numRows(), true);
         const SVectorRational& col = _columnVectors[columnIndex];
         for (int p = col.size() - 1; p >= 0; --p)
@@ -131,7 +131,7 @@ namespace ipo {
         result[columnIndex] = Rational(1);
       }
 
-      void computeApproximateKernelVector(std::size_t columnIndex, DenseVectorApproximation& result, double epsilon) const
+      void computeApproximateKernelVector(std::size_t columnIndex, soplex::DVectorReal& result, double epsilon) const
       {
         DVectorReal rhs;
         rhs.reDim(numRows(), true);
@@ -191,7 +191,7 @@ namespace ipo {
 
       }
 
-      void addRow(const SparseVector& row, const Rational& last, std::size_t newBasicColumnIndex)
+      void addRow(const Vector& row, const Rational& last, std::size_t newBasicColumnIndex)
       {
         assert(_columnBasics[newBasicColumnIndex] == std::numeric_limits<std::size_t>::max());
 
@@ -314,10 +314,10 @@ namespace ipo {
     struct NonbasicColumn
     {
       bool exactValid;
-      DenseVector exactDirection;
+      soplex::DVectorRational exactDirection;
       Rational exactRhs;
       bool approxValid;
-      DenseVectorApproximation approxDirection;
+      soplex::DVectorReal approxDirection;
       std::size_t sparsity;
       bool definesEquation;
       bool avoid;
@@ -492,7 +492,7 @@ namespace ipo {
         }
       }
 
-      void addPoint(SparseVector& point, std::size_t column, bool invalidate)
+      void addPoint(Vector& point, std::size_t column, bool invalidate)
       {
         _spanningPoints.push_back(point);
         _basicColumns.push_back(column);
@@ -510,7 +510,7 @@ namespace ipo {
             _columns[c].approxValid = false;
             if (_columns[c].exactValid)
             {
-              Rational product = scalarProduct(_columns[c].exactDirection, lastRow);
+              Rational product = _columns[c].exactDirection * lastRow;
               product -= _columns[c].exactRhs;
               if (product != 0)
               {
@@ -522,7 +522,7 @@ namespace ipo {
         }
       }
 
-      void addDirection(SparseVector& direction, std::size_t column, bool invalidate)
+      void addDirection(Vector& direction, std::size_t column, bool invalidate)
       {
         _spanningDirections.push_back(direction);
         _basicColumns.push_back(column);
@@ -540,7 +540,7 @@ namespace ipo {
             _columns[c].approxValid = false;
             if (_columns[c].exactValid)
             {
-              Rational product = scalarProduct(_columns[c].exactDirection, lastRow);
+              Rational product = _columns[c].exactDirection * lastRow;
               if (product != 0)
               {
                 _columns[c].exactValid = false;
@@ -718,7 +718,7 @@ namespace ipo {
           if (_spanningPoints.empty())
             _commonValue = plusInfinity;
           else
-            _commonValue = scalarProduct(*_spanningPoints.begin(), _directionVector);
+            _commonValue = *_spanningPoints.begin() * _directionVector;
 
           // Measure bitsize.
 
@@ -763,8 +763,8 @@ namespace ipo {
               // Case |S| = 0: We might add two points.
 
               const Rational& firstObjectiveValue = _result.points.front().objectiveValue;
-              SparseVector* firstPoint = &_result.points.front().vector;
-              SparseVector* secondPoint = NULL;
+              Vector* firstPoint = &_result.points.front().vector;
+              Vector* secondPoint = NULL;
               for (std::size_t i = 1; i < _result.points.size(); ++i)
               {
                 if (_result.points[i].objectiveValue != firstObjectiveValue)
@@ -796,7 +796,7 @@ namespace ipo {
             {
               // We add any point that has objective different from common value.
 
-              SparseVector* differentObjectiveVector = NULL;
+              Vector* differentObjectiveVector = NULL;
               for (std::size_t i = 0; i < _result.points.size(); ++i)
               {
                 if (_result.points[i].objectiveValue != _commonValue)
@@ -844,7 +844,7 @@ namespace ipo {
           }
           else
           {
-            SparseVector* differentObjectiveVector = NULL;
+            Vector* differentObjectiveVector = NULL;
             for (std::size_t i = 0; i < _result.points.size(); ++i)
             {
               if (_result.points[i].objectiveValue != _commonValue)
@@ -1060,8 +1060,8 @@ namespace ipo {
       LPRowSetRational* _equations;
       OracleBase* _oracle;
       OutputBase* _output;
-      std::vector<SparseVector> _spanningPoints;
-      std::vector<SparseVector> _spanningDirections;
+      std::vector<Vector> _spanningPoints;
+      std::vector<Vector> _spanningDirections;
       std::vector<std::size_t> _basicColumns;
       std::vector<std::size_t> _irredundantEquations;
       std::vector<std::size_t> _potentialEquations;
@@ -1071,8 +1071,8 @@ namespace ipo {
       OracleResult _result;
       std::size_t _directionColumn;
       ObjectiveBound _objectiveBound;
-      DenseVector _directionVector;
-      DenseVectorApproximation _approximateDirectionVector;
+      soplex::DVectorRational _directionVector;
+      soplex::DVectorReal _approximateDirectionVector;
       Rational _commonValue;
       std::size_t _numCacheQueries;
       std::size_t _numCacheHits;
@@ -1160,7 +1160,7 @@ namespace ipo {
       return _implementation->dimensionSafeUpperBound();
     }
 
-    const SparseVector& InformationBase::spanningPoint(std::size_t i) const
+    const Vector& InformationBase::spanningPoint(std::size_t i) const
     {
       ensureImplementation();
       return _implementation->_spanningPoints[i];
@@ -1172,7 +1172,7 @@ namespace ipo {
       return _implementation->_spanningPoints.size();
     }
 
-    const SparseVector& InformationBase::spanningRay(std::size_t i) const
+    const Vector& InformationBase::spanningRay(std::size_t i) const
     {
       ensureImplementation();
       return _implementation->_spanningDirections[i];

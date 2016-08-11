@@ -70,8 +70,8 @@ namespace ipo {
 
     struct Certificate
     {
-      std::vector<SparseVector> points;
-      std::vector<SparseVector> rays;
+      std::vector<Vector> points;
+      std::vector<Vector> rays;
     };
 
     class Implementation;
@@ -227,7 +227,7 @@ namespace ipo {
     class Result: public InformationBase
     {
     public:
-      Result(const std::vector<SparseVector>& spanningPoints, const std::vector<SparseVector>& spanningRays, 
+      Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
         const std::vector<std::size_t>& columnBasis, OracleBase* oracle);
       virtual ~Result();
 
@@ -236,8 +236,8 @@ namespace ipo {
       void certificate(Certificate& certificate) const;
       const Rational& violation() const;
 
-      bool separatePoint(const SparseVector& targetPoint, OutputBase& output);
-      bool separateRay(const SparseVector& targetRay, OutputBase& output);
+      bool separatePoint(const Vector& targetPoint, OutputBase& output);
+      bool separateRay(const Vector& targetRay, OutputBase& output);
 
       friend class Implementation;
     };

@@ -21,8 +21,8 @@ namespace ipo {
   class ConsoleApplicationObjectiveParser : public LPObjectiveParser
   {
   public:
-    ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space, std::vector<DenseVector*>& objectives, 
-      std::vector<std::string>& objectiveNames)
+    ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space,
+      std::vector<soplex::DVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -36,7 +36,7 @@ namespace ipo {
 
     virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& coefficients)
     {
-      DenseVector* vector = new DenseVector(_oracleVariables.size());
+      soplex::DVectorRational* vector = new soplex::DVectorRational(_oracleVariables.size());
       for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
@@ -54,7 +54,7 @@ namespace ipo {
     }
 
   private:
-    std::vector<DenseVector*>& _objectives;
+    std::vector<soplex::DVectorRational*>& _objectives;
     std::vector<std::string>& _objectiveNames;
     std::map<std::string, std::size_t> _oracleVariables;
   };
@@ -122,7 +122,7 @@ namespace ipo {
   {
   public:
     ConsoleApplicationPointParser(std::istream& stream, const Space& space,
-      std::vector<SparseVector>& points, std::vector<std::string>& pointNames)
+      std::vector<Vector>& points, std::vector<std::string>& pointNames)
       : PointParser(stream), _points(points), _pointNames(pointNames)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -136,13 +136,13 @@ namespace ipo {
 
     virtual void handlePoint(const std::string& name, const std::map< std::string, Rational >& values)
     {
-      SparseVector point(values.size());
+      VectorData* data = new VectorData(values.size());
       for (std::map<std::string, Rational>::const_iterator iter = values.begin(); iter != values.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
         {
-          point.add(varIter->second, iter->second);
+          data->add(varIter->second, iter->second);
         }
         else
         {
@@ -151,13 +151,13 @@ namespace ipo {
         }
       }
 
-      _points.push_back(point);
+      _points.push_back(Vector(data));
       _pointNames.push_back(name);
     }
 
   private:
     std::map<std::string, std::size_t> _oracleVariables;
-    std::vector<SparseVector>& _points;
+    std::vector<Vector>& _points;
     std::vector<std::string>& _pointNames;
   };
 
@@ -510,7 +510,8 @@ namespace ipo {
     std::cerr << std::flush;
   }
 
-  void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds)
+  void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& 
+upperBounds)
   {
     if (_projectedOracle)
     {
@@ -874,7 +875,7 @@ namespace ipo {
         if (norm > 0)
         {
           norm = std::sqrt(norm);
-          DenseVector* objectiveVector = new DenseVector(n);
+          soplex::DVectorRational* objectiveVector = new soplex::DVectorRational(n);
           for (std::size_t c = 0; c < n; ++c)
             (*objectiveVector)[c] = Rational(randomVector[c] / norm);
           _objectives.push_back(objectiveVector);
@@ -1022,7 +1023,7 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::optimizeObjective(const DenseVector* objective, bool maximize)
+  bool ConsoleApplicationBase::optimizeObjective(const soplex::VectorRational* objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
 
@@ -1033,7 +1034,7 @@ namespace ipo {
     }
     else
     {
-      DVectorRational negated;
+      soplex::DVectorRational negated;
       negated = *objective;
       negated *= -1;
       oracle()->maximize(result, negated, ObjectiveBound(), 0);
@@ -1057,7 +1058,7 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::generateFacets(const DenseVector* objective, bool print)
+  bool ConsoleApplicationBase::generateFacets(const soplex::VectorRational* objective, bool print)
   {
     std::size_t n = space().dimension();
 
@@ -1091,7 +1092,7 @@ namespace ipo {
       if (status == SPxSolver::UNBOUNDED)
       {
         spx->getPrimalRayRational(denseSolution);
-        SparseVector ray = denseToSparseVector(denseSolution);
+        Vector ray = denseToVector(denseSolution);
 
 //        std::cout << "Relaxation LP is unbounded with ray ";
 //        oracle()->printVector(std::cout, &sparseSolution);
@@ -1104,7 +1105,7 @@ namespace ipo {
       else if (status == SPxSolver::OPTIMAL)
       {
         spx->getPrimalRational(denseSolution);
-        SparseVector point = denseToSparseVector(denseSolution);
+        Vector point = denseToVector(denseSolution);
 
 //        std::cout << "Relaxation LP is bounded with optimum ";
 //        oracle()->printVector(std::cout, &sparseSolution);
@@ -1177,7 +1178,7 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::separateRayFacet(const SparseVector& direction, bool& isFeasible)
+  bool ConsoleApplicationBase::separateRayFacet(const Vector& direction, bool& isFeasible)
   {
     std::size_t n = space().dimension();
 
@@ -1238,7 +1239,7 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::separatePointFacet(const SparseVector& point, bool& isFeasible)
+  bool ConsoleApplicationBase::separatePointFacet(const Vector& point, bool& isFeasible)
   {
     std::size_t n = space().dimension();
 
@@ -1298,14 +1299,14 @@ namespace ipo {
     return true;
   }
 
-  bool ConsoleApplicationBase::computeSmallestFace(const SparseVector& point)
+  bool ConsoleApplicationBase::computeSmallestFace(const Vector& point)
   {
     SmallestFace::QuietOutput smallestFaceOutput;
     SmallestFace::Result smallestFace(oracle());
     smallestFace.run(point, smallestFaceOutput);
 
     std::cout << " Dimension: " << smallestFace.dimension() << std::endl;
-    SparseVector maximizingObjective = smallestFace.getMaximizingObjective();
+    Vector maximizingObjective = smallestFace.getMaximizingObjective();
     std::cout << " Objective : ";
     space().printVector(std::cout, maximizingObjective);
     std::cout << "\n" << std::flush;

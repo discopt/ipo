@@ -88,7 +88,7 @@ namespace ipo {
      * Projects a \c point.
      */
 
-    SparseVector projectPoint(const soplex::VectorRational& point) const;
+    Vector projectPoint(const soplex::VectorRational& point) const;
 
     /**
      * \brief Projects a \c direction.
@@ -96,7 +96,7 @@ namespace ipo {
      * Projects a \c direction.
      */
 
-    SparseVector projectDirection(const soplex::VectorRational& direction) const;
+    Vector projectDirection(const soplex::VectorRational& direction) const;
 
     /**
      * \brief Projects a hyperplane if possible.
@@ -115,8 +115,8 @@ namespace ipo {
      * \return                true iff hyperplane can be projected.
      */
 
-    bool projectHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& projectedNormal, Rational& projectedRhs) 
-      const;
+    bool projectHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& projectedNormal, 
+      Rational& projectedRhs) const;
 
     /**
      * \brief Lifts a hyperplane into the source space.
@@ -128,7 +128,8 @@ namespace ipo {
      * hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
      */
 
-    void liftHyperplane(const DenseVector& normal, const Rational& rhs, DenseVector& liftedNormal, Rational& liftedRhs) const;
+    void liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& liftedNormal,
+      Rational& liftedRhs) const;
 
     /**
      * \brief Returns the dimension of the image space.
@@ -273,7 +274,7 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const DenseVector& objective,
+    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
   protected:

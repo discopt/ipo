@@ -109,7 +109,7 @@ namespace ipo {
      * Does not emit a newline character.
      */
 
-    void printLinearForm(std::ostream& stream, const SparseVector& coefficients) const;
+    void printLinearForm(std::ostream& stream, const Vector& coefficients) const;
 
     /**
      * \brief Prints the linear form with these \c coefficients to \c stream.
@@ -118,7 +118,7 @@ namespace ipo {
      * Does not emit a newline character.
      */
 
-    void printLinearForm(std::ostream& stream, const DenseVector* coefficients) const;
+    void printLinearForm(std::ostream& stream, const soplex::VectorRational* coefficients) const;
 
     /**
      * \brief Prints the \c row (inequality / equation) to \c stream.
@@ -164,7 +164,7 @@ namespace ipo {
      * Does not emit a newline character.
      */
 
-    void printVector(std::ostream& stream, const SparseVector& vector) const;
+    void printVector(std::ostream& stream, const Vector& vector) const;
 
     /**
      * \brief Returns \c true iff spaces are equal.

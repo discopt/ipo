@@ -238,6 +238,14 @@ namespace ipo {
   {
   public:
     /**
+     * \brief Constructs the zero vector.
+     * 
+     * Constructs the zero vector.
+     */
+
+    ReferenceCountedVector();
+
+    /**
      * \brief Constructs a vector from the \p data.
      * 
      * Constructs a vector from the \p data.
@@ -372,6 +380,18 @@ namespace ipo {
   {
   public:
     /**
+     * \brief Constructs the zero vector.
+     * 
+     * Constructs the zero vector.
+     */
+
+    inline MutableVector()
+      : ReferenceCountedVector()
+    {
+      _data->_mutableUsage++;
+    }
+
+    /**
      * \brief Constructs a vector from the \p data.
      * 
      * Constructs a vector from the \p data.
@@ -487,6 +507,18 @@ namespace ipo {
   {
   public:
     /**
+     * \brief Constructs the zero vector.
+     * 
+     * Constructs the zero vector.
+     */
+
+    inline Vector()
+      : ReferenceCountedVector()
+    {
+      _data->_immutableUsage++;
+    }
+
+    /**
      * \brief Constructs a vector from the \p data.
      * 
      * Constructs a vector from the \p data.
@@ -543,11 +575,15 @@ namespace ipo {
     Vector& operator=(const Vector& other)
     {
       assert(_data->_immutableUsage > 0);
-      _data->_immutableUsage--;
-      _data->deleteIfUnused();
+      if (other._data != _data)
+      {
+        _data->_immutableUsage--;
+        _data->deleteIfUnused();
 
-      _data = other._data;
-      _data->_immutableUsage++;
+        _data = other._data;
+        _data->_immutableUsage++;
+      }
+      return *this;
     }
 
     /**
@@ -564,6 +600,7 @@ namespace ipo {
 
       _data = other._data;
       _data->_immutableUsage++;
+      return *this;
     }
 
     void swap(Vector& other)
