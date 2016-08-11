@@ -9,7 +9,11 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 find_package(Doxygen)
 
-set(IPO_SOURCES unique_vectors.cpp vectors.cpp rational.cpp
+set(IPO_SOURCES
+  linear_constraint.cpp
+  unique_vectors.cpp 
+  vectors.cpp 
+  rational.cpp
   spx_gmp.cpp
   space.cpp
   oracles.cpp
@@ -32,6 +36,7 @@ set(IPO_SOURCES unique_vectors.cpp vectors.cpp rational.cpp
 )
 
 set(IPO_INSTALL_HEADERS
+  unique_vectors.h
   affine_hull.h
   facets.h
   mixed_integer_program.h
@@ -83,6 +88,10 @@ endif()
 install(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
 
 install(FILES ${IPO_INSTALL_HEADERS}                    DESTINATION include/ipo  COMPONENT headers)
+
+install(FILES vectors-pub.h            RENAME vectors.h           DESTINATION include/ipo  COMPONENT headers)
+install(FILES linear_constraint-pub.h  RENAME linear_constraint.h DESTINATION include/ipo  COMPONENT headers)
+
 install(FILES common-debug.h           RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
 install(FILES common-release.h         RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
 install(FILES common-relwithdebinfo.h  RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)

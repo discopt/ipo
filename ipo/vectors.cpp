@@ -132,6 +132,47 @@ namespace ipo {
     if (_mutableUsage == 0 && _immutableUsage == 0)
       delete this;
   }
+  
+  Rational operator*(const ReferenceCountedVector& a, const ReferenceCountedVector& b)
+  {
+    if (a.size() == 0 || b.size() == 0)
+      return 0;
+
+    Rational result = 0;
+    std::size_t pa = 0;
+    std::size_t pb = 0;
+    std::size_t ia = a.index(pa);
+    std::size_t ib = b.index(pb);
+    while (true)
+    {
+      if (ia < ib)
+      {
+        ++pa;
+        if (pa == a.size())
+          break;
+        ia = a.index(pa);
+      }
+      else if (ia > ib)
+      {
+        ++pb;
+        if (pb == b.size())
+          break;
+        ib = b.index(pb);
+      }
+      else
+      {
+        result += a.value(pa) * b.value(pb);
+        ++pa;
+        ++pb;
+        if (pa == a.size() || pb == b.size())
+          break;
+        ia = a.index(pa);
+        ib = b.index(pb);
+      }
+    }
+    return result;
+  }
+
 
   
   
