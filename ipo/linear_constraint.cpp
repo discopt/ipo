@@ -2,7 +2,7 @@
 
 namespace ipo {
     
-  LinearConstraint::LinearConstraint(char type, Vector& normal, const Rational& rhs)
+  LinearConstraint::LinearConstraint(char type, const Vector& normal, const Rational& rhs)
     : _type(type), _normal(normal), _rhs(rhs)
   {
     assert(type == '<' || type == '>' || type == '=');
@@ -38,5 +38,62 @@ namespace ipo {
     else
       return -1;
   }
+
+  LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b)
+  {
+    if (a.type() == '>')
+    {
+      if (b.type() == '>')
+        return addScaled('<', a, -1, b, -1);
+      else
+        return addScaled('<', a, -1, b, 1); 
+    }
+    else
+    {
+      assert(a.type() == '=' || a.type() == '<');
+      if (b.type() == '>')
+        return addScaled('<', a, 1, b, -1);
+      else
+        return addScaled(b.type(), a, 1, b, 1);
+    }
+  }
+  
+  LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b)
+  {
+    if (a.type() == '>')
+    {
+      if (b.type() == '>')
+        return addScaled('<', a, -1, b, -1);
+      else if (b.type() == '=')
+        return addScaled('<', a, -1, b, -1); 
+      else
+        return addScaled('<', a, -1, b, 1); 
+    }
+    else if (a.type() == '<')
+    {
+      if (b.type() == '>')
+        return addScaled('<', a, 1, b, -1);
+      else if (b.type() == '<')
+        return addScaled('<', a, 1, b, 1);
+      else
+        return addScaled('<', a, 1, b, -1);
+    }
+    else
+    {
+      assert(a.type() == '=');
+      if (b.type() == '>')
+        return addScaled('<', a, 1, b, -1);
+      else if (b.type() == '<')
+        return addScaled('<', a, 1, b, -1);
+      else
+        return addScaled(b.type(), a, 1, b, -1);
+    }
+  }
+
+  LinearConstraint addScaled(char type, const LinearConstraint& a, int scaleA, const LinearConstraint& b, int scaleB)
+  {
+    return LinearConstraint(b.type(), addScaled(a.normal(), scaleA, b.normal(), scaleB), scaleA * a.rhs() + scaleB * b.rhs());
+  }
+
 
 } /* namespace ipo */

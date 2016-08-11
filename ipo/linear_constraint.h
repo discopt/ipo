@@ -5,6 +5,7 @@
 
 namespace ipo {
 
+  LinearConstraint addScaled(char type, const LinearConstraint& a, int scaleA, const LinearConstraint& b, int scaleB);
 
 } /* namespace ipo */
 

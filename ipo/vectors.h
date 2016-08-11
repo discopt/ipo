@@ -10,7 +10,14 @@
 
 namespace ipo {
 
-  
+  Vector addScaled(const Vector& a, int scaleA, const Vector& b, int scaleB);
+
+  std::size_t differingIndex(const ReferenceCountedVector& a, const ReferenceCountedVector& b);
+
+  void vectorToDense(const ReferenceCountedVector& source, soplex::VectorRational& target);
+  void vectorToSparse(const ReferenceCountedVector& source, soplex::SVectorRational& target);
+  MutableVector denseToVector(const soplex::VectorRational& source, bool saveMemory = true);
+  MutableVector sparseToVector(const soplex::SVectorRational& source);
 
   /** OLD IMPLEMENTATION **/
 

@@ -21,7 +21,7 @@ namespace ipo {
      * Constructs constraint of given \p type with given \p normal vector, right-hand side \p rhs.
      */
 
-    LinearConstraint(char type, Vector& normal, const Rational& rhs);
+    LinearConstraint(char type, const Vector& normal, const Rational& rhs);
 
     /**
      * \brief Destructor.
@@ -96,7 +96,10 @@ namespace ipo {
     Vector _normal; // Normal vector of constraint.
     Rational _rhs; // Right-hand side of constraint.
   };
-  
+
+  LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b);
+  LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);
+
 } /* namespace ipo */
 
 #endif /* IPO_LINEAR_CONSTRAINT_H_ */

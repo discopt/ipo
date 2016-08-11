@@ -573,6 +573,8 @@ namespace ipo {
   };
 
   Rational operator*(const ReferenceCountedVector& a, const ReferenceCountedVector& b);
+  Vector operator+(const Vector& a, const Vector& b);
+  Vector operator-(const Vector& a, const Vector& b);
 
 } /* namespace ipo */
 

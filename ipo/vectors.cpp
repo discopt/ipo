@@ -173,9 +173,171 @@ namespace ipo {
     return result;
   }
 
+  Vector operator+(const Vector& a, const Vector& b)
+  {
+    return addScaled(a, 1, b, 1);
+  }
 
+  Vector operator-(const Vector& a, const Vector& b)
+  {
+    return addScaled(a, 1, b, -1);
+  }
+  
+  Vector addScaled(const Vector& a, int scaleA, const Vector& b, int scaleB)
+  { 
+    assert(scaleA != 0);
+    assert(scaleB != 0);
+
+    if (scaleA == 1 && b.size() == 0)
+      return a;
+    if (scaleB == 1 && a.size() == 0)
+      return b;
+
+    VectorData* data = new VectorData( a.size() + b.size());
+    std::size_t pa = 0;
+    std::size_t pb = 0;
+    std::size_t ia, ib;
+    while (true)
+    {
+      if (pa < a.size())
+      {
+        ia = a.index(pa);
+        if (pb < b.size())
+          ib = b.index(pb);
+        else
+          ib = std::numeric_limits<std::size_t>::max();
+      }
+      else
+      {
+        ia = std::numeric_limits<std::size_t>::max();
+        if (pb < b.size())
+          ib = b.index(pb);
+        else
+          break;
+      }
+      
+      if (ia < ib)
+      {
+        data->add(ia, scaleA * a.value(pa));
+        ++pa;
+      }
+      else if (ib < ia)
+      {
+        data->add(ib, scaleB * b.value(pa));
+        ++pb;
+      }
+      else
+      {
+        Rational x = scaleA * a.value(pa) + scaleB * b.value(pb);
+        if (x != 0)
+          data->add(ia, x);
+        ++pa;
+        ++pb;
+      }
+    }
+    return MutableVector(data);
+  }
+
+  std::size_t differingIndex(const ReferenceCountedVector& a, const ReferenceCountedVector& b)
+  {
+    if (a.size() == 0)
+    {
+      if (b.size() == 0)
+        return std::numeric_limits<std::size_t>::max();
+      else
+        return b.index(0);
+    }
+    else if (b.size() == 0)
+      return a.index(0);
+
+    std::size_t pa = 0;
+    std::size_t pb = 0;
+    std::size_t ia = a.index(pa);
+    std::size_t ib = b.index(pb);
+
+    // Quick scan for comparing support structure and approximate values.
+
+    while (true)
+    {
+      if (ia < ib)
+        return ia;
+      else if (ia > ib)
+        return ib;
+      else
+      {
+        if (a.approximation(pa) != b.approximation(pb))
+          return ia;
+        ++pa;
+        ++pb;
+        if (pa == a.size() && pb == b.size())
+          break;
+        ia = a.index(pa);
+        ib = b.index(pb);
+        
+      }
+    }
+
+    // We now have same support, so we can compare exact values easier.
+
+    for (std::size_t p = 0; p < a.size(); ++p)
+    {
+      if (a.value(p) != b.value(p))
+        return a.index(p);
+    }
+
+    return std::numeric_limits<std::size_t>::max();
+  }
+
+  void vectorToDense(const ReferenceCountedVector& source, soplex::VectorRational& target)
+  {
+    assert(source.size() == 0 || source.index(source.size()-1) < target.dim());
+    target.clear();
+    for (std::size_t p = 0; p < source.size(); ++p)
+      target[source.index(p)] = source.value(p);
+  }
+
+  void vectorToSparse(const ReferenceCountedVector& source, soplex::SVectorRational& target)
+  {
+    target.clear();
+    for (std::size_t p = 0; p < source.size(); ++p)
+      target.add(source.index(p), source.value(p));
+  }
+
+  MutableVector denseToVector(const soplex::VectorRational& source, bool saveMemory)
+  {
+    std::size_t mem;
+    if (saveMemory)
+    {
+      mem = 0;
+      for (std::size_t i = 0; i < source.dim(); ++i)
+      {
+        if (source[i] != 0)
+          ++mem;
+      }
+    }
+    else
+      mem = source.dim();
+
+    VectorData* data = new VectorData(mem);
+    for (std::size_t i = 0; i < source.dim(); ++i)
+    {
+      if (source[i] != 0)
+        data->add(i, source[i]);
+    }
+    return MutableVector(data);
+  }
+
+  MutableVector sparseToVector(const soplex::SVectorRational& source)
+  {
+    VectorData* data = new VectorData(source.size());
+    for (int p = source.size() - 1; p >= 0; --p)
+      data->add(source.index(p), source.value(p));
+    data->sort();
+    return MutableVector(data);
+  }
   
   
+  /** OLD IMPLEMENTATION */
   
   bool SparseVector::Nonzero::operator<(const SparseVector::Nonzero& other) const
   {
