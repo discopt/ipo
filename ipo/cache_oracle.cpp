@@ -59,7 +59,7 @@ namespace ipo {
 
   }
 
-  void CacheOracle::setFace(Face* newFace)
+  void CacheOracle::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
@@ -68,16 +68,16 @@ namespace ipo {
 
     _facePoints.clear();
     _faceDirections.clear();
-    if (currentFace() != NULL)
+    if (!currentFace().definesCompleteFace())
     {
       for (UniqueVectors::Iterator iter = _uniquePoints.begin(); iter != _uniquePoints.end(); ++iter)
       {
-        if (currentFace()->containsPoint(*iter))
+        if (currentFace().evaluatePoint(*iter) == 0)
           _facePoints.push_back(Data(*iter));
       }
       for (UniqueVectors::Iterator iter = _uniqueDirections.begin(); iter != _uniqueDirections.end(); ++iter)
       {
-        if (currentFace()->containsDirection(*iter))
+        if (currentFace().evaluateRay(*iter) == 0)
           _faceDirections.push_back(Data(*iter));
       }
     }
@@ -160,9 +160,9 @@ namespace ipo {
     if (!_uniquePoints.insert(p))
       return false;
 
-    if (currentFace() != NULL)
+    if (!currentFace().definesCompleteFace())
     {
-      if (currentFace()->containsPoint(p))
+      if (currentFace().evaluatePoint(p) == 0)
         _facePoints.push_back(Data(p));
     }
     return true;
@@ -174,9 +174,9 @@ namespace ipo {
     if (!_uniqueDirections.insert(r))
       return false;
 
-    if (currentFace() != NULL)
+    if (!currentFace().definesCompleteFace())
     {
-      if (currentFace()->containsDirection(r))
+      if (currentFace().evaluateRay(r) == 0)
         _faceDirections.push_back(Data(r));
     }
     return true;

@@ -144,7 +144,7 @@ namespace ipo {
      * This implementation adds an equation to the underlying SCIP instance.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace = completeFace());
 
 //     /**
 //      * \brief Runs the oracle to maximize the dense rational \p objective.

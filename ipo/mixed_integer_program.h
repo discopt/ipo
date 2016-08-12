@@ -187,7 +187,7 @@ namespace ipo {
      * Restricts the MIP to the given face by adding an equation constraint.
      */
 
-    void setFace(Face* newFace);
+    void setFace(const LinearConstraint& newFace);
 
     /**
      * \brief Returns all row constraints.
@@ -229,7 +229,7 @@ namespace ipo {
     std::vector<std::string> _rowNames; // Row names
     std::vector<bool> _integrality; // Integrality constraints
     soplex::DVectorRational _worker; // Temporary dense rational vector.
-    Face* _currentFace; // Currently active face.
+    LinearConstraint _currentFace; // Currently active face.
   };
 
   /**
@@ -292,7 +292,7 @@ namespace ipo {
      * postprocessing.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace = completeFace());
 
   protected:
     

@@ -8,174 +8,9 @@
 #include "rows.h"
 #include "space.h"
 #include "vectors.h"
+#include "linear_constraint.h"
 
 namespace ipo {
-
-  /**
-   * \brief Defines a face of a polyhedron by a set of inequalities.
-   *
-   * Defines a face \f$F\f$ of a polyhedron \f$P\f$ by a set of inequalities.
-   * It is used to control over which face an \ref OracleBase optimizes.
-   **/
-
-  class Face
-  {
-  public:
-    /**
-     * \brief Constructs the trivial face.
-     *
-     * Constructs the trivial face in \c space defined by \f$\left<\mathbbm{O},x\right> \leq 0\f$.
-     * Use add() methods to add further inequalities.
-     **/
-
-    Face(const Space& space);
-
-    /**
-     * \brief Constructs a face definde by \c inequality.
-     *
-     * Constructs the face in \c space defined by \c inequality.
-     * Use add() methods to add further inequalities,
-     * that is, to intersect with other faces.
-     **/
-
-    Face(const Space& space, const soplex::LPRowRational& inequality);
-
-    /**
-     * \brief Constructs the interesection of the faces defined by \c inequalities.
-     *
-     * Constructs the intersection of the faces defined by \c inequalities in \c space.
-     * Use add() methods to add further inequalities,
-     * that is, to intersect with other faces.
-     **/
-
-    Face(const Space& space, const soplex::LPRowSetRational& inequalities);
-
-    /**
-     * \brief Destructor.
-     */
-
-    virtual ~Face();
-
-    /**
-     * \brief Adds \c inequality to the inequalities that define this face.
-     *
-     * Adds \c inequality to the inequality currently defining this face.
-     * Geometrically this means to intersect the current face with the
-     * one defined by \c inequality.
-     */
-
-    void add(const soplex::LPRowRational& inequality);
-
-    /**
-     * \brief Adds all \c inequalities to the ones that define this face.
-     *
-     * Adds all \c inequalities to the inequality currently defining this face.
-     * Geometrically this means to intersect the current face with all
-     * faces defined by \c inequalities.
-     */
-
-    void add(const soplex::LPRowSetRational& inequalities);
-
-    /**
-     * \brief Returns all defining inequalities.
-     *
-     * Returns a const reference to all inequalities added so far.
-     */
-
-    inline const soplex::LPRowSetRational& inequalities() const
-    {
-      return _inequalities;
-    }
-
-    /**
-     * \brief Returns a dense normal vector of an inequality that defines this face.
-     *
-     * Returns a const reference to the dense normal vector of an inequality
-     * that defines this face. The corresponding right-hand side can be obtained using rhs().
-     *
-     * \sa sparseNormal()
-     */
-
-    inline const soplex::VectorRational& denseNormal()
-    {
-      ensureSync();
-      return _denseNormal;
-    }
-
-    /**
-     * \brief Returns a sparse normal vector of an inequality that defines this face.
-     *
-     * Returns a const reference to the sparse normal vector of an inequality that defines this
-     * face. The corresponding right-hand side can be obtained using rhs().
-     *
-     * \sa denseNormal()
-     */
-
-    inline const Vector& sparseNormal()
-    {
-      ensureSync();
-      return _sparseNormal;
-    }
-
-    /**
-     * \brief Returns the right-hande side of an inequality that defines this face.
-     *
-     * Returns the right-hande side of an inequality that defines this face. The corresponding
-     * normal vector can be obtained using sparseNormal() or denseNormal().
-     */
-
-    inline const Rational& rhs()
-    {
-      ensureSync();
-      return _rhs;
-    }
-
-    /**
-     * \brief Returns the maximum norm of the stored normal vector that defines this face.
-     *
-     * Returns the maximum norm of the vector returned by denseNormal() or sparseNormal().
-     */
-
-    inline const Rational& maxNorm()
-    {
-      ensureSync();
-      return _maximumNorm;
-    }
-
-    /**
-     * \brief Checks whether the given \p point lies in the face.
-     *
-     * Returns true iff the \p point lies in the face.
-     */
-
-    bool containsPoint(const Vector& point);
-
-    /**
-     * \brief Checks whether the given \p direcvtion lies in the recession cone of the face.
-     *
-     * Returns true iff the \p direction lies in the recession cone of the face.
-     */
-
-    bool containsDirection(const Vector& direction);
-
-  protected:
-
-    /**
-     * \brief Ensures that all variables are in sync.
-     *
-     * Ensures that results of sparseNormal(), denseNormal() rhs() and maxNorm() are in sync with
-     * inequalities().
-     */
-
-    void ensureSync();
-
-    soplex::LPRowSetRational _inequalities; // Set of inequalities defining this face.
-    bool _synced; // Whether \c _inequalities is in sync with the remaining variables.
-    soplex::DVectorRational _denseNormal; // Dense normal vector of representing inequality.
-    Vector _sparseNormal; // Sparse normal vector of representing inequality.
-    Rational _maximumNorm; // Largest absolute number occuring in _normal.
-    Rational _rhs; // Right-hand side of representing inequality.
-  };
 
   /**
    * \brief Results of a call to an oracle.
@@ -446,7 +281,7 @@ namespace ipo {
      * setFace() for the next oracle.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace);
 
     /**
      * \brief Runs the oracle to maximize the dense rational \p objective.
@@ -563,7 +398,7 @@ namespace ipo {
      * Returns the current face. \sa setFace()
      */
 
-    virtual Face* currentFace();
+    virtual const LinearConstraint& currentFace();
 
   private:
     /**
@@ -573,8 +408,8 @@ namespace ipo {
      */
 
     OracleBase();
-    
-    Face* _currentFace; // Currently active face.
+
+    LinearConstraint _currentFace; // Inequality that defines the current face.
 
   protected:
     friend class FaceOracleBase;
@@ -615,7 +450,7 @@ namespace ipo {
      * setFace() for the next oracle.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace);
     
   protected:
 
@@ -683,10 +518,10 @@ namespace ipo {
      * actually access the current face, call OracleBase::currentFace().
      */
 
-    virtual Face* currentFace();
-    
+    virtual const LinearConstraint& currentFace();
       
   protected:
+    LinearConstraint _completeFace;
     std::size_t _maxInfeasibleIterations; // Maximum number of iterations before (heuristically) checking if the face is empty.
     soplex::Rational _M; // Dynamic constant for modifying objective.
     soplex::Rational _factor; // Cachable part of the constant for modifying objective.

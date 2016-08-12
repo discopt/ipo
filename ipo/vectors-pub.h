@@ -609,9 +609,13 @@ namespace ipo {
     }
   };
 
+  MutableVector zeroVector();
+  MutableVector unitVector(std::size_t index);
+
   Rational operator*(const ReferenceCountedVector& a, const ReferenceCountedVector& b);
   Vector operator+(const Vector& a, const Vector& b);
   Vector operator-(const Vector& a, const Vector& b);
+  MutableVector operator-(const ReferenceCountedVector& source);
 
 } /* namespace ipo */
 

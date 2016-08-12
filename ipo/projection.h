@@ -67,8 +67,7 @@ namespace ipo {
      * \param shift        Rational entry for shift vector \f$ b \f$.
      */
 
-    void addVariable(const std::string& variableName, const soplex::SVectorRational& coefficients,
-        const soplex::Rational& shift = soplex::Rational(0));
+    void addVariable(const std::string& variableName, const Vector& coefficients, const Rational& shift = Rational(0));
 
     /**
      * \brief Copies a source variable to the image space.
@@ -79,8 +78,7 @@ namespace ipo {
      * \param shift Rational entry for shift vector \f$ b \f$.
      */
 
-    void addVariable(std::size_t sourceVariable,
-      const soplex::Rational& shift = soplex::Rational(0));
+    void addVariable(std::size_t sourceVariable, const Rational& shift = Rational(0));
 
     /**
      * \brief Projects a \c point.
@@ -91,12 +89,28 @@ namespace ipo {
     Vector projectPoint(const soplex::VectorRational& point) const;
 
     /**
+     * \brief Projects a \c point.
+     *
+     * Projects a \c point.
+     */
+
+    Vector projectPoint(const Vector& point) const;
+
+    /**
      * \brief Projects a \c direction.
      *
      * Projects a \c direction.
      */
 
     Vector projectDirection(const soplex::VectorRational& direction) const;
+
+    /**
+     * \brief Projects a \c direction.
+     *
+     * Projects a \c direction.
+     */
+
+    Vector projectRay(const Vector& ray) const;
 
     /**
      * \brief Projects a hyperplane if possible.
@@ -128,8 +142,10 @@ namespace ipo {
      * hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
      */
 
-    void liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& liftedNormal,
-      Rational& liftedRhs) const;
+//     void liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& liftedNormal,
+//       Rational& liftedRhs) const;
+      
+    LinearConstraint liftLinearConstraint(const LinearConstraint& projectedConstraint) const;
 
     /**
      * \brief Returns the dimension of the image space.
@@ -171,7 +187,7 @@ namespace ipo {
      * as a const reference to a sparse rational vector.
      */
 
-    inline const soplex::SVectorRational& map(std::size_t variable) const
+    inline const Vector& map(std::size_t variable) const
     {
       return _map[variable];
     }
@@ -182,7 +198,7 @@ namespace ipo {
      * Returns an entry of the projection vector \f$ b \f$ for a given \p variable.
      */
 
-    inline const soplex::Rational& shift(std::size_t var) const
+    inline const Rational& shift(std::size_t var) const
     {
       return _shift[var];
     }
@@ -199,8 +215,8 @@ namespace ipo {
 
   protected:
     const Space& _sourceSpace;
-    std::vector<soplex::DSVectorRational> _map; // Rows of the projection matrix.
-    std::vector<soplex::Rational> _shift; // Entries of the projection vector.
+    std::vector<Vector> _map; // Rows of the projection matrix.
+    std::vector<Rational> _shift; // Entries of the projection vector.
   };
 
   /**
@@ -244,7 +260,7 @@ namespace ipo {
      * space.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace = completeFace());
     
     /**
      * \brief Returns the ambient \c space.
@@ -283,7 +299,7 @@ namespace ipo {
     OracleBase* _oracle; // Source oracle.
     soplex::DVectorRational _projectedVector; // Projected point or direction.
     soplex::DVectorRational _liftedVector; // Dense rational lifted objective.
-    Face* _liftedFace;
+    LinearConstraint _liftedFace;
   };
 
 } /* namespace ipo */

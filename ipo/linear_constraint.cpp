@@ -1,6 +1,12 @@
 #include "linear_constraint.h"
 
 namespace ipo {
+  
+  LinearConstraint::LinearConstraint()
+    : _type(','), _normal(), _rhs(0)
+  {
+    
+  }
     
   LinearConstraint::LinearConstraint(char type, const Vector& normal, const Rational& rhs)
     : _type(type), _normal(normal), _rhs(rhs)
@@ -37,6 +43,16 @@ namespace ipo {
       return 0;
     else
       return -1;
+  }
+
+  LinearConstraint completeFace()
+  {
+    return LinearConstraint('<', Vector(), Rational(0));
+  }
+
+  LinearConstraint emptyFace()
+  {
+    return LinearConstraint('<', Vector(), Rational(-1));
   }
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b)

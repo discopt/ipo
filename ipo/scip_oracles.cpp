@@ -204,12 +204,12 @@ double(row.value(p))));
     }
   }
 
-  void SCIPOracle::setFace(Face* newFace)
+  void SCIPOracle::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
 
-    if (currentFace() != NULL)
+    if (!currentFace().definesCompleteFace())
     {
       SCIP_CALL_EXC(SCIPdelCons(_scip, _faceConstraint));
       SCIP_CALL_EXC(SCIPreleaseCons(_scip, &_faceConstraint));
@@ -217,11 +217,11 @@ double(row.value(p))));
 
     OracleBase::setFace(newFace);
 
-    if (currentFace() != NULL)
+    if (!currentFace().definesCompleteFace())
     {
       DSVectorRational normalCopy;
-      const Rational& largest = currentFace()->maxNorm();
-      Rational scaling = 1;
+      Rational largest = currentFace().getMaximumNorm();
+//       Rational scaling = 1;
       
       // TODO: Scale currentFace()->sparseNormal properly!
 
@@ -231,10 +231,10 @@ double(row.value(p))));
 //         normalCopy = currentFace()->sparseNormal() * scaling;
 //       }
 //       const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
-      const Vector& normal = currentFace()->sparseNormal();
-      Rational rhs = currentFace()->rhs() * scaling;
+      const Vector& normal = currentFace().normal();
+      const Rational& rhs = currentFace().rhs();
 
-      /// Add constraint to SCIP.
+      // Add constraint to SCIP.
 
       SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &_faceConstraint, "face", 0, 0, 0,
         double(rhs),   double(rhs)));

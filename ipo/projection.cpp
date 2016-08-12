@@ -26,21 +26,33 @@ namespace ipo {
   }
 
   void Projection::addVariable(const std::string& variableName,
-    const SVectorRational& coefficients, const Rational& shift)
+    const Vector& coefficients, const Rational& shift)
   {
     _variables.push_back(variableName);
-    _map.push_back(DSVectorRational(coefficients));
+    _map.push_back(coefficients);
     _shift.push_back(shift);
   }
 
   void Projection::addVariable(std::size_t sourceVariable, const soplex::Rational& shift)
   {
     _variables.push_back(_sourceSpace[sourceVariable]);
-    _map.push_back(DSVectorRational(UnitVectorRational(sourceVariable)));
+    _map.push_back(unitVector(sourceVariable));
     _shift.push_back(shift);
   }
   
   Vector Projection::projectPoint(const VectorRational& point) const
+  {
+    VectorData* data = new VectorData(dimension());
+    for (std::size_t v = 0; v < dimension(); ++v)
+    {
+      Rational x = _shift[v] + _map[v] * point;
+      if (x != 0)
+        data->add(v, x);
+    }
+    return Vector(data);
+  }
+
+  Vector Projection::projectPoint(const Vector& point) const
   {
     VectorData* data = new VectorData(dimension());
     for (std::size_t v = 0; v < dimension(); ++v)
@@ -63,7 +75,19 @@ namespace ipo {
     }
     return Vector(data);
   }
-  
+
+  Vector Projection::projectRay(const Vector& ray) const
+  {
+    VectorData* data = new VectorData(dimension());
+    for (std::size_t v = 0; v < dimension(); ++v)
+    {
+      Rational x = _map[v] * ray;
+      if (x != 0)
+        data->add(v, x);
+    }
+    return Vector(data);
+  }
+
   bool Projection::projectHyperplane(const soplex::VectorRational& normal, const Rational& rhs,
     soplex::DVectorRational& projectedNormal,
     Rational& projectedRhs) const
@@ -73,25 +97,40 @@ namespace ipo {
     return false;
   }
 
-  void Projection::liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs,
-    soplex::DVectorRational& liftedNormal, Rational& liftedRhs) const
+//   void Projection::liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs,
+//     soplex::DVectorRational& liftedNormal, Rational& liftedRhs) const
+//   {
+//     liftedNormal.reDim(sourceSpace().dimension());
+//     liftedNormal.clear();
+//     liftedRhs = rhs;
+//     for (std::size_t v = 0; v < dimension(); ++v)
+//     {
+//       const SVectorRational& row = _map[v];
+//       for (int p = row.size() - 1; p >= 0; --p)
+//         liftedNormal[row.index(p)] += normal[v] * row.value(p);
+//       liftedRhs -= normal[v] * _shift[v];
+//     }
+//   }
+
+  LinearConstraint Projection::liftLinearConstraint(const LinearConstraint& projectedConstraint) const
   {
-    liftedNormal.reDim(sourceSpace().dimension());
-    liftedNormal.clear();
-    liftedRhs = rhs;
-    for (std::size_t v = 0; v < dimension(); ++v)
+    soplex::DVectorRational liftedNormal(sourceSpace().dimension());
+    Rational liftedRhs = projectedConstraint.rhs();
+    for (std::size_t p = 0; p < projectedConstraint.normal().size(); ++p)
     {
-      const SVectorRational& row = _map[v];
-      for (int p = row.size() - 1; p >= 0; --p)
-        liftedNormal[row.index(p)] += normal[v] * row.value(p);
-      liftedRhs -= normal[v] * _shift[v];
+      std::size_t v = projectedConstraint.normal().index(p);
+      const Rational& x = projectedConstraint.normal().value(p);
+      const Vector& row = _map[v];
+      for (int q = row.size() - 1; q >= 0; --q)
+        liftedNormal[row.index(q)] += x * row.value(q);
+      liftedRhs -= x * _shift[v]; 
     }
+    return LinearConstraint(projectedConstraint.type(), denseToVector(liftedNormal, true), liftedRhs);
   }
 
   ProjectedOracle::ProjectedOracle(const std::string& name,
     const Projection& projection, OracleBase* oracle)
-    : OracleBase(name, projection), _projection(projection), _oracle(oracle),
-    _liftedFace(NULL)
+    : OracleBase(name, projection), _projection(projection), _oracle(oracle)
   {
     OracleBase::initializedSpace();
 
@@ -102,34 +141,21 @@ namespace ipo {
 
   ProjectedOracle::~ProjectedOracle()
   {
-    if (_liftedFace)
-      delete _liftedFace;
+    
   }
 
 
-  void ProjectedOracle::setFace(Face* newFace)
+  void ProjectedOracle::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
 
     OracleBase::setFace(newFace);
 
-    if (_liftedFace)
-      delete _liftedFace;
-
-    if (newFace)
-    {
-      DVectorRational denseLiftedNormal;
-      Rational liftedRhs;
-      _projection.liftHyperplane(newFace->denseNormal(), newFace->rhs(), denseLiftedNormal,
-        liftedRhs);
-      DSVectorRational sparseLiftedNormal;
-      sparseLiftedNormal = denseLiftedNormal;
-      _liftedFace = new Face(_projection.sourceSpace(),
-        LPRowRational(-infinity, sparseLiftedNormal, liftedRhs));
-    }
+    if (newFace.definesCompleteFace())
+      _liftedFace = completeFace();
     else
-      _liftedFace = NULL;
+      _liftedFace = _projection.liftLinearConstraint(newFace);
 
     _oracle->setFace(_liftedFace);
   }
@@ -137,19 +163,23 @@ namespace ipo {
   std::size_t ProjectedOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
-    _liftedVector.clear();
+    Vector objectiveVector = denseToVector(objective);
+    LinearConstraint objectiveConstraint('<' , objectiveVector, objectiveBound.value);
+    LinearConstraint liftedObjectiveConstraint =  _projection.liftLinearConstraint(objectiveConstraint);
+
+    Vector liftedObjective = liftedObjectiveConstraint.normal();
+    Rational liftedRhs = liftedObjectiveConstraint.rhs();
+
     ObjectiveBound liftedObjectiveBound;
     liftedObjectiveBound.strict = objectiveBound.strict;
-    _projection.liftHyperplane(objective, objectiveBound.value, _liftedVector, liftedObjectiveBound.value);
     
     OracleResult sourceResult;
-    _oracle->maximize(sourceResult, _liftedVector, liftedObjectiveBound, minHeuristic, maxHeuristic);
+    _oracle->maximize(sourceResult, liftedObjective, liftedObjectiveBound, minHeuristic, maxHeuristic);
     if (sourceResult.isFeasible())
     {
       for (std::size_t i = 0; i < sourceResult.points.size(); ++i)
       {
-        vectorToDense(sourceResult.points[i].vector, _liftedVector);
-        Vector projectedPoint = _projection.projectPoint(_liftedVector);
+        Vector projectedPoint = _projection.projectPoint(sourceResult.points[i].vector);
         result.points.push_back(OracleResult::Point(projectedPoint));
       }
       checkDups = true;
@@ -158,9 +188,8 @@ namespace ipo {
     {
       for (std::size_t i = 0; i < sourceResult.directions.size(); ++i)
       {
-        vectorToDense(sourceResult.directions[i].vector, _liftedVector);
-        Vector projectedDirection = _projection.projectDirection(_liftedVector);
-        result.directions.push_back(OracleResult::Direction(projectedDirection));
+        Vector projectedRay = _projection.projectRay(sourceResult.directions[i].vector);
+        result.directions.push_back(OracleResult::Direction(projectedRay));
       }
     }
   }

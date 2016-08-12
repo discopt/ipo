@@ -149,7 +149,7 @@ namespace ipo {
 
     virtual bool printAmbientDimension();
     virtual bool printVariables();
-    virtual bool computeAffineHull(Face* face, const std::string& faceName);
+    virtual bool computeAffineHull(const LinearConstraint& face, const std::string& faceName);
     virtual bool optimizeObjective(const soplex::VectorRational* objective, bool maximize);
     virtual bool generateFacets(const soplex::VectorRational* objective, bool print);
     virtual bool separateRayFacet(const Vector& direction, bool& isFeasible);
@@ -216,7 +216,7 @@ namespace ipo {
       return _faces.size();
     }
 
-    inline const Face* face(std::size_t index) const
+    inline const LinearConstraint& face(std::size_t index) const
     {
       return _faces[index];
     }
@@ -315,7 +315,7 @@ namespace ipo {
     ProjectedOracle* _projectedOracle;
     OracleBase* _oracle;
 
-    std::vector<Face*> _faces;
+    std::vector<LinearConstraint> _faces;
     std::vector<std::string> _faceNames;
     std::vector<soplex::DVectorRational*> _objectives;
     std::vector<std::string> _objectiveNames;

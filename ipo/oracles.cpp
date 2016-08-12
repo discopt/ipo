@@ -8,108 +8,108 @@ using namespace soplex;
 
 namespace ipo {
 
-  Face::Face(const Space& space) 
-    : _synced(false), _denseNormal(space.dimension()), _sparseNormal()
-  {
-
-  }
-
-  Face::Face(const Space& space, const LPRowRational& inequality) : _synced(false),
-    _denseNormal(space.dimension()), _sparseNormal()
-  {
-    add(inequality);
-  }
-
-  Face::Face(const Space& space, const LPRowSetRational& inequalities) : _synced(false),
-    _denseNormal(space.dimension()), _sparseNormal()
-  {
-    add(inequalities);
-  }
-
-  Face::~Face()
-  {
-
-  }
-
-  void Face::add(const LPRowRational& inequality)
-  {
-    if (inequality.lhs() > -infinity && inequality.rhs() < infinity && inequality.lhs() < inequality.rhs())
-    {
-      throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
-    }
-    _inequalities.add(inequality);
-    _synced = false;
-  }
-
-  void Face::add(const LPRowSetRational& inequalities)
-  {
-    for (std::size_t i = 0; i < inequalities.num(); ++i)
-    {
-      if (inequalities.lhs(i) > -infinity && inequalities.rhs(i) < infinity
-          && inequalities.lhs(i) < inequalities.rhs(i))
-      {
-        throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
-      }
-    }
-
-    if (_inequalities.max() < _inequalities.num() + inequalities.num())
-      _inequalities.reMax(_inequalities.num() + inequalities.num());
-    _inequalities.add(inequalities);
-    _synced = false;
-  }
-
-  bool Face::containsPoint(const Vector& point)
-  {
-    ensureSync();
-    return _denseNormal * point == _rhs;
-  }
-
-  bool Face::containsDirection(const Vector& direction)
-  {
-    ensureSync();
-    return _denseNormal * direction == 0;
-  }
-
-  void Face::ensureSync()
-  {
-    if (_synced)
-      return;
-
-    _denseNormal.clear();
-    _rhs = 0;
-
-    for (std::size_t i = 0; i < _inequalities.num(); ++i)
-    {
-      const Rational& lhs = _inequalities.lhs(i);
-      const Rational& rhs = _inequalities.rhs(i);
-      if (lhs <= -infinity)
-      {
-        _rhs += rhs;
-        const SVectorRational& row = _inequalities.rowVector(i);
-        for (int p = row.size() - 1; p >= 0; --p)
-          _denseNormal[row.index(p)] += row.value(p);
-      }
-      else
-      {
-        assert(rhs >= -infinity);
-        _rhs -= lhs;
-        const SVectorRational& row = _inequalities.rowVector(i);
-        for (int p = row.size() - 1; p >= 0; --p)
-          _denseNormal[row.index(p)] -= row.value(p);
-      }
-    }
-
-    _sparseNormal = denseToVector(_denseNormal);
-    _maximumNorm = 0;
-    for (std::size_t p = 0; p < _sparseNormal.size(); ++p)
-    {
-      const Rational& x = _sparseNormal.value(p);
-      if (x > 0 && x > _maximumNorm)
-        _maximumNorm = x;
-      if (x < 0 && x < -_maximumNorm)
-        _maximumNorm = -x;
-    }
-  }
+//   Face::Face(const Space& space) 
+//     : _synced(false), _denseNormal(space.dimension()), _sparseNormal()
+//   {
+// 
+//   }
+// 
+//   Face::Face(const Space& space, const LPRowRational& inequality) : _synced(false),
+//     _denseNormal(space.dimension()), _sparseNormal()
+//   {
+//     add(inequality);
+//   }
+// 
+//   Face::Face(const Space& space, const LPRowSetRational& inequalities) : _synced(false),
+//     _denseNormal(space.dimension()), _sparseNormal()
+//   {
+//     add(inequalities);
+//   }
+// 
+//   Face::~Face()
+//   {
+// 
+//   }
+// 
+//   void Face::add(const LPRowRational& inequality)
+//   {
+//     if (inequality.lhs() > -infinity && inequality.rhs() < infinity && inequality.lhs() < inequality.rhs())
+//     {
+//       throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
+//     }
+//     _inequalities.add(inequality);
+//     _synced = false;
+//   }
+// 
+//   void Face::add(const LPRowSetRational& inequalities)
+//   {
+//     for (std::size_t i = 0; i < inequalities.num(); ++i)
+//     {
+//       if (inequalities.lhs(i) > -infinity && inequalities.rhs(i) < infinity
+//           && inequalities.lhs(i) < inequalities.rhs(i))
+//       {
+//         throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
+//       }
+//     }
+// 
+//     if (_inequalities.max() < _inequalities.num() + inequalities.num())
+//       _inequalities.reMax(_inequalities.num() + inequalities.num());
+//     _inequalities.add(inequalities);
+//     _synced = false;
+//   }
+// 
+//   bool Face::containsPoint(const Vector& point)
+//   {
+//     ensureSync();
+//     return _denseNormal * point == _rhs;
+//   }
+// 
+//   bool Face::containsDirection(const Vector& direction)
+//   {
+//     ensureSync();
+//     return _denseNormal * direction == 0;
+//   }
+// 
+//   void Face::ensureSync()
+//   {
+//     if (_synced)
+//       return;
+// 
+//     _denseNormal.clear();
+//     _rhs = 0;
+// 
+//     for (std::size_t i = 0; i < _inequalities.num(); ++i)
+//     {
+//       const Rational& lhs = _inequalities.lhs(i);
+//       const Rational& rhs = _inequalities.rhs(i);
+//       if (lhs <= -infinity)
+//       {
+//         _rhs += rhs;
+//         const SVectorRational& row = _inequalities.rowVector(i);
+//         for (int p = row.size() - 1; p >= 0; --p)
+//           _denseNormal[row.index(p)] += row.value(p);
+//       }
+//       else
+//       {
+//         assert(rhs >= -infinity);
+//         _rhs -= lhs;
+//         const SVectorRational& row = _inequalities.rowVector(i);
+//         for (int p = row.size() - 1; p >= 0; --p)
+//           _denseNormal[row.index(p)] -= row.value(p);
+//       }
+//     }
+// 
+//     _sparseNormal = denseToVector(_denseNormal);
+//     _maximumNorm = 0;
+//     for (std::size_t p = 0; p < _sparseNormal.size(); ++p)
+//     {
+//       const Rational& x = _sparseNormal.value(p);
+//       if (x > 0 && x > _maximumNorm)
+//         _maximumNorm = x;
+//       if (x < 0 && x < -_maximumNorm)
+//         _maximumNorm = -x;
+//     }
+//   }
 
   OracleResult::Point::Point(Vector& vec)
     : vector(vec)
@@ -195,14 +195,14 @@ namespace ipo {
   }
 
   OracleBase::OracleBase(const std::string& name, const Space& space) :
-      _name(name), _space(space), _nextOracle(NULL), _heuristicLevel(0), _currentFace(NULL)
+      _name(name), _space(space), _nextOracle(NULL), _heuristicLevel(0)
   {
 
   }
 
   OracleBase::OracleBase(const std::string& name,
     OracleBase* nextOracle) : _name(name), _space(nextOracle->space()),
-    _nextOracle(nextOracle), _heuristicLevel(nextOracle->heuristicLevel() + 1), _currentFace(NULL)
+    _nextOracle(nextOracle), _heuristicLevel(nextOracle->heuristicLevel() + 1)
   {
 
   }
@@ -217,7 +217,7 @@ namespace ipo {
 
   }
 
-  void OracleBase::setFace(Face* newFace)
+  void OracleBase::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
@@ -332,21 +332,21 @@ namespace ipo {
     }
   }
 
-  Face* OracleBase::currentFace()
+  const LinearConstraint& OracleBase::currentFace()
   {
     return _currentFace;
   }
 
   FaceOracleBase::FaceOracleBase(const std::string& name, OracleBase* nextOracle, std::size_t maxInfeasibleIterations,
     double initialM)
-    : OracleBase(name, nextOracle), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM)
+    : OracleBase(name, nextOracle), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM), _completeFace()
   {
 
   }
 
   FaceOracleBase::FaceOracleBase(const std::string& name, const Space& space, std::size_t maxInfeasibleIterations,
     double initialM)
-    : OracleBase(name, space), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM)
+    : OracleBase(name, space), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM), _completeFace()
   {
 
   }
@@ -363,7 +363,7 @@ namespace ipo {
     _modifiedObjective.reDim(_space.dimension(), false);
   }
 
-  void FaceOracleBase::setFace(Face* newFace)
+  void FaceOracleBase::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
@@ -371,13 +371,13 @@ namespace ipo {
     OracleBase::setFace(newFace);
     assert(newFace == OracleBase::currentFace());
 
-    if (newFace != NULL)
-      _factor = _M / newFace->maxNorm();
+    if (newFace.definesTrivialFace())
+      _factor = _M / currentFace().getMaximumNorm();
   }
 
-  Face* FaceOracleBase::currentFace()
+  const LinearConstraint& FaceOracleBase::currentFace()
   {
-    return NULL;
+    return _completeFace;
   }
 
   std::size_t FaceOracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
@@ -392,13 +392,17 @@ namespace ipo {
     {
       return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
     }
-    
+
     // Get face (note that currentFace() always yields NULL.
-    
-    Face* face = OracleBase::currentFace();
-    if (face == NULL)
+
+    const LinearConstraint& face = OracleBase::currentFace();
+    if (face.definesCompleteFace())
     {
       maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
+    }
+    else if (face.definesEmptyFace())
+    {
+      return 0;
     }
     else // We have a face and must tilt the objective vector.
     {
@@ -433,8 +437,7 @@ namespace ipo {
         {
           _modifiedObjective[v] = objective[v];
         }
-        const soplex::VectorRational& denseNormal = face->denseNormal();
-        const Vector& sparseNormal = face->sparseNormal();
+        const Vector& faceNormal = face.normal();
 
         // Loop that increases M as long as results are not feasible.
 
@@ -450,9 +453,9 @@ namespace ipo {
 
             for (std::size_t v = 0; v < space().dimension(); ++v)
               _modifiedObjective[v] = 0;
-            for (int p = sparseNormal.size() - 1; p >= 0; --p)
-              _modifiedObjective[sparseNormal.index(p)] = sparseNormal.value(p);
-            modifiedObjectiveBound.value = face->rhs();
+            for (int p = faceNormal.size() - 1; p >= 0; --p)
+              _modifiedObjective[faceNormal.index(p)] = faceNormal.value(p);
+            modifiedObjectiveBound.value = face.rhs();
             modifiedObjectiveBound.strict = false;
           }
           else
@@ -460,13 +463,13 @@ namespace ipo {
             // Setup objective via tilting.
 
             Rational scaling = _factor / maxObjectiveCoefficient;
-            modifiedObjectiveShift = scaling * face->rhs();
+            modifiedObjectiveShift = scaling * face.rhs();
             modifiedObjectiveBound.value = objectiveBound.value + modifiedObjectiveShift;
             modifiedObjectiveBound.strict = objectiveBound.strict;
-            for (int p = sparseNormal.size() - 1; p >= 0; --p)
+            for (int p = faceNormal.size() - 1; p >= 0; --p)
             {
-              int v = sparseNormal.index(p);
-              _modifiedObjective[v] = objective[v] + scaling * sparseNormal.value(p);
+              int v = faceNormal.index(p);
+              _modifiedObjective[v] = objective[v] + scaling * faceNormal.value(p);
             }
           }
           
@@ -485,7 +488,7 @@ namespace ipo {
             for (std::size_t i = 0; i < unrestrictedResult.points.size(); ++i)
             {
               Vector& vector = unrestrictedResult.points[i].vector;
-              if (!face->containsPoint(vector))
+              if (face.evaluatePoint(vector) != 0)
                 continue;
               
               Rational objectiveValue = objective * vector;
@@ -519,7 +522,7 @@ namespace ipo {
             for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
             {
               Vector& vector = unrestrictedResult.directions[i].vector;
-              if (!face->containsDirection(vector))
+              if (face.evaluateRay(vector) != 0)
                 continue;
 
               result.directions.push_back(OracleResult::Direction(vector));

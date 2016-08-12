@@ -14,8 +14,7 @@ namespace ipo {
 
 #ifdef WITH_SCIP
 
-  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space),
-    _currentFace(NULL)
+  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space), _currentFace()
   {
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -187,23 +186,23 @@ namespace ipo {
     return checkRayBounds(ray) && checkRayRows(ray);
   }
 
-  void MixedIntegerProgram::setFace(Face* newFace)
+  void MixedIntegerProgram::setFace(const LinearConstraint& newFace)
   {
     if (newFace == _currentFace)
       return;
 
-    if (_currentFace != NULL)
+    if (!_currentFace.definesCompleteFace())
       _rows.remove(_rows.num() - 1);
 
     _currentFace = newFace;
 
-    if (_currentFace != NULL)
+    if (!_currentFace.definesCompleteFace())
     {
       DSVectorRational vector;
-      const Vector& normal = _currentFace->sparseNormal();
+      const Vector& normal = _currentFace.normal();
       for (std::size_t p = 0; p < normal.size(); ++p)
         vector.add(normal.index(p), normal.value(p));
-      _rows.add(_currentFace->rhs(), vector, _currentFace->rhs());
+      _rows.add(_currentFace.rhs(), vector, _currentFace.rhs());
     }
   }
 
@@ -403,7 +402,7 @@ namespace ipo {
     
   }
 
-  void MIPOracleBase::setFace(Face* newFace)
+  void MIPOracleBase::setFace(const LinearConstraint& newFace)
   {
     OracleBase::setFace(newFace);
     

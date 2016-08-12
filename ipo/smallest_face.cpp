@@ -61,7 +61,7 @@ namespace ipo {
       * optimize over the faces of a normal cone.
       */
 
-      virtual void setFace(Face* newFace = NULL)
+      virtual void setFace(const LinearConstraint& newFace = completeFace())
       {
         throw std::runtime_error("NormalConeOracle does not support faces.");
       }

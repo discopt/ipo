@@ -16,6 +16,14 @@ namespace ipo {
   {
   public:
     /**
+     * \brief Constructs constraint <0,x> <= 0.
+     * 
+     * Constructs constraint <0,x> <= 0.
+     */
+
+    LinearConstraint();
+    
+    /**
      * \brief Constructs constraint of given \p type with given \p normal vector, right-hand side \p rhs.
      * 
      * Constructs constraint of given \p type with given \p normal vector, right-hand side \p rhs.
@@ -30,6 +38,21 @@ namespace ipo {
      */
 
     ~LinearConstraint();
+
+    /**
+     * \brief Returns true iff the constraints are equal.
+     * 
+     * Returns true iff the constraints are equal. Does not take into account the scaling.
+     */
+    
+    inline bool operator==(const LinearConstraint& other) const
+    {
+      if (_type != other._type)
+        return false;
+      if (_rhs != other._rhs)
+        return false;
+      return _normal == other._normal;
+    }
 
     /**
      * \brief Returns true for equations.
@@ -74,6 +97,69 @@ namespace ipo {
     }
 
     /**
+     * \brief Returns the maximum norm of the normal vector.
+     * 
+     * Returns the maximum norm of the normal vector, i.e., the largest absolute value of an entry.
+     */
+
+    inline Rational getMaximumNorm() const
+    {
+      Rational result = 0;
+      for (std::size_t p = 0; p < _normal.size(); ++p)
+      {
+        const Rational& x = _normal.value(p);
+        if (x > 0 && x > result)
+          result = x;
+        if (x < 0 && x < -result)
+          result = -x;
+      }
+      return result;
+    }
+
+    /**
+     * \brief Returns true iff this inequality constraint defines the complete face.
+     * 
+     * Returns true iff the constraint is an inequality constraint that defines the complete face.
+     */
+
+    inline bool definesCompleteFace() const
+    {
+      if (_type == '=')
+        return false;
+      else if (_type == '<')
+        return _normal.size() == 0 && _rhs >= 0;
+      else
+        return _normal.size() == 0 && _rhs <= 0;
+    }
+
+    /**
+     * \brief Returns true iff this inequality constraint defines the empty face.
+     * 
+     * Returns true iff the constraint is an inequality constraint that defines the empty face.
+     */
+
+    inline bool definesEmptyFace() const
+    {
+      if (_type == '=')
+        return false;
+      else if (_type == '<')
+        return _normal.size() == 0 && _rhs < 0;
+      else
+        return _normal.size() == 0 && _rhs > 0;
+    }
+
+    /**
+     * \brief Returns true iff this inequality constraint defines a trivial face.
+     * 
+     * Returns true iff the constraint is an inequality constraint that defines the trivial (complete or empty) face.
+     */
+
+    inline bool definesTrivialFace() const
+    {
+      return _type != '=' && _normal.size() ==0;
+    }
+
+    /**
      * \brief Returns an integer indicating where the point lies relative to the halfspace/hyperplane.
      * 
      * Returns 0 iff the point lies on the hyperplane. It returns a positive number iff the point lies in the interior of the 
@@ -96,6 +182,9 @@ namespace ipo {
     Vector _normal; // Normal vector of constraint.
     Rational _rhs; // Right-hand side of constraint.
   };
+
+  LinearConstraint completeFace();
+  LinearConstraint emptyFace();
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b);
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);

@@ -63,7 +63,7 @@ namespace ipo {
   {
   public:
     ConsoleApplicationInequalityParser(std::istream& stream, const Space& space,
-      std::vector<Face*>& faces, std::vector<std::string>& faceNames)
+      std::vector<LinearConstraint>& faces, std::vector<std::string>& faceNames)
       : LPInequalityParser(stream), _faces(faces), _faceNames(faceNames), _space(space)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -81,13 +81,13 @@ namespace ipo {
       if ((lhs <= -infinity && rhs >= infinity) || lhs == rhs)
         return;
 
-      DSVectorRational vector;
+      VectorData* vectorData = new VectorData();
       for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
         {
-          vector.add(varIter->second, iter->second);
+          vectorData->add(varIter->second, iter->second);
         }
         else
         {
@@ -96,24 +96,23 @@ namespace ipo {
         }
       }
 
+      Vector vector(vectorData);
       bool hasBoth = lhs > -infinity && rhs < infinity;
       if (lhs > -infinity)
       {
-        LPRowRational row(lhs, vector, infinity);
-        _faces.push_back(new Face(_space, row));
+        _faces.push_back(LinearConstraint(',', -vector, -lhs));
         _faceNames.push_back(hasBoth ? (name + "-lhs") : name);
       }
       if (rhs < infinity)
       {
-        LPRowRational row(-infinity, vector, rhs);
-        _faces.push_back(new Face(_space, row));
+        _faces.push_back(LinearConstraint('<', vector, rhs));
         _faceNames.push_back(hasBoth ? (name + "-rhs") : name);
       }
     }
 
   private:
     std::map<std::string, std::size_t> _oracleVariables;
-    std::vector<Face*>& _faces;
+    std::vector<LinearConstraint>& _faces;
     std::vector<std::string>& _faceNames;
     const Space& _space;
   };
@@ -206,8 +205,6 @@ namespace ipo {
       delete _projection;
     for (std::size_t i = 0; i < numObjectives(); ++i)
       delete _objectives[i];
-    for (std::size_t i = 0; i < numFaces(); ++i)
-      delete _faces[i];
   }
 
   void ConsoleApplicationBase::setBasicOracle(OracleBase* oracle)
@@ -293,7 +290,7 @@ namespace ipo {
 
     if (taskDimension() || taskEquations() || taskFacet() || taskFacets() || taskSmallestFace())
     {
-      if (!computeAffineHull(NULL, ""))
+      if (!computeAffineHull(completeFace(), ""))
         return false;
     }
 
@@ -958,12 +955,12 @@ upperBounds)
     return true;
   }
 
-  bool ConsoleApplicationBase::computeAffineHull(Face* face, const std::string& faceName)
+  bool ConsoleApplicationBase::computeAffineHull(const LinearConstraint& face, const std::string& faceName)
   {
     if (_taskDimension || _taskEquations)
     {
       std::cout << "Computing the affine hull";
-      if (face)
+      if (!face.definesCompleteFace())
       {
         std::cout << " of face " << faceName << ":\n" << std::flush;
       }
@@ -981,7 +978,7 @@ upperBounds)
 
     LPRowSetRational faceEquations;
     LPRowSetRational* equations;
-    if (face == NULL)
+    if (face.definesCompleteFace())
     {
       hull.run(*_equations, orac, hullOutput, 1, true);
       _basicColumns = hull.basicColumns();
@@ -998,7 +995,7 @@ upperBounds)
       orac->setFace(face);
       hull.run(faceEquations, orac, hullOutput, 1, true);
       equations = &faceEquations;
-      orac->setFace();
+      orac->setFace(completeFace());
     }
 
     if (_taskDimension)

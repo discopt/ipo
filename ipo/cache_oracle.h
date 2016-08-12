@@ -50,7 +50,7 @@ namespace ipo {
      * setFace() for the next oracle.
      */
 
-    virtual void setFace(Face* newFace = NULL);
+    virtual void setFace(const LinearConstraint& newFace = completeFace());
 
     /**
      * \brief Wrapper method that calls the oracle's implementation.

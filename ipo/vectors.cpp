@@ -146,6 +146,18 @@ namespace ipo {
     _data = zeroVectorData;
   }
 
+  MutableVector zeroVector()
+  {
+    return MutableVector(new VectorData());
+  }
+
+  MutableVector unitVector(std::size_t index)
+  {
+    VectorData* data = new VectorData(1);
+    data->add(index, Rational(1));
+    return MutableVector(data);
+  }
+
   Rational operator*(const ReferenceCountedVector& a, const ReferenceCountedVector& b)
   {
     if (a.size() == 0 || b.size() == 0)
@@ -382,6 +394,14 @@ namespace ipo {
       a[b.index(p)] -= b.value(p);
 
     return a;
+  }
+  
+  MutableVector operator-(const ReferenceCountedVector& source)
+  {
+    VectorData* data = new VectorData(source.size());
+    for (std::size_t p = 0; p < source.size(); ++p)
+      data->add(source.index(p), -source.value(p));
+    return MutableVector(data);
   }
 
 } /* namespace ipo */
