@@ -20,7 +20,7 @@ namespace ipo {
    *   Maximizes objective OBJ, which is a single argument representing a
    *   dense integral vector (as a list). It must print either
    *   'infeasible',
-   *   'unbounded' followed by a list of coordinates of an unbounded direction, or
+   *   'unbounded' followed by a list of coordinates of an unbounded rays, or
    *   'optimal' followed by a list of coordinates of an optimal solution.
    */
 

@@ -97,17 +97,17 @@ namespace ipo {
     Vector projectPoint(const Vector& point) const;
 
     /**
-     * \brief Projects a \c direction.
+     * \brief Projects a \c ray.
      *
-     * Projects a \c direction.
+     * Projects a \c ray.
      */
 
-    Vector projectDirection(const soplex::VectorRational& direction) const;
+    Vector projectRay(const soplex::VectorRational& ray) const;
 
     /**
-     * \brief Projects a \c direction.
+     * \brief Projects a \c ray.
      *
-     * Projects a \c direction.
+     * Projects a \c ray.
      */
 
     Vector projectRay(const Vector& ray) const;
@@ -297,8 +297,7 @@ namespace ipo {
 
     const Projection& _projection; // Projection.
     OracleBase* _oracle; // Source oracle.
-    soplex::DVectorRational _projectedVector; // Projected point or direction.
-    soplex::DVectorRational _liftedVector; // Dense rational lifted objective.
+    soplex::DVectorRational _projectedVector; // Projected point or ray.
     LinearConstraint _liftedFace;
   };
 

@@ -13,20 +13,19 @@ namespace ipo {
   {
   public:
     /**
-     * \brief Constructs an oracle that stores points and directions explicitly.
+     * \brief Constructs an oracle that stores points and rays explicitly.
      *
-     * Constructs an oracle with given \p name in given \p space that stores points and directions
-     * explicitly. The storage is external via the const references \p points and \p directions.
+     * Constructs an oracle with given \p name in given \p space that stores points and rays explicitly.
      */
 
     CacheOracle(const std::string& name, const Space& space);
 
     /**
-     * \brief Constructs an oracle that stores points and directions explicitly.
+     * \brief Constructs an oracle that stores points and rays explicitly.
      *
-     * Constructs an oracle with given \p name in given \p space that stores points and directions
+     * Constructs an oracle with given \p name in given \p space that stores points and rays
      * explicitly. It is associated to \p nextOracle. The storage is external via the const
-     * references \p points and \p directions.
+     * references \p points and \p rays.
      */
 
     CacheOracle(const std::string& name, OracleBase* nextOracle);
@@ -98,7 +97,7 @@ namespace ipo {
 
     inline std::size_t numRays() const
     {
-      return _uniqueDirections.size();
+      return _uniqueRays.size();
     }
 
   protected:
@@ -142,9 +141,9 @@ namespace ipo {
 
   protected:
     UniqueVectors _uniquePoints;
-    UniqueVectors _uniqueDirections;
+    UniqueVectors _uniqueRays;
     std::vector<Data> _facePoints;
-    std::vector<Data> _faceDirections;
+    std::vector<Data> _faceRays;
   };
 
 } /* namespace ipo */

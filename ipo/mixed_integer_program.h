@@ -326,7 +326,7 @@ namespace ipo {
 //     /**
 //      * \brief Corrects a given ray.
 //      *
-//      * Corrects a given ray (unbounded direction)
+//      * Corrects a given unbounded ray
 //      * by solving an LP.
 //      */
 // 
@@ -398,7 +398,7 @@ namespace ipo {
      * \brief Method that can add lazy inequalities that cut off a given ray.
      * 
      * Method that can add lazy inequalities that cut off a given \p ray. If not implemented, it is assumed that the MIP's
-     * unbounded directions are exactly the ones induced by the MIP that was passed to the constructor of the class.
+     * unbounded rays are exactly the ones induced by the MIP that was passed to the constructor of the class.
      */
 
     virtual void separateRay(const soplex::VectorRational& ray, soplex::LPRowSetRational& cuts);

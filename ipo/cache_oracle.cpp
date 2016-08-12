@@ -42,14 +42,14 @@ namespace ipo {
   }
 
   CacheOracle::CacheOracle(const std::string& name, const Space& space)
-    : OracleBase(name, space), _uniquePoints(space.dimension()), _uniqueDirections(space.dimension())
+    : OracleBase(name, space), _uniquePoints(space.dimension()), _uniqueRays(space.dimension())
   {
     OracleBase::initializedSpace();
   }
 
   CacheOracle::CacheOracle(const std::string& name, OracleBase* nextOracle)
     : OracleBase(name, nextOracle), _uniquePoints(nextOracle->space().dimension()), 
-    _uniqueDirections(nextOracle->space().dimension())
+    _uniqueRays(nextOracle->space().dimension())
   {
     OracleBase::initializedSpace();
   }
@@ -67,7 +67,7 @@ namespace ipo {
     OracleBase::setFace(newFace);
 
     _facePoints.clear();
-    _faceDirections.clear();
+    _faceRays.clear();
     if (!currentFace().definesCompleteFace())
     {
       for (UniqueVectors::Iterator iter = _uniquePoints.begin(); iter != _uniquePoints.end(); ++iter)
@@ -75,10 +75,10 @@ namespace ipo {
         if (currentFace().evaluatePoint(*iter) == 0)
           _facePoints.push_back(Data(*iter));
       }
-      for (UniqueVectors::Iterator iter = _uniqueDirections.begin(); iter != _uniqueDirections.end(); ++iter)
+      for (UniqueVectors::Iterator iter = _uniqueRays.begin(); iter != _uniqueRays.end(); ++iter)
       {
         if (currentFace().evaluateRay(*iter) == 0)
-          _faceDirections.push_back(Data(*iter));
+          _faceRays.push_back(Data(*iter));
       }
     }
   }
@@ -100,13 +100,13 @@ namespace ipo {
           ++numAddedPoints;
       }
       std::size_t numAddedRays = 0;
-      for (std::size_t i = 0; i < result.directions.size(); ++i)
+      for (std::size_t i = 0; i < result.rays.size(); ++i)
       {
-        if (addRay(result.directions[i].vector))
+        if (addRay(result.rays[i].vector))
           ++numAddedRays;
       }
 //       std::cerr << "CacheOracle: added " << numAddedPoints << " of " << result.points.size() << " points and "
-//         << numAddedRays << " of " << result.directions.size() << " rays to cache." << std::endl;
+//         << numAddedRays << " of " << result.rays.size() << " rays to cache." << std::endl;
     }
 
     return level;
@@ -120,17 +120,17 @@ namespace ipo {
       approximateObjective[i] = double(objective[i]);
     std::vector<Vector> searchResult;
 
-    // Search directions.
+    // Search rays.
 
-    search(_faceDirections, approximateObjective, 0.0, false, searchResult);
+    search(_faceRays, approximateObjective, 0.0, false, searchResult);
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
       Rational activity = objective * searchResult[i];
       if (activity <= 0)
         continue;
-      result.directions.push_back(OracleResult::Direction(searchResult[i]));
+      result.rays.push_back(OracleResult::Ray(searchResult[i]));
     }
-    if (!result.directions.empty())
+    if (!result.rays.empty())
       return heuristicLevel();
 
     // Search points.
@@ -171,13 +171,13 @@ namespace ipo {
   bool CacheOracle::addRay(const Vector& ray)
   {
     Vector r = ray;
-    if (!_uniqueDirections.insert(r))
+    if (!_uniqueRays.insert(r))
       return false;
 
     if (!currentFace().definesCompleteFace())
     {
       if (currentFace().evaluateRay(r) == 0)
-        _faceDirections.push_back(Data(r));
+        _faceRays.push_back(Data(r));
     }
     return true;
   }

@@ -16,9 +16,9 @@ namespace ipo {
    * \brief Results of a call to an oracle.
    *
    * Stores the data that an optimization oracle can return, in particular the returned unbounded
-   * directions or the returned points along with their objective values.
+   * rays or the returned points along with their objective values.
    *
-   * The caller of the oracle is responsible for freeing the points and directions returned.
+   * The caller of the oracle is responsible for freeing the points and rays returned.
    */
 
   class OracleResult
@@ -38,11 +38,11 @@ namespace ipo {
       }
     };
 
-    struct Direction
+    struct Ray
     {
       Vector vector;
 
-      Direction(Vector& vector);
+      Ray(Vector& vector);
     };
 
     /**
@@ -74,21 +74,21 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns \c true iff neither points nor directions are returned.
+     * \brief Returns \c true iff neither points nor rays are returned.
      *
-     * Returns \c true iff neither points nor directions are returned. In this case, heuristic()
+     * Returns \c true iff neither points nor rays are returned. In this case, heuristic()
      * must return 0, since a heuristic must forward a call if nothing was found.
      */
 
     inline bool isInfeasible()
     {
-      return points.empty() && directions.empty();
+      return points.empty() && rays.empty();
     }
 
     /**
      * \brief Returns \c true iff points are returned.
      *
-     * Returns \c true iff points (and hence no directions) are returned. If heuristic() returns 0,
+     * Returns \c true iff points (and hence no rays) are returned. If heuristic() returns 0,
      * then an optimum is among them.
      */
 
@@ -98,22 +98,21 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns \c true iff directions are returned.
+     * \brief Returns \c true iff rays are returned.
      *
-     * Returns \c true iff directions (and hence no points) are returned. In this case, heuristic()
+     * Returns \c true iff rays (and hence no points) are returned. In this case, heuristic()
      * must return 0, since an exact oracle cannot do better.
      */
 
     inline bool isUnbounded()
     {
-      return !directions.empty();
+      return !rays.empty();
     }
 
     /**
      * \brief Checks the state for consistency.
      *
-     * Checks the state for consistency, including result status, ordering of points and
-     * presence of duplicates.
+     * Checks the state for consistency, including result status, ordering of points and presence of duplicates.
      */
 
     void checkConsistent();
@@ -129,9 +128,9 @@ namespace ipo {
   protected:
 
     /**
-     * \brief Remove duplicate points and directions.
+     * \brief Remove duplicate points and rays.
      *
-     * Remove duplicate points and directions.
+     * Remove duplicate points and rays.
      */
 
     void removeDuplicates();
@@ -150,13 +149,13 @@ namespace ipo {
     std::vector<Point> points;
 
     /**
-     * \brief Array of returned unbounded directions.
+     * \brief Array of returned unbounded rays.
      *
-     * Array of returned unbounded directions. When an oracle call returns, this array must not
-     * contain duplicate directions.
+     * Array of returned unbounded rays. When an oracle call returns, this array must not
+     * contain duplicate rays.
      */
 
-    std::vector<Direction> directions;
+    std::vector<Ray> rays;
 
   protected:
     soplex::VectorRational const* _objective;
@@ -209,14 +208,14 @@ namespace ipo {
    * over the current face \f$ F \f$ (\c setFace()) with \c improveValue \f$ \gamma \f$ and
    * requested \c maxHeuristic and \c minHeuristic must obey the following rules, where we denote by
    * \f$ S \subseteq F \f$ and \f$ R \subseteq \text{recc}(P) \f$ the sets of returned \c points
-   * and \c directions, respectively. The returned \ref OracleResult is denoted by \c result.
+   * and \c rays, respectively. The returned \ref OracleResult is denoted by \c result.
    *
    * \li \c result.heuristic must be at least \c minHeuristic and at most \c maxHeuristic, or equal to 0.
    * \li One of \f$ S \f$ and \f$ R \f$ (or both) must be empty.
    * \li If \f$ S = R = \emptyset \f$, then \c result.heuristic must be equal to 0 and \f$F = \emptyset\f$ must hold.
    * \li Every \f$ r \in R\f$ satisfies \f$\left<c,r\right> > 0\f$.
    * \li If \c result.heuristic is equal to 0, then \f$ R \neq \emptyset \f$ holds if and only
-   *     if there exists a direction \f$r \in \text{recc}(F)\f$ with \f$\left<c,r\right> > 0\f$
+   *     if there exists a ray \f$r \in \text{recc}(F)\f$ with \f$\left<c,r\right> > 0\f$
    *     (given \f$F \neq \emptyset\f$).
    * \li If \c result.heuristic is equal to 0 and \f$F \neq \emptyset\f$ holds,
    *     then \f$S \neq \emptyset\f$ or \f$ R \neq \emptyset \f$ must hold.

@@ -20,12 +20,10 @@ namespace ipo {
    * // Create an oracle.
    * // ...
    *
-   * UniqueRationalVectors points(oracle->numVariables());
-   * UniqueRationalVectors directions(oracle->numVariables());
    * soplex::LPRowSetRational equations;
    * AffineHull::ProgressOutput hullOutput;
    * AffineHull::Result hull;
-   * hull.run(points, directions, equations, oracle, hullOutput);
+   * hull.run(equations, oracle, hullOutput);
    *
    * std::cout << "Dimension: " << hull.dimension() << std::endl;
    *
@@ -101,19 +99,19 @@ namespace ipo {
       virtual void onBeforeExactDirections();
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
-      virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
       virtual void onBeforeOracleMaximize();
-      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleMinimize();
-      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
-      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforePoint(bool twoPoints);
       virtual void onAfterPoint(bool twoPoints);
-      virtual void onBeforeDirection();
-      virtual void onAfterDirection();
+      virtual void onBeforeRay();
+      virtual void onAfterRay();
       virtual void onPotentialEquation();
       virtual void onEquation();
       virtual void onBeforeVerifyImmediate();
@@ -158,19 +156,19 @@ namespace ipo {
       virtual void onBeforeExactDirections();
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
-      virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
       virtual void onBeforeOracleMaximize();
-      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleMinimize();
-      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
-      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforePoint(bool twoPoints);
       virtual void onAfterPoint(bool twoPoints);
-      virtual void onBeforeDirection();
-      virtual void onAfterDirection();
+      virtual void onBeforeRay();
+      virtual void onAfterRay();
       virtual void onPotentialEquation();
       virtual void onEquation();
       virtual void onBeforeVerifyImmediate();
@@ -214,19 +212,19 @@ namespace ipo {
       virtual void onBeforeExactDirections();
       virtual void onAfterExactDirections(std::size_t numComputed);
       virtual void onBeforeCache();
-      virtual void onAfterCache(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterCache(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleZero();
       virtual void onAfterOracleZero(std::size_t numPoints);
       virtual void onBeforeOracleMaximize();
-      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMaximize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleMinimize();
-      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleMinimize(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforeOracleVerify(std::size_t verifyIndex);
-      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numDirections);
+      virtual void onAfterOracleVerify(std::size_t numPoints, std::size_t numRays);
       virtual void onBeforePoint(bool twoPoints);
       virtual void onAfterPoint(bool twoPoints);
-      virtual void onBeforeDirection();
-      virtual void onAfterDirection();
+      virtual void onBeforeRay();
+      virtual void onAfterRay();
       virtual void onPotentialEquation();
       virtual void onEquation();
       virtual void onBeforeVerifyImmediate();

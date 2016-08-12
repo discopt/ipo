@@ -377,7 +377,7 @@ namespace ipo {
 
       int dimensionLowerBound() const
       {
-        return int(_spanningPoints.size() + _spanningDirections.size()) - 1;
+        return int(_spanningPoints.size() + _spanningRays.size()) - 1;
       }
 
       int dimensionUnsafeUpperBound() const
@@ -522,11 +522,11 @@ namespace ipo {
         }
       }
 
-      void addDirection(Vector& direction, std::size_t column, bool invalidate)
+      void addRay(Vector& ray, std::size_t column, bool invalidate)
       {
-        _spanningDirections.push_back(direction);
+        _spanningRays.push_back(ray);
         _basicColumns.push_back(column);
-        _factorization->addRow(direction, Rational(0), column);
+        _factorization->addRow(ray, Rational(0), column);
 
         if (invalidate)
         {
@@ -567,7 +567,7 @@ namespace ipo {
         }
         else if (_result.isInfeasible())
         {
-          if (_spanningDirections.empty())
+          if (_spanningRays.empty())
             return;
           else
             throw std::runtime_error("Oracle claims infeasible after returning points or rays.");
@@ -688,7 +688,7 @@ namespace ipo {
           /// Zero objective case.
 
           if (_spanningPoints.empty()
-            && _spanningDirections.size() == getUpperBound(minHeuristic))
+            && _spanningRays.size() == getUpperBound(minHeuristic))
           {
             return findLastPoint();
           }
@@ -736,22 +736,22 @@ namespace ipo {
           _objectiveBound.strict = true;
           _output->onBeforeOracleMaximize();
           oracleMaximize(minHeuristic);
-          _output->onAfterOracleMaximize(_result.points.size(), _result.directions.size());
+          _output->onAfterOracleMaximize(_result.points.size(), _result.rays.size());
 
           if (_result.isInfeasible())
           {
-            if (!_spanningPoints.empty() || !_spanningDirections.empty())
+            if (!_spanningPoints.empty() || !_spanningRays.empty())
             {
               throw std::runtime_error(
-                "AffineHull: Oracle claims infeasible though we know some points/directions.");
+                "AffineHull: Oracle claims infeasible though we know some points/rays.");
             }
             break;
           }
           else if (_result.isUnbounded())
           {
-            _output->onBeforeDirection();
-            addDirection(_result.directions.front().vector, _directionColumn, true);
-            _output->onAfterDirection();
+            _output->onBeforeRay();
+            addRay(_result.rays.front().vector, _directionColumn, true);
+            _output->onAfterRay();
             continue;
           }
           else
@@ -824,22 +824,22 @@ namespace ipo {
           _objectiveBound.value = _commonValue;
           _output->onBeforeOracleMinimize();
           oracleMaximize(minHeuristic);
-          _output->onAfterOracleMinimize(_result.points.size(), _result.directions.size());
+          _output->onAfterOracleMinimize(_result.points.size(), _result.rays.size());
 
           if (_result.isInfeasible())
           {
-            if (!_spanningPoints.empty() || !_spanningDirections.empty())
+            if (!_spanningPoints.empty() || !_spanningRays.empty())
             {
               throw std::runtime_error(
-                "AffineHull: Oracle claims infeasible though we know some points/directions.");
+                "AffineHull: Oracle claims infeasible though we know some points/rays.");
             }
             break;
           }
           else if (_result.isUnbounded())
           {
-            _output->onBeforeDirection();
-            addDirection(_result.points.front().vector, _directionColumn, true);
-            _output->onAfterDirection();
+            _output->onBeforeRay();
+            addRay(_result.rays.front().vector, _directionColumn, true);
+            _output->onAfterRay();
             continue;
           }
           else
@@ -906,7 +906,7 @@ namespace ipo {
         _oracle = oracle;
         _output = &output;
         _spanningPoints.clear();
-        _spanningDirections.clear();
+        _spanningRays.clear();
         _basicColumns.clear();
         _irredundantEquations.clear();
         _potentialEquations.clear();
@@ -966,7 +966,7 @@ namespace ipo {
             _objectiveBound.strict = true;
             oracleMaximize(0);
             ++_numOracleCalls;
-            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
+            _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
 
             if (_result.isFeasible())
             {
@@ -991,7 +991,7 @@ namespace ipo {
             _output->onBeforeOracleVerify(_potentialEquations.size());
             oracleMaximize(0);
             ++_numOracleCalls;
-            _output->onAfterOracleVerify(_result.points.size(), _result.directions.size());
+            _output->onAfterOracleVerify(_result.points.size(), _result.rays.size());
 
             failure = !_result.isFeasible() || _result.points.front().objectiveValue != rhsSum;
           }
@@ -1044,7 +1044,7 @@ namespace ipo {
         _output->onEnd();
         _output->_implementation = NULL;
 
-        return int(_spanningPoints.size() + _spanningDirections.size()) - 1;
+        return int(_spanningPoints.size() + _spanningRays.size()) - 1;
       }
 
       friend class InformationBase;
@@ -1061,7 +1061,7 @@ namespace ipo {
       OracleBase* _oracle;
       OutputBase* _output;
       std::vector<Vector> _spanningPoints;
-      std::vector<Vector> _spanningDirections;
+      std::vector<Vector> _spanningRays;
       std::vector<std::size_t> _basicColumns;
       std::vector<std::size_t> _irredundantEquations;
       std::vector<std::size_t> _potentialEquations;
@@ -1175,13 +1175,13 @@ namespace ipo {
     const Vector& InformationBase::spanningRay(std::size_t i) const
     {
       ensureImplementation();
-      return _implementation->_spanningDirections[i];
+      return _implementation->_spanningRays[i];
     }
 
     std::size_t InformationBase::numSpanningRays() const
     {
       ensureImplementation();
-      return _implementation->_spanningDirections.size();
+      return _implementation->_spanningRays.size();
     }
 
     const std::vector<std::size_t>& InformationBase::basicColumns() const
@@ -1375,12 +1375,12 @@ namespace ipo {
 
     }
 
-    void OutputBase::onBeforeDirection()
+    void OutputBase::onBeforeRay()
     {
 
     }
 
-    void OutputBase::onAfterDirection()
+    void OutputBase::onAfterRay()
     {
 
     }
@@ -1581,12 +1581,12 @@ namespace ipo {
       _timeFactorization += timeStamp();
     }
 
-    void ProgressOutput::onBeforeDirection()
+    void ProgressOutput::onBeforeRay()
     {
       timeStamp();
     }
 
-    void ProgressOutput::onAfterDirection()
+    void ProgressOutput::onAfterRay()
     {
       onProgress();
       _timeFactorization += timeStamp();
@@ -1830,14 +1830,14 @@ namespace ipo {
       timeStamp("add-point");
     }
 
-    void DebugOutput::onBeforeDirection()
+    void DebugOutput::onBeforeRay()
     {
       printStatus();
       std::cout << "Adding a ray.";
       timeStamp();
     }
 
-    void DebugOutput::onAfterDirection()
+    void DebugOutput::onAfterRay()
     {
       printStatus();
       std::cout << "Added a ray.";

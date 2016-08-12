@@ -66,51 +66,6 @@ namespace ipo {
         throw std::runtime_error("NormalConeOracle does not support faces.");
       }
 
-//       /**
-//       * \brief Runs the oracle to maximize the dense rational \p objective.
-//       *
-//       * Runs the optimization oracle to maximize the given dense rational \p objective
-//       * over the current face \f$ F \f$ (see setFace()) and returns \p result.
-//       * If \p maxHeuristic is less than thisHeuristic() or if the objective value
-//       * requested by \p objectiveBound is not exceeded, then the call must be forwarded to the
-//       * next oracle.
-//       *
-//       * \param result         After the call, contains the oracle's answer.
-//       * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-//       * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-//       * \param maxHeuristic   Requested maximum heuristic level.
-//       * \param minHeuristic   Requested minimum heuristic level.
-//       *
-//       * This implementation
-//       */
-// 
-//       virtual void maximize(OracleResult& result, const soplex::VectorRational& objective,
-//         const ObjectiveBound& objectiveBound = ObjectiveBound(),
-//         std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
-//         std::size_t minHeuristic = 0)
-//       {
-//         updateObjective(objective);
-// 
-//         /// Perform stabilization.
-// 
-//         stabilizedPresolve();
-// 
-//         /// Optimize
-// 
-//         optimize(false);
-// 
-//         DSVectorRational* solution = new DSVectorRational;
-//         getPrimalSolution(*solution);
-//         
-//         result.buildStart(objective);
-//         if (*solution * objective == 0)
-//           result.buildAddPoint(solution);
-//         else
-//           result.buildAddDirection(solution);
-//         result.buildFinish(0, true, false, false);
-//         return result.buildAddPoint(solution);
-//       }
-
       /**
        * \brief Oracle's implementation to maximize the dense rational \p objective.
        *
@@ -144,7 +99,7 @@ namespace ipo {
         if (solution * objective == 0)
           result.points.push_back(OracleResult::Point(solution));
         else
-          result.directions.push_back(OracleResult::Direction(solution));
+          result.rays.push_back(OracleResult::Ray(solution));
 
         return heuristicLevel();
       }
@@ -273,7 +228,7 @@ std::size_t numRays,
           {
             _output->onBeforeOracleVerifyElement(i);
             bool verified = verifyNormalConeDirection(verifyResult, targetPoint, normalConeDirections[i]);
-            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.directions.size(), verified);
+            _output->onAfterOracleVerifyElement(verifyResult.points.size(), verifyResult.rays.size(), verified);
             if (!verified)
               continue;
           }
@@ -721,12 +676,12 @@ numEquations)
 
     void DebugOutput::onConeBeforeCache()
     {
-      std::cout << "Searching known points and directions:" << std::flush;
+      std::cout << "Searching known points and rays:" << std::flush;
     }
 
     void DebugOutput::onConeAfterCache(std::size_t numPoints, std::size_t numRays)
     {
-      std::cout << " (" << numPoints << " known points and " << numRays << " directions).\n" <<
+      std::cout << " (" << numPoints << " known points and " << numRays << " rays).\n" <<
 std::flush;
     }
 
@@ -747,7 +702,7 @@ std::flush;
           std::cout << " (feasible).\n" << std::flush;
       }
       else if (numRays > 0)
-        std::cout << " (" << numRays << " directions).\n" << std::flush;
+        std::cout << " (" << numRays << " rays).\n" << std::flush;
       else
         std::cout << " (infeasible).\n" << std::flush;
     }
@@ -919,12 +874,12 @@ numRays)
       _timeFactorization += timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onBeforeDirection()
+    void ProgressOutput::AffineHullOutput::onBeforeRay()
     {
       timeStamp();
     }
 
-    void ProgressOutput::AffineHullOutput::onAfterDirection()
+    void ProgressOutput::AffineHullOutput::onAfterRay()
     {
       onProgress();
       _timeFactorization += timeStamp();

@@ -8,109 +8,6 @@ using namespace soplex;
 
 namespace ipo {
 
-//   Face::Face(const Space& space) 
-//     : _synced(false), _denseNormal(space.dimension()), _sparseNormal()
-//   {
-// 
-//   }
-// 
-//   Face::Face(const Space& space, const LPRowRational& inequality) : _synced(false),
-//     _denseNormal(space.dimension()), _sparseNormal()
-//   {
-//     add(inequality);
-//   }
-// 
-//   Face::Face(const Space& space, const LPRowSetRational& inequalities) : _synced(false),
-//     _denseNormal(space.dimension()), _sparseNormal()
-//   {
-//     add(inequalities);
-//   }
-// 
-//   Face::~Face()
-//   {
-// 
-//   }
-// 
-//   void Face::add(const LPRowRational& inequality)
-//   {
-//     if (inequality.lhs() > -infinity && inequality.rhs() < infinity && inequality.lhs() < inequality.rhs())
-//     {
-//       throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
-//     }
-//     _inequalities.add(inequality);
-//     _synced = false;
-//   }
-// 
-//   void Face::add(const LPRowSetRational& inequalities)
-//   {
-//     for (std::size_t i = 0; i < inequalities.num(); ++i)
-//     {
-//       if (inequalities.lhs(i) > -infinity && inequalities.rhs(i) < infinity
-//           && inequalities.lhs(i) < inequalities.rhs(i))
-//       {
-//         throw std::runtime_error("Cannot add a proper ranged row as face-defining inequality.");
-//       }
-//     }
-// 
-//     if (_inequalities.max() < _inequalities.num() + inequalities.num())
-//       _inequalities.reMax(_inequalities.num() + inequalities.num());
-//     _inequalities.add(inequalities);
-//     _synced = false;
-//   }
-// 
-//   bool Face::containsPoint(const Vector& point)
-//   {
-//     ensureSync();
-//     return _denseNormal * point == _rhs;
-//   }
-// 
-//   bool Face::containsDirection(const Vector& direction)
-//   {
-//     ensureSync();
-//     return _denseNormal * direction == 0;
-//   }
-// 
-//   void Face::ensureSync()
-//   {
-//     if (_synced)
-//       return;
-// 
-//     _denseNormal.clear();
-//     _rhs = 0;
-// 
-//     for (std::size_t i = 0; i < _inequalities.num(); ++i)
-//     {
-//       const Rational& lhs = _inequalities.lhs(i);
-//       const Rational& rhs = _inequalities.rhs(i);
-//       if (lhs <= -infinity)
-//       {
-//         _rhs += rhs;
-//         const SVectorRational& row = _inequalities.rowVector(i);
-//         for (int p = row.size() - 1; p >= 0; --p)
-//           _denseNormal[row.index(p)] += row.value(p);
-//       }
-//       else
-//       {
-//         assert(rhs >= -infinity);
-//         _rhs -= lhs;
-//         const SVectorRational& row = _inequalities.rowVector(i);
-//         for (int p = row.size() - 1; p >= 0; --p)
-//           _denseNormal[row.index(p)] -= row.value(p);
-//       }
-//     }
-// 
-//     _sparseNormal = denseToVector(_denseNormal);
-//     _maximumNorm = 0;
-//     for (std::size_t p = 0; p < _sparseNormal.size(); ++p)
-//     {
-//       const Rational& x = _sparseNormal.value(p);
-//       if (x > 0 && x > _maximumNorm)
-//         _maximumNorm = x;
-//       if (x < 0 && x < -_maximumNorm)
-//         _maximumNorm = -x;
-//     }
-//   }
-
   OracleResult::Point::Point(Vector& vec)
     : vector(vec)
   {
@@ -123,7 +20,7 @@ namespace ipo {
     this->objectiveValue = value;
   }
 
-  OracleResult::Direction::Direction(Vector& vec)
+  OracleResult::Ray::Ray(Vector& vec)
     : vector(vec)
   {
     
@@ -181,17 +78,17 @@ namespace ipo {
 
     usv.clear();
     write = 0;
-    for (std::size_t read = 0; read < directions.size(); ++read)
+    for (std::size_t read = 0; read < rays.size(); ++read)
     {
-      if (usv.insert(directions[read].vector))
+      if (usv.insert(rays[read].vector))
       {
         if (write != read)
-          directions[write] = directions[read];
+          rays[write] = rays[read];
         ++write;
       }
     }
-    while (directions.size() > write)
-      directions.pop_back();
+    while (rays.size() > write)
+      rays.pop_back();
   }
 
   OracleBase::OracleBase(const std::string& name, const Space& space) :
@@ -240,7 +137,7 @@ namespace ipo {
 
     result._objective = &objective;
     result.points.clear();
-    result.directions.clear();
+    result.rays.clear();
 
     bool sort = false;
     bool checkDuplicates = false;
@@ -297,7 +194,7 @@ namespace ipo {
     // Call implementation and check whether results are satisfactory.
 
     maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
-    if (heuristicLevel() == 0 || !result.directions.empty())
+    if (heuristicLevel() == 0 || !result.rays.empty())
       return heuristicLevel();
 
     if (!result.points.empty())
@@ -322,7 +219,7 @@ namespace ipo {
 
     // Answer not satisfactory.
 
-    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.directions.empty()))
+    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.rays.empty()))
     {
       return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
     }
@@ -517,18 +414,18 @@ namespace ipo {
               break;
             }
           }
-          else if (!unrestrictedResult.directions.empty())
+          else if (!unrestrictedResult.rays.empty())
           {
-            for (std::size_t i = 0; i < unrestrictedResult.directions.size(); ++i)
+            for (std::size_t i = 0; i < unrestrictedResult.rays.size(); ++i)
             {
-              Vector& vector = unrestrictedResult.directions[i].vector;
+              Vector& vector = unrestrictedResult.rays[i].vector;
               if (face.evaluateRay(vector) != 0)
                 continue;
 
-              result.directions.push_back(OracleResult::Direction(vector));
+              result.rays.push_back(OracleResult::Ray(vector));
             }
             
-            if (!result.directions.empty())
+            if (!result.rays.empty())
               return heuristicLevel();
           }
           else
@@ -546,7 +443,7 @@ namespace ipo {
 
     // Answer not satisfactory.
 
-    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.directions.empty()))
+    if (heuristicLevel() > minHeuristic || (result.points.empty() && result.rays.empty()))
     {
       return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
     }

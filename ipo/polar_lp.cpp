@@ -506,15 +506,15 @@ soplex::VectorRational& normal,
       onBeforeOracleCall();
       _oracle->maximize(_result, inequalityRoundedDenseNormal, ObjectiveBound(inequalityRoundedRhs,
         true));
-      onAfterOracleCall(_result.isFeasible(), _result.points.size(), _result.directions.size(),
+      onAfterOracleCall(_result.isFeasible(), _result.points.size(), _result.rays.size(),
         false);
 
       if (_result.isUnbounded())
       {
-        for (std::size_t i = 0; i < _result.directions.size(); ++i)
+        for (std::size_t i = 0; i < _result.rays.size(); ++i)
         {
           onBeforeAddRay();
-          addRayRow(_result.directions[i].vector, true);
+          addRayRow(_result.rays[i].vector, true);
           onAfterAddRay();
         }
         continue;
@@ -732,14 +732,14 @@ soplex::VectorRational& normal,
       onBeforeOracleCall();
       _oracle->maximize(_result, inequalityExactDenseNormal, ObjectiveBound(inequalityRhs, true));
       onAfterOracleCall(_result.isFeasible(), _result.points.size(),
-        _result.directions.size(), false);
+        _result.rays.size(), false);
 
       if (_result.isUnbounded())
       {
-        for (std::size_t i = 0; i < _result.directions.size(); ++i)
+        for (std::size_t i = 0; i < _result.rays.size(); ++i)
         {
           onBeforeAddRay();
-          addRayRow(_result.directions[i].vector, false);
+          addRayRow(_result.rays[i].vector, false);
           onAfterAddRay();
         }
         continue;

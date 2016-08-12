@@ -108,7 +108,7 @@ namespace ipo {
     if (status == "unbounded")
     {
       Vector solution = parseSolution(output);
-      result.directions.push_back(OracleResult::Direction(solution));  
+      result.rays.push_back(OracleResult::Ray(solution));  
     }
     else if (status == "optimal")
     {

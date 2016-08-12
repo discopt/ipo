@@ -152,7 +152,7 @@ namespace ipo {
     virtual bool computeAffineHull(const LinearConstraint& face, const std::string& faceName);
     virtual bool optimizeObjective(const soplex::VectorRational* objective, bool maximize);
     virtual bool generateFacets(const soplex::VectorRational* objective, bool print);
-    virtual bool separateRayFacet(const Vector& direction, bool& isFeasible);
+    virtual bool separateRayFacet(const Vector& ray, bool& isFeasible);
     virtual bool separatePointFacet(const Vector& point, bool& isFeasible);
     virtual bool computeSmallestFace(const Vector& point);
     virtual bool printCached();
@@ -287,8 +287,8 @@ namespace ipo {
     std::vector<std::string> _faceFiles;
     std::vector<std::string> _objectiveArguments;
     std::vector<std::string> _objectiveFiles;
-    std::vector<std::string> _directionArguments;
-    std::vector<std::string> _directionFiles;
+    std::vector<std::string> _rayArguments;
+    std::vector<std::string> _rayFiles;
     std::vector<std::string> _pointArguments;
     std::vector<std::string> _pointFiles;
     std::size_t _numRandomObjectives;

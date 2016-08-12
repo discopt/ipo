@@ -64,12 +64,12 @@ namespace ipo {
     return Vector(data);
   }
 
-  Vector Projection::projectDirection(const VectorRational& direction) const
+  Vector Projection::projectRay(const VectorRational& ray) const
   {
     VectorData* data = new VectorData(dimension());
     for (std::size_t v = 0; v < dimension(); ++v)
     {
-      Rational x = _map[v] * direction;
+      Rational x = _map[v] * ray;
       if (x != 0)
         data->add(v, x);
     }
@@ -134,7 +134,6 @@ namespace ipo {
   {
     OracleBase::initializedSpace();
 
-    _liftedVector.reDim(projection.sourceSpace().dimension(), false);
     _projectedVector.reDim(projection.dimension(), false);
   }
 
@@ -186,10 +185,10 @@ namespace ipo {
     }
     else if (sourceResult.isUnbounded())
     {
-      for (std::size_t i = 0; i < sourceResult.directions.size(); ++i)
+      for (std::size_t i = 0; i < sourceResult.rays.size(); ++i)
       {
-        Vector projectedRay = _projection.projectRay(sourceResult.directions[i].vector);
-        result.directions.push_back(OracleResult::Direction(projectedRay));
+        Vector projectedRay = _projection.projectRay(sourceResult.rays[i].vector);
+        result.rays.push_back(OracleResult::Ray(projectedRay));
       }
     }
   }
