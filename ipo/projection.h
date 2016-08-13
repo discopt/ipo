@@ -113,39 +113,28 @@ namespace ipo {
     Vector projectRay(const Vector& ray) const;
 
     /**
-     * \brief Projects a hyperplane if possible.
+     * \brief Projects a linear \p constraint if possible.
      *
-     * If possible, projects a hyperplane defined by \p normal and \p rhs into the projected space. The projected hyperplane is
-     * defined by \p projectedNormal and \p projectedRhs. Details are as follows.
+     * If possible, projects a linear constraint into the projected space. Otherwise, returns the completeFace().
      *
      * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,x\right> = \beta \f$ be the equation defining the 
-     * hyperplane. The hyperplane defined by \f$ \left<c,x\right> = \delta \f$ is its projection if
-     * \f$ c^\intercal A  = a^\intercal \f$ and \f$\delta - c^\intercal b = \beta\f$ hold.
-     * 
-     * \param normal          Normal vector of given hyperplane in source space.
-     * \param rhs             Right-hand side of given hyperplane in source space.
-     * \param projectedNormal Normal vector of resulting hyperplane in projected space.
-     * \param projectedRhs    Right-hand side of resulting hyperplane in projected space.
-     * \return                true iff hyperplane can be projected.
+     * given (boundary) hyperplane. The hyperplane defined by \f$ \left<c,x\right> = \delta \f$ is its projection if
+     * \f$ c^\intercal A  = a^\intercal \f$ and \f$\delta - c^\intercal b = \beta\f$ hold. If this system has no solution, then
+     * completeFace() is returned.
      */
 
-    bool projectHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& projectedNormal, 
-      Rational& projectedRhs) const;
+    LinearConstraint projectLinearConstraint(const LinearConstraint& constraint) const;
 
     /**
-     * \brief Lifts a hyperplane into the source space.
+     * \brief Lifts a linear \p constraint into the source space.
      *
-     * Lifts a hyperplane defined by \p normal and \p rhs into the source space. The lifted hyperplane is defined by 
-     * \p liftedNormal and \p liftedRhs. Details are as follows.
+     * Lifts a linear \p constraint into the source space.
      *
      * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,y\right> = \beta \f$ be the equation defining the 
-     * hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
+     * (boundary) hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
      */
-
-//     void liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs, soplex::DVectorRational& liftedNormal,
-//       Rational& liftedRhs) const;
-      
-    LinearConstraint liftLinearConstraint(const LinearConstraint& projectedConstraint) const;
+  
+    LinearConstraint liftLinearConstraint(const LinearConstraint& constraint) const;
 
     /**
      * \brief Returns the dimension of the image space.

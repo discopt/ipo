@@ -88,44 +88,27 @@ namespace ipo {
     return Vector(data);
   }
 
-  bool Projection::projectHyperplane(const soplex::VectorRational& normal, const Rational& rhs,
-    soplex::DVectorRational& projectedNormal,
-    Rational& projectedRhs) const
+  LinearConstraint Projection::projectLinearConstraint(const LinearConstraint& constraint) const
   {
-    std::cerr << "Projection of hyperplanes not implemented - claiming not projectible!" << std::endl;
+    std::cerr << "Projection of linear constraints not implemented - claiming not projectible!" << std::endl;
 
-    return false;
+    return completeFace();
   }
 
-//   void Projection::liftHyperplane(const soplex::VectorRational& normal, const Rational& rhs,
-//     soplex::DVectorRational& liftedNormal, Rational& liftedRhs) const
-//   {
-//     liftedNormal.reDim(sourceSpace().dimension());
-//     liftedNormal.clear();
-//     liftedRhs = rhs;
-//     for (std::size_t v = 0; v < dimension(); ++v)
-//     {
-//       const SVectorRational& row = _map[v];
-//       for (int p = row.size() - 1; p >= 0; --p)
-//         liftedNormal[row.index(p)] += normal[v] * row.value(p);
-//       liftedRhs -= normal[v] * _shift[v];
-//     }
-//   }
-
-  LinearConstraint Projection::liftLinearConstraint(const LinearConstraint& projectedConstraint) const
+  LinearConstraint Projection::liftLinearConstraint(const LinearConstraint& constraint) const
   {
     soplex::DVectorRational liftedNormal(sourceSpace().dimension());
-    Rational liftedRhs = projectedConstraint.rhs();
-    for (std::size_t p = 0; p < projectedConstraint.normal().size(); ++p)
+    Rational liftedRhs = constraint.rhs();
+    for (std::size_t p = 0; p < constraint.normal().size(); ++p)
     {
-      std::size_t v = projectedConstraint.normal().index(p);
-      const Rational& x = projectedConstraint.normal().value(p);
+      std::size_t v = constraint.normal().index(p);
+      const Rational& x = constraint.normal().value(p);
       const Vector& row = _map[v];
       for (int q = row.size() - 1; q >= 0; --q)
         liftedNormal[row.index(q)] += x * row.value(q);
       liftedRhs -= x * _shift[v]; 
     }
-    return LinearConstraint(projectedConstraint.type(), denseToVector(liftedNormal, true), liftedRhs);
+    return LinearConstraint(constraint.type(), denseToVector(liftedNormal, true), liftedRhs);
   }
 
   ProjectedOracle::ProjectedOracle(const std::string& name,

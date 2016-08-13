@@ -361,10 +361,10 @@ public:
       bool add = true;
       if (projectedSpace())
       {
-        soplex::DVectorRational denseInstanceObjective(projectedOracle()->space().sourceSpace().dimension());
-        vectorToDense(_instanceObjective, denseInstanceObjective);
-        Rational projectedRhs;
-        add = projectedOracle()->space().projectHyperplane(denseInstanceObjective, Rational(0), *objective, projectedRhs);
+        LinearConstraint projectedConstraint = projectedOracle()->space().projectLinearConstraint(LinearConstraint('<',  
+          _instanceObjective, Rational(0)));
+        add = !projectedConstraint.definesCompleteFace();
+        vectorToDense(projectedConstraint.normal(), *objective);
       }
       else
         vectorToDense(_instanceObjective, *objective);
