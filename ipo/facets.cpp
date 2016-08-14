@@ -16,7 +16,7 @@ namespace ipo {
     {
     public:
       Implementation(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays,
-        const std::vector<std::size_t>& columnBasis, OracleBase* oracle) 
+        const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle) 
         : PolarLP(oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(false)
       {
         SVectorRational vector;
@@ -161,15 +161,8 @@ namespace ipo {
 
         dense.reDim(n() + 1);
         getPrimalSolution(dense);
-        _inequality.setRhs(dense[n()]);
-        DSVectorRational sparse;
-        for (std::size_t v = 0; v < n(); ++v)
-        {
-          if (dense[v] != 0)
-            sparse.add(v, dense[v]);
-        }
-
-        _inequality.setRowVector(sparse);
+        Rational rhs = 0;
+        std::swap(rhs, dense[n()]);
         _violation = getObjectiveValue();
 
         /// Use basis information for the certificate.
@@ -186,11 +179,11 @@ namespace ipo {
         if (_certificate.points.size() + _certificate.rays.size() == _dimension + 1)
         {
           _separatedEquation = true;
-          _inequality.setLhs(_inequality.rhs());
+          _inequality = LinearConstraint('=', denseToVector(dense) , rhs);
         }
         else
         {
-          _inequality.setLhs(-infinity);
+          _inequality = LinearConstraint('<', denseToVector(dense) , rhs);
           if (_certificate.points.size() + _certificate.rays.size() == _dimension)
             _separatedFacet = true;
           else
@@ -227,7 +220,7 @@ namespace ipo {
 
       /// Result.
 
-      LPRowRational _inequality;
+      LinearConstraint _inequality;
       Certificate _certificate;
       Rational _violation;
       bool _separatedFacet;
@@ -235,7 +228,7 @@ namespace ipo {
     };
 
     Result::Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
-      const std::vector<std::size_t>& columnBasis, OracleBase* oracle)
+      const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle)
     {
       _implementation = new Implementation(spanningPoints, spanningRays, columnBasis, oracle);
     }
@@ -246,14 +239,9 @@ namespace ipo {
       delete _implementation;
     }
 
-    void Result::inequality(soplex::LPRowRational& inequality) const
+    LinearConstraint Result::inequality() const
     {
-      inequality = _implementation->_inequality;
-    }
-
-    void Result::inequality(soplex::LPRowSetRational& inequalities) const
-    {
-      inequalities.add(-infinity, _implementation->_inequality.rowVector(), _implementation->_inequality.rhs());
+      return _implementation->_inequality;
     }
 
     void Result::certificate(Certificate& certificate) const

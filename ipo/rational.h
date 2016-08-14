@@ -14,6 +14,22 @@ namespace ipo {
   const double minusInfinity = -soplex::infinity;
 
   typedef soplex::Rational Rational;
+  
+  class IntegralScaler
+  {
+  public:
+    IntegralScaler();
+    ~IntegralScaler();
+
+    void operator()(const Rational& number);
+
+    const Rational factor() const;
+
+  private:
+    mpz_class _numScaler;
+    mpz_class _denScaler;
+  };
+
 
 } /* namespace ipo */
 

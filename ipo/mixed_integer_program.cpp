@@ -14,7 +14,7 @@ namespace ipo {
 
 #ifdef WITH_SCIP
 
-  MixedIntegerProgram::MixedIntegerProgram(Space& space, SCIP* scip) : _space(space), _currentFace()
+  MixedIntegerProgram::MixedIntegerProgram(SCIP* scip) : _currentFace()
   {
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -27,13 +27,7 @@ namespace ipo {
 
     /// Setup columns.
 
-    bool buildSpace = space.dimension() == 0;
-    if (!buildSpace && space.dimension() != n)
-    {
-      throw std::runtime_error(
-        "Dimension mismatch while constructing a MixedIntegerProgram for a non-empty space.");
-    }
-
+    SpaceData* spaceData = new SpaceData();
     _columns.reMax(n);
     _integrality.resize(n);
     Rational obj, lower, upper;
@@ -53,9 +47,10 @@ namespace ipo {
         upper = infinity;
       _columns.add(SCIPgetObjsense(scip) == SCIP_OBJSENSE_MAXIMIZE ? obj : -obj, lower, vector, upper);
       _integrality[v] = SCIPvarGetType(origVars[v]) != SCIP_VARTYPE_CONTINUOUS;
-      if (buildSpace)
-        space.addVariable(SCIPvarGetName(origVars[v]));
+
+      spaceData->addVariable(SCIPvarGetName(origVars[v]));
     }
+    _space = Space(spaceData);
 
     /// Setup rows.
 
@@ -261,20 +256,13 @@ namespace ipo {
         names->push_back("fixed-" + space()[c]);
     }
   }
-  
-  MIPOracleBase::MIPOracleBase(const std::string& name, const Space& space, const MixedIntegerProgram& mip)
-    : OracleBase(name, space)
-  {
-    OracleBase::initializedSpace();
-    
-    initializeLP(mip);
-  }
 
-  MIPOracleBase::MIPOracleBase(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip)
+  MIPOracleBase::MIPOracleBase(const std::string& name, const MixedIntegerProgram& mip,
+    const std::shared_ptr<OracleBase>& nextOracle)
     : OracleBase(name, nextOracle)
-  {
-    OracleBase::initializedSpace();
-    
+  {  
+    OracleBase::initializeSpace(mip.space());
+
     initializeLP(mip);
   }
 
@@ -345,13 +333,13 @@ namespace ipo {
       factor = 1024.0 / double(largest);
     }
     for (std::size_t v = 0; v < n; ++v)
-      _objective[v] = factor * objective[v];
+      _objective[v] = double(factor * objective[v]);
 
     // Call the solver's method.
     
     assert(_points.empty());
     assert(_rays.empty());
-
+    
     solverMaximize(_objective, infinity, _points, _rays);
 
     if (!_points.empty())

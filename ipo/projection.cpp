@@ -3,73 +3,81 @@
 using namespace soplex;
 
 namespace ipo {
-
-  Projection::Projection(const Space& sourceSpace)
+  
+  ProjectionData::ProjectionData(const Space& sourceSpace)
     : _sourceSpace(sourceSpace)
   {
-
+    _imageSpaceData = new SpaceData;
+    _imageSpaceData->markUsed();
   }
 
-  Projection::Projection(const Space& sourceSpace, const std::vector< std::size_t >& variableSubset)
+  ProjectionData::ProjectionData(const Space& sourceSpace, const std::vector< std::size_t >& variableSubset)
     : _sourceSpace(sourceSpace)
   {
-    _variables.reserve(variableSubset.size());
-    _map.reserve(variableSubset.size());
-    _shift.reserve(variableSubset.size());
-    for (std::size_t i = 0; i < variableSubset.size(); ++i)
-      addVariable(variableSubset[i]);
+    std::vector<std::string> variableNames;
+    for (std::size_t iv = 0; iv < variableSubset.size(); ++iv)
+      variableNames.push_back(sourceSpace[variableSubset[iv]]);
+
+    for (std::size_t iv = 0; iv < variableSubset.size(); ++iv)
+      _map.push_back(unitVector(variableSubset[iv]));
+
+    _shift.resize(variableNames.size(), Rational(0));
+
+    _imageSpaceData = new SpaceData(variableNames);
+    _imageSpaceData->markUsed();
   }
 
-  Projection::~Projection()
+  ProjectionData::~ProjectionData()
   {
-
+    _imageSpaceData->unmarkUsed();
   }
 
-  void Projection::addVariable(const std::string& variableName,
-    const Vector& coefficients, const Rational& shift)
+  bool ProjectionData::operator==(const ProjectionData& other) const
   {
-    _variables.push_back(variableName);
+    if (_sourceSpace != other._sourceSpace)
+      return false;
+
+    if (*_imageSpaceData != *other._imageSpaceData)
+      return false;
+
+    if (_shift != other._shift)
+      return false;
+
+    for (std::size_t v = 0; v < _map.size(); ++v)
+    {
+      if (_map[v] != other._map[v])
+        return false;
+    }
+    return true;
+  }
+
+  void ProjectionData::addVariable(const std::string& variableName, const Vector& coefficients, const Rational& shift)
+  {
+    _imageSpaceData->addVariable(variableName);
     _map.push_back(coefficients);
     _shift.push_back(shift);
   }
-
-  void Projection::addVariable(std::size_t sourceVariable, const soplex::Rational& shift)
+  
+  void ProjectionData::addVariable(std::size_t sourceVariable, const Rational& shift)
   {
-    _variables.push_back(_sourceSpace[sourceVariable]);
+    _imageSpaceData->addVariable(_sourceSpace[sourceVariable]);
     _map.push_back(unitVector(sourceVariable));
     _shift.push_back(shift);
   }
-  
-  Vector Projection::projectPoint(const VectorRational& point) const
-  {
-    VectorData* data = new VectorData(dimension());
-    for (std::size_t v = 0; v < dimension(); ++v)
-    {
-      Rational x = _shift[v] + _map[v] * point;
-      if (x != 0)
-        data->add(v, x);
-    }
-    return Vector(data);
-  }
 
+  void ProjectionData::unmarkUsed()
+  {
+    _usage--;
+    if (_usage == 0)
+      delete this;
+  }
+  
   Vector Projection::projectPoint(const Vector& point) const
   {
-    VectorData* data = new VectorData(dimension());
-    for (std::size_t v = 0; v < dimension(); ++v)
+    VectorData* data = new VectorData(imageSpace().dimension());
+    for (std::size_t v = 0; v < imageSpace().dimension(); ++v)
     {
-      Rational x = _shift[v] + _map[v] * point;
-      if (x != 0)
-        data->add(v, x);
-    }
-    return Vector(data);
-  }
-
-  Vector Projection::projectRay(const VectorRational& ray) const
-  {
-    VectorData* data = new VectorData(dimension());
-    for (std::size_t v = 0; v < dimension(); ++v)
-    {
-      Rational x = _map[v] * ray;
+      Rational x = shift(v) + row(v) * point;
       if (x != 0)
         data->add(v, x);
     }
@@ -78,10 +86,10 @@ namespace ipo {
 
   Vector Projection::projectRay(const Vector& ray) const
   {
-    VectorData* data = new VectorData(dimension());
-    for (std::size_t v = 0; v < dimension(); ++v)
+    VectorData* data = new VectorData(imageSpace().dimension());
+    for (std::size_t v = 0; v < imageSpace().dimension(); ++v)
     {
-      Rational x = _map[v] * ray;
+      Rational x = row(v) * ray;
       if (x != 0)
         data->add(v, x);
     }
@@ -101,33 +109,33 @@ namespace ipo {
     Rational liftedRhs = constraint.rhs();
     for (std::size_t p = 0; p < constraint.normal().size(); ++p)
     {
-      std::size_t v = constraint.normal().index(p);
+      std::size_t variable = constraint.normal().index(p);
       const Rational& x = constraint.normal().value(p);
-      const Vector& row = _map[v];
-      for (int q = row.size() - 1; q >= 0; --q)
-        liftedNormal[row.index(q)] += x * row.value(q);
-      liftedRhs -= x * _shift[v]; 
+      const Vector& rowVector = row(variable);
+      for (int q = rowVector.size() - 1; q >= 0; --q)
+        liftedNormal[rowVector.index(q)] += x * rowVector.value(q);
+      liftedRhs -= x * shift(variable); 
     }
     return LinearConstraint(constraint.type(), denseToVector(liftedNormal, true), liftedRhs);
   }
 
-  ProjectedOracle::ProjectedOracle(const std::string& name,
-    const Projection& projection, OracleBase* oracle)
-    : OracleBase(name, projection), _projection(projection), _oracle(oracle)
+  ProjectionOracle::ProjectionOracle(const std::string& name, const Projection& projection,
+    const std::shared_ptr<OracleBase>& oracle)
+    : OracleBase(name), _projection(projection), _oracle(oracle)
   {
-    OracleBase::initializedSpace();
+    OracleBase::initializeSpace(projection.imageSpace());
 
-    _projectedVector.reDim(projection.dimension(), false);
+    _projectedVector.reDim(space().dimension(), false);
   }
 
 
-  ProjectedOracle::~ProjectedOracle()
+  ProjectionOracle::~ProjectionOracle()
   {
     
   }
 
 
-  void ProjectedOracle::setFace(const LinearConstraint& newFace)
+  void ProjectionOracle::setFace(const LinearConstraint& newFace)
   {
     if (newFace == currentFace())
       return;
@@ -142,7 +150,7 @@ namespace ipo {
     _oracle->setFace(_liftedFace);
   }
   
-  std::size_t ProjectedOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+  std::size_t ProjectionOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     Vector objectiveVector = denseToVector(objective);

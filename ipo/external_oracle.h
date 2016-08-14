@@ -28,38 +28,6 @@ namespace ipo {
   {
   public:
     /**
-     * \brief Creates an instance.
-     *
-     * Creates an instance together with a temporary working directory.
-     *
-     * \param name                    Name of the oracle.
-     * \param program                 Location of the external program.
-     * \param instance                Specification of the instance.
-     * \param space                   Ambient space.
-     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
-     * \param initialM                Initial value of \f$ M \f$.
-     */
-
-    ExternalOracle(const std::string& name, const Space& space, const std::string& program, const std::string& instance, 
-      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
-
-    /**
-     * \brief Creates an instance.
-     *
-     * Creates an instance together with a temporary working directory.
-     *
-     * \param name                    Name of the oracle.
-     * \param program                 Location of the external program.
-     * \param instance                Specification of the instance.
-     * \param space                   Reference to ambient space that is defined by the oracle.
-     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
-     * \param initialM                Initial value of \f$ M \f$.
-     */
-
-    ExternalOracle(const std::string& name, Space& space, const std::string& program, const std::string& instance, 
-      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
-
-    /**
      * \brief Creates an instance associated to \p nextOracle.
      *
      * Creates an instance associated to \p nextOracle together with a temporary working directory.
@@ -72,8 +40,8 @@ namespace ipo {
      * \param initialM                Initial value of \f$ M \f$.
      */
 
-    ExternalOracle(const std::string& name, OracleBase* nextOracle, const std::string& program, const std::string& instance, 
-      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
+    ExternalOracle(const std::string& name, const std::string& program, const std::string& instance,
+      const std::shared_ptr<OracleBase>& nextOracle = NULL, std::size_t maxInfeasibleIterations = 4, double initialM = 16);
 
     /**
      * \brief Destructor.

@@ -352,7 +352,7 @@ namespace ipo {
     {
     public:
       Implementation()
-        : _equations(NULL), _oracle(NULL), _output(NULL), _factorization(NULL)
+        : _oracle(NULL), _output(NULL), _factorization(NULL)
       {
         _directionColumn = std::numeric_limits<std::size_t>::max();
         _commonValue = infinity;
@@ -398,66 +398,64 @@ namespace ipo {
 
       void initializeEquations()
       {
+        assert(_potentialEquations.empty());
+        assert(_redundantEquations.empty());
+
         _espace->reset(n());
-        for (int e = 0; e < _equations->num(); ++e)
-          _espace->addLazy(_equations->rowVector(e));
+        for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
+          _espace->addLazy(_irredundantEquations[i].normal());
         _espace->flushLazy();
 
-        _irredundantEquations.clear();
-        for (int e = 0; e < _equations->num(); ++e)
-        {
-          if (!_espace->isDependent(e))
-            _irredundantEquations.push_back(e);
-        }
-      }
-
-      void removePotentialEquations()
-      {
-#ifdef IPO_DEBUG
-        int lastIrredundant = -1;
+        std::vector<LinearConstraint> newIrredundantEquations;
+        std::vector<LinearConstraint> newRedundantEquations;
         for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
         {
-          if (_irredundantEquations[i] > lastIrredundant)
-            lastIrredundant = _irredundantEquations[i];
+          if (_espace->isDependent(i))
+            newIrredundantEquations.push_back(_irredundantEquations[i]);
+          else
+            newRedundantEquations.push_back(_irredundantEquations[i]);
         }
-        int firstPotential = _equations->num();
-        for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
-        {
-          if (_potentialEquations[i] < firstPotential)
-            firstPotential = _potentialEquations[i];
-        }
-        assert(firstPotential > lastIrredundant);
-#endif
-
-        /// Remove equations.
-
-        std::vector<int> remove;
-        for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
-          remove.push_back(_potentialEquations[i]);
-        _equations->remove(&remove[0], remove.size());
-
-        /// Recompute dependencies.
-        initializeEquations();
+        _irredundantEquations = newIrredundantEquations;
+        _redundantEquations = newRedundantEquations;
       }
+
+//       void removePotentialEquations()
+//       {
+// #ifdef IPO_DEBUG
+//         // Check that we first have the irredundant and then the potential equations.
+//         
+//         int lastIrredundant = -1;
+//         for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
+//         {
+//           if (_irredundantEquations[i] > lastIrredundant)
+//             lastIrredundant = _irredundantEquations[i];
+//         }
+//         int firstPotential = _equations->num();
+//         for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
+//         {
+//           if (_potentialEquations[i] < firstPotential)
+//             firstPotential = _potentialEquations[i];
+//         }
+//         assert(firstPotential > lastIrredundant);
+// #endif
+// 
+//         /// Remove equations.
+// 
+//         std::vector<int> remove;
+//         for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
+//           remove.push_back(_potentialEquations[i]);
+//         _equations->remove(&remove[0], remove.size());
+// 
+//         /// Recompute dependencies.
+//         initializeEquations();
+//       }
 
       void removeRedundantEquations()
       {
-        std::vector<int> redundantEquations;
-        for (std::size_t e = 0; e < _equations->num(); ++e)
-        {
-          if (_espace->isDependent(e))
-            redundantEquations.push_back(e);
-        }
-        _equations->remove(&redundantEquations[0], redundantEquations.size());
-        _irredundantEquations.clear();
-        for (std::size_t e = 0; e < _equations->num(); ++e)
-          _irredundantEquations.push_back(e);
-        _potentialEquations.clear();
+        std::size_t oldSize = _redundantEquations.size();
+        _redundantEquations.clear();
 
-        /// TODO: After this, all equations are irredundant and not potential anymore, so
-        /// approximation status got lost.
-
-        _output->onRemovedRedundantEquations(redundantEquations.size());
+        _output->onRemovedRedundantEquations(oldSize);
       }
 
       void updateApproximateDirections()
@@ -483,10 +481,9 @@ namespace ipo {
         if (_result.isInfeasible())
         {
           _infeasible = true;
-          DSVectorRational zeroVector;
-          _equations->add(Rational(1), zeroVector, Rational(1));
-          _irredundantEquations.clear();
-          _irredundantEquations.push_back(_equations->num() - 1);
+          std::copy(_irredundantEquations.begin(), _irredundantEquations.end(), std::back_inserter(_redundantEquations));
+          _irredundantEquations.resize(1);
+          _irredundantEquations[0] = LinearConstraint('=', zeroVector(), Rational(1));
           _potentialEquations.clear();
           _output->onEquation();
         }
@@ -554,6 +551,7 @@ namespace ipo {
       void findLastPoint()
       {
         _directionVector.clear();
+        _directionVector.reDim(n());
 
         _output->onBeforeOracleZero();
 
@@ -867,33 +865,28 @@ namespace ipo {
 
           _directionVector *= -1;
           _commonValue *= -1;
-          
-          DSVectorRational sparseDirectionVector;
-          for (std::size_t v = 0; v < n(); ++v)
-          {
-            if (_directionVector[v] != 0)
-              sparseDirectionVector.add(v, _directionVector[v]);
-          }
 
-          _espace->add(sparseDirectionVector, false);
-          _equations->add(_commonValue, sparseDirectionVector, _commonValue);
+          // We have (probably) found an equation.
+
+          LinearConstraint equation = LinearConstraint('=', denseToVector(_directionVector), _commonValue);
+          _espace->add(equation.normal());
           _columns[_directionColumn].definesEquation = true;
 
           if (minimizationHeuristicLevel > 0 || maximizationHeuristicLevel > 0)
           {
-            _potentialEquations.push_back(_equations->num() - 1);
+            _potentialEquations.push_back(equation);
             _output->onPotentialEquation();
           }
           else
           {
-            _irredundantEquations.push_back(_equations->num() - 1);
+            _irredundantEquations.push_back(equation);
             _output->onEquation();
           }
         }
       }
 
-      int run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output, std::size_t minHeuristicBeforeVerification, 
-        bool removeRedundantEqns)
+      int run(std::vector<LinearConstraint>& equations, const std::shared_ptr<OracleBase>& oracle, OutputBase& output,
+        std::size_t minHeuristicBeforeVerification, bool removeRedundantEqns)
       {
         /// Free data from previous run.
 
@@ -902,7 +895,7 @@ namespace ipo {
 
         /// Reset data.
 
-        _equations = &equations;
+        _irredundantEquations = equations;
         _oracle = oracle;
         _output = &output;
         _spanningPoints.clear();
@@ -933,10 +926,10 @@ namespace ipo {
         _output->_implementation = this;
         _output->onStart();
 
-        if (_equations->num() > 0)
+        if (_irredundantEquations.size() > 0)
         {
           initializeEquations();
-          _output->onAddedInitialEquations(_equations->num());
+          _output->onAddedInitialEquations(_irredundantEquations.size());
         }
 
         mainLoop(minHeuristicBeforeVerification);
@@ -953,9 +946,8 @@ namespace ipo {
           bool failure = false;
           for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
           {
-            _directionVector.clear();
-            _directionVector.assign(_equations->rowVector(_potentialEquations[i]));
-            const Rational& rhs = _equations->rhs(_potentialEquations[i]);
+            vectorToDense(_potentialEquations[i].normal(), _directionVector);
+            const Rational& rhs = _potentialEquations[i].rhs();
             objectiveSum += _directionVector;
             rhsSum += rhs;
 
@@ -1019,17 +1011,13 @@ namespace ipo {
 
           if (!_potentialEquations.empty())
           {
-            std::vector<int> remove;
-            for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
-              remove.push_back(_potentialEquations[i]);
-            _equations->remove(&remove[0], remove.size());
             _potentialEquations.clear();
 
             /// Reinitialize edeps.
 
             _espace->reset(n()); // TODO: Could be improved
-            for (int e = 0; e < _equations->num(); ++e)
-              _espace->addLazy(_equations->rowVector(e));
+            for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
+              _espace->addLazy(_irredundantEquations[i].normal());
             _espace->flushLazy();
           }
 
@@ -1043,6 +1031,8 @@ namespace ipo {
 
         _output->onEnd();
         _output->_implementation = NULL;
+        
+        equations = _irredundantEquations;
 
         return int(_spanningPoints.size() + _spanningRays.size()) - 1;
       }
@@ -1057,14 +1047,14 @@ namespace ipo {
       }
 
     protected:
-      LPRowSetRational* _equations;
-      OracleBase* _oracle;
+      std::vector<LinearConstraint> _irredundantEquations;
+      std::vector<LinearConstraint> _redundantEquations;
+      std::vector<LinearConstraint> _potentialEquations;
+      std::shared_ptr<OracleBase> _oracle;
       OutputBase* _output;
       std::vector<Vector> _spanningPoints;
       std::vector<Vector> _spanningRays;
       std::vector<std::size_t> _basicColumns;
-      std::vector<std::size_t> _irredundantEquations;
-      std::vector<std::size_t> _potentialEquations;
       VectorSpaceGenerators *_espace;
       Factorization* _factorization;
       std::vector<NonbasicColumn> _columns;
@@ -1106,14 +1096,15 @@ namespace ipo {
       return lower;
     }
 
-    int Result::run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
+    int Result::run(std::vector<LinearConstraint>& equations,
+      const std::shared_ptr<OracleBase>& oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification, bool removeRedundantEquations)
     {
       return _implementation->run(equations, oracle, output, minHeuristicBeforeVerification, removeRedundantEquations);
     }
 
-    int run(LPRowSetRational& equations, OracleBase* oracle, OutputBase& output, std::size_t minHeuristicBeforeVerification,
-      bool removeRedundantEquations)
+    int run(std::vector<LinearConstraint>& equations, const std::shared_ptr<OracleBase>& oracle, OutputBase& output,
+      std::size_t minHeuristicBeforeVerification, bool removeRedundantEquations)
     {
       Implementation implementation;
       return implementation.run(equations, oracle, output, minHeuristicBeforeVerification, removeRedundantEquations);
@@ -1190,20 +1181,32 @@ namespace ipo {
       return _implementation->_basicColumns;
     }
 
-    const std::vector<std::size_t>& InformationBase::irredundantEquations() const
+    const std::vector<LinearConstraint>& InformationBase::irredundantEquations() const
     {
       ensureImplementation();
       return _implementation->_irredundantEquations;
+    }
+
+    const std::vector<LinearConstraint>& InformationBase::redundantEquations() const
+    {
+      ensureImplementation();
+      return _implementation->_redundantEquations;
+    }
+
+    const std::vector<LinearConstraint>& InformationBase::potentialEquations() const
+    {
+      ensureImplementation();
+      return _implementation->_potentialEquations;
     }
 
     std::size_t InformationBase::numIrredundantEquations() const
     {
       return irredundantEquations().size();
     }
-
-    const std::vector<std::size_t>& InformationBase::potentialEquations() const
+    
+    std::size_t InformationBase::numRedundantEquations() const
     {
-      return _implementation->_potentialEquations;
+      return redundantEquations().size();
     }
 
     std::size_t InformationBase::numPotentialEquations() const

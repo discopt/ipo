@@ -3,9 +3,9 @@
 
 #include <vector>
 #include <limits>
+#include <memory>
 
 #include "common.h"
-#include "rows.h"
 #include "space.h"
 #include "vectors.h"
 #include "linear_constraint.h"
@@ -172,12 +172,12 @@ namespace ipo {
 
     }
 
-    inline ObjectiveBound(const soplex::Rational& val, bool strct) : value(val), strict(strct)
+    inline ObjectiveBound(const Rational& val, bool strct) : value(val), strict(strct)
     {
 
     }
 
-    inline bool satisfiedBy(const soplex::Rational& other) const
+    inline bool satisfiedBy(const Rational& other) const
     {
       if (strict)
         return other > value;
@@ -331,30 +331,21 @@ namespace ipo {
   protected:
 
     /**
-     * \brief Constructs an oracle with given \p name in given \p space.
+     * \brief Constructs an oracle with given \p name, optionally associated to \p nextOracle.
      *
-     * Constructs an oracle with given \p name in given \p space.
+     * Constructs an oracle with given \p name that is optionally associated to \p nextOracle. If not associated, then the space
+     * will be the emptySpace() initially.
      */
 
-    OracleBase(const std::string& name, const Space& space);
+    OracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
-     * \brief Constructs a heuristic with given \p name associated to \p nextOracle.
+     * \brief Initializes datastructures that require the oracle's ambient space.
      *
-     * Constructs a heuristic oracle with given \p name that is associated to \p nextOracle. The
-     * ambient space is equal to that of \p nextOracle.
+     * Initializes datastructures that require the oracle's ambient space. Should be called before the constructor ends.
      */
 
-    OracleBase(const std::string& name, OracleBase* nextOracle);
-
-    /**
-     * \brief Initializes datastructures that require the space.
-     *
-     * Initializes datastructures that require the space. This method should be called at the end
-     * of the constructor of a subclass.
-     */
-
-    void initializedSpace();
+    void initializeSpace(const Space& space);
 
     /**
      * \brief Wrapper method that calls the oracle's implementation.
@@ -414,8 +405,8 @@ namespace ipo {
     friend class FaceOracleBase;
     
     std::string _name; // Name of the oracle.
-    const Space& _space; // Ambient space of the oracle.
-    OracleBase* _nextOracle; // Next optimization oracle (or NULL if exact).
+    Space _space; // Ambient space of the oracle.
+    std::shared_ptr<OracleBase> _nextOracle; // Next associated optimization oracle (or NULL if exact).
     std::size_t _heuristicLevel; // Number of associated oracles.
     soplex::DVectorRational _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
   };
@@ -454,24 +445,10 @@ namespace ipo {
   protected:
 
     /**
-     * \brief Constructs an oracle with given \p name in given \p space.
+     * \brief Constructs an oracle with given \p name, optionally associated to \p nextOracle.
      *
-     * Constructs an exact face optimization oracle with given \p name in given \p space.
-     *
-     * \param name                      Name of the oracle.
-     * \param space                     Ambient space.
-     * \param maxInfeasibleIterations   Maximum number of iterations before (heuristically) checking if the face is empty.
-     * \param initialM                  Initial value of \f$ M \f$.
-     */
-
-    FaceOracleBase(const std::string& name, const Space& space, std::size_t maxInfeasibleIterations = 4,
-      double initialM = 16);
-
-    /**
-     * \brief Constructs a heuristic with given \p name associated to \p nextOracle.
-     *
-     * Constructs a heuristic optimization oracle with given \p name that is associated to
-     * \p nextOracle. The ambient space is equal to that of \p nextOracle.
+     * Constructs an oracle with given \p name that is optionally associated to \p nextOracle. If not associated, then the space
+     * will be the emptySpace() initially.
      *
      * \param name               Name of the oracle.
      * \param nextOracle         Next oracle to forward calls to.
@@ -479,17 +456,16 @@ namespace ipo {
      * \param initialM           Initial value of \f$ M \f$.
      */
 
-    FaceOracleBase(const std::string& name, OracleBase* nextOracle, std::size_t maxInfeasibleIterations = 4,
-      double initialM = 16);
+    FaceOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle = NULL,
+      std::size_t maxInfeasibleIterations = 4, double initialM = 16);
 
     /**
-     * \brief Initializes datastructures that require the space.
+     * \brief Initializes datastructures that require the oracle's ambient space.
      *
-     * Initializes datastructures that require the space. This method should be called at the end
-     * of the constructor of a subclass.
+     * Initializes datastructures that require the oracle's ambient space. Should be called before the constructor ends.
      */
 
-    void initializedSpace();
+    void initializeSpace(const Space& space);
     
     /**
      * \brief Wrapper method that calls the oracle's implementation.

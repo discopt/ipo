@@ -3,21 +3,20 @@
 
 #include "common.h"
 #include "rational.h"
+#include "linear_constraint.h"
 
 namespace ipo {
 
-  bool manhattanNormShortestCombination(std::size_t n, soplex::DSVectorRational& newTarget,
-      const soplex::SVectorRational& target, const soplex::SVectorRational& source, soplex::Rational& targetMultiplier,
-      soplex::Rational& sourceMultiplier, soplex::Rational& norm);
+  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+    Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm);
 
-  bool manhattanNormGreedyCombination(std::size_t n, soplex::DSVectorRational& newTarget,
-      const soplex::SVectorRational& target, const soplex::SVectorRational& source, soplex::Rational& targetMultiplier,
-      soplex::Rational& sourceMultiplier, soplex::Rational& norm);
+  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+    Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm);
 
-  void manhattanNormImproveEquations(std::size_t n, soplex::LPRowSetRational& equations);
+  void manhattanNormImproveEquations(std::size_t n, std::vector<LinearConstraint>& equations);
 
-  void manhattanNormImproveInequality(std::size_t n, soplex::LPRowRational& inequality,
-      const soplex::LPRowSetRational& equations);
+  void manhattanNormImproveInequality(std::size_t n, LinearConstraint& inequality,
+      const std::vector<LinearConstraint>& equations);
 
 } /* namespace ipo */
 

@@ -258,7 +258,7 @@ numEquations);
     class Result: public InformationBase
     {
     public:
-      Result(OracleBase* oracle);
+      Result(const std::shared_ptr<OracleBase>& oracle);
       virtual ~Result();
 
       Vector getMaximizingObjective() const;

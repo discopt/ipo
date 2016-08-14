@@ -80,25 +80,6 @@ namespace ipo {
   class SCIPOracle: public MIPOracleBase
   {
   public:
-     /**
-     * \brief Constructs a SCIP oracle with given \p name in given \p space.
-     *
-     * Constructs a SCIP oracle with given \p name in given \p space. The oracle is implemented by
-     * calling SCIP on a copy of the given \p originalSCIP instance.
-     */
-
-    SCIPOracle(const std::string& name, const Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP);
-
-     /**
-     * \brief Constructs a SCIP oracle with given \p name in given \p space.
-     *
-     * Constructs a SCIP oracle with given \p name in given \p space. The oracle is implemented by
-     * calling SCIP on a copy of the given \p originalSCIP instance. If \p space is 0-dimensional,
-     * it is augmented according to the variables of the SCIP instance.
-     */
-
-    SCIPOracle(const std::string& name, Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP);
-
     /**
      * \brief Constructs a heuristic SCIP oracle with given \p name associated to \p nextOracle.
      *
@@ -107,17 +88,8 @@ namespace ipo {
      * SCIP on a copy of the given \p originalSCIP instance.
      */
 
-    SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip, SCIP* originalSCIP);
-
-    /**
-     * \brief Constructs a SCIP oracle with given \p name in given \p space.
-     *
-     * Constructs a SCIP oracle with given \p name. The oracle is implemented by calling SCIP in
-     * order to solve the mixed-integer program \p mip. The ambient space is equal to that of
-     * \p mip.
-     */
-
-    SCIPOracle(const std::string& name, const MixedIntegerProgram& mip);
+    SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, SCIP* originalSCIP,
+      const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Constructs a SCIP oracle with given \p name in given \p space.
@@ -127,7 +99,7 @@ namespace ipo {
      * ambient space is equal to that of \p mip and to that of \p nextOracle.
      */
 
-    SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip);
+    SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Destructor.
@@ -172,7 +144,7 @@ namespace ipo {
 
   protected:
 
-    void copySCIP(SCIP* originalSCIP, Space& scipSpace);
+    void copySCIP(SCIP* originalSCIP);
 
     void initializeFromMIP(const MixedIntegerProgram& mip);
 

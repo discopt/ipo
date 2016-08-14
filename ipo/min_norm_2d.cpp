@@ -6,7 +6,6 @@
 #include <vector>
 
 #include "vector_2d.h"
-#include "rows.h"
 #include "spx_gmp.h"
 
 #include <iostream> // TODO: Debug
@@ -518,15 +517,13 @@ namespace ipo {
     optMu = (mpq_class(mu) - mpq_class(beta, gamma) * lambda) / alpha;
   }
 
-  bool manhattanNormShortestCombination(std::size_t n, soplex::DSVectorRational& newTarget,
-      const soplex::SVectorRational& target, const soplex::SVectorRational& source, soplex::Rational& targetMultiplier,
-      soplex::Rational& sourceMultiplier, soplex::Rational& norm)
+  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+    Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm)
   {
-    newTarget.clear();
     std::vector<mpz_class> u(n);
     std::vector<mpz_class> v(n);
     Rational targetNorm = 0;
-    for (int p = target.size() - 1; p >= 0; --p)
+    for (std::size_t p = 0; p < target.size(); ++p)
     {
       assert(rational2mpzDen(target.value(p)) == 1);
       const Rational& x = target.value(p);
@@ -536,7 +533,7 @@ namespace ipo {
       else
         targetNorm -= x;
     }
-    for (int p = source.size() - 1; p >= 0; --p)
+    for (std::size_t p = 0; p < source.size(); ++p)
     {
       assert(rational2mpzDen(source.value(p)) == 1);
       v[source.index(p)] = rational2mpzNum(source.value(p));
@@ -548,16 +545,20 @@ namespace ipo {
     bool result = mpz2rational(pi) < targetNorm;
     if (result)
     {
+      VectorData* data = new VectorData(std::min(n, source.size() + target.size()));
       for (std::size_t i = 0; i < n; ++i)
       {
         mpq_class x = lambda * u[i] + mu * v[i];
-        x.canonicalize();
         if (x != 0)
-          newTarget.add(i, mpq2rational(x));
+        {
+          x.canonicalize();
+          data->add(i, mpq2rational(x));
+        }
       }
       targetMultiplier = mpq2rational(lambda);
       sourceMultiplier = mpq2rational(mu);
       norm = mpq2rational(pi);
+      newTarget = Vector(data);
     }
     return result;
   }
@@ -623,19 +624,17 @@ namespace ipo {
     return result;
   }
 
-  bool manhattanNormGreedyCombination(std::size_t n, soplex::DSVectorRational& newTarget,
-      const soplex::SVectorRational& target, const soplex::SVectorRational& source, soplex::Rational& targetMultiplier,
-      soplex::Rational& sourceMultiplier, soplex::Rational& norm)
+  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+    Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm)
   {
-    newTarget.clear();
     std::vector<mpz_class> u(n);
     std::vector<mpz_class> v(n);
-    for (int p = target.size() - 1; p >= 0; --p)
+    for (std::size_t p = 0; p < target.size(); ++p)
     {
       assert(rational2mpzDen(target.value(p)) == 1);
       u[target.index(p)] = rational2mpzNum(target.value(p));
     }
-    for (int p = source.size() - 1; p >= 0; --p)
+    for (std::size_t p = 0; p < source.size(); ++p)
     {
       assert(rational2mpzDen(source.value(p)) == 1);
       v[source.index(p)] = rational2mpzNum(source.value(p));
@@ -645,44 +644,47 @@ namespace ipo {
     bool result = manhattanNormGreedyCombination(u, v, lambda, mu, pi);
     if (result)
     {
+      VectorData* data = new VectorData(std::min(n, source.size() + target.size()));
       for (std::size_t i = 0; i < n; ++i)
       {
         mpq_class x = lambda * u[i] + mu * v[i];
-        x.canonicalize();
         if (x != 0)
-          newTarget.add(i, mpq2rational(x));
+        {
+          x.canonicalize();
+          data->add(i, mpq2rational(x));
+        }
       }
       targetMultiplier = mpq2rational(lambda);
       sourceMultiplier = mpq2rational(mu);
       norm = mpq2rational(pi);
+      newTarget = Vector(data);
     }
     return result;
   }
 
-  void manhattanNormImproveEquations(std::size_t n, soplex::LPRowSetRational& equations)
+  void manhattanNormImproveEquations(std::size_t n, std::vector<LinearConstraint>& equations)
   {
-    scaleRowsIntegral(equations);
-    soplex::DSVectorRational newTarget;
+    scaleIntegral(equations);
+
+    Vector newTarget;
     bool improved = true;
     while (improved)
     {
       improved = false;
-      for (int i = 0; i < equations.num(); ++i)
+      for (std::size_t i = 0; i < equations.size(); ++i)
       {
-        for (int j = 0; j < equations.num(); ++j)
+        for (std::size_t j = 0; j < equations.size(); ++j)
         {
           if (i == j)
             continue;
-          soplex::Rational targetMultiplier, sourceMultiplier, newNorm;
-          if (manhattanNormGreedyCombination(n, newTarget, equations.rowVector(i), equations.rowVector(j),
-              targetMultiplier, sourceMultiplier, newNorm))
+
+          Rational targetMultiplier, sourceMultiplier, newNorm;
+          if (manhattanNormGreedyCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier, 
+            sourceMultiplier, newNorm))
           {
             improved = true;
-            equations.xtend(i, newTarget.size());
-            equations.rowVector_w(i).clear();
-            equations.rowVector_w(i) = newTarget;
-            equations.lhs_w(i) = targetMultiplier * equations.lhs(i) + sourceMultiplier * equations.lhs(j);
-            equations.rhs_w(i) = targetMultiplier * equations.rhs(i) + sourceMultiplier * equations.rhs(j);
+            equations[i] = LinearConstraint('=', newTarget, targetMultiplier * equations[i].rhs() + sourceMultiplier * 
+              equations[j].rhs());
           }
         }
       }
@@ -691,58 +693,49 @@ namespace ipo {
     while (improved)
     {
       improved = false;
-      for (int i = 0; i < equations.num(); ++i)
+      for (std::size_t i = 0; i < equations.size(); ++i)
       {
-        for (int j = 0; j < equations.num(); ++j)
+        for (std::size_t j = 0; j < equations.size(); ++j)
         {
           if (i == j)
             continue;
-          soplex::Rational targetMultiplier, sourceMultiplier, newNorm;
-          if (manhattanNormShortestCombination(n, newTarget, equations.rowVector(i), equations.rowVector(j),
-              targetMultiplier, sourceMultiplier, newNorm))
+
+          Rational targetMultiplier, sourceMultiplier, newNorm;
+          if (manhattanNormShortestCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier, 
+            sourceMultiplier, newNorm))
           {
             improved = true;
-            equations.xtend(i, newTarget.size());
-            equations.rowVector_w(i).clear();
-            equations.rowVector_w(i) = newTarget;
-            equations.lhs_w(i) = targetMultiplier * equations.lhs(i) + sourceMultiplier * equations.lhs(j);
-            equations.rhs_w(i) = targetMultiplier * equations.rhs(i) + sourceMultiplier * equations.rhs(j);
+            equations[i] = LinearConstraint('=', newTarget, 
+              targetMultiplier * equations[i].rhs() + sourceMultiplier * equations[j].rhs());
           }
         }
       }
     }
   }
 
-  void manhattanNormImproveInequality(std::size_t n, soplex::LPRowRational& inequality,
-      const soplex::LPRowSetRational& equations)
+  void manhattanNormImproveInequality(std::size_t n, LinearConstraint& inequality,
+      const std::vector<LinearConstraint>& equations)
   {
-    bool hasFiniteLhs = inequality.lhs() > -infinity/2;
-    bool hasFiniteRhs = inequality.rhs() < +infinity/2;
-    scaleRowIntegral(inequality);
-    soplex::DSVectorRational newTarget;
+    scaleIntegral(inequality);
+    Vector newTarget;
     bool improved = true;
     while (improved)
     {
       improved = false;
-      for (int i = 0; i < equations.num(); ++i)
+      for (std::size_t i = 0; i < equations.size(); ++i)
       {
-        soplex::Rational targetMultiplier, sourceMultiplier, newNorm;
-        if (manhattanNormShortestCombination(n, newTarget, inequality.rowVector(), equations.rowVector(i),
+        Rational targetMultiplier, sourceMultiplier, newNorm;
+        if (manhattanNormShortestCombination(n, newTarget, inequality.normal(), equations[i].normal(),
             targetMultiplier, sourceMultiplier, newNorm))
         {
           improved = true;
-          inequality.setRowVector(newTarget);
           if (targetMultiplier <= 0)
             throw std::runtime_error("BUG in manhattan norm inequality improvement: Multiplier must be positive!");
-          inequality.setLhs(targetMultiplier * inequality.lhs() + sourceMultiplier * equations.lhs(i));
-          inequality.setRhs(targetMultiplier * inequality.rhs() + sourceMultiplier * equations.rhs(i));
+          inequality = LinearConstraint(inequality.type(), newTarget,
+            targetMultiplier * inequality.rhs() + sourceMultiplier * equations[i].rhs());
         }
       }
     }
-    if (!hasFiniteLhs)
-      inequality.setLhs(-infinity);
-    if (!hasFiniteRhs)
-      inequality.setRhs(infinity);
   }
 
 }

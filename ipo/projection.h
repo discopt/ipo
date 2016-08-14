@@ -5,55 +5,33 @@
 
 namespace ipo {
 
-  /**
-   * \brief An affine projection map, together with the image space.
-   *
-   * Defines an affine projection \f$ \pi(x) = Ax + b \f$ together with the image space.
-   * Its main purpose is to create a \ref ProjectedOracle from another oracle.
-   */
-
-  class Projection : public Space
+  class ProjectionData
   {
   public:
-    /**
-     * \brief Constructs a projection of \p sourceSpace into the 0-dimensional image space.
-     *
-     * Constructs a projection of \p sourceSpace into the 0-dimensional image space. Use
-     * \ref addVariable() to increase its dimension.
-     *
-     * \param sourceSpace Source space.
-     */
+    ProjectionData(const Space& sourceSpace);
+    ProjectionData(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset);
+    ~ProjectionData();
 
-    Projection(const Space& sourceSpace);
+    bool operator==(const ProjectionData& other) const;
 
-    /**
-     * \brief Constructs an orthogonal projection for a given space.
-     *
-     * Constructs an orthogonal projection of the \c space onto a subset of the variables.
-     *
-     * \param sourceSpace    Source space of the projection.
-     * \param variableSubset Indices of the subset of variables to project to.
-     */
-
-    Projection(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset);
-
-    /**
-     * \brief Destructor.
-     *
-     * Destructor.
-     */
-
-    virtual ~Projection();
-
-    /**
-     * \brief Returns the source space.
-     *
-     * Returns a const reference to the source space.
-     */
-
-    const Space& sourceSpace() const
+    inline const Space& sourceSpace() const
     {
       return _sourceSpace;
+    }
+
+    inline Space imageSpace()
+    {
+      return Space(_imageSpaceData);
+    }
+
+    inline const Vector& row(std::size_t variable) const
+    {
+      return _map[variable];
+    }
+
+    inline const Rational& shift(std::size_t variable) const
+    {
+      return _shift[variable];
     }
 
     /**
@@ -81,12 +59,91 @@ namespace ipo {
     void addVariable(std::size_t sourceVariable, const Rational& shift = Rational(0));
 
     /**
-     * \brief Projects a \c point.
-     *
-     * Projects a \c point.
+     * \brief Increases the usage counter by 1.
+     * 
+     * Increases the usage counter by 1.
      */
 
-    Vector projectPoint(const soplex::VectorRational& point) const;
+    inline void markUsed()
+    {
+      _usage++;
+    }
+
+    /**
+     * \brief Decreases the usage counter by 1.
+     * 
+     * Decreases the usage counter by 1 and frees it if the latter reached 0.
+     */
+    
+    void unmarkUsed();
+
+  protected:
+    SpaceData* _imageSpaceData;
+    const Space _sourceSpace;
+    std::vector<Vector> _map; // Rows of the projection matrix.
+    std::vector<Rational> _shift; // Entries of the projection vector.
+    std::size_t _usage;
+  };
+
+  class Projection
+  {
+  public:
+    inline Projection(ProjectionData* data)
+      : _data(data), _imageSpace(_data->imageSpace())
+    {
+      _data->markUsed();
+    }
+
+    inline Projection(const Projection& other)
+      : _data(other._data), _imageSpace(other.imageSpace())
+    {
+      _data->markUsed();
+    }
+
+    ~Projection()
+    {
+      _data->unmarkUsed();
+    }
+
+    inline Projection& operator=(const Projection& other)
+    {
+      if (_data != other._data)
+      {
+        _data->unmarkUsed();
+        _data = other._data;
+        _data->markUsed();
+        _imageSpace = other.imageSpace();
+      }
+      return *this;
+    }
+
+    inline bool operator==(const Projection& other)
+    {
+      if (_data == other._data)
+        return true;
+
+      return *_data == *other._data;
+    }
+    
+    inline const Space& sourceSpace() const
+    {
+      return _data->sourceSpace();
+    }
+
+    inline const Space& imageSpace() const
+    {
+      return _imageSpace;
+    }
+
+    inline const Vector& row(std::size_t variable) const
+    {
+      return _data->row(variable);
+    }
+
+    inline const Rational& shift(std::size_t variable) const
+    {
+      return _data->shift(variable);
+    }
 
     /**
      * \brief Projects a \c point.
@@ -95,14 +152,6 @@ namespace ipo {
      */
 
     Vector projectPoint(const Vector& point) const;
-
-    /**
-     * \brief Projects a \c ray.
-     *
-     * Projects a \c ray.
-     */
-
-    Vector projectRay(const soplex::VectorRational& ray) const;
 
     /**
      * \brief Projects a \c ray.
@@ -136,76 +185,9 @@ namespace ipo {
   
     LinearConstraint liftLinearConstraint(const LinearConstraint& constraint) const;
 
-    /**
-     * \brief Returns the dimension of the image space.
-     *
-     * Returns the dimension of the image space, i.e., the number of variables.
-     */
-
-    inline std::size_t dimension() const
-    {
-      return _map.size();
-    }
-
-    /**
-     * \brief Returns the name of the image variable indexed by \c var.
-     *
-     * Returns the name of the image variable indexed by \c var.
-     */
-
-    inline const std::string& operator[](std::size_t var) const
-    {
-      return _variables[var];
-    }
-
-    /**
-     * \brief Returns the name of the image variable indexed by \c var.
-     *
-     * Returns the name of the image variable indexed by \c var.
-     */
-
-    inline const std::string& variable(std::size_t var) const
-    {
-      return _variables[var];
-    }
-
-    /**
-     * \brief Returns a row of the projection matrix.
-     *
-     * Returns a row of the projection matrix \f$ A \f$ for a given \p variable
-     * as a const reference to a sparse rational vector.
-     */
-
-    inline const Vector& map(std::size_t variable) const
-    {
-      return _map[variable];
-    }
-
-    /**
-     * \brief Returns an entry of the projection vector.
-     *
-     * Returns an entry of the projection vector \f$ b \f$ for a given \p variable.
-     */
-
-    inline const Rational& shift(std::size_t var) const
-    {
-      return _shift[var];
-    }
-
-  private:
-
-    /**
-     * \brief The default constructor is disabled.
-     *
-     * The default constructor is disabled.
-     */
-
-    Projection();
-
   protected:
-    const Space& _sourceSpace;
-    std::vector<Vector> _map; // Rows of the projection matrix.
-    std::vector<Rational> _shift; // Entries of the projection vector.
+    ProjectionData* _data;
+    Space _imageSpace;
   };
 
   /**
@@ -217,7 +199,7 @@ namespace ipo {
    * \sa Projection
    */
 
-  class ProjectedOracle: public OracleBase
+  class ProjectionOracle: public OracleBase
   {
   public:
     /**
@@ -230,14 +212,13 @@ namespace ipo {
      * \param oracle     Oracle in the source space.
      */
 
-    ProjectedOracle(const std::string& name, const Projection& projection,
-      OracleBase* oracle);
+    ProjectionOracle(const std::string& name, const Projection& projection, const std::shared_ptr<OracleBase>& oracle);
 
     /**
      * \brief Destructor.
      */
 
-    virtual ~ProjectedOracle();
+    virtual ~ProjectionOracle();
 
     /**
      * \brief Restricts the oracle to the face defined by \p newFace.
@@ -254,10 +235,21 @@ namespace ipo {
     /**
      * \brief Returns the ambient \c space.
      *
-     * Returns a reference to the ambient \c space.
+     * Returns a const-reference to the ambient \c space.
      */
 
-    inline const Projection& space() const
+    inline const Space& space() const
+    {
+      return _projection.imageSpace();
+    }
+
+    /**
+     * \brief Returns the associated projection.
+     * 
+     * Returns a const-reference to the associated projection.
+     */
+
+    inline const Projection& projection() const
     {
       return _projection;
     }
@@ -284,8 +276,8 @@ namespace ipo {
 
   protected:
 
-    const Projection& _projection; // Projection.
-    OracleBase* _oracle; // Source oracle.
+    Projection _projection; // Projection map and image space.
+    std::shared_ptr<OracleBase> _oracle; // Source oracle.
     soplex::DVectorRational _projectedVector; // Projected point or ray.
     LinearConstraint _liftedFace;
   };

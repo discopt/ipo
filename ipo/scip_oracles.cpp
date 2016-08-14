@@ -57,58 +57,21 @@ namespace ipo {
     }
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, const Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP)
-    : MIPOracleBase(name, space, mip)
+  SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, SCIP* originalSCIP,
+    const std::shared_ptr<OracleBase>& nextOracle)
+    : MIPOracleBase(name, mip, nextOracle)
   {
-    Space scipSpace;
-    copySCIP(originalSCIP, scipSpace);
-    if (space != scipSpace)
-      throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
+    copySCIP(originalSCIP);
 
-    initializedSpace();
+    initializeSpace(mip.space());
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, Space& space, const MixedIntegerProgram& mip, SCIP* originalSCIP)
-    : MIPOracleBase(name, space, mip)
-  {
-    Space scipSpace;
-    copySCIP(originalSCIP, scipSpace);
-    if (space.dimension() == 0)
-      space = scipSpace;
-    else if (space != scipSpace)
-      throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
-
-    initializedSpace();
-  }
-
-  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip, SCIP* originalSCIP)
-    : MIPOracleBase(name, nextOracle, mip)
-  {
-    Space scipSpace;
-    copySCIP(originalSCIP, scipSpace);
-    if (_space != scipSpace)
-      throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
-
-    initializedSpace(); 
-  }
-
-  SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip)
-    : MIPOracleBase(name, mip.space(), mip)
+  SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle)
+    : MIPOracleBase(name, mip, nextOracle)
   {
     initializeFromMIP(mip);
 
-    initializedSpace();
-  }
-
-  SCIPOracle::SCIPOracle(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip)
-    : MIPOracleBase(name, nextOracle, mip)
-  {
-    if (mip.space() != nextOracle->space())
-      throw std::runtime_error("Spaces differ while constructing SCIPOracle.");
-
-    initializeFromMIP(mip);
-
-    initializedSpace();
+    initializeSpace(mip.space());
   }
 
   SCIPOracle::~SCIPOracle()
@@ -120,7 +83,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPfree(&_scip));
   }
 
-  void SCIPOracle::copySCIP(SCIP* originalSCIP, Space& scipSpace)
+  void SCIPOracle::copySCIP(SCIP* originalSCIP)
   {
     if (!SCIPisTransformed(originalSCIP))
     {
@@ -134,7 +97,8 @@ namespace ipo {
     for (std::size_t v = 0; v < n; ++v)
     {
       const std::string varName = SCIPvarGetName(origVars[v]);
-      scipSpace.addVariable(varName);
+//       scipSpace.addVariable(varName);
+//       TODO: implement
     }
 
     /// Create SCIP instance via copy.

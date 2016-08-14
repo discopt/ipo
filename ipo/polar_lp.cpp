@@ -28,7 +28,7 @@ namespace ipo {
 
   }
 
-  PolarLP::PolarLP(OracleBase* oracle, double initialPenalty, int maxAge) 
+  PolarLP::PolarLP(const std::shared_ptr<OracleBase>& oracle, double initialPenalty, int maxAge) 
     : _oracle(oracle), _n(oracle->space().dimension()), _d(oracle->space().dimension() + 1), 
     _offsetLower(oracle->space().dimension() + 1), _offsetUpper(2 * (oracle->space().dimension() + 1)), _stabilizing(false),
     _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0), _lastPenaltyCosts(0.0)

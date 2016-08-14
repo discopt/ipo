@@ -111,5 +111,62 @@ namespace ipo {
     return LinearConstraint(b.type(), addScaled(a.normal(), scaleA, b.normal(), scaleB), scaleA * a.rhs() + scaleB * b.rhs());
   }
 
+  void addToLP(soplex::SoPlex& spx, const LinearConstraint& constraint)
+  {
+    const Rational& rhs = constraint.rhs();
+    soplex::DSVectorRational normal(constraint.normal().size());
+    vectorToSparse(constraint.normal(), normal);
+    if (constraint.type() == '<')
+      spx.addRowRational(soplex::LPRowRational(-soplex::infinity, normal, rhs));
+    else if (constraint.type() == '>')
+      spx.addRowRational(soplex::LPRowRational(rhs, normal, soplex::infinity));
+    else
+      spx.addRowRational(soplex::LPRowRational(rhs, normal, rhs));
+  }
+
+  void addToLP(soplex::SoPlex& spx, const std::vector< LinearConstraint >& constraints)
+  {
+    soplex::DSVectorRational normal(spx.numColsRational());
+    for (std::size_t i = 0; i < constraints.size(); ++i)
+    {
+      const Rational& rhs = constraints[i].rhs();
+      vectorToSparse(constraints[i].normal(), normal);
+      if (constraints[i].type() == '<')
+        spx.addRowRational(soplex::LPRowRational(-soplex::infinity, normal, rhs));
+      else if (constraints[i].type() == '>')
+        spx.addRowRational(soplex::LPRowRational(rhs, normal, soplex::infinity));
+      else
+        spx.addRowRational(soplex::LPRowRational(rhs, normal, rhs));
+    }
+  }
+
+  LinearConstraint integralScaled(const LinearConstraint& constraint)
+  {
+    // Compute scaling factor.
+
+    IntegralScaler scaler;
+    for (std::size_t p = 0; p < constraint.normal().size(); ++p)
+      scaler(constraint.normal().value(p));
+    Rational factor = scaler.factor();
+
+    // Scale it.
+
+    VectorData* data = new VectorData(constraint.normal().size());
+    for (std::size_t p = 0; p < constraint.normal().size(); ++p)
+      data->add(constraint.normal().index(p), factor * constraint.normal().value(p));
+    return LinearConstraint(constraint.type(), Vector(data), factor * constraint.rhs());
+  }
+
+  void scaleIntegral(LinearConstraint& constraint)
+  {
+    constraint = integralScaled(constraint);
+  }
+
+  void scaleIntegral(std::vector<LinearConstraint>& constraints)
+  {
+    for (std::size_t i = 0; i < constraints.size(); ++i)
+      scaleIntegral(constraints[i]);
+  }
+
 
 } /* namespace ipo */

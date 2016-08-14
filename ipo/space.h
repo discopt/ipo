@@ -7,177 +7,208 @@
 #include "common.h"
 #include "rational.h"
 #include "vectors.h"
+#include "linear_constraint.h"
 
 namespace ipo {
 
+  class Space;
+
   /**
-   * \brief Defines the ambient space for oracles.
+   * \brief Storage class of a \ref Space.
+   * 
+   * Storage class of a \ref Space. Stores the variable names and a reference counter.
+   */
+
+  class SpaceData
+  {
+  public:
+    /**
+     * \brief Constructs without variables. Use addVariable() to add them.
+     * 
+     * Constructs without variables. Use addVariable() to add them.
+     */
+
+    SpaceData();
+
+    /**
+     * \brief Constructs with given \p variableNames.
+     * 
+     * Constructs with given \p variableNames. Use addVariable() to add further ones.
+     */
+
+    SpaceData(const std::vector<std::string>& variableNames);
+
+    /**
+     * \brief Destructor.
+     * 
+     * Destructor.
+     */
+
+    ~SpaceData();
+
+    /**
+     * \brief Returns true iff all variables coincide.
+     * 
+     * Returns true iff all variables coincide.
+     */
+
+    bool operator==(const SpaceData& other) const;
+
+    /**
+     * \brief Returns true iff not all variables coincide.
+     * 
+     * Returns true iff not all variables coincide.
+     */
+
+    inline bool operator!=(const SpaceData& other) const
+    {
+      return !(*this == other);
+    }
+
+    /**
+     * \brief Returns the dimension of the space.
+     * 
+     * Returns the dimension of the space.
+     */
+
+    inline std::size_t dimension() const
+    {
+      return _variableNames.size();
+    }
+
+    /**
+     * \brief Returns the name of the given \p variable.
+     * 
+     * Returns a const-reference to the name of the given \p variable.
+     */
+
+    inline const std::string& variableName(std::size_t variable) const
+    {
+      return _variableNames[variable];
+    }
+
+    /**
+     * \brief Adds a variable with given \p name.
+     * 
+     * Adds a variable with given \p name to the space.
+     */
+    
+    void addVariable(const std::string& name);
+
+    /**
+     * \brief Increases the usage counter by 1.
+     * 
+     * Increases the usage counter by 1.
+     */
+
+    inline void markUsed()
+    {
+      _usage++;
+    }
+
+    /**
+     * \brief Decreases the usage counter by 1.
+     * 
+     * Decreases the usage counter by 1 and frees it if the latter reached 0.
+     */
+    
+    void unmarkUsed();
+
+    friend class Space;
+
+  protected:
+    std::vector<std::string> _variableNames; // The variable names.
+    std::size_t _usage; // Reference counter.
+  };
+
+  /**
+   * \brief Defines the ambient space for polyhedra.
    *
-   * Defines the ambient space for one or more oracle(s), including the names of variables.
-   * Contains relevant methods for printing linear forms, vectors, inequalities and equations.
+   * Defines the ambient space for polyhedra defined by more oracles and stores the names of variables. Contains relevant methods 
+   * for printing vectors, linear forms and linear constraints. Implementation is by reference counting, i.e., copying is cheap
+   * and ownership is managed automatically.
    */
 
   class Space
   {
   public:
     /**
-     * \brief Constructs a space without variables.
-     *
-     * Constructs the 0-dimensional space. Use \ref addVariable() to increase its dimension.
+     * \brief Constructs the empty space.
+     * 
+     * Constructs the empty space.
      */
 
     Space();
 
     /**
-     * \brief Constructs a space with given \c variables.
-     *
-     * Constructs a space with given \c variables.
+     * \brief Constructs from \ref SpaceData object.
+     * 
+     * Constructs from \ref SpaceData object.
      */
 
-    Space(const std::vector<std::string>& variables);
+    inline Space(SpaceData* data)
+      : _data(data)
+    {
+      _data->_usage++;
+    }
 
     /**
      * \brief Copy constructor.
-     *
+     * 
      * Copy constructor.
      */
 
-    Space(const Space& other);
+    inline Space(const Space& other)
+      : _data(other._data)
+    {
+      _data->markUsed();
+    }
 
     /**
      * \brief Destructor.
-     *
+     * 
+     * Destructor.
      */
 
-    ~Space();
-
-    /**
-     * \brief Adds a variable with given \c name.
-     *
-     * Adds a variable with given \c name. Does only ensure uniqueness of this variable name
-     * in debug mode.
-     */
-
-    void addVariable(const std::string& name);
-
-    /**
-     * \brief Returns the dimension of the space.
-     *
-     * Returns the dimension of the space, i.e., the number of variables.
-     */
-
-    inline std::size_t dimension() const
+    ~Space()
     {
-      return _variables.size();
+      _data->unmarkUsed();
     }
 
     /**
-     * \brief Returns the name of the variable indexed by \c var.
-     *
-     * Returns the name of the variable indexed by \c var.
+     * \brief Assignment operator.
+     * 
+     * Assignment operator.
      */
 
-    inline const std::string& operator[](std::size_t var) const
+    inline Space& operator=(const Space& other)
     {
-      return _variables[var];
+      if (_data != other._data)
+      {
+        _data->unmarkUsed();
+        _data = other._data;
+        _data->markUsed();
+      }
+      return *this;
     }
 
     /**
-     * \brief Returns the name of the variable indexed by \c var.
-     *
-     * Returns the name of the variable indexed by \c var.
+     * \brief Returns true if spaces are equal.
+     * 
+     * Returns true if spaces are equal, including variable names.
      */
 
-    inline const std::string& variable(std::size_t var) const
+    inline bool operator==(const Space& other) const
     {
-      return _variables[var];
+      if (_data == other._data)
+        return true;
+      return *_data == *other._data;
     }
-
+    
     /**
-     * \brief Prints the linear form with these \c coefficients to \c stream.
-     *
-     * Prints the linear form with theses \c coefficients to \c stream using the variable names.
-     * Does not emit a newline character.
-     */
-
-    void printLinearForm(std::ostream& stream, const soplex::SVectorRational* coefficients) const;
-
-    /**
-     * \brief Prints the linear form with these \c coefficients to \c stream.
-     *
-     * Prints the linear form with theses \c coefficients to \c stream using the variable names.
-     * Does not emit a newline character.
-     */
-
-    void printLinearForm(std::ostream& stream, const Vector& coefficients) const;
-
-    /**
-     * \brief Prints the linear form with these \c coefficients to \c stream.
-     *
-     * Prints the linear form with theses \c coefficients to \c stream using the variable names.
-     * Does not emit a newline character.
-     */
-
-    void printLinearForm(std::ostream& stream, const soplex::VectorRational* coefficients) const;
-
-    /**
-     * \brief Prints the \c row (inequality / equation) to \c stream.
-     *
-     * Prints the \c row (inequality / equation) to \c stream using the variable names. Does not
-     * emit a newline character.
-     */
-
-    void printRow(std::ostream& stream, const soplex::LPRowRational& row) const;
-
-    /**
-     * \brief Prints the row (inequality / equation) \c index of the set of \c rows to \c stream.
-     *
-     * Prints the row (inequality / equation) \c index of the set of \c rows to \c stream using the
-     * variable names. Does not emit a newline character.
-     */
-
-    void printRow(std::ostream& stream, const soplex::LPRowSetRational& rows, std::size_t index)
-      const;
-
-    /**
-     * \brief Prints all \c rows (inequality / equation) to \c stream.
-     *
-     * Prints all \c rows (inequality / equation) to \c stream using the variable names. Emits a
-     * newline character after each row.
-     */
-
-    void printRows(std::ostream& stream, const soplex::LPRowSetRational& rows) const;
-
-    /**
-     * \brief Prints \c vector to \c stream.
-     *
-     * Prints \c vector to \c stream using the variable names of the oracle.
-     * Does not emit a newline character.
-     */
-
-    void printVector(std::ostream& stream, const soplex::SVectorRational* vector) const;
-
-    /**
-     * \brief Prints \c vector to \c stream.
-     *
-     * Prints \c vector to \c stream using the variable names of the oracle.
-     * Does not emit a newline character.
-     */
-
-    void printVector(std::ostream& stream, const Vector& vector) const;
-
-    /**
-     * \brief Returns \c true iff spaces are equal.
-     *
-     * Returns \c true iff spaces have the same variables in the same order.
-     */
-
-    bool operator==(const Space& other) const;
-
-    /**
-     * \brief Returns \c true iff spaces are not equal.
-     *
-     * Returns \c true iff spaces are not equal (\sa operator==()).
+     * \brief Returns true if spaces are not equal.
+     * 
+     * Returns true if spaces are not equal, also considering variable names.
      */
 
     inline bool operator!=(const Space& other) const
@@ -185,17 +216,56 @@ namespace ipo {
       return !(*this == other);
     }
 
-  protected:
-    /*
-     * \brief Implementation of row printing.
-     *
-     * Implementation of row printing.
+    /**
+     * \brief Returns the dimension of the space.
+     * 
+     * Returns the dimension of the space.
      */
 
-    void printRow(std::ostream& stream, const soplex::Rational* lhs, const soplex::Rational* rhs,
-      const soplex::SVectorRational& vector) const;
+    inline std::size_t dimension() const
+    {
+      return _data->dimension();
+    }
 
-    std::vector<std::string> _variables; // Variable names.
+    /**
+     * \brief Returns the name of the given \p variable.
+     * 
+     * Returns a const-reference to the name of the given \p variable.
+     */
+
+    inline const std::string& operator[](std::size_t variable) const
+    {
+      return _data->variableName(variable);
+    }
+
+    /**
+     * \brief Prints given \p vector to given \p stream.
+     * 
+     * Prints given \p vector to given \p stream, using stored variable names. Nonzeros are delimited by a comma.
+     */
+
+    void printVector(std::ostream& stream, const Vector& vector) const;
+
+    /**
+     * \brief Prints given \p linearForm to given \p stream.
+     * 
+     * Prints given \p linearForm to given \p stream, using stored variable names. Nonzeros are delimited by the sign of the next
+     * entry.
+     */
+
+    void printLinearForm(std::ostream& stream, const Vector& linearForm) const;
+
+    /**
+     * \brief Prints given linear \p constraint to given \p stream.
+     * 
+     * Prints given linear \p constraint to given \p stream, using stored variable names. Nonzeros are delimited by the sign of 
+     * the next entry.
+     */
+
+    void printLinearConstraint(std::ostream& stream, const LinearConstraint& constraint) const;
+
+  protected:
+    SpaceData* _data; // Pointer to data.
   };
 
 }

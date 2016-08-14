@@ -90,22 +90,19 @@ namespace ipo {
     while (rays.size() > write)
       rays.pop_back();
   }
+  
+  
 
-  OracleBase::OracleBase(const std::string& name, const Space& space) :
-      _name(name), _space(space), _nextOracle(NULL), _heuristicLevel(0)
+  OracleBase::OracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
+    : _name(name), _nextOracle(nextOracle), _heuristicLevel(nextOracle ? nextOracle->heuristicLevel() + 1 : 0)
   {
 
   }
 
-  OracleBase::OracleBase(const std::string& name,
-    OracleBase* nextOracle) : _name(name), _space(nextOracle->space()),
-    _nextOracle(nextOracle), _heuristicLevel(nextOracle->heuristicLevel() + 1)
+  void OracleBase::initializeSpace(const Space& space)
   {
+    _space = space;
 
-  }
-
-  void OracleBase::initializedSpace()
-  {
     _tempObjective.reDim(_space.dimension(), false);
   }
 
@@ -234,16 +231,9 @@ namespace ipo {
     return _currentFace;
   }
 
-  FaceOracleBase::FaceOracleBase(const std::string& name, OracleBase* nextOracle, std::size_t maxInfeasibleIterations,
-    double initialM)
+  FaceOracleBase::FaceOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle, 
+    std::size_t maxInfeasibleIterations, double initialM)
     : OracleBase(name, nextOracle), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM), _completeFace()
-  {
-
-  }
-
-  FaceOracleBase::FaceOracleBase(const std::string& name, const Space& space, std::size_t maxInfeasibleIterations,
-    double initialM)
-    : OracleBase(name, space), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM), _completeFace()
   {
 
   }
@@ -253,9 +243,9 @@ namespace ipo {
 
   }
 
-  void FaceOracleBase::initializedSpace()
+  void FaceOracleBase::initializeSpace(const Space& space)
   {
-    OracleBase::initializedSpace();
+    OracleBase::initializeSpace(space);
 
     _modifiedObjective.reDim(_space.dimension(), false);
   }

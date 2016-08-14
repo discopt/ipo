@@ -15,20 +15,11 @@ namespace ipo {
     /**
      * \brief Constructs an oracle that stores points and rays explicitly.
      *
-     * Constructs an oracle with given \p name in given \p space that stores points and rays explicitly.
+     * Constructs an oracle with given \p name that stores points and rays returned by the associated oracle \p nextOracle 
+     * explicitly.
      */
 
-    CacheOracle(const std::string& name, const Space& space);
-
-    /**
-     * \brief Constructs an oracle that stores points and rays explicitly.
-     *
-     * Constructs an oracle with given \p name in given \p space that stores points and rays
-     * explicitly. It is associated to \p nextOracle. The storage is external via the const
-     * references \p points and \p rays.
-     */
-
-    CacheOracle(const std::string& name, OracleBase* nextOracle);
+    CacheOracle(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle);
 
     /**
      * \brief Destructor.

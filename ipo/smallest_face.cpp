@@ -16,24 +16,18 @@ namespace ipo {
     class NormalConeOracle: public OracleBase, public PolarLP
     {
     public:
-      NormalConeOracle(Space& space, OracleBase* originalOracle,
+      NormalConeOracle(const Space& space, const std::shared_ptr<OracleBase>& originalOracle,
         const Vector& target, OutputBase* output)
-        : OracleBase("normal cone of " + originalOracle->name(), space),
+        : OracleBase("normal cone of " + originalOracle->name()),
         PolarLP(originalOracle, 1024.0, 1000), _output(output)
       {
-        if (space.dimension() == 0)
-        {
-          for (std::size_t v = 0; v < n(); ++v)
-            space.addVariable("a#" + originalOracle->space()[v]);
-          space.addVariable("beta");
-        }
-        else if (space.dimension() != originalOracle->space().dimension() + 1)
+        if (space.dimension() != originalOracle->space().dimension() + 1)
         {
           throw std::runtime_error(
             "Spaces differ while constructing NormalConeOracle.");
         }
 
-        OracleBase::initializedSpace();
+        OracleBase::initializeSpace(space);
 
         /// Initialize Polar LP.
 
@@ -174,8 +168,8 @@ std::size_t numRays,
     class Implementation
     {
     public:
-      Implementation(OracleBase* oracle)
-        : _originalOracle(oracle), _output(NULL), _normalConeOracle(NULL), _dimension(-2)
+      Implementation(const std::shared_ptr<OracleBase>& oracle)
+        : _originalOracle(oracle), _output(NULL), _dimension(-2)
       {
         _maximizingObjective.reDim(_originalOracle->space().dimension() + 1);
       }
@@ -192,7 +186,7 @@ std::size_t numRays,
         return result.isFeasible() && result.points.front().objectiveValue == product;
       }
 
-      int run(const Vector& targetPoint, OutputBase& output, LPRowSetRational& coneEquations,
+      int run(const Vector& targetPoint, OutputBase& output, std::vector<LinearConstraint>& coneEquations,
         const std::vector<Vector>& normalConeDirections, bool verifyDirections)
       {
         std::size_t n = _originalOracle->space().dimension();
@@ -202,16 +196,18 @@ std::size_t numRays,
 
         _output->onStart();
 
-        Space normaleConeSpace;
-        NormalConeOracle definitionOracle(normaleConeSpace, _originalOracle, targetPoint, _output);
-        CacheOracle cacheOracle("cached " + definitionOracle.name(), &definitionOracle);
-        
-        _normalConeDefinitionOracle = &definitionOracle;
-        _normalConeOracle = &cacheOracle;
+        SpaceData* normalConeSpaceData = new SpaceData();
+        for (std::size_t v = 0; v < n; ++v)
+          normalConeSpaceData->addVariable("a#" + _originalOracle->space()[v]);
+        normalConeSpaceData->addVariable("beta");
+        Space normalConeSpace(normalConeSpaceData);
+
+        _normalConeMainOracle = std::make_shared<NormalConeOracle>(normalConeSpace, _originalOracle, targetPoint, _output);
+        _normalConeCachedOracle = std::make_shared<CacheOracle>("cached " + _normalConeMainOracle->name(), _normalConeMainOracle);
 
         /// Initialize points and directions.
         Vector zeroVector(0);
-        cacheOracle.addPoint(zeroVector);
+        _normalConeCachedOracle->addPoint(zeroVector);
 
 //         DVectorRational denseTarget;
         OracleResult verifyResult;
@@ -243,26 +239,26 @@ std::size_t numRays,
           if (rhs != 0)
             rayData->add(n, rhs);
 
-          cacheOracle.addRay(Vector(rayData));
+          _normalConeCachedOracle->addRay(Vector(rayData));
         }
         if (verifyDirections)
           _output->onAfterVerifyElements(normalConeDirections.size());
 
         /// Initialize equations.
 
-        DSVectorRational vector;
+        VectorData* vectorData = new VectorData(targetPoint.size() + 1);
         for (std::size_t p = 0; p < targetPoint.size(); ++p)
-          vector.add(targetPoint.index(p), targetPoint.value(p));
-        vector.add(n, Rational(-1));
-        coneEquations.add(Rational(0), vector, Rational(0));
+          vectorData->add(targetPoint.index(p), targetPoint.value(p));
+        vectorData->add(n, Rational(-1));
+        coneEquations.push_back(LinearConstraint('=', Vector(vectorData), Rational(0)));
 
-        _output->onAddedInitials(cacheOracle.numPoints(), cacheOracle.numRays(), coneEquations.num());
+        _output->onAddedInitials(_normalConeCachedOracle->numPoints(), _normalConeCachedOracle->numRays(), coneEquations.size());
 
         /// Start affine hull algorithm.
 
         AffineHull::OutputBase& hullOutput = output.normalConeHullOutput();
         AffineHull::Result hull;
-        hull.run(coneEquations, _normalConeOracle, hullOutput);
+        hull.run(coneEquations, _normalConeCachedOracle, hullOutput);
         _dimension = n - hull.dimension();
 
         /// Extract ray.
@@ -275,7 +271,9 @@ std::size_t numRays,
 
         _output->onEnd();
         _output->_implementation = NULL;
-        _normalConeOracle = NULL;
+        
+        _normalConeCachedOracle = NULL;
+        _normalConeMainOracle = NULL;
 
         return _dimension;
       }
@@ -290,12 +288,8 @@ std::size_t numRays,
 
         // Compute difference and create equation valid for normal cone.
 
-        DSVectorRational vector;
-        LPRowSetRational coneEquations;
-        vectorToDense(first, dense);
-        dense -= second;
-        vector = dense;
-        coneEquations.add(Rational(0), vector, Rational(0));
+        std::vector<LinearConstraint> coneEquations;
+        coneEquations.push_back(LinearConstraint('=', first - second, Rational(0)));
 
         // Compute barycenter.
 
@@ -316,16 +310,16 @@ std::size_t numRays,
       friend class Result;
 
     protected:
-      OracleBase* _originalOracle;
+      std::shared_ptr<OracleBase> _originalOracle;
       OutputBase* _output;
-      NormalConeOracle* _normalConeDefinitionOracle;
-      CacheOracle* _normalConeOracle;
+      std::shared_ptr<NormalConeOracle> _normalConeMainOracle;
+      std::shared_ptr<CacheOracle> _normalConeCachedOracle;
 
       int _dimension;
       soplex::DVectorRational _maximizingObjective;
     };
 
-    Result::Result(OracleBase* oracle)
+    Result::Result(const std::shared_ptr<OracleBase>& oracle)
     {
       _implementation = new Implementation(oracle);
     }
@@ -365,13 +359,13 @@ std::size_t numRays,
     int Result::run(const Vector& targetPoint, OutputBase& output,
         const std::vector<Vector>& normalConeRays, bool verifyRays)
     {
-      LPRowSetRational coneEquations;
+      std::vector<LinearConstraint> coneEquations;
       return _implementation->run(targetPoint, output, coneEquations, normalConeRays, verifyRays);
     }
 
     int Result::run(const Vector& targetPoint, OutputBase& output, const LPRowSetRational& affineHullEquations)
     {
-      LPRowSetRational coneEquations;
+      std::vector<LinearConstraint> coneEquations;
       std::vector<Vector> normalConeRays;
       for (int i = affineHullEquations.num() - 1; i >= 0; --i)
       {
@@ -391,7 +385,7 @@ std::size_t numRays,
 
     int Result::run(const Vector& targetPoint, OutputBase& output)
     {
-      LPRowSetRational coneEquations;
+      std::vector<LinearConstraint> coneEquations;
       std::vector<Vector> normalConeRays;
       return _implementation->run(targetPoint, output, coneEquations, normalConeRays, false);
     }
@@ -470,19 +464,19 @@ std::size_t numRays,
     std::size_t InformationBase::numRowsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeDefinitionOracle->numRows();
+      return _implementation->_normalConeMainOracle->numRows();
     }
 
     std::size_t InformationBase::numColumnsLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeDefinitionOracle->numColumns();
+      return _implementation->_normalConeMainOracle->numColumns();
     }
 
     std::size_t InformationBase::numNonzerosLP() const
     {
       ensureImplementation();
-      return _implementation->_normalConeDefinitionOracle->numNonzeros();
+      return _implementation->_normalConeMainOracle->numNonzeros();
     }
 
     bool InformationBase::hasImplementation() const

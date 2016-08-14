@@ -41,17 +41,12 @@ namespace ipo {
     return valueMantissa > other.valueMantissa;
   }
 
-  CacheOracle::CacheOracle(const std::string& name, const Space& space)
-    : OracleBase(name, space), _uniquePoints(space.dimension()), _uniqueRays(space.dimension())
+  CacheOracle::CacheOracle(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
+    : OracleBase(name, nextOracle), _uniquePoints(nextOracle->space().dimension()), _uniqueRays(nextOracle->space().dimension())
   {
-    OracleBase::initializedSpace();
-  }
+    assert(nextOracle);
 
-  CacheOracle::CacheOracle(const std::string& name, OracleBase* nextOracle)
-    : OracleBase(name, nextOracle), _uniquePoints(nextOracle->space().dimension()), 
-    _uniqueRays(nextOracle->space().dimension())
-  {
-    OracleBase::initializedSpace();
+    OracleBase::initializeSpace(nextOracle->space());
   }
 
   CacheOracle::~CacheOracle()

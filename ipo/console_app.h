@@ -64,7 +64,7 @@ namespace ipo {
      * parsed.
      */
 
-    void setBasicOracle(OracleBase* oracle);
+    void setBasicOracle(std::shared_ptr<OracleBase> oracle);
 
     /**
      * \brief Parses all arguments by repeatedly calling \ref parseArgument().
@@ -150,15 +150,15 @@ namespace ipo {
     virtual bool printAmbientDimension();
     virtual bool printVariables();
     virtual bool computeAffineHull(const LinearConstraint& face, const std::string& faceName);
-    virtual bool optimizeObjective(const soplex::VectorRational* objective, bool maximize);
-    virtual bool generateFacets(const soplex::VectorRational* objective, bool print);
+    virtual bool optimizeObjective(const Vector& objective, bool maximize);
+    virtual bool generateFacets(const Vector& objective, bool print);
     virtual bool separateRayFacet(const Vector& ray, bool& isFeasible);
     virtual bool separatePointFacet(const Vector& point, bool& isFeasible);
     virtual bool computeSmallestFace(const Vector& point);
     virtual bool printCached();
 
     void setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& upperBounds);
-    void addRelaxationRows(const soplex::LPRowSetRational& rows);
+    void addRelaxationConstraints(const std::vector<LinearConstraint>& constraints);
 
   protected:
     inline bool taskPrintAmbientDimension() const
@@ -226,12 +226,12 @@ namespace ipo {
       return _objectives.size();
     }
 
-    inline const soplex::DVectorRational* objective(std::size_t index) const
+    inline const Vector& objective(std::size_t index) const
     {
       return _objectives[index];
     }
 
-    inline void addObjective(soplex::DVectorRational* objective, const std::string& name)
+    inline void addObjective(const Vector& objective, const std::string& name)
     {
       _objectives.push_back(objective);
       _objectiveNames.push_back(name);
@@ -262,19 +262,19 @@ namespace ipo {
       return _space;
     }
 
-    inline OracleBase* oracle()
+    inline std::shared_ptr<OracleBase>& oracle()
     {
       return _oracle;
     }
 
     inline bool projectedSpace()
     {
-      return _projectedOracle != NULL;
+      return _projectionOracle != NULL;
     }
 
-    inline ProjectedOracle* projectedOracle()
+    inline const std::shared_ptr<ProjectionOracle>& projectedOracle()
     {
-      return _projectedOracle;
+      return _projectionOracle;
     }
 
   private:
@@ -310,23 +310,23 @@ namespace ipo {
     bool _optionCache;
 
     Space _space;
-    CacheOracle* _cacheOracle;
+    std::shared_ptr<CacheOracle> _cacheOracle;
     Projection* _projection;
-    ProjectedOracle* _projectedOracle;
-    OracleBase* _oracle;
+    std::shared_ptr<ProjectionOracle> _projectionOracle;
+    std::shared_ptr<OracleBase> _oracle;
 
     std::vector<LinearConstraint> _faces;
     std::vector<std::string> _faceNames;
-    std::vector<soplex::DVectorRational*> _objectives;
+    std::vector<Vector> _objectives;
     std::vector<std::string> _objectiveNames;
     std::vector<Vector> _rays;
     std::vector<std::string> _rayNames;
     std::vector<Vector> _points;
     std::vector<std::string> _pointNames;
     soplex::LPColSetRational _relaxationColumns;
-    soplex::LPRowSetRational _relaxationRows;
+    std::vector<LinearConstraint> _relaxationConstraints;
 
-    soplex::LPRowSetRational* _equations;
+    std::vector<LinearConstraint> _equations;
     std::vector<Vector> _spanningPoints;
     std::vector<Vector> _spanningRays;
     std::vector<std::size_t> _basicColumns;

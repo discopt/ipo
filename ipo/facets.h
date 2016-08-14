@@ -228,11 +228,10 @@ namespace ipo {
     {
     public:
       Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
-        const std::vector<std::size_t>& columnBasis, OracleBase* oracle);
+        const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle);
       virtual ~Result();
 
-      void inequality(soplex::LPRowRational& inequality) const;
-      void inequality(soplex::LPRowSetRational& inequalities) const;
+      LinearConstraint inequality() const;
       void certificate(Certificate& certificate) const;
       const Rational& violation() const;
 

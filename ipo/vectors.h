@@ -24,6 +24,12 @@ namespace ipo {
   soplex::VectorRational& operator+=(soplex::VectorRational& a, const ReferenceCountedVector& b);
   soplex::VectorRational& operator-=(soplex::VectorRational& a, const ReferenceCountedVector& b);
 
+  Vector integralScaled(const Vector& vector);
+  void scaleIntegral(Vector& vector);
+  void scaleIntegral(std::vector<Vector>& vectors);
+
+  void scaleIntegral(const soplex::VectorRational& vector, soplex::DVectorRational& scaled);
+
 } /* namespace ipo */
 
 #endif /* IPO_VECTORS_IMPL_H_ */

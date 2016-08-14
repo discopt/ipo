@@ -336,6 +336,17 @@ namespace ipo {
     }
 
     /**
+     * \brief Tests for inequality with \c other vector.
+     * 
+     * Tests for inequality with \c other vector.
+     */
+
+    inline bool operator!=(const ReferenceCountedVector& other) const
+    {
+      return !(*this == other);
+    }
+
+    /**
      * \brief Fast ordering comparison.
      * 
      * Fast ordering comparison. First compares the number of nonzeros, then the indices and approximate values and finally the

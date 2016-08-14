@@ -10,42 +10,16 @@ using namespace soplex;
 
 namespace ipo {
 
-  ExternalOracle::ExternalOracle(const std::string& name, const Space& space, const std::string& program,
-    const std::string& instance, std::size_t maxInfeasibleIterations, double initialM)
-    : FaceOracleBase(name, space, maxInfeasibleIterations, initialM)
-  {
-    Space externalSpace;
-    initialize(externalSpace);
-    if (space != externalSpace)
-      throw std::runtime_error("Spaces differ while constructing ExternalOracle.");
-
-    FaceOracleBase::initializedSpace();
-  }
-
-  ExternalOracle::ExternalOracle(const std::string& name, Space& space, const std::string& program, const std::string& instance, 
-    std::size_t maxInfeasibleIterations, double initialM)
-    : FaceOracleBase(name, space, maxInfeasibleIterations, initialM)
-  {
-    Space externalSpace;
-    initialize(externalSpace);
-    if (space.dimension() == 0)
-      space = externalSpace;
-    else if (space != externalSpace)
-      throw std::runtime_error("Spaces differ while constructing ExternalOracle.");
-
-    FaceOracleBase::initializedSpace();
-  }
-  
-  ExternalOracle::ExternalOracle(const std::string& name, OracleBase* nextOracle, const std::string& program,
-    const std::string& instance, std::size_t maxInfeasibleIterations, double initialM)
+  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program, const std::string& instance, 
+    const std::shared_ptr<OracleBase>& nextOracle, std::size_t maxInfeasibleIterations, double initialM)
     : FaceOracleBase(name, nextOracle, maxInfeasibleIterations, initialM)
   {
     Space externalSpace;
     initialize(externalSpace);
-    if (externalSpace != _space)
-      throw std::runtime_error("Spaces differ while constructing ExternalOracle.");
+//     if (externalSpace != _space)
+//       throw std::runtime_error("Spaces differ while constructing ExternalOracle.");
 
-    FaceOracleBase::initializedSpace();
+    FaceOracleBase::initializeSpace(externalSpace);
   }
 
   void ExternalOracle::initialize(Space& externalSpace)
@@ -71,7 +45,7 @@ namespace ipo {
       {
         std::string varName;
         initStream >> varName;
-        externalSpace.addVariable(varName);
+//         externalSpace.addVariable(varName); // TODO: building of space after oracle construction is not allowed yet!
       }
     }
   }
@@ -88,7 +62,7 @@ namespace ipo {
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     DVectorRational scaledObjective;
-    scaleVectorIntegral(objective, scaledObjective);
+    scaleIntegral(objective, scaledObjective);
 
     std::stringstream param, output;
     param << "--maximize \"";

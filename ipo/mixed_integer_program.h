@@ -39,7 +39,7 @@ namespace ipo {
      * Only explicitly stated linear constraints of the instance are considered.
      */
 
-    MixedIntegerProgram(Space& space, SCIP* scip);
+    MixedIntegerProgram(SCIP* scip);
 #endif
 
     /**
@@ -223,7 +223,7 @@ namespace ipo {
       std::vector<std::string>* names = NULL);
 
   protected:
-    const Space& _space; // Space with column names.
+    Space _space; // Space with column names.
     soplex::LPColSetRational _columns; // Columns
     soplex::LPRowSetRational _rows; // Rows
     std::vector<std::string> _rowNames; // Row names
@@ -242,7 +242,6 @@ namespace ipo {
   class MIPOracleBase: public OracleBase
   {
   protected:
-
     /**
      * \brief Constructs the oracle.
      *
@@ -252,27 +251,12 @@ namespace ipo {
      * part of a solution, i.e., the integer variables of the solution will remain fixed until the completion is finished.
      * The actual MIP solver oracle is provided by inheriting from this class.
      *
-     * \param name              Name of the oracle.
-     * \param mip               Associated mixed-integer program.
+     * \param name       Name of the oracle.
+     * \param mip        Associated mixed-integer program.
+     * \param nextOracle Next associated oracle.
      */
 
-    MIPOracleBase(const std::string& name, const Space& space, const MixedIntegerProgram& mip);
-
-    /**
-     * \brief Constructs the oracle.
-     *
-     * Constructs the oracle based on the MIP that is passed. The latter need not be complete, i.e., there may be inequalities
-     * missing. In this case, the separate() method should be implemented by the inheriting class, which is then queried with
-     * a potential solution and must produce additional inequalities. Not that this is only required to complete the continuous
-     * part of a solution, i.e., the integer variables of the solution will remain fixed until the completion is finished.
-     * The actual MIP solver oracle is provided by inheriting from this class.
-     *
-     * \param name              Name of the oracle.
-     * \param mip               Associated mixed-integer program.
-     * \param nextOracle        Next associated oracle.
-     */
-
-    MIPOracleBase(const std::string& name, OracleBase* nextOracle, const MixedIntegerProgram& mip);
+    MIPOracleBase(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Destructor.

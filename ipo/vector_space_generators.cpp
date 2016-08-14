@@ -37,25 +37,19 @@ namespace ipo {
     _zeroRhs = true;
   }
 
-  std::size_t VectorSpaceGenerators::add(const SVectorRational& vector)
+  std::size_t VectorSpaceGenerators::add(const Vector& vector, bool dependent)
   {
-    addLazy(vector);
+    addLazy(vector, dependent);
     flushLazy();
     return _spx->numColsRational() - 1;
   }
 
-  std::size_t VectorSpaceGenerators::add(const SVectorRational& vector, bool dependent)
+  std::size_t VectorSpaceGenerators::addLazy(const Vector& vector, bool dependent)
   {
-    if (dependent)
-      _spx->addColRational(LPColRational(Rational(0), vector, Rational(0), Rational(0)));
-    else
-      _spx->addColRational(LPColRational(Rational(0), vector, infinity, -infinity));
-    return _spx->numColsRational() - 1;
-  }
-
-  std::size_t VectorSpaceGenerators::addLazy(const SVectorRational& vector)
-  {
-    _spx->addColRational(LPColRational(Rational(0), vector, infinity, -infinity));
+    DSVectorRational svector;
+    vectorToSparse(vector, svector);
+    _spx->addColRational(LPColRational(Rational(0), svector, dependent ? Rational(0) : Rational(infinity), 
+      dependent ? Rational(0) : Rational(-infinity)));
     _lazyVectors.push_back(_spx->numColsRational() - 1);
     return _spx->numColsRational() - 1;
   }

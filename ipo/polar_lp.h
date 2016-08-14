@@ -26,7 +26,7 @@ namespace ipo {
       std::vector<Vector> tightRays;
     };
 
-    PolarLP(OracleBase* oracle, double initialPenalty = 1024.0, int maxAge = 30);
+    PolarLP(const std::shared_ptr<OracleBase>& oracle, double initialPenalty = 1024.0, int maxAge = 30);
     virtual ~PolarLP();
 
   protected:
@@ -113,7 +113,7 @@ namespace ipo {
     void addRayRow(Vector& ray, bool stabLP);
 
   protected:
-    OracleBase* _oracle;
+    std::shared_ptr<OracleBase> _oracle;
 
 //    int iteration;
 

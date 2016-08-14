@@ -20,7 +20,7 @@ namespace ipo {
    * // Create an oracle.
    * // ...
    *
-   * soplex::LPRowSetRational equations;
+   * std::vector<LinearConstraint> equations;
    * AffineHull::ProgressOutput hullOutput;
    * AffineHull::Result hull;
    * hull.run(equations, oracle, hullOutput);
@@ -58,9 +58,11 @@ namespace ipo {
       const Vector& spanningRay(std::size_t i) const;
       std::size_t numSpanningRays() const;
       const std::vector<std::size_t>& basicColumns() const;
-      const std::vector<std::size_t>& irredundantEquations() const;
+      const std::vector<LinearConstraint>& irredundantEquations() const;
+      const std::vector<LinearConstraint>& redundantEquations() const;
+      const std::vector<LinearConstraint>& potentialEquations() const;
       std::size_t numIrredundantEquations() const;
-      const std::vector<std::size_t>& potentialEquations() const;
+      std::size_t numRedundantEquations() const;
       std::size_t numPotentialEquations() const;
       std::size_t numCacheQueries() const;
       std::size_t numCacheHits() const;
@@ -252,13 +254,13 @@ namespace ipo {
 
       int dimension() const;
 
-      int run(soplex::LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
+      int run(std::vector<LinearConstraint>& equations, const std::shared_ptr<OracleBase>& oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
       friend class Implementation;
     };
 
-    int run(soplex::LPRowSetRational& equations, OracleBase* oracle, OutputBase& output,
+    int run(std::vector<LinearConstraint>& equations, const std::shared_ptr<OracleBase>& oracle, OutputBase& output,
         std::size_t minHeuristicBeforeVerification = 0, bool removeRedundantEquations = false);
 
   } /* namespace AffineHull */

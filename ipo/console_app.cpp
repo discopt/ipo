@@ -22,7 +22,7 @@ namespace ipo {
   {
   public:
     ConsoleApplicationObjectiveParser(std::istream& stream, const Space& space,
-      std::vector<soplex::DVectorRational*>& objectives, std::vector<std::string>& objectiveNames)
+      std::vector<Vector>& objectives, std::vector<std::string>& objectiveNames)
       : LPObjectiveParser(stream), _objectives(objectives), _objectiveNames(objectiveNames)
     {
       for (std::size_t i = 0; i < space.dimension(); ++i)
@@ -36,25 +36,28 @@ namespace ipo {
 
     virtual void handleObjective(const std::string& name, const std::map<std::string, Rational>& coefficients)
     {
-      soplex::DVectorRational* vector = new soplex::DVectorRational(_oracleVariables.size());
+      VectorData* vectorData = new VectorData(_oracleVariables.size());
       for (std::map<std::string, Rational>::const_iterator iter = coefficients.begin(); iter != coefficients.end(); ++iter)
       {
         std::map<std::string, std::size_t>::const_iterator varIter = _oracleVariables.find(iter->first);
         if (varIter != _oracleVariables.end())
-          (*vector)[varIter->second] = iter->second;
+        {
+          if (iter->second != 0)
+            vectorData->add(varIter->second, iter->second);
+        }
         else
         {
           std::cerr << "Skipping objective: Unknown variable <" << iter->first << ">.\n" << std::endl;
-          delete vector;
+          delete vectorData;
           return;
         }
       }
-      _objectives.push_back(vector);
+      _objectives.push_back(Vector(vectorData));
       _objectiveNames.push_back(name);
     }
 
   private:
-    std::vector<soplex::DVectorRational*>& _objectives;
+    std::vector<Vector>& _objectives;
     std::vector<std::string>& _objectiveNames;
     std::map<std::string, std::size_t> _oracleVariables;
   };
@@ -187,27 +190,17 @@ namespace ipo {
 
     _oracle = NULL;
     _cacheOracle = NULL;
-    _equations = NULL;
     _projection = NULL;
-    _projectedOracle = NULL;
+    _projectionOracle = NULL;
   }
 
   ConsoleApplicationBase::~ConsoleApplicationBase()
   {
-    if (_equations)
-      delete _equations;
-
-    if (_cacheOracle)
-      delete _cacheOracle;
-    if (_projectedOracle)
-      delete _projectedOracle;
     if (_projection)
       delete _projection;
-    for (std::size_t i = 0; i < numObjectives(); ++i)
-      delete _objectives[i];
   }
 
-  void ConsoleApplicationBase::setBasicOracle(OracleBase* oracle)
+  void ConsoleApplicationBase::setBasicOracle(std::shared_ptr<OracleBase> oracle)
   {
     if (_oracle)
       throw std::runtime_error("Error in ConsoleApplicationBase::setBasicOracle: Oracle already set.");
@@ -226,10 +219,11 @@ namespace ipo {
           projectionVariables.push_back(v);
       }
 
-      _projection = new Projection(originalSpace, projectionVariables);
-      _projectedOracle =  new ProjectedOracle("projection of " + oracle->name(), *_projection, oracle);
-      _space = *_projection;
-      oracle = _projectedOracle;
+      ProjectionData* projectionData = new ProjectionData(originalSpace, projectionVariables);
+      _projection = new Projection(projectionData);
+      _projectionOracle =  std::make_shared<ProjectionOracle>("projection of " + oracle->name(), *_projection, oracle);
+      _space = _projection->imageSpace();
+      oracle = _projectionOracle;
     }
     else
     {
@@ -238,7 +232,7 @@ namespace ipo {
 
     if (_optionCache)
     {
-      _cacheOracle = new CacheOracle("cached " + oracle->name(), oracle);
+      _cacheOracle = std::make_shared<CacheOracle>("cached " + oracle->name(), oracle);
       _oracle = _cacheOracle;
     }
     else
@@ -510,7 +504,7 @@ namespace ipo {
   void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& 
 upperBounds)
   {
-    if (_projectedOracle)
+    if (_projectionOracle)
     {
       // TODO: Some of the bounds may be used in case of projection!
     }
@@ -524,15 +518,15 @@ upperBounds)
     }
   }
 
-  void ConsoleApplicationBase::addRelaxationRows(const soplex::LPRowSetRational& rows)
+  void ConsoleApplicationBase::addRelaxationConstraints(const std::vector<LinearConstraint>& constraints)
   {
-    if (_projectedOracle)
+    if (_projectionOracle)
     {
       // TODO: Some of the rows may be used in case of projection!
     }
     else
     {
-      _relaxationRows.add(rows);
+      std::copy(constraints.begin(), constraints.end(), std::back_inserter(_relaxationConstraints));
     }
   }
 
@@ -828,7 +822,6 @@ upperBounds)
 
     std::size_t n = space().dimension();
 
-    _equations = new LPRowSetRational;
     _relaxationColumns.clear();
     DSVectorRational zeroVector;
     for (std::size_t c = 0; c < n; ++c)
@@ -872,10 +865,10 @@ upperBounds)
         if (norm > 0)
         {
           norm = std::sqrt(norm);
-          soplex::DVectorRational* objectiveVector = new soplex::DVectorRational(n);
-          for (std::size_t c = 0; c < n; ++c)
-            (*objectiveVector)[c] = Rational(randomVector[c] / norm);
-          _objectives.push_back(objectiveVector);
+          VectorData* objectiveVectorData = new VectorData(n);
+          for (std::size_t v = 0; v < n; ++v)
+            objectiveVectorData->add(v, Rational(randomVector[v] / norm));
+          _objectives.push_back(Vector(objectiveVectorData));
           _objectiveNames.push_back(":RANDOM:");
         }
       }
@@ -970,17 +963,18 @@ upperBounds)
       }
     }
 
-    OracleBase* orac = oracle();
+    std::shared_ptr<OracleBase> orac = oracle();
     std::size_t n = space().dimension();
 
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
 
-    LPRowSetRational faceEquations;
-    LPRowSetRational* equations;
+    std::vector<LinearConstraint> faceEquations;
+    std::vector<LinearConstraint>* equations;
     if (face.definesCompleteFace())
     {
-      hull.run(*_equations, orac, hullOutput, 1, true);
+      hull.run(_equations, orac, hullOutput, 1, true);
+      
       _basicColumns = hull.basicColumns();
       _spanningPoints.reserve(hull.numSpanningPoints());
       for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)
@@ -988,7 +982,7 @@ upperBounds)
       _spanningRays.reserve(hull.numSpanningRays());
       for (std::size_t i = 0; i < hull.numSpanningRays(); ++i)
         _spanningRays.push_back(hull.spanningRay(i));
-      equations = _equations;
+      equations = &_equations;
     }
     else
     {
@@ -1004,14 +998,14 @@ upperBounds)
     }
 
     if (_optionReadable)
-      manhattanNormImproveEquations(n, *_equations);
+      manhattanNormImproveEquations(n, *equations);
 
     if (_taskEquations)
     {
-      for (int i = 0; i < equations->num(); ++i)
+      for (std::size_t i = 0; i < equations->size(); ++i)
       {
         std::cout << " Equation: ";
-        space().printRow(std::cout, *equations, i);
+        space().printLinearConstraint(std::cout, (*equations)[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1020,21 +1014,18 @@ upperBounds)
     return true;
   }
 
-  bool ConsoleApplicationBase::optimizeObjective(const soplex::VectorRational* objective, bool maximize)
+  bool ConsoleApplicationBase::optimizeObjective(const Vector& objective, bool maximize)
   {
     std::cout << (maximize ? " Maximum: " : " Minimum: ") << std::flush;
 
     OracleResult result;
     if (maximize)
     {
-      oracle()->maximize(result, *objective, ObjectiveBound(), 0);
+      oracle()->maximize(result, objective, ObjectiveBound(), 0);
     }
     else
     {
-      soplex::DVectorRational negated;
-      negated = *objective;
-      negated *= -1;
-      oracle()->maximize(result, negated, ObjectiveBound(), 0);
+      oracle()->maximize(result, -objective, ObjectiveBound(), 0);
     }
 
     if (result.isInfeasible())
@@ -1055,7 +1046,7 @@ upperBounds)
     return true;
   }
 
-  bool ConsoleApplicationBase::generateFacets(const soplex::VectorRational* objective, bool print)
+  bool ConsoleApplicationBase::generateFacets(const Vector& objective, bool print)
   {
     std::size_t n = space().dimension();
 
@@ -1072,10 +1063,13 @@ upperBounds)
     spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
     LPColSetRational cols;
     cols = _relaxationColumns;
-    cols.maxObj_w() = *objective;
+    for (std::size_t v = 0; v < cols.num(); ++v)
+      cols.maxObj_w(v) = 0;
+    for (std::size_t p = 0; p < objective.size(); ++p)
+      cols.maxObj_w(objective.index(p)) = objective.value(p);
     spx->addColsRational(cols);
-    spx->addRowsRational(*_equations);
-    spx->addRowsRational(_relaxationRows);
+    addToLP(*spx, _equations);
+    addToLP(*spx, _relaxationConstraints);
 
     Separation::QuietOutput separateOutput;
     Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
@@ -1121,16 +1115,15 @@ upperBounds)
 
       /// Obtain inequality and certificate.
 
-      LPRowRational inequality;
       Separation::Certificate certificate;
-      separate.inequality(inequality);
+      LinearConstraint inequality = separate.inequality();
       separate.certificate(certificate);
-      spx->addRowRational(inequality);
+      addToLP(*spx, inequality);
 
       /// If it should be reused, record the facet.
       if (_optionReuseFacets)
       {
-        _relaxationRows.add(inequality);
+        _relaxationConstraints.push_back(inequality);
       }
 
       if (separate.separatedFacet())
@@ -1142,9 +1135,9 @@ upperBounds)
         throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
       }
 
-      manhattanNormImproveInequality(n, inequality, *_equations);
+      manhattanNormImproveInequality(n, inequality, _equations);
 
-      space().printRow(std::cout, inequality);
+      space().printLinearConstraint(std::cout, inequality);
 
       if (_optionCertificates)
       {
@@ -1192,9 +1185,8 @@ upperBounds)
       isFeasible = false;
 
 
-    LPRowRational inequality;
     Separation::Certificate certificate;
-    separate.inequality(inequality);
+    LinearConstraint inequality = separate.inequality();
     separate.certificate(certificate);
 
     if (separate.separatedFacet())
@@ -1206,9 +1198,9 @@ upperBounds)
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
     }
 
-    manhattanNormImproveInequality(n, inequality, *_equations);
+    manhattanNormImproveInequality(n, inequality, _equations);
 
-    space().printRow(std::cout, inequality);
+    space().printLinearConstraint(std::cout, inequality);
 
     if (_optionCertificates)
     {
@@ -1252,9 +1244,8 @@ upperBounds)
     else
       isFeasible = false;
 
-    LPRowRational inequality;
     Separation::Certificate certificate;
-    separate.inequality(inequality);
+    LinearConstraint inequality = separate.inequality();
     separate.certificate(certificate);
 
     if (separate.separatedFacet())
@@ -1266,9 +1257,9 @@ upperBounds)
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
     }
 
-    manhattanNormImproveInequality(n, inequality, *_equations);
+    manhattanNormImproveInequality(n, inequality, _equations);
 
-    space().printRow(std::cout, inequality);
+    space().printLinearConstraint(std::cout, inequality);
 
     if (_optionCertificates)
     {

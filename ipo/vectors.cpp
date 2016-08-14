@@ -3,7 +3,6 @@
 #include <iostream>
 #include <cmath>
 
-
 namespace ipo {
 
   VectorData::Nonzero::Nonzero(std::size_t idx, const Rational& val)
@@ -105,6 +104,7 @@ namespace ipo {
   void VectorData::add(std::size_t index, const Rational& value)
   {
     assert(_immutableUsage == 0);
+    assert(value != 0);
     _nonzeros.push_back(Nonzero(index, value));
   }
 
@@ -402,6 +402,50 @@ namespace ipo {
     for (std::size_t p = 0; p < source.size(); ++p)
       data->add(source.index(p), -source.value(p));
     return MutableVector(data);
+  }
+  
+  Vector integralScaled(const Vector& vector)
+  {
+    // Compute scaling factor.
+
+    IntegralScaler scaler;
+    for (std::size_t p = 0; p < vector.size(); ++p)
+      scaler(vector.value(p));
+    Rational factor = scaler.factor();
+
+    // Scale it.
+
+    VectorData* data = new VectorData(vector.size());
+    for (std::size_t p = 0; p < vector.size(); ++p)
+      data->add(vector.index(p), factor * vector.value(p));
+    return Vector(data);
+  }
+
+  void scaleIntegral(Vector& vector)
+  {
+    vector = integralScaled(vector);
+  }
+
+  void scaleIntegral(std::vector<Vector>& vectors)
+  {
+    for (std::size_t i = 0; i < vectors.size(); ++i)
+      scaleIntegral(vectors[i]);
+  }
+
+  void scaleIntegral(const soplex::VectorRational& vector, soplex::DVectorRational& scaled)
+  {
+    // Compute scaling factor.
+
+    IntegralScaler scaler;
+    for (std::size_t i = 0; i < vector.dim(); ++i)
+      scaler(vector[i]);
+    Rational factor = scaler.factor();
+
+    // Scale it.
+
+    scaled.reDim(vector.dim(), false);
+    for (std::size_t i = 0; i < vector.dim(); ++i)
+      scaled[i] = factor * vector[i];
   }
 
 } /* namespace ipo */

@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "rational.h"
+#include "vectors.h"
 
 namespace ipo {
 
@@ -15,9 +16,8 @@ namespace ipo {
     virtual ~VectorSpaceGenerators();
 
     void reset(std::size_t ambientDimension);
-    std::size_t add(const soplex::SVectorRational& vector);
-    std::size_t add(const soplex::SVectorRational& vector, bool dependent);
-    std::size_t addLazy(const soplex::SVectorRational& vector);
+    std::size_t add(const Vector& vector, bool dependent = false);
+    std::size_t addLazy(const Vector& vector, bool dependent = false);
     void flushLazy();
     bool isDependent(std::size_t index);
     bool isDependent(const soplex::SVectorRational& vector);
