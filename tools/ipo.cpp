@@ -57,19 +57,13 @@ public:
     _useInstanceInequalities = true;
 
 #ifdef WITH_SCIP
-    _scipMip = NULL;
     _scipOracle = NULL;
 #endif
   }
 
   virtual ~IPOConsoleApplication()
   {
-    /// ~ConsoleApplicationBase will free the oracle passed to setBasicOracle.
-
-#ifdef WITH_SCIP
-    if (_scipMip)
-      delete _scipMip;
-#endif
+    
   }
 
   virtual bool run()
@@ -273,7 +267,6 @@ public:
 #ifdef WITH_SCIP
     if (_oracleArgument == "scip")
     {
-      std::size_t n = 0;
       try
       {
         SCIP* scip = NULL;
@@ -281,7 +274,6 @@ public:
         {
           SCIP_CALL_EXC(SCIPcreate(&scip));
           SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
-          SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
           SCIP_CALL_EXC(SCIPreadProb(scip, firstArgument.c_str(), NULL));
           SCIP_CALL_EXC(SCIPtransformProb(scip));
         }
@@ -291,10 +283,10 @@ public:
           throw ex;
         }
 
-//         _scipSpace = new Space;
-//         std::cerr << "Creating MixedIntegerProgram instance." << std::endl;
-        _scipMip = new MixedIntegerProgram(scip);
-        n = _scipMip->space().dimension();
+        _scipOracle = std::make_shared<SCIPOracle>(firstArgument, scip);
+        
+        _instanceObjective = getSCIPObjective(scip);
+        
         SCIP_CALL_EXC(SCIPfree(&scip));
       }
       catch (SCIPException& exc)
@@ -304,28 +296,6 @@ public:
         throw std::runtime_error(ss.str());
       }
 
-      /// Extract instance objective.
-
-      std::size_t size = 0;
-      for (std::size_t i = 0; i < n; ++i)
-      {
-        const soplex::Rational& x = _scipMip->columns().maxObj(i);
-        if (x != 0)
-          ++size;
-      }
-
-      VectorData* data = new VectorData(size);
-      
-//       _instanceObjective = Vector(size);
-      for (std::size_t i = 0; i < n; ++i)
-      {
-        const soplex::Rational& x = _scipMip->columns().maxObj(i);
-        if (x != 0)
-          data->add(i, x);
-      }
-      _instanceObjective = Vector(data);
-
-      _scipOracle = std::make_shared<SCIPOracle>(firstArgument, *_scipMip);
       oracle = _scipOracle;
     }
 #endif
@@ -368,10 +338,15 @@ public:
 #ifdef WITH_SCIP
     if (_useInstanceBounds)
     {
-      soplex::DVectorRational lower(space().dimension());
-      soplex::DVectorRational upper(space().dimension());
-      const soplex::LPColSetRational& cols = _scipMip->columns();
-      setRelaxationBounds(cols.lower(), cols.upper());
+      soplex::DVectorRational lower(oracle()->space().dimension());
+      soplex::DVectorRational upper(oracle()->space().dimension());
+      const MixedIntegerSet& mis = *_scipOracle->mixedIntegerSet(); 
+      for (std::size_t v = 0; v < mis.numVariables(); ++v)
+      {
+        lower[v] = mis.variable(v).lowerBound;
+        upper[v] = mis.variable(v).upperBound;
+      }
+      setRelaxationBounds(lower, upper);
     }
     if (_useInstanceInequalities)
     {
@@ -388,7 +363,7 @@ protected:
   virtual bool printInstanceObjective()
   {
     std::cout << "Instance objective:\n ";
-    space().printLinearForm(std::cout, _instanceObjective);
+    oracle()->space().printLinearForm(std::cout, _instanceObjective);
     std::cout << "\n" << std::flush;
     return true;
   }
@@ -403,7 +378,6 @@ protected:
   bool _useInstanceInequalities;
 
 #ifdef WITH_SCIP
-  MixedIntegerProgram* _scipMip;
   std::shared_ptr<SCIPOracle> _scipOracle;
 #endif
   Vector _instanceObjective;

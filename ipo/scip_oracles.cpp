@@ -21,24 +21,7 @@
 
 using namespace soplex;
 
-/// TODO: Handle unbounded instances.
-
 namespace ipo {
-
-  void getSCIPObjective(SCIP* scip, soplex::DVectorRational& objective, bool makeMaximization)
-  {
-    std::size_t n = SCIPgetNOrigVars(scip);
-    objective.reDim(n);
-    SCIP_VAR** vars = SCIPgetOrigVars(scip);
-    for (std::size_t v = 0; v < n; ++v)
-      reconstruct(SCIPvarGetObj(vars[v]), objective[v], SCIPfeastol(scip));
-
-    if (makeMaximization && SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE)
-    {
-      for (std::size_t v = 0; v < n; ++v)
-        objective[v] *= -1;
-    }
-  }
 
   void getSCIPvarToIndexMap(SCIP* scip, SCIPvarToIndexMap& map)
   {
@@ -57,21 +40,47 @@ namespace ipo {
     }
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, SCIP* originalSCIP,
-    const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, mip, nextOracle)
+  Vector getSCIPObjective(SCIP* scip, bool makeMaximization)
   {
-    copySCIP(originalSCIP);
+    std::size_t n = SCIPgetNOrigVars(scip);
+    VectorData* data = new VectorData(n);
+    SCIP_VAR** vars = SCIPgetOrigVars(scip);
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      double value = SCIPvarGetObj(vars[v]);
+      if (!SCIPisZero(scip, value))
+      {
+        Rational x;
+        reconstruct(value, x, SCIPfeastol(scip));
+        if (x != 0) // Nonzero-check above does not guarantee that reconstruct yields a nonzero.
+          data->add(v, x);
+      }
+    }
 
-    initializeSpace(mip.space());
+    if (makeMaximization && SCIPgetObjsense(scip) == SCIP_OBJSENSE_MINIMIZE)
+    {
+      for (std::size_t p = 0; p < data->size(); ++p)
+        data->value(p) *= -1;
+    }
+
+    return Vector(data);
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, mip, nextOracle)
+  SCIPOracle::SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle)
+    : MIPOracleBase(name, nextOracle)
   {
-    initializeFromMIP(mip);
+    std::shared_ptr<MixedIntegerSet> mixedIntegerSet = constructFromSCIP(originalSCIP);
 
-    initializeSpace(mip.space());
+    initialize(mixedIntegerSet);
+  }
+
+  SCIPOracle::SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
+    const std::shared_ptr<OracleBase>& nextOracle)
+    : MIPOracleBase(name, nextOracle)
+  {
+    constructFromMixedIntegerSet(mixedIntegerSet);
+
+    initialize(mixedIntegerSet);
   }
 
   SCIPOracle::~SCIPOracle()
@@ -83,7 +92,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPfree(&_scip));
   }
 
-  void SCIPOracle::copySCIP(SCIP* originalSCIP)
+  std::shared_ptr<MixedIntegerSet> SCIPOracle::constructFromSCIP(SCIP* originalSCIP)
   {
     if (!SCIPisTransformed(originalSCIP))
     {
@@ -93,13 +102,6 @@ namespace ipo {
 
     std::size_t n = SCIPgetNOrigVars(originalSCIP);
     SCIP_VAR** origVars = SCIPgetOrigVars(originalSCIP);
-
-    for (std::size_t v = 0; v < n; ++v)
-    {
-      const std::string varName = SCIPvarGetName(origVars[v]);
-//       scipSpace.addVariable(varName);
-//       TODO: implement
-    }
 
     /// Create SCIP instance via copy.
 
@@ -113,6 +115,7 @@ namespace ipo {
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
     SCIP_CALL_EXC(SCIPsetBoolParam(_scip, "misc/catchctrlc", 0));
+    SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
 
     _variables.resize(n);
     for (std::size_t v = 0; v < n; ++v)
@@ -122,13 +125,15 @@ namespace ipo {
       _variables[v] = static_cast<SCIP_VAR*>(SCIPhashmapGetImage(hashMap, transVar));
     }
     SCIPhashmapFree(&hashMap);
+
+    return std::make_shared<MixedIntegerSet>(originalSCIP);
   }
 
-  void SCIPOracle::initializeFromMIP(const MixedIntegerProgram& mip)
+  void SCIPOracle::constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)
   {
-    std::size_t n = mip.space().dimension();
+    std::size_t n = mixedIntegerSet->space().dimension();
 
-    /// Initialize SCIP.
+    // Initialize SCIP.
 
     SCIP_CALL_EXC(SCIPcreate(&_scip));
     SCIP_CALL_EXC(SCIPincludeDefaultPlugins(_scip));
@@ -137,31 +142,31 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPsetBoolParam(_scip, "misc/catchctrlc", 0));
     SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
 
-    /// Create variables.
+    // Create variables.
 
-    const LPColSetRational& cols = mip.columns();
-    _variables.resize(cols.num());
-    for (std::size_t c = 0; c < cols.num(); ++c)
+    _variables.resize(mixedIntegerSet->numVariables());
+    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
     {
-      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[c], space()[c].c_str(),
-        double(cols.lower(c)), double(cols.upper(c)), double(cols.maxObj(c)),
-        mip.isIntegral(c) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
-      SCIP_CALL_EXC(SCIPaddVar(_scip, _variables[c]));
+      const MixedIntegerSet::Variable& variable = mixedIntegerSet->variable(v);
+      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[v], space()[v].c_str(), double(variable.lowerBound), 
+        double(variable.upperBound), 0.0, mixedIntegerSet->isIntegral(v) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
+      SCIP_CALL_EXC(SCIPaddVar(_scip, _variables[v]));
     }
 
-    /// Create constraints.
+    // Create row constraints.
 
-    const LPRowSetRational& rows = mip.rows();
-    for (std::size_t r = 0; r < rows.num(); ++r)
+    const std::vector<LinearConstraint>& rows = mixedIntegerSet->rowConstraints();
+    for (std::size_t r = 0; r < rows.size(); ++r)
     {
+      const LinearConstraint& constraint = rows[r];
       SCIP_CONS* cons = NULL;
-      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mip.rowName(r).c_str(), 0, 0, 0,
-        double(rows.lhs(r)), double(rows.rhs(r))));
-      const SVectorRational& row = rows.rowVector(r);
-      for (int p = row.size() - 1; p >= 0; --p)
+      double rhs = double(constraint.rhs());
+      double lhs = constraint.isEquation() ? rhs : 0.0;
+      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mixedIntegerSet->rowName(r).c_str(), 0, 0, 0, lhs, rhs));
+      const Vector& normal = constraint.normal();
+      for (std::size_t p = 0; p < normal.size(); ++p)
       {
-        SCIP_CALL_EXC(SCIPaddCoefLinear(_scip, cons, _variables[row.index(p)],
-double(row.value(p))));
+        SCIP_CALL_EXC(SCIPaddCoefLinear(_scip, cons, _variables[normal.index(p)], normal.approximation(p)));
       }
       SCIP_CALL_EXC(SCIPaddCons(_scip, cons));
       SCIP_CALL_EXC(SCIPreleaseCons(_scip, &cons));
@@ -183,25 +188,13 @@ double(row.value(p))));
 
     if (!currentFace().definesCompleteFace())
     {
-      DSVectorRational normalCopy;
-      Rational largest = currentFace().getMaximumNorm();
-//       Rational scaling = 1;
-      
-      // TODO: Scale currentFace()->sparseNormal properly!
-
-//       if (largest != 0 && (largest < _minLargestCoefficient || largest > _maxLargestCoefficient))
-//       {
-//         scaling = _bestLargestCoefficient / largest;
-//         normalCopy = currentFace()->sparseNormal() * scaling;
-//       }
-//       const SVectorRational& normal = (scaling == 1) ? currentFace()->sparseNormal() : normalCopy;
       const Vector& normal = currentFace().normal();
-      const Rational& rhs = currentFace().rhs();
+      double rhs = double(currentFace().rhs());
 
       // Add constraint to SCIP.
 
-      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &_faceConstraint, "face", 0, 0, 0,
-        double(rhs),   double(rhs)));
+      assert(currentFace().isEquation());
+      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &_faceConstraint, "face", 0, 0, 0, rhs, rhs));
       for (std::size_t p = 0; p < normal.size(); ++p)
       {
         SCIP_CALL_EXC(SCIPaddCoefLinear(_scip, _faceConstraint, _variables[normal.index(p)],

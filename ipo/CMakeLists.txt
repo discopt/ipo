@@ -23,7 +23,7 @@ set(IPO_SOURCES
   reconstruct.cpp
   vector_2d.cpp
   min_norm_2d.cpp
-  mixed_integer_program.cpp
+  mip.cpp
   facets.cpp
   affine_hull.cpp
   cpu_timer.cpp

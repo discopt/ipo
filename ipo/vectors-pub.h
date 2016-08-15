@@ -131,13 +131,28 @@ namespace ipo {
     /**
      * \brief Returns the value of the nonzero specified by \p position.
      * 
-     * Returns the value of the nonzero specified by \p position.
+     * Returns a const-reference to the value of the nonzero specified by \p position.
      * 
      * \param position Specifies the the nonzero, starting with 0.
      * \returns        Value of the nonzero.
      */
 
     inline const Rational& value(std::size_t position) const
+    {
+      assert(position < _nonzeros.size());
+      return _nonzeros[position].value;
+    }
+    
+    /**
+     * \brief Returns the value of the nonzero specified by \p position.
+     * 
+     * Returns a reference to the value of the nonzero specified by \p position.
+     * 
+     * \param position Specifies the the nonzero, starting with 0.
+     * \returns        Reference to the value of the nonzero.
+     */
+
+    inline Rational& value(std::size_t position)
     {
       assert(position < _nonzeros.size());
       return _nonzeros[position].value;

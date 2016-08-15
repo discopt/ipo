@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "oracles.h"
-#include "mixed_integer_program.h"
+#include "mip.h"
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -47,22 +47,17 @@ namespace ipo {
   /**
    * \brief Extracts the objective from a SCIP instance.
    *
-   * Extracts the objective from the given SCIP instance
-   * as a dense rational vector. The variables
-   * are ordered canonically (see \ref getSCIPvarToIndexMap()).
-   * By default, the objective is scaled such that
-   * it corresponds to a maximization problem.
+   * Extracts the objective from the given SCIP instance. The variables are ordered canonically (see \ref getSCIPvarToIndexMap()).
+   * By default, the objective is scaled such that it corresponds to a maximization problem.
    *
-   * \param originalSCIP
+   * \param scip
    *   SCIP instance
-   * \param objective
-   *   Objective vector for the objective. Its dimension is set appropriately.
    * \param makeMaximization
    *   If \c true, the objective is scaled such that it
    *   corresponds to a maximization problem.
    */
 
-  void getSCIPObjective(SCIP* originalSCIP, soplex::DVectorRational& objective, bool makeMaximization = true);
+  Vector getSCIPObjective(SCIP* scip, bool makeMaximization = true);
 
   /**
    * \brief An oracle based on the SCIP solver.
@@ -74,32 +69,32 @@ namespace ipo {
    * \ref MixedIntegerProgramCorrectorOracle that postprocesses the solutions.
    *
    * An instance is either constructed from a \c SCIP instance
-   * or from a \ref MixedIntegerProgram.
+   * or from a \ref MIP.
    */
 
   class SCIPOracle: public MIPOracleBase
   {
   public:
     /**
-     * \brief Constructs a heuristic SCIP oracle with given \p name associated to \p nextOracle.
+     * \brief Constructs a SCIP oracle with given \p name, optionally associated to \p nextOracle.
      *
-     * Constructs a heuristic SCIP oracle with given \p name that is associated to \p nextOracle.
-     * The ambient space is equal to that of \p nextOracle. The oracle is implemented by calling
-     * SCIP on a copy of the given \p originalSCIP instance.
+     * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is equal
+     * defined via the \p originalSCIP instance (and must be equal to that of \p nextOracle). The oracle is implemented by 
+     * calling SCIP on a copy of the given \p originalSCIP instance.
      */
 
-    SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, SCIP* originalSCIP,
-      const std::shared_ptr<OracleBase>& nextOracle = NULL);
+    SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Constructs a SCIP oracle with given \p name in given \p space.
      *
-     * Constructs a SCIP oracle with given \p name that is associated to \p nextOracle. The oracle
-     * is implemented by calling SCIP in order to solve the mixed-integer program \p mip. The
-     * ambient space is equal to that of \p mip and to that of \p nextOracle.
+     * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is equal to
+     * that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling SCIP in order 
+     * to solve mixed-integer programs over the \p mixedIntegerSet.
      */
 
-    SCIPOracle(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle = NULL);
+    SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, 
+      const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Destructor.
@@ -141,12 +136,12 @@ namespace ipo {
 //       const ObjectiveBound& objectiveBound = ObjectiveBound(),
 //       std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max(),
 //       std::size_t minHeuristic = 0);
-
+    
   protected:
 
-    void copySCIP(SCIP* originalSCIP);
+    std::shared_ptr<MixedIntegerSet> constructFromSCIP(SCIP* originalSCIP);
 
-    void initializeFromMIP(const MixedIntegerProgram& mip);
+    void constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet);
 
     virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
       std::vector<double*>& rays);
@@ -162,7 +157,7 @@ namespace ipo {
 //    *
 //    * A oracle for the polyhedron \f$ P \f$
 //    * that uses SCIP to optimize.
-//    * An instance is constructed from a \ref MixedIntegerProgram.
+//    * An instance is constructed from a \ref MIP.
 //    */
 //
 //   class ExactSCIPOptimizationOracle: public FaceOptimizationOracleBase
@@ -172,7 +167,7 @@ namespace ipo {
 //     /**
 //      * \brief Constructor.
 //      *
-//      * Constructs an oracle for the given \ref MixedIntegerProgram.
+//      * Constructs an oracle for the given \ref MIP.
 //      * It calls ExactSCIP externally and reads back the optimal
 //      * solution from a file.
 //      * For this the constructor creates a temporary directory.

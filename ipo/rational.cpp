@@ -2,6 +2,12 @@
 
 namespace ipo {
 
+  bool isIntegral(const Rational& number)
+  {
+    mpq_class y(number.getMpqRef());
+    return y.get_den() == 1;
+  }
+
   IntegralScaler::IntegralScaler()
     : _numScaler(0), _denScaler(1)
   {

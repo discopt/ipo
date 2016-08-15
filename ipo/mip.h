@@ -1,7 +1,8 @@
-#ifndef IPO_MIXED_INTEGER_PROGRAM_H_
-#define IPO_MIXED_INTEGER_PROGRAM_H_
+#ifndef IPO_MIP_H_
+#define IPO_MIP_H_
 
 #include "common.h"
+#include "rational.h"
 
 #include <string>
 #include <vector>
@@ -21,37 +22,46 @@
 namespace ipo {
 
   /**
-   * \brief A mixed-integer program.
+   * \brief A mixed-integer set.
    *
-   * A mixed-integer program.
-   * It is typically used to create oracles for optimizing over it,
-   * e.g., using \ref SCIPOracle and \ref ExactSCIPOracle.
+   * A mixed-integer set. It is typically used to create oracles for optimizing over it, e.g., using \ref SCIPOracle.
    */
 
-  class MixedIntegerProgram
+  class MixedIntegerSet
   {
+  public:
+    struct Variable
+    {
+      bool integral;
+      Rational upperBound;
+      Rational lowerBound;
+
+      Variable();
+      Variable(const Rational& lowerBound, const Rational& upperBound, bool integral);
+    };
+
   public:
 #ifdef WITH_SCIP
     /**
-     * \brief Constructs a \c MixedIntegerProgram from a \c SCIP instance.
+     * \brief Constructs a \c MixedIntegerSet from a \c SCIP instance.
      *
-     * Constructs a \c MixedIntegerProgram from a \c SCIP instance.
-     * Only explicitly stated linear constraints of the instance are considered.
+     * Constructs a \c MixedIntegerSet from a \c SCIP instance. Only explicitly stated linear constraints of the instance are 
+     * considered.
      */
 
-    MixedIntegerProgram(SCIP* scip);
+    MixedIntegerSet(SCIP* scip);
 #endif
 
     /**
      * \brief Destructor.
      */
 
-    virtual ~MixedIntegerProgram();
+    virtual ~MixedIntegerSet();
 
     /**
      * \brief Returns the space.
      *
-     * Returns a const reference to the space.
+     * Returns a const-reference to the space.
      */
 
     inline const Space& space() const
@@ -65,15 +75,15 @@ namespace ipo {
      * Returns the number of columns.
      */
 
-    inline std::size_t numColumns() const
+    inline std::size_t numVariables() const
     {
       return _space.dimension();
     }
 
     /**
-     * \brief Returns the number of rows.
+     * \brief Returns the number of row constraints.
      *
-     * Returns the number of rows.
+     * Returns the number of row constraints.
      */
 
     inline std::size_t numRows() const
@@ -82,25 +92,47 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the columns.
+     * \brief Returns a \p variable.
      *
-     * Returns a const reference to the columns.
+     * Returns a const-reference to the specified \p variable.
      */
 
-    inline const soplex::LPColSetRational& columns() const
+    inline const Variable& variable(std::size_t variable) const
     {
-      return _columns;
+      return _variables[variable];
     }
 
     /**
-     * \brief Returns the rows.
+     * \brief Returns a \p row constraint.
      *
-     * Returns a const reference to the rows.
+     * Returns a const-reference to a \p row constraint.
      */
 
-    inline const soplex::LPRowSetRational& rows() const
+    inline const LinearConstraint& rowConstraint(std::size_t row) const
     {
-      return _rows;
+      return _rowConstraints[row];
+    }
+
+    /**
+     * \brief Returns all row constraints.
+     *
+     * Returns a const-reference to vector containing all row constraint.
+     */
+
+    inline const std::vector<LinearConstraint>& rowConstraints() const
+    {
+      return _rowConstraints;
+    }
+
+    /**
+     * \brief Returns a \p row name.
+     *
+     * Returns a const-refrence to a \p row name.
+     */
+
+    inline const std::string& rowName(std::size_t row) const
+    {
+      return _rowNames[row];
     }
 
     /**
@@ -111,125 +143,112 @@ namespace ipo {
 
     inline bool isIntegral(std::size_t variable) const
     {
-      return _integrality[variable];
+      return _variables[variable].integral;
     }
 
+//     /**
+//      * \brief Returns true if the given \c point satisfies all bound constraints.
+//      *
+//      * Returns true if the given \c point satisfies all bound constraints.
+//      */
+// 
+//     bool checkPointBounds(const soplex::SVectorRational* point) const;
+// 
+//     /**
+//      * \brief Returns true if the given \c point satisfies all row constraints.
+//      *
+//      * Returns true if the given \c point satisfies all row constraints.
+//      */
+// 
+//     bool checkPointRows(const soplex::SVectorRational* point);
+// 
+//     /**
+//      * \brief Returns true if the given \c point satisfies all integrality constraints.
+//      *
+//      * Returns true if the given \c point satisfies all integrality constraints.
+//      */
+// 
+//     bool checkPointIntegral(const soplex::SVectorRational* point) const;
+// 
+//     /**
+//      * \brief Returns true if the given \c point is feasible.
+//      *
+//      * Returns true if the given \c point is feasible.
+//      */
+// 
+//     bool checkPoint(const soplex::SVectorRational* point);
+// 
+//     /**
+//      * \brief Returns true if the given \c ray satisfies all bound constraints.
+//      *
+//      * Returns true if the given \c ray satisfies all bound constraints.
+//      */
+// 
+//     bool checkRayBounds(const soplex::SVectorRational* ray) const;
+// 
+//     /**
+//      * \brief Returns true if the given \c ray satisfies all row constraints.
+//      *
+//      * Returns true if the given \c ray satisfies all row constraints.
+//      */
+// 
+//     bool checkRayRows(const soplex::SVectorRational* ray);
+// 
+//     /**
+//      * \brief Returns true if the given \c ray is feasible.
+//      *
+//      * Returns true if the given \c ray is feasible.
+//      */
+// 
+//     bool checkRay(const soplex::SVectorRational* ray);
+// 
     /**
-     * \brief Returns the name of the given row.
-     *
-     * Returns the name of the given \c row.
-     */
-
-    inline const std::string& rowName(std::size_t row) const
-    {
-      return _rowNames[row];
-    }
-
-    /**
-     * \brief Returns true if the given \c point satisfies all bound constraints.
-     *
-     * Returns true if the given \c point satisfies all bound constraints.
-     */
-
-    bool checkPointBounds(const soplex::SVectorRational* point) const;
-
-    /**
-     * \brief Returns true if the given \c point satisfies all row constraints.
-     *
-     * Returns true if the given \c point satisfies all row constraints.
-     */
-
-    bool checkPointRows(const soplex::SVectorRational* point);
-
-    /**
-     * \brief Returns true if the given \c point satisfies all integrality constraints.
-     *
-     * Returns true if the given \c point satisfies all integrality constraints.
-     */
-
-    bool checkPointIntegral(const soplex::SVectorRational* point) const;
-
-    /**
-     * \brief Returns true if the given \c point is feasible.
-     *
-     * Returns true if the given \c point is feasible.
-     */
-
-    bool checkPoint(const soplex::SVectorRational* point);
-
-    /**
-     * \brief Returns true if the given \c ray satisfies all bound constraints.
-     *
-     * Returns true if the given \c ray satisfies all bound constraints.
-     */
-
-    bool checkRayBounds(const soplex::SVectorRational* ray) const;
-
-    /**
-     * \brief Returns true if the given \c ray satisfies all row constraints.
-     *
-     * Returns true if the given \c ray satisfies all row constraints.
-     */
-
-    bool checkRayRows(const soplex::SVectorRational* ray);
-
-    /**
-     * \brief Returns true if the given \c ray is feasible.
-     *
-     * Returns true if the given \c ray is feasible.
-     */
-
-    bool checkRay(const soplex::SVectorRational* ray);
-
-    /**
-     * \brief Restricts the MIP to the given face.
-     *
-     * Restricts the MIP to the given face by adding an equation constraint.
-     */
+      * \brief Restricts the MixedIntegerSet to the given face.
+      *
+      * Restricts the MixedIntegerSet to the given face by adding an equation constraint.
+      */
 
     void setFace(const LinearConstraint& newFace);
 
-    /**
-     * \brief Returns all row constraints.
-     *
-     * Returns all row constraints or only those that are inequalities or equations,
-     * respectively.
-     *
-     * \param rows
-     *   Rows structure to write to.
-     * \param inequalities
-     *   Whether to extract inequalities.
-     * \param equations
-     *   Whether to extract equations.
-     * \param names
-     *   If not \c NULL, writes corresponding row names.
-     */
-
-    void getConstraints(soplex::LPRowSetRational& rows, bool inequalities, bool equations,
-        std::vector<std::string>* names = NULL);
-
-    /**
-     * \brief Extracts equations that correspond to fixed variables.
-     *
-     * Extracts equations that correspond to fixed variables.
-     *
-     * \param rows
-     *   Rows structure to write to.
-     * \param names
-     *   If not \c NULL, writes corresponding row names.
-     */
-
-    void getFixedVariableEquations(soplex::LPRowSetRational& rows,
-      std::vector<std::string>* names = NULL);
+//     /**
+//      * \brief Returns all row constraints.
+//      *
+//      * Returns all row constraints or only those that are inequalities or equations,
+//      * respectively.
+//      *
+//      * \param rows
+//      *   Rows structure to write to.
+//      * \param inequalities
+//      *   Whether to extract inequalities.
+//      * \param equations
+//      *   Whether to extract equations.
+//      * \param names
+//      *   If not \c NULL, writes corresponding row names.
+//      */
+// 
+//     void getConstraints(soplex::LPRowSetRational& rows, bool inequalities, bool equations,
+//         std::vector<std::string>* names = NULL);
+// 
+//     /**
+//      * \brief Extracts equations that correspond to fixed variables.
+//      *
+//      * Extracts equations that correspond to fixed variables.
+//      *
+//      * \param rows
+//      *   Rows structure to write to.
+//      * \param names
+//      *   If not \c NULL, writes corresponding row names.
+//      */
+// 
+//     void getFixedVariableEquations(soplex::LPRowSetRational& rows,
+//       std::vector<std::string>* names = NULL);
 
   protected:
     Space _space; // Space with column names.
-    soplex::LPColSetRational _columns; // Columns
-    soplex::LPRowSetRational _rows; // Rows
-    std::vector<std::string> _rowNames; // Row names
-    std::vector<bool> _integrality; // Integrality constraints
-    soplex::DVectorRational _worker; // Temporary dense rational vector.
-    LinearConstraint _currentFace; // Currently active face.
+    std::vector<Variable> _variables;
+    std::vector<LinearConstraint> _rowConstraints; // Row constraints.
+    std::vector<std::string> _rowNames; // Row constraints' names.
+    LinearConstraint _currentFace; // Currently active face constraint.
   };
 
   /**
@@ -241,22 +260,27 @@ namespace ipo {
 
   class MIPOracleBase: public OracleBase
   {
+  public:
+    inline const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet() const
+    {
+      return _mixedIntegerSet;
+    }
+
   protected:
     /**
      * \brief Constructs the oracle.
      *
-     * Constructs the oracle based on the MIP that is passed. The latter need not be complete, i.e., there may be inequalities
-     * missing. In this case, the separate() method should be implemented by the inheriting class, which is then queried with
-     * a potential solution and must produce additional inequalities. Not that this is only required to complete the continuous
-     * part of a solution, i.e., the integer variables of the solution will remain fixed until the completion is finished.
-     * The actual MIP solver oracle is provided by inheriting from this class.
+     * Constructs the oracle based on a MixedIntegerSet that is passed to the initialize() method. The latter need not be 
+     * complete, i.e., there may be inequalities missing. In this case, the separate() method should be implemented by the 
+     * inheriting class, which is then queried with a potential solution and must produce additional inequalities. Note that this 
+     * is only required to complete the continuous part of a solution, i.e., the integer variables of the solution will remain 
+     * fixed until the completion is finished. An actual MIP solver oracle is provided by inheriting from this class.
      *
-     * \param name       Name of the oracle.
-     * \param mip        Associated mixed-integer program.
-     * \param nextOracle Next associated oracle.
+     * \param name            Name of the oracle.
+     * \param nextOracle      Next associated oracle.
      */
 
-    MIPOracleBase(const std::string& name, const MixedIntegerProgram& mip, const std::shared_ptr<OracleBase>& nextOracle = NULL);
+    MIPOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Destructor.
@@ -267,6 +291,14 @@ namespace ipo {
     virtual ~MIPOracleBase();
 
     /**
+     * \brief Initializes the oracle for the given \p mixedIntegerSet.
+     * 
+     * Initializes the oracle for the given \p mixedIntegerSet. Also calls OracleBase::initializeSpace().
+     */
+    
+    void initialize(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet);
+
+    /**
      * \brief Restricts the oracle to the face defined by \p newFace.
      *
      * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
@@ -275,20 +307,11 @@ namespace ipo {
      * This implementation adds a corresponding equation to the LP that is used for the
      * postprocessing.
      */
-
+    
     virtual void setFace(const LinearConstraint& newFace = completeFace());
 
   protected:
-    
-    struct Column
-    {
-      bool integral;
-      soplex::Rational upper;
-      soplex::Rational lower;
-    };
 
-    void initializeLP(const MixedIntegerProgram& mip);
-    
 //     /**
 //      * \brief Initializes the LP and solver.
 //      *
@@ -397,8 +420,8 @@ namespace ipo {
     
     Vector computeRay();
 
+    std::shared_ptr<MixedIntegerSet> _mixedIntegerSet;
     soplex::SoPlex* _spx; // LP solver with the correction LP.
-    std::vector<Column> _columns;
     std::size_t _numRows;
     double* _objective;
     soplex::DVectorRational _lpResult;
@@ -406,12 +429,8 @@ namespace ipo {
     soplex::LPRowSetRational _separateResult;
     std::vector<double*> _points;
     std::vector<double*> _rays;
-
-//     MixedIntegerProgram& _mip; // Associated mixed-integer program.
-//     OracleBase* _approximateOracle; // Approximate oracle.
-//     soplex::DVectorRational _denseVector; // Temporary dense rational vector.
   };
 
 } /* namespace ipo */
 
-#endif /* IPO_MIXED_INTEGER_PROGRAM_H_ */
+#endif /* IPO_MIP_H_ */

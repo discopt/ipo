@@ -257,11 +257,6 @@ namespace ipo {
       return _points[index];
     }
 
-    inline const Space& space() const
-    {
-      return _space;
-    }
-
     inline std::shared_ptr<OracleBase>& oracle()
     {
       return _oracle;
@@ -309,7 +304,6 @@ namespace ipo {
     int _optionPrintRandom;
     bool _optionCache;
 
-    Space _space;
     std::shared_ptr<CacheOracle> _cacheOracle;
     Projection* _projection;
     std::shared_ptr<ProjectionOracle> _projectionOracle;

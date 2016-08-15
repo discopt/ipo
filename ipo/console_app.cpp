@@ -222,12 +222,7 @@ namespace ipo {
       ProjectionData* projectionData = new ProjectionData(originalSpace, projectionVariables);
       _projection = new Projection(projectionData);
       _projectionOracle =  std::make_shared<ProjectionOracle>("projection of " + oracle->name(), *_projection, oracle);
-      _space = _projection->imageSpace();
       oracle = _projectionOracle;
-    }
-    else
-    {
-      _space = oracle->space();
     }
 
     if (_optionCache)
@@ -323,7 +318,7 @@ namespace ipo {
         if (print >= 2)
         {
           std::cout << " ";
-          space().printLinearForm(std::cout, objective(i));
+          oracle()->space().printLinearForm(std::cout, objective(i));
         }
         if (print >= 1)
           std::cout << ":\n" << std::flush;
@@ -820,7 +815,7 @@ upperBounds)
       return false;
     }
 
-    std::size_t n = space().dimension();
+    std::size_t n = oracle()->space().dimension();
 
     _relaxationColumns.clear();
     DSVectorRational zeroVector;
@@ -832,7 +827,7 @@ upperBounds)
     for (std::size_t i = 0; i < _objectiveArguments.size(); ++i)
     {
       std::istringstream stream(_objectiveArguments[i]);
-      ConsoleApplicationObjectiveParser parser(stream, space(), _objectives, _objectiveNames);
+      ConsoleApplicationObjectiveParser parser(stream, oracle()->space(), _objectives, _objectiveNames);
       parser.run();
     }
 
@@ -841,7 +836,7 @@ upperBounds)
     for (std::size_t i = 0; i < _objectiveFiles.size(); ++i)
     {
       std::ifstream stream(_objectiveFiles[i]);
-      ConsoleApplicationObjectiveParser parser(stream, space(), _objectives, _objectiveNames);
+      ConsoleApplicationObjectiveParser parser(stream, oracle()->space(), _objectives, _objectiveNames);
       parser.run();
     }
 
@@ -879,7 +874,7 @@ upperBounds)
     for (std::size_t i = 0; i < _faceArguments.size(); ++i)
     {
       std::istringstream stream(_faceArguments[i]);
-      ConsoleApplicationInequalityParser parser(stream, space(), _faces, _faceNames);
+      ConsoleApplicationInequalityParser parser(stream, oracle()->space(), _faces, _faceNames);
       parser.run();
     }
 
@@ -888,7 +883,7 @@ upperBounds)
     for (std::size_t i = 0; i < _faceFiles.size(); ++i)
     {
       std::ifstream stream(_faceFiles[i]);
-      ConsoleApplicationInequalityParser parser(stream, space(), _faces, _faceNames);
+      ConsoleApplicationInequalityParser parser(stream, oracle()->space(), _faces, _faceNames);
       parser.run();
     }
 
@@ -897,7 +892,7 @@ upperBounds)
     for (std::size_t i = 0; i < _rayArguments.size(); ++i)
     {
       std::istringstream stream(_rayArguments[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _rays, _rayNames);
+      ConsoleApplicationPointParser parser(stream, oracle()->space(), _rays, _rayNames);
       parser.run();
     }
 
@@ -906,7 +901,7 @@ upperBounds)
     for (std::size_t i = 0; i < _rayFiles.size(); ++i)
     {
       std::ifstream stream(_rayFiles[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _rays, _rayNames);
+      ConsoleApplicationPointParser parser(stream, oracle()->space(), _rays, _rayNames);
       parser.run();
     }
 
@@ -915,7 +910,7 @@ upperBounds)
     for (std::size_t i = 0; i < _pointArguments.size(); ++i)
     {
       std::istringstream stream(_pointArguments[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _points, _pointNames);
+      ConsoleApplicationPointParser parser(stream, oracle()->space(), _points, _pointNames);
       parser.run();
     }
 
@@ -924,7 +919,7 @@ upperBounds)
     for (std::size_t i = 0; i < _pointFiles.size(); ++i)
     {
       std::ifstream stream(_pointFiles[i]);
-      ConsoleApplicationPointParser parser(stream, space(), _points, _pointNames);
+      ConsoleApplicationPointParser parser(stream, oracle()->space(), _points, _pointNames);
       parser.run();
     }
 
@@ -933,17 +928,17 @@ upperBounds)
 
   bool ConsoleApplicationBase::printAmbientDimension()
   {
-    std::cout << "Ambient dimension:\n " << space().dimension() << "\n" << std::flush;
+    std::cout << "Ambient dimension:\n " << oracle()->space().dimension() << "\n" << std::flush;
     return true;
   }
 
   bool ConsoleApplicationBase::printVariables()
   {
     std::cout << "Variables:\n";
-    for (std::size_t i = 0; i < space().dimension(); ++i)
+    for (std::size_t i = 0; i < oracle()->space().dimension(); ++i)
     {
-      const std::string& name = space()[i];
-      std::cout << " " << name << (i + 1 < space().dimension() ? "," : "\n");
+      const std::string& name = oracle()->space()[i];
+      std::cout << " " << name << (i + 1 < oracle()->space().dimension() ? "," : "\n");
     }
     return true;
   }
@@ -964,7 +959,7 @@ upperBounds)
     }
 
     std::shared_ptr<OracleBase> orac = oracle();
-    std::size_t n = space().dimension();
+    std::size_t n = oracle()->space().dimension();
 
     AffineHull::QuietOutput hullOutput;
     AffineHull::Result hull;
@@ -1005,7 +1000,7 @@ upperBounds)
       for (std::size_t i = 0; i < equations->size(); ++i)
       {
         std::cout << " Equation: ";
-        space().printLinearConstraint(std::cout, (*equations)[i]);
+        oracle()->space().printLinearConstraint(std::cout, (*equations)[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1035,12 +1030,12 @@ upperBounds)
     else if (result.isUnbounded())
     {
       std::cout << "unbounded ray ";
-      space().printVector(std::cout, result.rays.front().vector);
+      oracle()->space().printVector(std::cout, result.rays.front().vector);
       std::cout << "\n" << std::flush;
     }
     else
     {
-      space().printVector(std::cout, result.points.front().vector);
+      oracle()->space().printVector(std::cout, result.points.front().vector);
       std::cout << " (value: " << result.points.front().objectiveValue << ")\n" << std::flush;
     }
     return true;
@@ -1048,7 +1043,7 @@ upperBounds)
 
   bool ConsoleApplicationBase::generateFacets(const Vector& objective, bool print)
   {
-    std::size_t n = space().dimension();
+    std::size_t n = oracle()->space().dimension();
 
     /// Setup the LP.
 
@@ -1137,7 +1132,7 @@ upperBounds)
 
       manhattanNormImproveInequality(n, inequality, _equations);
 
-      space().printLinearConstraint(std::cout, inequality);
+      oracle()->space().printLinearConstraint(std::cout, inequality);
 
       if (_optionCertificates)
       {
@@ -1146,13 +1141,13 @@ upperBounds)
         for (std::size_t i = 0; i < certificate.points.size(); ++i)
         {
           std::cout << "  Certifying point: ";
-          space().printVector(std::cout, certificate.points[i]);
+          oracle()->space().printVector(std::cout, certificate.points[i]);
           std::cout << "\n";
         }
         for (std::size_t i = 0; i < certificate.rays.size(); ++i)
         {
           std::cout << "  Certifying ray: ";
-          space().printVector(std::cout, certificate.rays[i]);
+          oracle()->space().printVector(std::cout, certificate.rays[i]);
           std::cout << "\n";
         }
         std::cout << "\n" << std::flush;
@@ -1170,7 +1165,7 @@ upperBounds)
 
   bool ConsoleApplicationBase::separateRayFacet(const Vector& ray, bool& isFeasible)
   {
-    std::size_t n = space().dimension();
+    std::size_t n = oracle()->space().dimension();
 
     Separation::QuietOutput separateOutput;
     Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
@@ -1200,7 +1195,7 @@ upperBounds)
 
     manhattanNormImproveInequality(n, inequality, _equations);
 
-    space().printLinearConstraint(std::cout, inequality);
+    oracle()->space().printLinearConstraint(std::cout, inequality);
 
     if (_optionCertificates)
     {
@@ -1209,13 +1204,13 @@ upperBounds)
       for (std::size_t i = 0; i < certificate.points.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        space().printVector(std::cout, certificate.points[i]);
+        oracle()->space().printVector(std::cout, certificate.points[i]);
         std::cout << "\n";
       }
       for (std::size_t i = 0; i < certificate.rays.size(); ++i)
       {
         std::cout << "  Certifying ray: ";
-        space().printVector(std::cout, certificate.rays[i]);
+        oracle()->space().printVector(std::cout, certificate.rays[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1230,7 +1225,7 @@ upperBounds)
 
   bool ConsoleApplicationBase::separatePointFacet(const Vector& point, bool& isFeasible)
   {
-    std::size_t n = space().dimension();
+    std::size_t n = oracle()->space().dimension();
 
     Separation::QuietOutput separateOutput;
     Separation::Result separate(_spanningPoints, _spanningRays, _basicColumns, oracle());
@@ -1259,7 +1254,7 @@ upperBounds)
 
     manhattanNormImproveInequality(n, inequality, _equations);
 
-    space().printLinearConstraint(std::cout, inequality);
+    oracle()->space().printLinearConstraint(std::cout, inequality);
 
     if (_optionCertificates)
     {
@@ -1268,13 +1263,13 @@ upperBounds)
       for (std::size_t i = 0; i < certificate.points.size(); ++i)
       {
         std::cout << "  Certifying point: ";
-        space().printVector(std::cout, certificate.points[i]);
+        oracle()->space().printVector(std::cout, certificate.points[i]);
         std::cout << "\n";
       }
       for (std::size_t i = 0; i < certificate.rays.size(); ++i)
       {
         std::cout << "  Certifying ray: ";
-        space().printVector(std::cout, certificate.rays[i]);
+        oracle()->space().printVector(std::cout, certificate.rays[i]);
         std::cout << "\n";
       }
       std::cout << std::flush;
@@ -1296,7 +1291,7 @@ upperBounds)
     std::cout << " Dimension: " << smallestFace.dimension() << std::endl;
     Vector maximizingObjective = smallestFace.getMaximizingObjective();
     std::cout << " Objective : ";
-    space().printVector(std::cout, maximizingObjective);
+    oracle()->space().printVector(std::cout, maximizingObjective);
     std::cout << "\n" << std::flush;
 
     return true;
