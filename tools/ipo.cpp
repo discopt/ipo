@@ -274,6 +274,7 @@ public:
         {
           SCIP_CALL_EXC(SCIPcreate(&scip));
           SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
+          SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
           SCIP_CALL_EXC(SCIPreadProb(scip, firstArgument.c_str(), NULL));
           SCIP_CALL_EXC(SCIPtransformProb(scip));
         }
