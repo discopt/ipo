@@ -1244,15 +1244,16 @@ upperBounds)
     separate.certificate(certificate);
 
     if (separate.separatedFacet())
+    {
       std::cout << "\n Separated by facet: ";
+      manhattanNormImproveInequality(n, inequality, _equations);
+    }
     else if (separate.separatedEquation())
       std::cout << "\n Separated by equation: ";
     else
     {
       throw std::runtime_error("A bug in IPO occured: Separated neither a facet nor an equation! Please report.");
     }
-
-    manhattanNormImproveInequality(n, inequality, _equations);
 
     oracle()->space().printLinearConstraint(std::cout, inequality);
 

@@ -112,9 +112,8 @@ namespace ipo {
 //    std::cerr << std::endl;
 
     assert(lower.size() == 2);
-    if (lower.back() == 0)
-      throw std::runtime_error("HNF is singular!");
-    mpz_mod(lower.front().get_mpz_t(), lower.front().get_mpz_t(), lower.back().get_mpz_t());
+    if (lower.back() != 0)
+      mpz_mod(lower.front().get_mpz_t(), lower.front().get_mpz_t(), lower.back().get_mpz_t());
     upperLeft = upper.front();
     lowerLeft = lower.front();
     lowerRight = lower.back();
@@ -454,7 +453,8 @@ namespace ipo {
   void manhattanNormShortestCombination(const std::vector<mpz_class>& u, const std::vector<mpz_class>& v,
       mpq_class& optLambda, mpq_class& optMu, mpz_class& optPi)
   {
-    /// Make a quick check whether u and v are a lattice basis already.
+    // Make a quick check whether u and v are a lattice basis already.
+
     bool uHasUnit = false;
     bool uHasOne = false;
     bool vHasUnit = false;
@@ -495,6 +495,28 @@ namespace ipo {
     /// If not obviously already a lattice basis, compute HNF.
     mpz_class alpha, beta, gamma;
     hermiteNormalFormTwoRows(v, u, alpha, beta, gamma);
+    if (gamma == 0)
+    {
+      // HNF is singular: u and v must be parallel.
+
+      std::size_t jointNonzero = std::numeric_limits<std::size_t>::max();
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        if (u[i] != 0 && v[i] != 0)
+        {
+          jointNonzero = i;
+          break;
+        }
+      }
+
+      // Set lambda and mu such that lambda * u + mu * v is the zero-vector.
+
+      optLambda = 1;
+      optMu = -mpq_class(u[jointNonzero]) / mpq_class(v[jointNonzero]);
+      optPi = 0;
+      return;
+    }
+    
     if (alpha == 1 && gamma == 1)
       return manhattanNormShortestLatticeCombination(u, v, optLambda.get_num(), optMu.get_num(), optPi);
 
@@ -571,7 +593,8 @@ namespace ipo {
     std::vector<bool> processed(n, false);
     std::vector<mpz_class> combination(n, 0);
 
-    /// Init result with u.
+    // Init result with u.
+
     lambda = 1;
     mu = 0;
     pi = 0;
@@ -733,6 +756,8 @@ namespace ipo {
             throw std::runtime_error("BUG in manhattan norm inequality improvement: Multiplier must be positive!");
           inequality = LinearConstraint(inequality.type(), newTarget,
             targetMultiplier * inequality.rhs() + sourceMultiplier * equations[i].rhs());
+          if (newTarget.size() == 0)
+            return;
         }
       }
     }
