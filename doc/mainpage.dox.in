@@ -77,8 +77,8 @@ requirements for an optimization oracle are very simple:
     a point in <em>P</em> of maximum objective value.
 \li If the maximum is not attained, it must return an unbounded direction proving this.
     Of course, if <em>P</em> is empty, it must claim "infeasible".
-\li In order to speed up certain algorithms,
-    an oracle may also return non-optimal solutions if permitted by the caller.
+\li There exist several ways to speed up certain algorithms, e.g., by returning additional solutions, implementing
+    another heuristic oracle that is faster but does not guarantee optimality, etc.
 
 \section technicalDetails Technical Details
 
@@ -90,49 +90,48 @@ In order to implement an optimization oracle,
 there are some base classes from which one must inherit:
 
 \li 
-  OptimizationOracleBase: 
+  OracleBase: 
   The most general base class.
 \li 
-  FaceOptimizationOracleBase: 
-  Inherit from this class if your oracle directly supports optimization over any face given by an inducing inequality.
+  FaceOracleBase: 
+  Inherit from this class if your oracle is not capable of optimizing over a face of <em>P</em> explicitly.
 
 For mixed-integer programs, several oracles are already implemented:
 \li 
-  SCIPOptimizationOracle:
+  SCIPOracle:
   This oracle is built from a 
   <a href="http://scip.zib.de/">SCIP</a>
   instance which is used for optimization.
-  The returned floating-point solutions are turned into rational ones using rational-reconstruction techniques.
+  It inherits from MIPOracle which cares about the correct handling of the floating-point solutions returned by SCIP.
+<!--
 \li
-  MixedIntegerProgramCorrectorOracle:
-  This oracle is built from a MixedIntegerProgram instance which explicitly represents a MIP and
-  another oracle which is supposed to solve the MIP, allowing approximate solutions.
-  It takes the returned solutions and checks/restores feasibility and optimality w.r.t. the continuous variables.
-  Use this on top of an oracle which simply reconstructs floating-point solutions.
-\li
-  ExactSCIPOptimizationOracle:
+  ExactSCIPOracle:
   This oracle is built from a MixedIntegerProgram instances which explicitly represents a MIP and optionally
   another oracle which may act as a heuristic.
   If non-optimality is permitted, it runs the heuristic oracle,
   and otherwise
   <a href="http://scip.zib.de/#exact">SCIP-ex</a>.
+-->!
 \li
-  WrapperOptimizationOracle:
+  ExternalOracle:
   This oracle uses an external program using a defined interface.
 
-\section tools Command Line Tools
+\section tools Command Line Tool
 
 <span style="color: #007bff; font-weight: bold;">I</span><span style="font-weight: bold;">P</span><span style="color: #ff0000; font-weight: bold;">O</span></span>
-comes with tools that use
+comes with a tool that use
 <a href="http://scip.zib.de/">SCIP</a>
 as an oracle.
-It can handle all polyhedra that SCIP understands, e.g., mixed-integer hulls of ZIMPL models:
+It can handle all polyhedra that SCIP understands, e.g., mixed-integer hulls of ZIMPL models.
+Here are some sample invocations:
 \li
-  \c ipo-dimension: Computes the affine hull.
+  \c ipo --dimension: Computes the affine hull.
 \li
-  \c ipo-facets: Computes facets based on the objective function present in the instance.
+  \c ipo \c --facets: Uses the objective function present in the instance to computes facets.
 \li
-  \c ipo-smallest-face: Computes the dimension of the smallest face containing a given point.
+  \c ipo \c --facets \c --random \c 1000: Additionally usese 1000 randomly samples objective functions for facet generation..
+\li
+  \c ipo \c --smallest-face \c --point \c '(x1=1)': Computes the smallest face that contains the unit vector with x1=1.
 
 \section about About
 
@@ -162,7 +161,7 @@ Pull from the <a href="http://bitbucket.org/polyhedra-oracles/ipo/">git reposito
 Note that IPO is not available as in a packaged form (i.e., a tar.gz archive) since it
 is still under heavy development. This will change once it reaches a more stable state.
 
-After unpacking the tarball simply follow the instructions in the INSTALL file.
+After cloning, please follow the instructions in the INSTALL file.
 
 */
 
