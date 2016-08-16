@@ -46,7 +46,7 @@ namespace ipo {
 
   std::size_t VectorSpaceGenerators::addLazy(const Vector& vector, bool dependent)
   {
-    DSVectorRational svector;
+    DSVectorRational svector(vector.size());
     vectorToSparse(vector, svector);
     _spx->addColRational(LPColRational(Rational(0), svector, dependent ? Rational(0) : Rational(infinity), 
       dependent ? Rational(0) : Rational(-infinity)));
