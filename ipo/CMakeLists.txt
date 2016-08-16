@@ -35,24 +35,25 @@ set(IPO_SOURCES
 )
 
 set(IPO_INSTALL_HEADERS
-  unique_vectors.h
   affine_hull.h
-  facets.h
-  mip.h
-  polar_lp.h
-  smallest_face.h
-  vector_space_generators.h
-  cpu_timer.h
-  min_norm_2d.h
-  oracles.h
-  projection.h
   cache_oracle.h
-  reconstruct.h
-  spx_gmp.h
-  vector_2d.h
   console_app.h
+  cpu_timer.h
+  facets.h
+  min_norm_2d.h
+  mip.h
+  oracles.h
   parser.h
+  polar_lp.h
+  projection.h
+  smallest_face.h
   space.h
+  spx_gmp.h
+  unique_vectors.h
+  rational.h
+  reconstruct.h
+  vector_2d.h
+  vector_space_generators.h
 )
 
 set(IPO_OTHER_HEADERS
