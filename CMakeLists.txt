@@ -10,6 +10,13 @@ set (IPO_VERSION_MINOR 0)
 add_definitions("-std=gnu++11")
 
 
+# Set default BUILD_TYPE:
+if(NOT CMAKE_BUILD_TYPE)
+  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
+  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
+  FORCE)
+endif()
+
 SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 IF(UNIX)
