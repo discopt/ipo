@@ -351,8 +351,7 @@ public:
     }
     if (_useInstanceInequalities)
     {
-      // TODO: at the moment, MIPs have ranged rows.
-//       addRelaxationConstraints(_scipMip->rows());
+      addRelaxationConstraints(_scipOracle->mixedIntegerSet()->rowConstraints());
     }
 #endif
 
