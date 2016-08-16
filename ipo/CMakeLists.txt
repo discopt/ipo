@@ -38,11 +38,9 @@ set(IPO_INSTALL_HEADERS
   unique_vectors.h
   affine_hull.h
   facets.h
-  mixed_integer_program.h
+  mip.h
   polar_lp.h
-  rows.h
   smallest_face.h
-  unique_rational_vectors.h
   vector_space_generators.h
   cpu_timer.h
   min_norm_2d.h
