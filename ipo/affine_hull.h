@@ -4,7 +4,7 @@
 #include <map>
 
 #include "common.h"
-#include "cpu_timer.h"
+#include "timer.h"
 #include "oracles.h"
 
 namespace ipo {
@@ -329,10 +329,16 @@ namespace ipo {
    *                              direction vectors should be computed exactly.
    */
 
-  void affineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
-    const std::vector<LinearConstraint>& givenEquations, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::size_t lastCheapHeuristic = std::numeric_limits<std::size_t>::max(), 
-    std::size_t lastModerateHeuristic = 0, bool approximateDirections = true);
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
+    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, std::size_t lastCheapHeuristic, 
+    std::size_t lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(), 
+    bool approximateDirections = true);
+
+  /**
+   * \brief Class for debugging an affine-hull computation.
+   * 
+   * Class for debugging an affine-hull computation. It prints at least one line for each notification.
+   */
 
   class DebugAffineHullHandler: public AffineHullHandler
   {
@@ -370,6 +376,189 @@ namespace ipo {
     bool _printEquations;
     bool _printDirections;
   };
+
+  /**
+    * \brief Class for collecting statistics of an affine-hull computation.
+    * 
+    * Class for collecting statistics of an affine-hull computation.
+    */
+
+  class StatisticsAffineHullHandler: public AffineHullHandler
+  {
+  public:
+    /**
+      * \brief Constructor.
+      * 
+      * Constructor.
+      */
+
+    StatisticsAffineHullHandler();
+
+    /**
+      * \brief Destructor.
+      * 
+      * Destructor.
+      */
+
+    virtual ~StatisticsAffineHullHandler();
+
+    /**
+      * \brief Notification method, see \ref AffineHullHandler.
+      * 
+      * Notification method, see \ref AffineHullHandler.
+      */
+
+    virtual void notify(Event event, AffineHullState& state);
+
+    /**
+     * \brief Resets all statistics.
+     * 
+     * Resets all statistics.
+     */
+
+    void reset();
+
+    /**
+     * \brief Returns the number of oracle queries.
+     * 
+     * Returns the number of oracle queries.
+     */
+
+    inline std::size_t numOracleQueries() const
+    {
+      return _numOracleQueries;
+    }
+
+    /**
+     * \brief Returns the vector storing how often an oracle returned with each heuristicLevel.
+     * 
+     * Returns the vector storing how often an oracle returned with each heuristicLevel.
+     */
+
+    inline const std::vector<std::size_t>& numOracleSuccesses() const
+    {
+      return _numOracleSuccesses;
+    }
+
+    /**
+     * \brief Returns how many approximate direction vectors were computed.
+     * 
+     * Returns how many approximate direction vectors were computed.
+     */
+
+    inline std::size_t numDirectionApproximateSolves() const
+    {
+      return _numDirectionApproximateSolves;
+    }
+
+    /**
+     * \brief Returns how many exact direction vectors were computed.
+     * 
+     * Returns how many exact direction vectors were computed.
+     */
+
+    inline std::size_t numDirectionExactSolves() const
+    {
+      return _numDirectionExactSolves;
+    }
+
+    /**
+     * \brief Returns the average number of nonzeros of the computed exact directions.
+     * 
+     * Returns the average number of nonzeros of the computed exact directions.
+     */
+
+    inline double averageDirectionNonzeros() const
+    {
+      return double(_sumDirectionNonzeros) / double(_numDirectionExactSolves);
+    }
+
+    /**
+     * \brief Returns the maximum bitsize of a computed exact direction.
+     * 
+     * Returns the maximum bitsize of a computed exact direction.
+     */
+
+    inline std::size_t maxDirectionBitsize() const
+    {
+      return _maxDirectionBitsize;
+    }
+
+    /**
+     * \brief Returns the total running time for computing approximate directions.
+     * 
+     * Returns the total running time for computing approximate directions.
+     */
+
+    inline double timeApproximateDirections() const
+    {
+      return _timeApproximateDirections;
+    }
+
+    /**
+     * \brief Returns the total running time for computing exact directions.
+     * 
+     * Returns the total running time for computing exact directions.
+     */
+
+    inline double timeExactDirections() const
+    {
+      return _timeExactDirections;
+    }
+    
+    /**
+     * \brief Returns the total running time for updating the LU factorization.
+     * 
+     * Returns the total running time for updating the LU factorization
+     */
+
+    inline double timeFactorizations() const
+    {
+      return _timeFactorizations;
+    }
+    
+    /**
+     * \brief Returns the total running time for oracles.
+     * 
+     * Returns the total running time for oracles.
+     */
+
+    inline double timeOracles() const
+    {
+      return _timeOracles;
+    }
+
+    /**
+     * \brief Returns the total running time for the algorithm.
+     * 
+     * Returns the total running time for the algorithm.
+     */
+
+    inline double timeAll() const
+    {
+      return _timeAll;
+    }
+
+  protected:
+    std::size_t _numOracleQueries;
+    std::vector<std::size_t> _numOracleSuccesses;
+    std::size_t _numDirectionApproximateSolves;
+    std::size_t _numDirectionExactSolves;
+    std::size_t _sumDirectionNonzeros;
+    std::size_t _maxDirectionBitsize;
+    double _timeApproximateDirections;
+    double _timeExactDirections;
+    double _timeFactorizations;
+    double _timeOracles;
+    double _timeAll;
+    double _timeLastEvent;
+    Event _lastEvent;
+  };
+
+
+  
+  /////////////////////////////////// OLD INTERFACE /////////////////////////////////
+  
 
   /**
    * \brief Computation of the affine hull of a polyhedron.
@@ -543,7 +732,7 @@ namespace ipo {
     protected:
       std::string _indent;
       std::size_t _numVerificationCalls;
-      CPUTimer _timer;
+      Timer _timer;
       bool _lastHeuristic;
       double _lastTime;
       double _timeStarted;
@@ -601,7 +790,7 @@ namespace ipo {
     protected:
       double _lastTime;
       std::map<std::string, double> _times;
-      CPUTimer _timer;
+      Timer _timer;
     };
 
     /**

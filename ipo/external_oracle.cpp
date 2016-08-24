@@ -4,7 +4,7 @@
 #include <sys/stat.h>
 #include <string>
 
-#include "cpu_timer.h"
+#include "timer.h"
 
 using namespace soplex;
 
@@ -185,7 +185,7 @@ namespace ipo {
     std::ifstream timing((_path + "/time.log").c_str());
     double time;
     timing >> time;
-    addTimeToActiveTimers(time);
+    addTimeToRunningTimers(time);
   }
 
 } /* namespace ipo */

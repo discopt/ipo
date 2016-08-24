@@ -17,7 +17,7 @@
 #endif
 
 #include "reconstruct.h"
-#include "cpu_timer.h"
+#include "timer.h"
 
 using namespace soplex;
 

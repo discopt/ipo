@@ -206,7 +206,7 @@ std::size_t numRays);
       protected:
         std::string _indent;
         std::size_t _numVerificationCalls;
-        CPUTimer _timer;
+        Timer _timer;
         bool _lastApprox;
         double _lastTime;
         double _timeStarted;

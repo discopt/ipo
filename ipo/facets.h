@@ -5,7 +5,7 @@
 
 #include "common.h"
 #include "spx_gmp.h"
-#include "cpu_timer.h"
+#include "timer.h"
 #include "oracles.h"
 
 namespace ipo {
@@ -204,7 +204,7 @@ namespace ipo {
       double timeStamp();
 
       std::string _indent;
-      CPUTimer _timer;
+      Timer _timer;
       std::size_t _numStabilizationLP;
       std::size_t _numMainLP;
       std::size_t _numCache;

@@ -45,7 +45,7 @@ int main(int argc, char** argv)
 
   std::vector<Vector> points, rays;
   std::vector<LinearConstraint> givenEquations, equations;
-  affineHull(handlers, cacheOracle, givenEquations, points, rays, equations, 1);
+  affineHull(cacheOracle, points, rays, equations, handlers, 1, std::numeric_limits<std::size_t>::max(), givenEquations);
 
   return 0;
 }

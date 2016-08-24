@@ -1025,10 +1025,9 @@ namespace ipo {
     
   }
 
-  void affineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
-    const std::vector<LinearConstraint>& givenEquations,     std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::size_t lastCheapHeuristic, std::size_t lastModerateHeuristic,
-    bool approximateDirections)
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
+    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, std::size_t lastCheapHeuristic, 
+    std::size_t lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
   {
     XAffineHull algorithm(handlers, oracle, resultPoints, resultRays, resultEquations);
     algorithm.paramLastCheapHeuristic = lastCheapHeuristic;

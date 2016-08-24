@@ -27,7 +27,7 @@ set(IPO_SOURCES
   mip.cpp
   facets.cpp
   affine_hull.cpp
-  cpu_timer.cpp
+  timer.cpp
   polar_lp.cpp
   smallest_face.cpp
   external_oracle.cpp
@@ -39,7 +39,6 @@ set(IPO_INSTALL_HEADERS
   affine_hull.h
   cache_oracle.h
   console_app.h
-  cpu_timer.h
   facets.h
   min_norm_2d.h
   mip.h
@@ -51,6 +50,7 @@ set(IPO_INSTALL_HEADERS
   smallest_face.h
   space.h
   spx_gmp.h
+  timer.h
   unique_vectors.h
   rational.h
   reconstruct.h
