@@ -252,7 +252,7 @@ namespace ipo {
           points.push_back(point);
         }
 
-        /// TODO: Use exact primal SCIP functionality instead of reconstruction.
+        // TODO: Use exact primal SCIP functionality instead of reconstruction.
 
         break;
       }

@@ -108,27 +108,6 @@ namespace ipo {
     
     void search(std::vector<Data>& vectors, const soplex::VectorReal& approximateObjective,
       double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result);
-    
-//     struct VectorStats
-//     {
-//       
-// 
-//       double value; // TODO: remove
-// 
-//       VectorStats();
-//       VectorStats(double theObjectiveValue, std::size_t theSparsity, std::size_t theIndex);
-//       VectorStats& operator=(const VectorStats& other);
-//       bool operator<(const VectorStats& other) const;
-//     };
-// 
-//     typedef std::vector<std::size_t> FaceIndices;
-// 
-//     void updateFaceIndices(const UniqueRationalVectorsBase& vectors, FaceIndices& faceIndices,
-//       std::size_t& end, bool handlingPoints);
-// 
-//     void search(const UniqueRationalVectorsBase& vectors, const FaceIndices& faceIndices,
-//       const soplex::VectorReal& approxObjective, double approxObjectiveBound, bool handlingPoints,
-//       std::vector<std::size_t>& result);
 
   protected:
     UniqueVectors _uniquePoints;

@@ -100,8 +100,6 @@ namespace ipo {
         if (addRay(result.rays[i].vector))
           ++numAddedRays;
       }
-//       std::cerr << "CacheOracle: added " << numAddedPoints << " of " << result.points.size() << " points and "
-//         << numAddedRays << " of " << result.rays.size() << " rays to cache." << std::endl;
     }
 
     return level;
@@ -155,11 +153,8 @@ namespace ipo {
     if (!_uniquePoints.insert(p))
       return false;
 
-    if (!currentFace().definesCompleteFace())
-    {
-      if (currentFace().evaluatePoint(p) == 0)
-        _facePoints.push_back(Data(p));
-    }
+    if (currentFace().definesCompleteFace() || currentFace().evaluatePoint(p) == 0)
+      _facePoints.push_back(Data(p));
     return true;
   }
 
@@ -169,73 +164,10 @@ namespace ipo {
     if (!_uniqueRays.insert(r))
       return false;
 
-    if (!currentFace().definesCompleteFace())
-    {
-      if (currentFace().evaluateRay(r) == 0)
-        _faceRays.push_back(Data(r));
-    }
+    if (currentFace().definesCompleteFace() || currentFace().evaluateRay(r) == 0)
+      _faceRays.push_back(Data(r));
     return true;
   }
-
-  
-/*
-  CacheOracle::VectorStats::VectorStats()
-  {
-
-  }
-
-  CacheOracle::VectorStats::VectorStats(double theObjectiveValue, std::size_t theSparsity,
-    std::size_t theIndex) : sparsity(theSparsity), index(theIndex)
-  {
-    valueMantissa = frexp(theObjectiveValue, &valueExponent);
-    value = theObjectiveValue;
-  }
-
-  CacheOracle::VectorStats& CacheOracle::VectorStats::operator=(
-    const CacheOracle::VectorStats& other)
-  {
-    valueExponent = other.valueExponent;
-    valueMantissa = other.valueMantissa;
-    sparsity = other.sparsity;
-    index = other.index;
-    return *this;
-  }
-
-  bool CacheOracle::VectorStats::operator<(const CacheOracle::VectorStats& other) const
-  {
-    if (valueMantissa > 0 && other.valueMantissa <= 0)
-      return true;
-    if (valueMantissa >= 0 && other.valueMantissa > 0)
-      return false;
-    if (valueExponent > other.valueExponent)
-      return true;
-    if (valueExponent < other.valueExponent)
-      return false;
-    if (sparsity < other.sparsity)
-      return true;
-    if (sparsity > other.sparsity)
-      return false;
-    return valueMantissa > other.valueMantissa;
-  }
-
-  void CacheOracle::updateFaceIndices(const UniqueRationalVectorsBase& vectors,
-    CacheOracle::FaceIndices& faceIndices, std::size_t& end, bool handlingPoints)
-  {
-    for (; end < vectors.size(); ++end)
-    {
-      if (currentFace() != NULL)
-      {
-        if ((handlingPoints &&
-          (*vectors[end] * currentFace()->denseNormal() != currentFace()->rhs()))
-          || (!handlingPoints &&
-          (*vectors[end] * currentFace()->denseNormal() != 0)))
-        {
-          continue;
-        }
-      }
-      faceIndices.push_back(end);
-    }
-  }*/
 
   void CacheOracle::search(std::vector<Data>& vectors, const soplex::VectorReal& approximateObjective,
     double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result)

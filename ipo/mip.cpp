@@ -395,10 +395,9 @@ namespace ipo {
       prepareSolver(objective);
       Vector vector = computeRay();
       restoreSolver();
-      
-      result.rays.push_back(OracleResult::Ray(vector));
 
-      // If no ray could be found and heuristicLevel is positive, then we force forwarding by claiming infeasibility.
+      result.rays.push_back(OracleResult::Ray(vector));
+      return 0;
     }
     return heuristicLevel();
   }

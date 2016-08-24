@@ -33,3 +33,16 @@ install(
   COMPONENT bin
 )
 
+# paper-affine-hull
+
+add_executable(ipo-paper-affine-hull
+  paper_affine_hull.cpp
+)
+
+target_link_libraries(ipo-paper-affine-hull
+  ${IPO_LIBRARIES}
+)
+
+if (SCIP_FOUND)
+  target_link_libraries(ipo-paper-affine-hull ${SCIP_LIBRARIES})
+endif()

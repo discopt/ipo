@@ -76,8 +76,8 @@ namespace ipo {
     /**
      * \brief Returns \c true iff neither points nor rays are returned.
      *
-     * Returns \c true iff neither points nor rays are returned. In this case, heuristic()
-     * must return 0, since a heuristic must forward a call if nothing was found.
+     * Returns \c true iff neither points nor rays are returned. In this case, heuristicLevel() must return 0, since a heuristic 
+     * must forward a call if nothing was found.
      */
 
     inline bool isInfeasible()
@@ -88,8 +88,8 @@ namespace ipo {
     /**
      * \brief Returns \c true iff points are returned.
      *
-     * Returns \c true iff points (and hence no rays) are returned. If heuristic() returns 0,
-     * then an optimum is among them.
+     * Returns \c true iff points (and hence no rays) are returned. If heuristicLevel() returns 0, then the first point is an 
+     * optimal one.
      */
 
     inline bool isFeasible()
@@ -100,7 +100,7 @@ namespace ipo {
     /**
      * \brief Returns \c true iff rays are returned.
      *
-     * Returns \c true iff rays (and hence no points) are returned. In this case, heuristic()
+     * Returns \c true iff rays (and hence no points) are returned. In this case, heuristicLevel()
      * must return 0, since an exact oracle cannot do better.
      */
 
@@ -167,12 +167,14 @@ namespace ipo {
     Rational value;
     bool strict;
 
-    inline ObjectiveBound() : value(minusInfinity), strict(false)
+    inline ObjectiveBound() 
+      : value(plusInfinity), strict(false)
     {
 
     }
 
-    inline ObjectiveBound(const Rational& val, bool strct) : value(val), strict(strct)
+    inline ObjectiveBound(const Rational& val, bool strct)
+      : value(val), strict(strct)
     {
 
     }
@@ -292,18 +294,18 @@ namespace ipo {
      * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
      * objective vector), and finally postprocesses the result object.
      *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param minHeuristic   Requested minimum heuristic level.
-     * \param maxHeuristic   Requested maximum heuristic level.
+     * \param result            After the call, contains the oracle's answer.
+     * \param objective         Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound    Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param minHeuristicLevel Requested minimum heuristic level.
+     * \param maxHeuristicLevel Requested maximum heuristic level.
      *
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
     void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0,
+      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max());
 
     /**
      * \brief Runs the oracle to maximize the sparse rational \p objective.
@@ -315,18 +317,18 @@ namespace ipo {
      * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
      * objective vector), and finally postprocesses the result object.
      *
-     * \param result         After the call, contains the oracle's answer.
-     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
-     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
-     * \param minHeuristic   Requested minimum heuristic level.
-     * \param maxHeuristic   Requested maximum heuristic level.
+     * \param result            After the call, contains the oracle's answer.
+     * \param objective         Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound    Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param minHeuristicLevel Requested minimum heuristic level.
+     * \param maxHeuristicLevel Requested maximum heuristic level.
      *
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
     void maximize(OracleResult& result, const Vector& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristic = 0,
-      std::size_t maxHeuristic = std::numeric_limits<std::size_t>::max());
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0,
+      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max());
 
   protected:
 

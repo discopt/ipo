@@ -130,6 +130,8 @@ namespace ipo {
   void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, 
     std::size_t minHeuristic, std::size_t maxHeuristic)
   {
+    assert(objective.dim() == space().dimension());
+
     // Initialize result.
 
     result._objective = &objective;
@@ -138,8 +140,6 @@ namespace ipo {
 
     bool sort = false;
     bool checkDuplicates = false;
-
-//     std::cerr << "Oracle(" << heuristicLevel() <<") <" << name() << "> called for objective: " << objective << std::endl;
 
     result._heuristicLevel = maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, 
       checkDuplicates);
@@ -164,15 +164,6 @@ namespace ipo {
 
     if (checkDuplicates)
       result.removeDuplicates();
-
-//     std::cerr << "Oracle(" << heuristicLevel() <<") <" << name() << ">";
-//     if (result.isFeasible())
-//       std::cerr << " returned " << result.points.size() << " points, maximum = " << result.points.front().objectiveValue;
-//     else if (result.isUnbounded())
-//       std::cerr << " returned " << result.directions.size() << " rays.";
-//     else
-//       std::cerr << " claims infeasible." << std::endl;
-//     std::cerr << std::endl;
   }
 
   std::size_t OracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
@@ -182,7 +173,7 @@ namespace ipo {
       || heuristicLevel() > 0 && _nextOracle != NULL);
 
     // If requested, forward to next oracle.
-    
+
     if (heuristicLevel() > maxHeuristic)
     {
       return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
@@ -190,9 +181,10 @@ namespace ipo {
 
     // Call implementation and check whether results are satisfactory.
 
-    maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
-    if (heuristicLevel() == 0 || !result.rays.empty())
-      return heuristicLevel();
+    std::size_t implHeuristicLevel = maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
+      checkDups);
+    if (implHeuristicLevel == 0 || !result.rays.empty())
+      return implHeuristicLevel;
 
     if (!result.points.empty())
     {

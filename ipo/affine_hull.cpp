@@ -13,6 +13,1182 @@ using namespace soplex;
 
 
 namespace ipo {
+  
+  class Factorization
+  {
+  public:
+    Factorization(std::size_t numColumns) :
+        _numRows(0), _columnVectors(numColumns), _columnBasics(numColumns, std::numeric_limits<std::size_t>::max())
+    {
+
+    }
+
+    ~Factorization()
+    {
+
+    }
+
+    inline std::size_t numRows() const
+    {
+      return _numRows;
+    }
+
+    inline std::size_t numColumns() const
+    {
+      return _columnVectors.size();
+    }
+
+    inline bool isBasic(std::size_t columnIndex) const
+    {
+      return _columnBasics[columnIndex] != std::numeric_limits<std::size_t>::max();
+    }
+
+    void solveRightFactor(DVectorRational& vector) const
+    {
+      for (std::size_t b = _numRows; b > 0; b--)
+      {
+        std::size_t pivotRow = b - 1;
+        const DSVectorRational& column = _factorUcolumnVectors[pivotRow];
+        assert(column.index(column.size() - 1) == pivotRow);
+        vector[pivotRow] /= column.value(column.size() - 1);
+
+        for (int p = column.size() - 2; p >= 0; --p)
+        {
+          vector[column.index(p)] -= column.value(p) * vector[pivotRow];
+        }
+      }
+    }
+
+    void solveRightApproximateFactor(DVectorReal& vector) const
+    {
+      for (std::size_t b = _numRows; b > 0; b--)
+      {
+        std::size_t pivotRow = b - 1;
+        const DSVectorReal& column = _approximateFactorUcolumnVectors[pivotRow];
+        assert(column.index(column.size() - 1) == pivotRow);
+        vector[pivotRow] /= column.value(column.size() - 1);
+
+        for (int p = column.size() - 2; p >= 0; --p)
+        {
+          vector[column.index(p)] -= column.value(p) * vector[pivotRow];
+        }
+      }
+    }
+
+    void solveLeftFactor(DVectorRational& vector) const
+    {
+      for (std::size_t pivotRow = 0; pivotRow < numRows(); ++pivotRow)
+      {
+        const DSVectorRational& column = _factorLcolumnVectors[pivotRow];
+        assert(column.index(0) == pivotRow);
+        vector[pivotRow] /= column.value(0);
+
+        for (int p = column.size() - 1; p >= 1; --p)
+        {
+          vector[column.index(p)] -= column.value(p) * vector[pivotRow];
+        }
+      }
+    }
+
+    void solveLeftApproximateFactor(DVectorReal& vector) const
+    {
+      for (std::size_t pivotRow = 0; pivotRow < numRows(); ++pivotRow)
+      {
+        const DSVectorReal& column = _approximateFactorLcolumnVectors[pivotRow];
+        assert(column.index(0) == pivotRow);
+        vector[pivotRow] /= column.value(0);
+
+        for (int p = column.size() - 1; p >= 1; --p)
+        {
+          vector[column.index(p)] -= column.value(p) * vector[pivotRow];
+        }
+      }
+    }
+
+    void computeKernelVector(std::size_t columnIndex, soplex::DVectorRational& result) const
+    {
+      soplex::DVectorRational rhs;
+      rhs.reDim(numRows(), true);
+      const SVectorRational& col = _columnVectors[columnIndex];
+      for (int p = col.size() - 1; p >= 0; --p)
+        rhs[col.index(p)] = -col.value(p);
+
+      solveLeftFactor(rhs);
+      solveRightFactor(rhs);
+
+      std::size_t size = 1;
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+      {
+        if (rhs[b] != 0)
+          ++size;
+      }
+      result.reDim(numColumns(), false);
+      result.clear();
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+        result[_basicColumns[b]] = rhs[b];
+      result[columnIndex] = Rational(1);
+    }
+
+    void computeApproximateKernelVector(std::size_t columnIndex, soplex::DVectorReal& result, double epsilon) const
+    {
+      DVectorReal rhs;
+      rhs.reDim(numRows(), true);
+      const SVectorRational& col = _columnVectors[columnIndex];
+      for (int p = col.size() - 1; p >= 0; --p)
+        rhs[col.index(p)] = -(double) col.value(p);
+
+      solveLeftApproximateFactor(rhs);
+      solveRightApproximateFactor(rhs);
+
+      result.reDim(numColumns());
+      result.clear();
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+      {
+        if (fabs(rhs[b]) > epsilon)
+          result[_basicColumns[b]] = rhs[b];
+      }
+      result[columnIndex] = 1.0;
+    }
+
+    void dump()
+    {
+      std::cerr << "ACM: Matrix is " << numRows() << "x" << numColumns() << "\n";
+      std::cerr << "ACM: Basis:";
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+        std::cerr << " " << _basicColumns[b];
+      std::cerr << std::endl;
+      for (std::size_t c = 0; c < numColumns(); ++c)
+      {
+        std::cerr << "ACM: Column " << c << ":";
+        for (int p = 0; p < _columnVectors[c].size(); ++p)
+        {
+          std::cerr << "{" << _columnVectors[c].index(p) << ":" << _columnVectors[c].value(p) << "}";
+        }
+        std::cerr << std::endl;
+      }
+      std::cerr << "ACM: L:\n";
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+      {
+        std::cerr << "ACM: Column " << b << " -> " << _basicColumns[b] << ":";
+        for (int p = 0; p < _factorLcolumnVectors[b].size(); ++p)
+        {
+          std::cerr << "{" << _factorLcolumnVectors[b].index(p) << ":" << _factorLcolumnVectors[b].value(p) << "}";
+        }
+        std::cerr << std::endl;
+      }
+      std::cerr << "ACM: U:\n";
+      for (std::size_t b = 0; b < _basicColumns.size(); ++b)
+      {
+        std::cerr << "ACM: Column " << b << " -> " << _basicColumns[b] << ":";
+        for (int p = 0; p < _factorUcolumnVectors[b].size(); ++p)
+        {
+          std::cerr << "{" << _factorUcolumnVectors[b].index(p) << ":" << _factorUcolumnVectors[b].value(p) << "}";
+        }
+        std::cerr << std::endl;
+      }
+
+    }
+
+    void addRow(const Vector& row, const Rational& last, std::size_t newBasicColumnIndex)
+    {
+      assert(_columnBasics[newBasicColumnIndex] == std::numeric_limits<std::size_t>::max());
+
+      // Compute new column which is aligned right to the right factor.
+
+      DVectorRational rhs;
+      rhs.reDim(numRows(), true);
+      rhs.assign(_columnVectors[newBasicColumnIndex]);
+      solveLeftFactor(rhs);
+      _factorUcolumnVectors.push_back(DSVectorRational());
+      _factorUcolumnVectors.back() = rhs;
+      _factorUcolumnVectors.back().sort();
+      _basicColumns.push_back(newBasicColumnIndex);
+      _columnBasics[newBasicColumnIndex] = numRows();
+
+      _approximateFactorUcolumnVectors.push_back(DSVectorReal());
+      for (int p = 0; p < _factorUcolumnVectors.back().size(); ++p)
+      {
+        _approximateFactorUcolumnVectors.back().add(_factorUcolumnVectors.back().index(p),
+            (double) _factorUcolumnVectors.back().value(p));
+      }
+
+      // Copy new row to worker which is a row vector indexed the ordered basis.
+
+      DVectorRational worker;
+      worker.reDim(numRows() + 1, true);
+      for (int p = row.size() - 1; p >= 0; --p)
+      {
+        if (_columnBasics[row.index(p)] != std::numeric_limits<std::size_t>::max())
+          worker[_columnBasics[row.index(p)]] = row.value(p);
+      }
+      if (last != 0 && _columnBasics[numColumns() - 1] != std::numeric_limits<std::size_t>::max())
+        worker[_columnBasics[numColumns() - 1]] = last;
+
+      std::vector<int> positions(_basicColumns.size(), 0);
+      for (std::size_t b = 0; b < _basicColumns.size() - 1; ++b)
+      {
+        if (worker[b] == 0)
+          continue;
+
+        std::size_t pivotRowIndex = b;
+        std::size_t pivotColumnIndex = _basicColumns[b];
+        assert(_factorUcolumnVectors[b].index(_factorUcolumnVectors[b].size() - 1) == pivotRowIndex);
+        const Rational& pivotElement = _factorUcolumnVectors[b].value(_factorUcolumnVectors[b].size() - 1);
+        assert(pivotElement != 0);
+        const Rational lambda = -worker[b] / pivotElement;
+
+        for (std::size_t i = b + 1; i < _basicColumns.size(); ++i)
+        {
+          const SVectorRational& currentRightColumn = _factorUcolumnVectors[i];
+          while (positions[i] < currentRightColumn.size() && currentRightColumn.index(positions[i]) < pivotRowIndex)
+            positions[i]++;
+
+          // Pivot row entry may be zero:
+
+          if (positions[i] == currentRightColumn.size() || currentRightColumn.index(positions[i]) > pivotRowIndex)
+            continue;
+
+          assert(currentRightColumn.index(positions[i]) == pivotRowIndex);
+
+          worker[i] += lambda * currentRightColumn.value(positions[i]);
+        }
+
+        /// Put -lambda into left factor.
+        _factorLcolumnVectors[b].add(_numRows, -lambda);
+        _approximateFactorLcolumnVectors[b].add(_numRows, -(double) lambda);
+      }
+      if (worker[numRows()] == 0)
+      {
+        throw std::runtime_error("Invalid call to AffineComputationMatrix::addRow: Basis matrix is singular!");
+      }
+
+      // Diagonal entries.
+
+      _factorLcolumnVectors.push_back(DSVectorRational());
+      _factorLcolumnVectors[numRows()].add(numRows(), Rational(1));
+      _factorUcolumnVectors[numRows()].add(numRows(), worker[numRows()]);
+
+      _approximateFactorLcolumnVectors.push_back(DSVectorReal());
+      _approximateFactorLcolumnVectors[numRows()].add(numRows(), 1.0);
+      _approximateFactorUcolumnVectors[numRows()].add(numRows(), (double) worker[numRows()]);
+
+      // Physically add the row.
+
+      for (int p = row.size() - 1; p >= 0; --p)
+      {
+        _columnVectors[row.index(p)].add(numRows(), row.value(p));
+      }
+      if (last != 0)
+        _columnVectors[numColumns() - 1].add(numRows(), last);
+      ++_numRows;
+    }
+
+    void getLastRow(DVectorRational& row) const
+    {
+      row.reDim(numColumns(), true);
+      if (numRows() == 0)
+        return;
+      int rowIndex = numRows() - 1;
+      for (std::size_t c = 0; c < numColumns(); ++c)
+      {
+        int p = _columnVectors[c].size() - 1;
+        if (p >= 0 && _columnVectors[c].index(p) == rowIndex)
+        {
+          row[c] = _columnVectors[c].value(p);
+        }
+      }
+    }
+
+  protected:
+    std::size_t _numRows;
+    std::vector<DSVectorRational> _columnVectors;
+    std::vector<std::size_t> _basicColumns;
+    std::vector<std::size_t> _columnBasics;
+    std::vector<DSVectorRational> _factorLcolumnVectors;
+    std::vector<DSVectorRational> _factorUcolumnVectors;
+    std::vector<DSVectorReal> _approximateFactorLcolumnVectors;
+    std::vector<DSVectorReal> _approximateFactorUcolumnVectors;
+  };
+
+  struct NonbasicColumn
+  {
+    bool exactValid;
+    soplex::DVectorRational exactDirection;
+    Rational exactRhs;
+    bool approximateValid;
+    soplex::DVectorReal approximateDirection;
+    std::size_t sparsity;
+    bool definesEquation;
+    bool avoid;
+
+    NonbasicColumn()
+      : exactDirection(0)
+    {
+      exactValid = false;
+      approximateValid = false;
+      definesEquation = false;
+      avoid = false;
+      sparsity = 0;
+    }
+
+    bool requiredBefore(const NonbasicColumn& other) const
+    {
+      if (definesEquation)
+        return false;
+      if (other.definesEquation)
+        return true;
+
+      if (avoid)
+        return false;
+      if (other.avoid)
+        return true;
+
+      return false;
+    }
+
+    bool preferredBeforeSparsity(const NonbasicColumn& other) const
+    {
+      assert(!this->requiredBefore(other));
+      assert(!other.requiredBefore(*this));
+
+      return sparsity < other.sparsity;
+    }
+  };
+
+  AffineHullState::AffineHullState()
+  {
+
+  }
+
+  AffineHullState::~AffineHullState()
+  {
+
+  }
+
+  class XAffineHull : public AffineHullState
+  {
+  public:
+    XAffineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
+      std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, std::vector<LinearConstraint>& resultEquations)
+      : _handlers(handlers), _oracle(oracle), _points(resultPoints), _rays(resultRays), _equations(resultEquations),
+      _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(plusInfinity), 
+      _objectiveValueNegative(plusInfinity),
+      _verifyIndex(std::numeric_limits<std::size_t>::max()),
+      _verifySuccess(true), _lastApproximateDirectionSolves(0), _lastExactDirectionSolves(0),
+      _lastExactDirectionNonzeros(0), _lastExactDirectionBitsize(std::numeric_limits<std::size_t>::max())
+    {
+      _points.clear();
+      _rays.clear();
+      _equations.clear();
+      _directionPositiveVector.reDim(_n, false);
+      _directionNegativeVector.reDim(_n, false);
+      _columns.resize(_n + 1);
+      _columns[_n].avoid = true;
+    }
+
+    virtual ~XAffineHull()
+    {
+      
+    }
+
+    virtual const Space& space() const
+    {
+      return _oracle->space();
+    }
+    
+    virtual std::size_t numPoints() const
+    {
+      return _points.size();
+    }
+        
+    virtual std::size_t numRays() const
+    {
+      return _rays.size();
+    }
+
+    virtual std::size_t numEquations() const
+    {
+      return _equations.size();
+    }
+
+    virtual std::size_t numCandidateEquations() const
+    {
+      return _candidateEquations.size();
+    }
+
+    virtual bool infeasible() const
+    {
+      return _infeasible;
+    }
+
+    virtual std::size_t verifyIndex() const
+    {
+      return _verifyIndex;
+    }
+    
+    virtual bool verifySuccess() const
+    {
+      return _verifySuccess;
+    }
+
+    virtual std::size_t directionApproximateSolves() const
+    {
+      return _lastApproximateDirectionSolves;
+    }
+
+    virtual std::size_t directionExactSolves() const
+    {
+      return _lastExactDirectionSolves;
+    }
+
+    virtual std::size_t directionNonzeros()
+    {
+      if (_lastExactDirectionNonzeros == std::numeric_limits<std::size_t>::max())
+      {
+        _lastExactDirectionNonzeros = 0;
+        for (std::size_t v = 0; v < _n; ++v)
+        {
+          if (_directionPositiveVector[v] != 0)
+            ++_lastExactDirectionNonzeros;
+        }
+      }
+      return _lastExactDirectionNonzeros;
+    }
+
+    virtual std::size_t directionBitsize()
+    {
+      if (_lastExactDirectionBitsize == std::numeric_limits<std::size_t>::max())
+      {
+        _lastExactDirectionBitsize = 0;
+        for (std::size_t v = 0; v < _n; ++v)
+        {
+          if (_directionPositiveVector[v] != 0)
+            _lastExactDirectionBitsize += _directionPositiveVector[v].sizeInBase(2);
+        }
+      }
+      return _lastExactDirectionBitsize;
+    }
+
+    virtual const soplex::VectorRational& directionVector()
+    {
+      return _directionPositiveVector;
+    }
+
+    virtual std::size_t oracleMaxHeuristicLevel() const
+    {
+      return _oracleMaxHeuristicLevel;
+    }
+
+    virtual std::size_t oracleMinHeuristicLevel() const
+    {
+      return _oracleMinHeuristicLevel;
+    }
+
+    virtual std::size_t oracleResultHeuristicLevel() const
+    {
+      return _oracleResultHeuristicLevel;
+    }
+
+    virtual std::size_t oracleNumPoints() const
+    {
+      return _result.points.size();
+    }
+
+    virtual std::size_t oracleNumRays() const
+    {
+      return _result.rays.size();
+    }
+
+    virtual const std::vector<Vector>& spanningPoints() const
+    {
+      return _points;
+    }
+
+    virtual const std::vector<Vector>& spanningRays() const
+    {
+      return _rays;
+    }
+
+    virtual const std::vector<LinearConstraint>& equations() const
+    {
+      return _equations;
+    }
+
+    virtual const std::vector<LinearConstraint>& candidateEquations() const
+    {
+      return _candidateEquations;
+    }
+
+  protected:
+
+    void notify(AffineHullHandler::Event event)
+    {
+      for (std::size_t i = 0; i < _handlers.size(); ++i)
+        _handlers[i]->notify(event, *this);
+    }
+
+    void resetEquations()
+    {
+      _equationSpace.reset(_n);
+      for (std::size_t i = 0; i < _equations.size(); ++i)
+        _equationSpace.addLazy(_equations[i].normal());
+      _equationSpace.flushLazy();
+    }
+
+    void initializeEquations(const std::vector<LinearConstraint>& givenEquations)
+    {
+      assert(_equations.empty());
+
+      _equationSpace.reset(_n);
+      for (std::size_t i = 0; i < givenEquations.size(); ++i)
+        _equationSpace.addLazy(givenEquations[i].normal());
+      _equationSpace.flushLazy();
+
+      for (std::size_t i = 0; i < givenEquations.size(); ++i)
+      {
+        if (_equationSpace.isDependent(i))
+          _equations.push_back(givenEquations[i]);
+      }
+
+      resetEquations();
+    }
+
+    std::size_t updateApproximateDirections()
+    {
+      std::size_t count = 0;
+      for (std::size_t c = 0; c <= _n; ++c)
+      {
+        DSVectorReal vector;
+        if (!_factorization.isBasic(c) && !_columns[c].approximateValid)
+        {
+          vector.clear();
+          _factorization.computeApproximateKernelVector(c, _columns[c].approximateDirection, paramApproximateDirectionEpsilon);
+          _columns[c].approximateValid = true;
+          ++count;
+        }
+      }
+    }
+
+    void computeAllowedDirectionColumn()
+    {
+      _allowedDirectionColumns.clear();
+      for (std::size_t c = 0; c <= _n; ++c)
+      {
+        if (_factorization.isBasic(c))
+          continue;
+
+        if (_allowedDirectionColumns.empty())
+        {
+          _allowedDirectionColumns.push_back(c);
+          continue;
+        }
+        if (_columns[c].requiredBefore(_columns[_allowedDirectionColumns.front()]))
+        {
+          _allowedDirectionColumns.clear();
+          _allowedDirectionColumns.push_back(c);
+        }
+        else if (!_columns[_allowedDirectionColumns.front()].requiredBefore(_columns[c]))
+          _allowedDirectionColumns.push_back(c);
+      }
+
+      for (std::size_t i = 0; i < _allowedDirectionColumns.size(); ++i)
+      {
+        assert(!_columns[_allowedDirectionColumns[i]].definesEquation);
+      }
+    }
+    
+    std::size_t selectDirectionColumnSparseApproximate()
+    {
+      std::size_t column = _allowedDirectionColumns[0];
+      for (std::size_t i = 1; i < _allowedDirectionColumns.size(); ++i)
+      {
+        if (_columns[_allowedDirectionColumns[i]].sparsity < _columns[column].sparsity)
+          column = _allowedDirectionColumns[i];
+      }
+      return column;
+    }
+
+    std::size_t selectDirectionColumnRandom()
+    {
+      return _allowedDirectionColumns[rand() % _allowedDirectionColumns.size()];
+    }
+
+    void updateExactDirection(std::size_t column)
+    {
+      NonbasicColumn& col = _columns[column];
+      _factorization.computeKernelVector(column, col.exactDirection);
+
+      col.exactRhs = col.exactDirection[_n];
+      col.exactDirection.reDim(_n);
+      col.exactValid = true;
+
+      // Also update approximate direction.
+
+      col.approximateDirection = col.exactDirection;
+      col.approximateValid = true;
+    }
+
+    bool checkDirectionDepends(std::size_t column)
+    {
+      if (_equationSpace.isDependent(_columns[column].exactDirection))
+      {
+        _columns[column].definesEquation = true;
+        return true;
+      }
+      return false;
+    }
+
+    void addPoint(Vector& point, std::size_t column, bool invalidate)
+    {
+      _points.push_back(point);
+
+      notify(AffineHullHandler::POINT_BEGIN);
+
+      _basicColumns.push_back(column);
+      _factorization.addRow(point, Rational(-1), column);
+
+      if (invalidate)
+      {
+        DVectorRational lastRow;
+        _factorization.getLastRow(lastRow);
+        lastRow.reDim(_n);
+        for (std::size_t c = 0; c <= _n; ++c)
+        {
+          if (_factorization.isBasic(c))
+            continue;
+
+          _columns[c].approximateValid = false;
+          if (_columns[c].exactValid)
+          {
+            Rational product = _columns[c].exactDirection * lastRow;
+            product -= _columns[c].exactRhs;
+            if (product != 0)
+            {
+              _columns[c].exactValid = false;
+              _columns[c].definesEquation = false;
+            }
+          }
+        }
+      }
+
+      notify(AffineHullHandler::POINT_END);
+    }
+
+    void addRay(Vector& ray, std::size_t column, bool invalidate)
+    {
+      _rays.push_back(ray);
+
+      notify(AffineHullHandler::RAY_BEGIN);      
+      
+      _basicColumns.push_back(column);
+      _factorization.addRow(ray, Rational(0), column);
+
+      if (invalidate)
+      {
+        DVectorRational lastRow;
+        _factorization.getLastRow(lastRow);
+        lastRow.reDim(_n);
+        for (std::size_t c = 0; c <= _n; ++c)
+        {
+          if (_factorization.isBasic(c))
+            continue;
+
+          _columns[c].approximateValid = false;
+          if (_columns[c].exactValid)
+          {
+            Rational product = _columns[c].exactDirection * lastRow;
+            if (product != 0)
+            {
+              _columns[c].exactValid = false;
+              _columns[c].definesEquation = false;
+            }
+          }
+        }
+      }
+      
+      notify(AffineHullHandler::RAY_END);
+    }
+
+    void oracleQuery(AffineHullHandler::Event event, const soplex::DVectorRational& objective, 
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0, 
+      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max())
+    {
+      _oracleMaxHeuristicLevel = maxHeuristicLevel;
+      _oracleMinHeuristicLevel = minHeuristicLevel;
+
+      notify(event);
+      
+      _oracle->maximize(_result, objective, objectiveBound, minHeuristicLevel, maxHeuristicLevel);
+      _oracleResultHeuristicLevel = _result.heuristicLevel();
+
+      if (event == AffineHullHandler::ORACLE_VERIFY_BEGIN)
+        _verifySuccess = _result.isFeasible() && _result.points.front().objectiveValue == objectiveBound.value;
+      
+      notify(AffineHullHandler::Event(int(event) + 1));
+    }
+
+    void findLastPoint()
+    {
+      _directionPositiveVector.clear();
+
+      oracleQuery(AffineHullHandler::ORACLE_ZERO_BEGIN, _directionPositiveVector);
+
+      if (_result.isUnbounded())
+      {
+        throw std::runtime_error("Oracle claims unbounded for zero objective vector.");
+      }
+      else if (_result.isFeasible())
+        addPoint(_result.points.front().vector, _n, false);
+      else if (!_rays.empty())
+      {
+        throw std::runtime_error("Oracle claims infeasible after returning points or rays.");
+      }
+    }
+
+    void mainLoop(std::size_t lastCheapHeuristic, std::size_t lastHeuristic)
+    {
+      while (lowerBound() < candidateUpperBound())
+      {
+        notify(AffineHullHandler::LOOP);
+
+        // Zero objective case.
+
+        if (_points.empty() && _rays.size() == candidateUpperBound())
+        {
+          findLastPoint();
+          return;
+        }
+
+        if (paramApproximateDirections)
+        {
+          // Approximate directions.
+
+          notify(AffineHullHandler::DIRECTIONS_APPROXIMATE_BEGIN);
+          _lastApproximateDirectionSolves = updateApproximateDirections();
+          notify(AffineHullHandler::DIRECTIONS_APPROXIMATE_END);
+        }
+
+        // Exact directions.
+
+        notify(AffineHullHandler::DIRECTIONS_EXACT_BEGIN);
+        _lastExactDirectionSolves = 0;
+        _allowedDirectionColumns.clear();
+        do
+        {
+          if (_allowedDirectionColumns.empty())
+            computeAllowedDirectionColumn();
+          assert(!_allowedDirectionColumns.empty());
+
+          if (paramApproximateDirections)
+            _directionColumn = selectDirectionColumnSparseApproximate();
+          else
+            _directionColumn = selectDirectionColumnRandom();
+
+          assert(_directionColumn <= _n);
+
+          updateExactDirection(_directionColumn);
+          ++_lastExactDirectionSolves;
+        }
+        while (checkDirectionDepends(_directionColumn));
+        _directionPositiveVector = _columns[_directionColumn].exactDirection;
+        _directionNegativeVector = -_directionPositiveVector;
+        _lastExactDirectionNonzeros = std::numeric_limits<std::size_t>::max();
+        _lastExactDirectionBitsize = std::numeric_limits<std::size_t>::max();
+
+        if (_points.empty())
+        {
+          _objectiveValuePositive = plusInfinity;
+          _objectiveValueNegative = plusInfinity;
+        }
+        else
+        {
+          _objectiveValuePositive = *_points.begin() * _directionPositiveVector;
+          _objectiveValueNegative = -_objectiveValuePositive;
+        }
+
+        notify(AffineHullHandler::DIRECTIONS_EXACT_END);
+
+        // Loop for maximization / minimization.
+
+        std::size_t lastMaximizeHeuristicLevel = _oracle->heuristicLevel() + 1;
+        std::size_t lastMinimizeHeuristicLevel = _oracle->heuristicLevel() + 1;
+        Rational* pObjectiveValue =  NULL;
+        bool addEquation = true;
+        while (lastMaximizeHeuristicLevel > lastHeuristic || lastMinimizeHeuristicLevel > lastHeuristic)
+        {
+          // Maximize or minimize? Choose depending on last heuristic level (higher has preference).
+
+          if (lastMaximizeHeuristicLevel >= lastMinimizeHeuristicLevel)
+          {
+            pObjectiveValue = &_objectiveValuePositive;
+            std::size_t min = lastMaximizeHeuristicLevel - 1;
+            if (min < lastCheapHeuristic)
+              min = lastHeuristic;
+            std::size_t max = lastMaximizeHeuristicLevel - 1;
+            oracleQuery(AffineHullHandler::ORACLE_MAXIMIZE_BEGIN, _directionPositiveVector, 
+              ObjectiveBound(_objectiveValuePositive, true), min, max);
+            lastMaximizeHeuristicLevel = _result.heuristicLevel();
+          }
+          else
+          {
+            pObjectiveValue = &_objectiveValueNegative;
+            std::size_t min = lastMinimizeHeuristicLevel - 1;
+            if (min < lastCheapHeuristic)
+              min = lastHeuristic;
+            std::size_t max = lastMinimizeHeuristicLevel - 1;
+            oracleQuery(AffineHullHandler::ORACLE_MINIMIZE_BEGIN, _directionNegativeVector, 
+              ObjectiveBound(_objectiveValueNegative, true), min, max);
+            lastMinimizeHeuristicLevel = _result.heuristicLevel();
+          }
+
+          // Evaluate result.
+
+          if (_result.isInfeasible())
+          {
+            assert(_points.empty() && _rays.empty());
+            _infeasible = true;
+            _equations.clear();
+            _equations.push_back(LinearConstraint('=', zeroVector(), Rational(1)));
+            _candidateEquations.clear();
+            notify(AffineHullHandler::EQUATION_FINAL);
+            return;
+          }
+          else if (_result.isUnbounded())
+          {
+            addRay(_result.rays.front().vector, _directionColumn, true);
+            addEquation = false;
+            break;
+          }
+          else
+          {
+            assert(_result.isFeasible());
+
+            for (std::size_t i = 0; i < _result.points.size(); ++i)
+            {
+              Vector& vector = _result.points[i].vector;
+              const Rational& value = _result.points[i].objectiveValue;
+              if (value == *pObjectiveValue)
+                continue;
+              
+              if (_points.empty())
+              {
+                addPoint(vector, _n, true);
+                _objectiveValuePositive = value;
+                _objectiveValueNegative = -_objectiveValuePositive;
+              }
+              else
+              {
+                addPoint(vector, _directionColumn, true);
+                addEquation = false;
+                break;
+              }
+            }
+            if (!addEquation)
+              break;
+          }
+        }
+
+        // If not enough was found, add candidate equation.
+
+        if (addEquation)
+        {
+          LinearConstraint equation = LinearConstraint('=', denseToVector(_directionPositiveVector), _objectiveValuePositive);
+          _equationSpace.add(equation.normal());
+          _columns[_directionColumn].definesEquation = true;
+
+          if (lastMinimizeHeuristicLevel > 0 || lastMaximizeHeuristicLevel > 0)
+          {
+            _candidateEquations.push_back(equation);
+            notify(AffineHullHandler::EQUATION_CANDIDATE);
+          }
+          else
+          {
+            _equations.push_back(equation);
+            notify(AffineHullHandler::EQUATION_FINAL);
+          }
+        }
+      }
+    }
+
+  public:
+
+    void run(const std::vector<LinearConstraint>& givenEquations)
+    {
+      notify(AffineHullHandler::BEGIN);
+      initializeEquations(givenEquations);
+      notify(AffineHullHandler::EQUATIONS_INITIALIZED);
+
+      mainLoop(paramLastCheapHeuristic, paramLastModerateHeuristic);
+
+      if (lowerBound() < upperBound() && !_candidateEquations.empty())
+      {
+        // Verify k equations with only k+1 oracle calls. If one fails, continue with exact loop.
+
+        notify(AffineHullHandler::VERIFY_BEGIN);
+
+        _directionNegativeVector.clear();
+        _objectiveValueNegative = 0;
+        for (std::size_t i = 0; _verifySuccess && i < _candidateEquations.size(); ++i)
+        {
+          vectorToDense(_candidateEquations[i].normal(), _directionPositiveVector);
+          _objectiveValuePositive = _candidateEquations[i].rhs();
+          _directionNegativeVector -= _directionPositiveVector;
+          _objectiveValueNegative -= _objectiveValuePositive;
+
+          _verifyIndex = i;
+          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector, 
+            ObjectiveBound(_objectiveValuePositive, true));
+          
+          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector, 
+            ObjectiveBound(_objectiveValuePositive, true));
+        }
+
+        // Last oracle call.
+
+        if (_verifySuccess)
+        {
+          _verifyIndex = _candidateEquations.size();
+          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionNegativeVector, 
+            ObjectiveBound(_objectiveValueNegative, true));
+        }
+        notify(AffineHullHandler::VERIFY_END);
+
+        // If successful, make equations regular ones.
+        
+        
+        if (_verifySuccess)
+        {
+          std::copy(_candidateEquations.begin(), _candidateEquations.end(), std::back_inserter(_equations));
+          _candidateEquations.clear();
+        }
+      }
+
+      // Verification failed, so start main loop again with exact oracle.
+
+      if (lowerBound() < upperBound())
+      {
+        resetEquations();
+        _candidateEquations.clear();
+
+        mainLoop(std::numeric_limits<std::size_t>::max(), 0);
+      }
+
+      notify(AffineHullHandler::END);
+    }
+
+  public:
+    std::size_t paramLastCheapHeuristic;
+    std::size_t paramLastModerateHeuristic;
+    bool paramApproximateDirections;
+    double paramApproximateDirectionEpsilon;
+
+  protected:
+    std::vector<AffineHullHandler*>& _handlers;
+    std::shared_ptr<OracleBase> _oracle;
+    std::vector<Vector>& _points;
+    std::vector<Vector>& _rays;
+    std::vector<LinearConstraint>& _equations;
+    std::vector<LinearConstraint> _candidateEquations;
+    bool _infeasible;
+    std::size_t _n;
+    std::vector<std::size_t> _basicColumns;
+
+    OracleResult _result;
+    VectorSpaceGenerators _equationSpace;
+    std::size_t _directionColumn;
+    std::vector<std::size_t> _allowedDirectionColumns;
+    soplex::DVectorRational _directionPositiveVector;
+    soplex::DVectorRational _directionNegativeVector;
+    Factorization _factorization;
+    std::vector<NonbasicColumn> _columns;
+    Rational _objectiveValuePositive;
+    Rational _objectiveValueNegative;
+
+    std::size_t _verifyIndex;
+    bool _verifySuccess;
+    std::size_t _lastApproximateDirectionSolves;
+    std::size_t _lastExactDirectionSolves;
+    std::size_t _lastExactDirectionNonzeros;
+    std::size_t _lastExactDirectionBitsize;
+    std::size_t _oracleMaxHeuristicLevel;
+    std::size_t _oracleMinHeuristicLevel;
+    std::size_t _oracleResultHeuristicLevel;
+  };
+
+  AffineHullHandler::AffineHullHandler()
+  {
+
+  }
+
+  AffineHullHandler::~AffineHullHandler()
+  {
+    
+  }
+
+  void affineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
+    const std::vector<LinearConstraint>& givenEquations,     std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
+    std::vector<LinearConstraint>& resultEquations, std::size_t lastCheapHeuristic, std::size_t lastModerateHeuristic,
+    bool approximateDirections)
+  {
+    XAffineHull algorithm(handlers, oracle, resultPoints, resultRays, resultEquations);
+    algorithm.paramLastCheapHeuristic = lastCheapHeuristic;
+    algorithm.paramLastModerateHeuristic = lastModerateHeuristic;
+    algorithm.paramApproximateDirections = approximateDirections;
+    algorithm.paramApproximateDirectionEpsilon = 1.0e-7;
+    algorithm.run(givenEquations);
+  }
+
+  DebugAffineHullHandler::DebugAffineHullHandler(std::ostream& stream, bool printPointsAndRays, bool printEquations,
+    bool printDirections)
+    : _stream(stream), _printPointsAndRays(printPointsAndRays), _printEquations(printEquations), _printDirections(printDirections)
+  {
+    
+  }
+
+  DebugAffineHullHandler::~DebugAffineHullHandler()
+  {
+
+  }
+
+  void DebugAffineHullHandler::notify(AffineHullHandler::Event event, AffineHullState& state)
+  {
+    switch (event)
+    {
+      case ipo::AffineHullHandler::BEGIN:
+        _stream << "AH: Computing affine hull in ambient space of dimension " << state.space().dimension() << "\n";
+      break;
+      case ipo::AffineHullHandler::LOOP:
+        _stream << "AH: " << state.lowerBound() << " <= dimension ";
+        if (state.candidateUpperBound() < state.upperBound())
+          _stream << "<?= " << state.candidateUpperBound();
+        _stream << "<= " << state.upperBound() << ".\n";
+      break;
+      case ipo::AffineHullHandler::EQUATIONS_INITIALIZED:
+        _stream << "AH: Initialized " << state.numEquations() << " given independent equations.\n";
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_BEGIN:
+        _stream << "AH: Computing approximate directions.\n";
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_END:
+        _stream << "AH: Computed " << state.directionApproximateSolves() << " approximate directions.\n";
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_BEGIN:
+        _stream << "AH: Computing exact directions.\n";
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_END:
+        _stream << "AH: Computed " << state.directionExactSolves() << " exact directions.\n";
+        _stream << "AH: Current direction vector has " << state.directionNonzeros() << " nonzeros and an encoding length of "
+          << state.directionBitsize() << " bits.\n";
+        if (_printDirections)
+        {
+          _stream << "AH: ";
+          state.space().printLinearForm(_stream, denseToVector(state.directionVector(), false));
+          _stream << "\n";
+        }
+      break;
+      case ipo::AffineHullHandler::ORACLE_ZERO_BEGIN:
+        _stream << "AH: Maximizing zero objective";
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+          _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+        else
+          _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+      break;
+      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_BEGIN:
+        _stream << "AH: Maximizing direction objective";
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+          _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+        else
+          _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+      break;
+      case ipo::AffineHullHandler::ORACLE_MINIMIZE_BEGIN:
+        _stream << "AH: Minimizing direction objective";
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+          _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+        else
+          _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+      break;
+      case ipo::AffineHullHandler::ORACLE_VERIFY_BEGIN:
+        _stream << "AH: Maximizing verification objective";
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+          _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+        else
+          _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+      break;
+      case ipo::AffineHullHandler::ORACLE_ZERO_END:
+      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_END:
+      case ipo::AffineHullHandler::ORACLE_MINIMIZE_END:
+      case ipo::AffineHullHandler::ORACLE_VERIFY_END:
+        if (state.oracleNumPoints() > 0)
+          _stream << "AH: Oracle returned " << state.oracleNumPoints() << " points";
+        else if (state.oracleNumRays() > 0)
+          _stream << "AH: Oracle returned " << state.oracleNumRays() << " rays";
+        else
+          _stream << "AH: Oracle claimed infeasible";
+        _stream << ", heurLevel = " << state.oracleResultHeuristicLevel() << "\n";
+      break;
+      case ipo::AffineHullHandler::POINT_BEGIN:
+        _stream << "AH: Adding a point.\n";
+        if (_printPointsAndRays)
+        {
+          _stream << "AH: ";
+          state.space().printVector(_stream, state.spanningPoints().back());
+          _stream << "\n";
+        }
+      break;
+      case ipo::AffineHullHandler::POINT_END:
+        _stream << "AH: Added a point.\n";
+      break;
+      case ipo::AffineHullHandler::RAY_BEGIN:
+        _stream << "AH: Adding a ray.\n";
+        if (_printPointsAndRays)
+        {
+          _stream << "AH: ";
+          state.space().printVector(_stream, state.spanningRays().back());
+          _stream << "\n";
+        }
+      break;
+      case ipo::AffineHullHandler::RAY_END:
+        _stream << "AH: Added a ray.\n";
+      break;
+      case ipo::AffineHullHandler::EQUATION_CANDIDATE:
+        _stream << "AH: Added a candidate equation.\n";
+        if (_printEquations)
+        {
+          _stream << "AH: ";
+          state.space().printLinearConstraint(_stream, state.candidateEquations().back());
+          _stream << "\n";
+        }
+      break;
+      case ipo::AffineHullHandler::EQUATION_FINAL:
+        _stream << "AH: Added an equation.\n";
+        if (_printEquations)
+        {
+          _stream << "AH: ";
+          state.space().printLinearConstraint(_stream, state.equations().back());
+          _stream << "\n";
+        }
+      break;
+      case ipo::AffineHullHandler::VERIFY_BEGIN:
+        _stream << "AH: Starting to verify " << state.numCandidateEquations() << " candidate equations.\n";
+      break;
+      case ipo::AffineHullHandler::VERIFY_END:
+        if (state.verifySuccess())
+          _stream << "AH: Verified " << state.numCandidateEquations() << " candidate equations.\n";
+        else
+          _stream << "AH: Failed to verify " << state.numCandidateEquations() << " candidate equations.\n";
+      break;
+      case ipo::AffineHullHandler::END:
+        _stream << "AH: Dimension is equal to " << state.lowerBound() << "." << std::endl;
+      break;
+      default:
+        _stream << "AH: Unhandled event " << event << ".\n" << std::endl;
+      break;
+    }
+    _stream << std::flush;
+  }
+
+  
+  
 
   namespace AffineHull {
 
