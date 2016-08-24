@@ -788,12 +788,13 @@ namespace ipo {
 
           updateExactDirection(_directionColumn);
           ++_lastExactDirectionSolves;
+          _directionPositiveVector = _columns[_directionColumn].exactDirection; // TODO: Avoid copying: a pointer should suffice!
+          _lastExactDirectionNonzeros = std::numeric_limits<std::size_t>::max();
+          _lastExactDirectionBitsize = std::numeric_limits<std::size_t>::max();
+          notify(AffineHullHandler::DIRECTIONS_EXACT_COMPUTED);
         }
         while (checkDirectionDepends(_directionColumn));
-        _directionPositiveVector = _columns[_directionColumn].exactDirection;
         _directionNegativeVector = -_directionPositiveVector;
-        _lastExactDirectionNonzeros = std::numeric_limits<std::size_t>::max();
-        _lastExactDirectionBitsize = std::numeric_limits<std::size_t>::max();
 
         if (_points.empty())
         {
@@ -914,6 +915,7 @@ namespace ipo {
 
     void run(const std::vector<LinearConstraint>& givenEquations)
     {
+      _oracleMaxHeuristicLevel = _oracle->heuristicLevel();
       notify(AffineHullHandler::BEGIN);
       initializeEquations(givenEquations);
       notify(AffineHullHandler::EQUATIONS_INITIALIZED);
@@ -967,6 +969,9 @@ namespace ipo {
 
       if (lowerBound() < upperBound())
       {
+        for (std::size_t c = 0; c <= _n; ++c)
+          _columns[c].definesEquation = false;
+
         resetEquations();
         _candidateEquations.clear();
 
@@ -1072,6 +1077,9 @@ namespace ipo {
         _stream << "AH: Computed " << state.directionApproximateSolves() << " approximate directions.\n";
       break;
       case ipo::AffineHullHandler::DIRECTIONS_EXACT_BEGIN:
+        _stream << "AH: Computed an exact direction.\n";
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_COMPUTED:
         _stream << "AH: Computing exact directions.\n";
       break;
       case ipo::AffineHullHandler::DIRECTIONS_EXACT_END:
@@ -1184,6 +1192,104 @@ namespace ipo {
       break;
     }
     _stream << std::flush;
+  }
+
+  StatisticsAffineHullHandler::StatisticsAffineHullHandler()
+  {
+    reset();
+  }
+
+  StatisticsAffineHullHandler::~StatisticsAffineHullHandler()
+  {
+
+  }
+
+  void StatisticsAffineHullHandler::reset()
+  {
+    _timer.reset();
+    _numOracleQueries = 0;
+    _numHeuristicLevelAnswers.clear();
+    _numDirectionApproximateSolves = 0;
+    _numDirectionExactSolves = 0;
+    _sumDirectionNonzeros = 0;
+    _maxDirectionBitsize = 0;
+    _numFactorizations = 0;
+    _timeApproximateDirections = 0.0;
+    _timeExactDirections = 0.0;
+    _timeFactorizations = 0.0;
+    _timeOracles = 0.0;
+    _timeMainLoop = 0.0;
+    _timeVerification = 0.0;
+    _timeLastExactDirectionBegin = 0.0;
+    _timeLastMainLoop = 0.0;
+    _timeLastVerification = 0.0;
+    _timeLastEvent = 0.0;
+    _lastEvent = ipo::AffineHullHandler::END;
+  }
+
+  void StatisticsAffineHullHandler::notify(AffineHullHandler::Event event, AffineHullState& state)
+  {
+    if (event == ipo::AffineHullHandler::BEGIN)
+    {
+      _timer.reset();
+      _timer.start();
+      _numHeuristicLevelAnswers.resize(state.oracleMaxHeuristicLevel() + 1, 0);
+    }
+    double time = _timer.time();
+    switch (event)
+    {
+      case ipo::AffineHullHandler::BEGIN:
+        _timeLastMainLoop = time;
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_END:
+        _numDirectionApproximateSolves += state.directionApproximateSolves();
+        assert(_lastEvent == DIRECTIONS_APPROXIMATE_BEGIN);
+        _timeApproximateDirections += time - _timeLastEvent;
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_BEGIN:
+        _timeLastExactDirectionBegin = time;
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_COMPUTED:
+        _numDirectionExactSolves++;
+        _sumDirectionNonzeros += state.directionNonzeros();
+        _maxDirectionBitsize = std::max(_maxDirectionBitsize, state.directionBitsize());
+      break;
+      case ipo::AffineHullHandler::DIRECTIONS_EXACT_END:
+        _timeExactDirections += time - _timeLastExactDirectionBegin;
+      break;
+      case ipo::AffineHullHandler::ORACLE_ZERO_END:
+      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_END:
+      case ipo::AffineHullHandler::ORACLE_MINIMIZE_END:
+      case ipo::AffineHullHandler::ORACLE_VERIFY_END:
+        assert(_lastEvent == ORACLE_ZERO_BEGIN || _lastEvent == ORACLE_MAXIMIZE_BEGIN || _lastEvent == ORACLE_MINIMIZE_BEGIN
+          || _lastEvent == ORACLE_VERIFY_BEGIN);
+        _numOracleQueries++;
+        _timeOracles += time - _timeLastEvent;
+        assert(state.oracleResultHeuristicLevel() < _numHeuristicLevelAnswers.size());
+        _numHeuristicLevelAnswers[state.oracleResultHeuristicLevel()]++;
+      break;
+      case ipo::AffineHullHandler::POINT_END:
+      case ipo::AffineHullHandler::RAY_END:
+        _numFactorizations++;
+        assert(_lastEvent == POINT_BEGIN || _lastEvent == RAY_BEGIN);
+        _timeFactorizations += time - _timeLastEvent;
+      break;
+      case ipo::AffineHullHandler::VERIFY_BEGIN:
+        _timeMainLoop += time - _timeLastMainLoop;
+        _timeLastVerification = time;
+      break;
+      case ipo::AffineHullHandler::VERIFY_END:
+        _timeVerification += time - _timeLastVerification;
+        _timeLastMainLoop = time;
+      break;
+      case ipo::AffineHullHandler::END:
+        _timeMainLoop += time - _timeLastMainLoop;
+      break;
+    }
+#ifdef IPO_DEBUG
+    _lastEvent = event;
+#endif
+    _timeLastEvent = time;
   }
 
   

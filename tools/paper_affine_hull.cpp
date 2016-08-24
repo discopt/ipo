@@ -40,12 +40,34 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   std::vector<AffineHullHandler*> handlers;
-  DebugAffineHullHandler handler(std::cout);
-  handlers.push_back(&handler);
+  DebugAffineHullHandler debugHandler(std::cout);
+  StatisticsAffineHullHandler statsHandler;
+  handlers.push_back(&debugHandler);
+  handlers.push_back(&statsHandler);
 
   std::vector<Vector> points, rays;
-  std::vector<LinearConstraint> givenEquations, equations;
-  affineHull(cacheOracle, points, rays, equations, handlers, 1, std::numeric_limits<std::size_t>::max(), givenEquations);
+  std::vector<LinearConstraint> equations;
+  affineHull(cacheOracle, points, rays, equations, handlers, 1, 0);
 
+  std::cout << "\n";
+  std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
+    << "  +  verification time: " << statsHandler.timeVerification() << "\n";
+  std::cout << std::endl;
+  std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " << 
+    statsHandler.timeApproximateDirections() << " seconds.\n";
+  std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " << 
+    statsHandler.timeExactDirections() << " seconds.\n";
+  std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations() 
+    << " seconds.\n";
+  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
+    << " seconds.\n";
+  const std::vector<std::size_t>& numHeuristicLevelAnswers = statsHandler.numHeuristicLevelAnswers();
+  for (std::size_t h = 0; h < numHeuristicLevelAnswers.size(); ++h)
+  {
+    std::cout << "Number of answers of oracle with heuristic-level " << h << ": " << numHeuristicLevelAnswers[h] << 
+"\n";
+  }
+  
+  
   return 0;
 }
