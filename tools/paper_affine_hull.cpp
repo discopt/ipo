@@ -23,6 +23,7 @@
 #include "ipo/affine_hull.h"
 #include "ipo/scip_oracles.h"
 #include "ipo/cache_oracle.h"
+#include "ipo/statistics_oracle.h"
 
 using namespace ipo;
 
@@ -35,7 +36,12 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>(argv[1], scip);
-  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>("cached " + std::string(argv[1]), scipOracle);
+  std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
+
+  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>("cached " + std::string(argv[1]), scipOracleStats);
+  std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
+
+  std::shared_ptr<OracleBase> oracle = cacheOracleStats;
 
   SCIP_CALL_EXC(SCIPfree(&scip));
 
@@ -47,7 +53,7 @@ int main(int argc, char** argv)
 
   std::vector<Vector> points, rays;
   std::vector<LinearConstraint> equations;
-  affineHull(cacheOracle, points, rays, equations, handlers, 1, 0);
+  affineHull(oracle, points, rays, equations, handlers, 2, 0);
 
   std::cout << "\n";
   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
@@ -61,13 +67,18 @@ int main(int argc, char** argv)
     << " seconds.\n";
   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
     << " seconds.\n";
-  const std::vector<std::size_t>& numHeuristicLevelAnswers = statsHandler.numHeuristicLevelAnswers();
-  for (std::size_t h = 0; h < numHeuristicLevelAnswers.size(); ++h)
+
+  for (std::shared_ptr<OracleBase> o = oracle; o != NULL; o = o->nextOracle())
   {
-    std::cout << "Number of answers of oracle with heuristic-level " << h << ": " << numHeuristicLevelAnswers[h] << 
-"\n";
+    std::size_t h = o->heuristicLevel();
+    std::cout << "Oracle " << h << ": " << o->name() << "\n";
+    std::shared_ptr<StatisticsOracle> s = std::dynamic_pointer_cast<StatisticsOracle>(o);
+    std::cout << "  #calls:   " << s->numCalls() << "\n";
+    std::cout << "  #success: " << s->numSuccess() << "\n";
+    std::cout << "  time:     " << s->time() << "\n";
+//     std::cout << "Number of answers of oracle with heuristic-level " << h << ": " << numHeuristicLevelAnswers[h] << "\n";
   }
-  
-  
+  std::cout << std::endl;
+
   return 0;
 }

@@ -267,6 +267,7 @@ namespace ipo {
       DIRECTIONS_APPROXIMATE_BEGIN,
       DIRECTIONS_APPROXIMATE_END,
       DIRECTIONS_EXACT_BEGIN,
+      DIRECTIONS_EXACT_COMPUTED,
       DIRECTIONS_EXACT_END,
       ORACLE_ZERO_BEGIN,
       ORACLE_ZERO_END = ORACLE_ZERO_BEGIN + 1,
@@ -435,9 +436,9 @@ namespace ipo {
      * Returns the vector storing how often an oracle returned with each heuristicLevel.
      */
 
-    inline const std::vector<std::size_t>& numOracleSuccesses() const
+    inline const std::vector<std::size_t>& numHeuristicLevelAnswers() const
     {
-      return _numOracleSuccesses;
+      return _numHeuristicLevelAnswers;
     }
 
     /**
@@ -470,7 +471,7 @@ namespace ipo {
 
     inline double averageDirectionNonzeros() const
     {
-      return double(_sumDirectionNonzeros) / double(_numDirectionExactSolves);
+      return _numDirectionExactSolves > 0 ? 0.0 : double(_sumDirectionNonzeros) / double(_numDirectionExactSolves);
     }
 
     /**
@@ -482,6 +483,17 @@ namespace ipo {
     inline std::size_t maxDirectionBitsize() const
     {
       return _maxDirectionBitsize;
+    }
+
+    /**
+     * \brief Returns how many factorization updates were performed.
+     * 
+     * Returns how many factorization updates were performed.
+     */
+
+    inline std::size_t numFactorizations() const
+    {
+      return _numFactorizations;
     }
 
     /**
@@ -527,6 +539,28 @@ namespace ipo {
     {
       return _timeOracles;
     }
+    
+    /**
+     * \brief Returns the total running time for the main loop.
+     * 
+     * Returns the total running time for the main loop.
+     */
+
+    inline double timeMainLoop() const
+    {
+      return _timeMainLoop;
+    }
+  
+    /**
+     * \brief Returns the total running time for the candidate equation verification.
+     * 
+     * Returns the total running time for the candidate equation verification.
+     */
+
+    inline double timeVerification() const
+    {
+      return _timeVerification;
+    }
 
     /**
      * \brief Returns the total running time for the algorithm.
@@ -536,23 +570,32 @@ namespace ipo {
 
     inline double timeAll() const
     {
-      return _timeAll;
+      return _timeMainLoop + _timeVerification;
     }
 
   protected:
+    Timer _timer;
     std::size_t _numOracleQueries;
-    std::vector<std::size_t> _numOracleSuccesses;
+    std::vector<std::size_t> _numHeuristicLevelAnswers;
     std::size_t _numDirectionApproximateSolves;
     std::size_t _numDirectionExactSolves;
     std::size_t _sumDirectionNonzeros;
     std::size_t _maxDirectionBitsize;
+    std::size_t _numFactorizations;
     double _timeApproximateDirections;
     double _timeExactDirections;
     double _timeFactorizations;
     double _timeOracles;
-    double _timeAll;
     double _timeLastEvent;
+    double _timeLastExactDirectionBegin;
+    double _timeLastMainLoop;
+    double _timeLastVerification;
+    double _timeMainLoop;
+    double _timeVerification;
+
+#ifdef IPO_DEBUG
     Event _lastEvent;
+#endif
   };
 
 

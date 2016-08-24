@@ -79,7 +79,7 @@ namespace ipo {
   }
 
   std::size_t CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     std::size_t level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
       checkDups);

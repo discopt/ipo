@@ -58,7 +58,7 @@ namespace ipo {
      */
 
     virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
     
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.

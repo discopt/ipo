@@ -12,6 +12,8 @@
 
 namespace ipo {
 
+  class StatisticsOracle;
+
   /**
    * \brief Results of a call to an oracle.
    *
@@ -232,6 +234,8 @@ namespace ipo {
   class OracleBase
   {
   public:
+    friend class StatisticsOracle;
+
     // Destructor.
 
     virtual ~OracleBase();
@@ -256,6 +260,17 @@ namespace ipo {
     inline const Space& space() const
     {
       return _space;
+    }
+
+    /**
+     * \brief Returns the next associated oracle.
+     * 
+     * Returns the next associated oracle, or NULL if it has heuristicLevel() = 0.
+     */
+
+    inline const std::shared_ptr<OracleBase>& nextOracle() const
+    {
+      return _nextOracle;
     }
 
     /**
@@ -365,7 +380,7 @@ namespace ipo {
      */
 
     virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
+      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
 
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.

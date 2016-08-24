@@ -167,7 +167,7 @@ namespace ipo {
   }
 
   std::size_t OracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
+    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);

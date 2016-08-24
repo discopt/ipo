@@ -30,6 +30,7 @@ set(IPO_SOURCES
   timer.cpp
   polar_lp.cpp
   smallest_face.cpp
+  statistics_oracle.cpp
   external_oracle.cpp
   console_app.cpp
   parser.cpp
@@ -50,6 +51,7 @@ set(IPO_INSTALL_HEADERS
   smallest_face.h
   space.h
   spx_gmp.h
+  statistics_oracle.h
   timer.h
   unique_vectors.h
   rational.h
