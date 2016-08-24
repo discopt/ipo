@@ -10,6 +10,7 @@ set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 find_package(Doxygen)
 
 set(IPO_SOURCES
+  parameters.cpp
   linear_constraint.cpp
   unique_vectors.cpp 
   vectors.cpp 
@@ -43,6 +44,7 @@ set(IPO_INSTALL_HEADERS
   min_norm_2d.h
   mip.h
   oracles.h
+  parameters.h
   parser.h
   polar_lp.h
   projection.h
