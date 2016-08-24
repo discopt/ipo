@@ -326,8 +326,8 @@ namespace ipo {
     delete _spx;
   }
 
-  std::size_t MIPOracleBase::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel MIPOracleBase::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     std::size_t n = space().dimension();
 

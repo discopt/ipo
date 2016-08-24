@@ -182,7 +182,7 @@ namespace ipo {
      * Returns the maximum allowed heuristic level of the current oracle call.
      */
 
-    virtual std::size_t oracleMaxHeuristicLevel() const = 0;
+    virtual HeuristicLevel oracleMaxHeuristicLevel() const = 0;
 
     /**
      * \brief Returns the minimum allowed heuristic level of the current oracle call.
@@ -190,7 +190,7 @@ namespace ipo {
      * Returns the minimum allowed heuristic level of the current oracle call.
      */
 
-    virtual std::size_t oracleMinHeuristicLevel() const = 0;
+    virtual HeuristicLevel oracleMinHeuristicLevel() const = 0;
 
     /**
      * \brief Returns the heuristic level of the oracle's last answer.
@@ -198,7 +198,7 @@ namespace ipo {
      * Returns the heuristic level of the oracle's last answer.
      */
 
-    virtual std::size_t oracleResultHeuristicLevel() const = 0;
+    virtual HeuristicLevel oracleResultHeuristicLevel() const = 0;
 
     /**
      * \brief Returns the number of points returned by the last oracle call.
@@ -331,8 +331,8 @@ namespace ipo {
    */
 
   void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, std::size_t lastCheapHeuristic, 
-    std::size_t lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(), 
+    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
+    HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(), 
     bool approximateDirections = true);
 
   /**

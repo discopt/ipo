@@ -57,8 +57,9 @@ namespace ipo {
      * This implementation calls the standard implementation from \ref OracleBase and adds new points and rays to the cache.
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
     
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.
@@ -74,8 +75,9 @@ namespace ipo {
      * This implementation searches in the point / ray storage for suitable results.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
 
     bool addPoint(const Vector& point);
 

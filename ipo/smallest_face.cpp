@@ -75,8 +75,9 @@ namespace ipo {
        * This implementation solves the polar LP to optimize over the normal cone at a point.
        */
       
-      virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-        const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+      virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+        const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, 
+        bool& checkDups)
       {
         updateObjective(objective);
 
@@ -133,8 +134,7 @@ namespace ipo {
         _output->onConeBeforeOracleCall(forceOptimal);
       }
 
-      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints,
-std::size_t numRays,
+      virtual void onAfterOracleCall(bool forceOptimal, bool feasible, std::size_t numPoints, std::size_t numRays,
           bool lastIteration)
       {
         _output->onConeAfterOracleCall(forceOptimal, feasible, numPoints, numRays);

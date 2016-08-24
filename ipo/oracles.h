@@ -13,6 +13,15 @@
 namespace ipo {
 
   class StatisticsOracle;
+  
+  /**
+   * \brief Heuristic level for oracles.
+   * 
+   * An oracle without an associated oracle has heuristic level 0, one with an associated oracle has a heuristic level
+   * equal to the associated one's plus 1.
+   */
+
+  typedef std::size_t HeuristicLevel;
 
   /**
    * \brief Results of a call to an oracle.
@@ -70,7 +79,7 @@ namespace ipo {
      * then an optimum must be among them.
      */
 
-    inline std::size_t heuristicLevel() const
+    inline HeuristicLevel heuristicLevel() const
     {
       return _heuristicLevel;
     }
@@ -161,7 +170,7 @@ namespace ipo {
 
   protected:
     soplex::VectorRational const* _objective;
-    std::size_t _heuristicLevel;
+    HeuristicLevel _heuristicLevel;
   };
 
   struct ObjectiveBound
@@ -282,7 +291,7 @@ namespace ipo {
      * plus 1.
      */
 
-    inline std::size_t heuristicLevel() const
+    inline HeuristicLevel heuristicLevel() const
     {
       return _heuristicLevel;
     }
@@ -319,8 +328,8 @@ namespace ipo {
      */
 
     void maximize(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0,
-      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max());
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0,
+      HeuristicLevel maxHeuristicLevel = std::numeric_limits<HeuristicLevel>::max());
 
     /**
      * \brief Runs the oracle to maximize the sparse rational \p objective.
@@ -342,8 +351,8 @@ namespace ipo {
      */
 
     void maximize(OracleResult& result, const Vector& objective,
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0,
-      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max());
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0,
+      HeuristicLevel maxHeuristicLevel = std::numeric_limits<HeuristicLevel>::max());
 
   protected:
 
@@ -379,8 +388,9 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, 
+      bool& checkDups);
 
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.
@@ -396,8 +406,9 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups) = 0;
+    virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups) = 0;
 
     /**
      * \brief Returns the current face.
@@ -424,7 +435,7 @@ namespace ipo {
     std::string _name; // Name of the oracle.
     Space _space; // Ambient space of the oracle.
     std::shared_ptr<OracleBase> _nextOracle; // Next associated optimization oracle (or NULL if exact).
-    std::size_t _heuristicLevel; // Number of associated oracles.
+    HeuristicLevel _heuristicLevel; // Number of associated oracles.
     soplex::DVectorRational _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
   };
 
@@ -467,10 +478,10 @@ namespace ipo {
      * Constructs an oracle with given \p name that is optionally associated to \p nextOracle. If not associated, then the space
      * will be the emptySpace() initially.
      *
-     * \param name               Name of the oracle.
-     * \param nextOracle         Next oracle to forward calls to.
-     * \param maxInfeasibleIterations   Maximum number of iterations before (heuristically) checking if the face is empty.
-     * \param initialM           Initial value of \f$ M \f$.
+     * \param name                    Name of the oracle.
+     * \param nextOracle              Next oracle to forward calls to.
+     * \param maxInfeasibleIterations Maximum number of iterations before (heuristically) checking if the face is empty.
+     * \param initialM                Initial value of \f$ M \f$.
      */
 
     FaceOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle = NULL,
@@ -499,8 +510,9 @@ namespace ipo {
      * The maximizeImplementation() function is called repeatedly with titled objective vectors (see \ref FaceOracleBase).
      */
 
-    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel maxHeuristic, HeuristicLevel minHeuristic, bool& sort,
+      bool& checkDups);
 
     /**
      * \brief Returns the current face.

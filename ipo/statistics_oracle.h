@@ -78,25 +78,29 @@ namespace ipo {
 
     protected:
 
-      virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-        const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+      virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+        const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+        bool& checkDups);
 
-      virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-        const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+      virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+        const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+        bool& checkDups);
 
     protected:
       StatisticsOracle& _host;
     };
 
-    virtual std::size_t maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
 
     void beforeForward();
 
     void afterForward();
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
   
   protected:
 

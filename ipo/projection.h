@@ -282,8 +282,9 @@ namespace ipo {
      * For requirements on the behavior, see Detailed Description of \ref OracleBase.
      */
 
-    virtual std::size_t maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups);
+    virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
 
   protected:
 

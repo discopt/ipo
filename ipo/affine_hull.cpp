@@ -474,17 +474,17 @@ namespace ipo {
       return _directionPositiveVector;
     }
 
-    virtual std::size_t oracleMaxHeuristicLevel() const
+    virtual HeuristicLevel oracleMaxHeuristicLevel() const
     {
       return _oracleMaxHeuristicLevel;
     }
 
-    virtual std::size_t oracleMinHeuristicLevel() const
+    virtual HeuristicLevel oracleMinHeuristicLevel() const
     {
       return _oracleMinHeuristicLevel;
     }
 
-    virtual std::size_t oracleResultHeuristicLevel() const
+    virtual HeuristicLevel oracleResultHeuristicLevel() const
     {
       return _oracleResultHeuristicLevel;
     }
@@ -710,8 +710,8 @@ namespace ipo {
     }
 
     void oracleQuery(AffineHullHandler::Event event, const soplex::DVectorRational& objective, 
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), std::size_t minHeuristicLevel = 0, 
-      std::size_t maxHeuristicLevel = std::numeric_limits<std::size_t>::max())
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0, 
+      HeuristicLevel maxHeuristicLevel = std::numeric_limits<HeuristicLevel>::max())
     {
       _oracleMaxHeuristicLevel = maxHeuristicLevel;
       _oracleMinHeuristicLevel = minHeuristicLevel;
@@ -745,7 +745,7 @@ namespace ipo {
       }
     }
 
-    void mainLoop(std::size_t lastCheapHeuristic, std::size_t lastHeuristic)
+    void mainLoop(HeuristicLevel lastCheapHeuristic, HeuristicLevel lastHeuristic)
     {
       while (lowerBound() < candidateUpperBound())
       {
@@ -811,8 +811,8 @@ namespace ipo {
 
         // Loop for maximization / minimization.
 
-        std::size_t lastMaximizeHeuristicLevel = _oracle->heuristicLevel() + 1;
-        std::size_t lastMinimizeHeuristicLevel = _oracle->heuristicLevel() + 1;
+        HeuristicLevel lastMaximizeHeuristicLevel = _oracle->heuristicLevel() + 1;
+        HeuristicLevel lastMinimizeHeuristicLevel = _oracle->heuristicLevel() + 1;
         Rational* pObjectiveValue =  NULL;
         bool addEquation = true;
         while (lastMaximizeHeuristicLevel > lastHeuristic || lastMinimizeHeuristicLevel > lastHeuristic)
@@ -822,10 +822,10 @@ namespace ipo {
           if (lastMaximizeHeuristicLevel >= lastMinimizeHeuristicLevel)
           {
             pObjectiveValue = &_objectiveValuePositive;
-            std::size_t min = lastMaximizeHeuristicLevel - 1;
+            HeuristicLevel min = lastMaximizeHeuristicLevel - 1;
             if (min < lastCheapHeuristic)
               min = lastHeuristic;
-            std::size_t max = lastMaximizeHeuristicLevel - 1;
+            HeuristicLevel max = lastMaximizeHeuristicLevel - 1;
             oracleQuery(AffineHullHandler::ORACLE_MAXIMIZE_BEGIN, _directionPositiveVector, 
               ObjectiveBound(_objectiveValuePositive, true), min, max);
             lastMaximizeHeuristicLevel = _result.heuristicLevel();
@@ -833,10 +833,10 @@ namespace ipo {
           else
           {
             pObjectiveValue = &_objectiveValueNegative;
-            std::size_t min = lastMinimizeHeuristicLevel - 1;
+            HeuristicLevel min = lastMinimizeHeuristicLevel - 1;
             if (min < lastCheapHeuristic)
               min = lastHeuristic;
-            std::size_t max = lastMinimizeHeuristicLevel - 1;
+            HeuristicLevel max = lastMinimizeHeuristicLevel - 1;
             oracleQuery(AffineHullHandler::ORACLE_MINIMIZE_BEGIN, _directionNegativeVector, 
               ObjectiveBound(_objectiveValueNegative, true), min, max);
             lastMinimizeHeuristicLevel = _result.heuristicLevel();
@@ -975,15 +975,15 @@ namespace ipo {
         resetEquations();
         _candidateEquations.clear();
 
-        mainLoop(std::numeric_limits<std::size_t>::max(), 0);
+        mainLoop(std::numeric_limits<HeuristicLevel>::max(), 0);
       }
 
       notify(AffineHullHandler::END);
     }
 
   public:
-    std::size_t paramLastCheapHeuristic;
-    std::size_t paramLastModerateHeuristic;
+    HeuristicLevel paramLastCheapHeuristic;
+    HeuristicLevel paramLastModerateHeuristic;
     bool paramApproximateDirections;
     double paramApproximateDirectionEpsilon;
 
@@ -1015,9 +1015,9 @@ namespace ipo {
     std::size_t _lastExactDirectionSolves;
     std::size_t _lastExactDirectionNonzeros;
     std::size_t _lastExactDirectionBitsize;
-    std::size_t _oracleMaxHeuristicLevel;
-    std::size_t _oracleMinHeuristicLevel;
-    std::size_t _oracleResultHeuristicLevel;
+    HeuristicLevel _oracleMaxHeuristicLevel;
+    HeuristicLevel _oracleMinHeuristicLevel;
+    HeuristicLevel _oracleResultHeuristicLevel;
   };
 
   AffineHullHandler::AffineHullHandler()
@@ -1031,8 +1031,8 @@ namespace ipo {
   }
 
   void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, std::size_t lastCheapHeuristic, 
-    std::size_t lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
+    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
+    HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
   {
     XAffineHull algorithm(handlers, oracle, resultPoints, resultRays, resultEquations);
     algorithm.paramLastCheapHeuristic = lastCheapHeuristic;
@@ -1095,28 +1095,28 @@ namespace ipo {
       break;
       case ipo::AffineHullHandler::ORACLE_ZERO_BEGIN:
         _stream << "AH: Maximizing zero objective";
-        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
       case ipo::AffineHullHandler::ORACLE_MAXIMIZE_BEGIN:
         _stream << "AH: Maximizing direction objective";
-        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
       case ipo::AffineHullHandler::ORACLE_MINIMIZE_BEGIN:
         _stream << "AH: Minimizing direction objective";
-        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
       case ipo::AffineHullHandler::ORACLE_VERIFY_BEGIN:
         _stream << "AH: Maximizing verification objective";
-        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<std::size_t>::max())
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";

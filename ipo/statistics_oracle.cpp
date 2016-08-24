@@ -14,16 +14,16 @@ namespace ipo {
 
   }
 
-  std::size_t StatisticsOracle::ForwardWrapperOracle::maximizeController(OracleResult& result,
-    const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, std::size_t minHeuristic,
-    std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel StatisticsOracle::ForwardWrapperOracle::maximizeController(OracleResult& result,
+    const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic,
+    HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
 
     _host.beforeForward();
 
-    std::size_t resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
+    HeuristicLevel resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
       sort, checkDups);
 
     _host.afterForward();
@@ -31,9 +31,9 @@ namespace ipo {
     return resultLevel;
   }
 
-  std::size_t StatisticsOracle::ForwardWrapperOracle::maximizeImplementation(OracleResult& result,
-    const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, std::size_t minHeuristic,
-    std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel StatisticsOracle::ForwardWrapperOracle::maximizeImplementation(OracleResult& result,
+    const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic,
+    HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert(false);
   }
@@ -64,8 +64,8 @@ namespace ipo {
     // We do not call OracleBase::setFace() since the above call will call setFace() for the ForwardWrapperOracle, which does it.
   }
 
-  std::size_t StatisticsOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel StatisticsOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
@@ -84,7 +84,7 @@ namespace ipo {
 
     // We call the target oracle.
 
-    std::size_t resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
+    HeuristicLevel resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
       sort, checkDups);
 
     // The target oracle returned.
@@ -109,8 +109,8 @@ namespace ipo {
     _timer.start();
   }
 
-  std::size_t StatisticsOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel StatisticsOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert(false);
   }

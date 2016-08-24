@@ -157,8 +157,8 @@ namespace ipo {
     _oracle->setFace(_liftedFace);
   }
   
-  std::size_t ProjectionOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel ProjectionOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     Vector objectiveVector = denseToVector(objective);
     LinearConstraint objectiveConstraint('<' , objectiveVector, objectiveBound.value);

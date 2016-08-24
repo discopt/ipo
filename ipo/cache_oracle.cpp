@@ -79,10 +79,10 @@ namespace ipo {
     }
   }
 
-  std::size_t CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
-    std::size_t level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
+    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
       checkDups);
 
     if (level < heuristicLevel())
@@ -106,8 +106,8 @@ namespace ipo {
     return level;
   }
 
-  std::size_t CacheOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel CacheOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     soplex::DVectorReal approximateObjective(objective.dim());
     for (std::size_t i = 0; i < approximateObjective.dim(); ++i)

@@ -121,14 +121,14 @@ namespace ipo {
   }
 
   void OracleBase::maximize(OracleResult& result, const Vector& objective, const ObjectiveBound& objectiveBound,
-    std::size_t minHeuristic, std::size_t maxHeuristic)
+    HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic)
   {
     vectorToDense(objective, _tempObjective);
     return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
   }
 
   void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, 
-    std::size_t minHeuristic, std::size_t maxHeuristic)
+    HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic)
   {
     assert(objective.dim() == space().dimension());
 
@@ -166,8 +166,8 @@ namespace ipo {
       result.removeDuplicates();
   }
 
-  std::size_t OracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel OracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
@@ -181,8 +181,8 @@ namespace ipo {
 
     // Call implementation and check whether results are satisfactory.
 
-    std::size_t implHeuristicLevel = maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
-      checkDups);
+    HeuristicLevel implHeuristicLevel = maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
+      sort, checkDups);
     if (implHeuristicLevel == 0 || !result.rays.empty())
       return implHeuristicLevel;
 
@@ -259,8 +259,8 @@ namespace ipo {
     return _completeFace;
   }
 
-  std::size_t FaceOracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, std::size_t maxHeuristic, std::size_t minHeuristic, bool& sort, bool& checkDups)
+  HeuristicLevel FaceOracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
+    const ObjectiveBound& objectiveBound, HeuristicLevel maxHeuristic, HeuristicLevel minHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
