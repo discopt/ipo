@@ -35,10 +35,10 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>(argv[1], scip);
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", scip);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
-  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>("cached " + std::string(argv[1]), scipOracleStats);
+  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;

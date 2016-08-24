@@ -215,6 +215,17 @@ namespace ipo {
     ProjectionOracle(const std::string& name, const Projection& projection, const std::shared_ptr<OracleBase>& oracle);
 
     /**
+     * \brief Constructor for given projection and source oracle.
+     *
+     * Constructor for given \p projection and source \p oracle. The oracle is named "Projection(\p oracle->name())".
+     *
+     * \param projection Projection map.
+     * \param oracle     Oracle in the source space.
+     */
+
+    ProjectionOracle(const Projection& projection, const std::shared_ptr<OracleBase>& oracle);
+
+    /**
      * \brief Destructor.
      */
 

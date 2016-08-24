@@ -128,6 +128,13 @@ namespace ipo {
     _projectedVector.reDim(space().dimension(), false);
   }
 
+  ProjectionOracle::ProjectionOracle(const Projection& projection, const std::shared_ptr<OracleBase>& oracle)
+    : OracleBase("Projection(" + oracle->name() + ")"), _projection(projection), _oracle(oracle)
+  {
+    OracleBase::initializeSpace(projection.imageSpace());
+
+    _projectedVector.reDim(space().dimension(), false);
+  }
 
   ProjectionOracle::~ProjectionOracle()
   {

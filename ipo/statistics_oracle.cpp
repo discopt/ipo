@@ -4,7 +4,7 @@ namespace ipo {
 
   StatisticsOracle::ForwardWrapperOracle::ForwardWrapperOracle(StatisticsOracle& host,
     const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase("forward to " + nextOracle->name(), nextOracle), _host(host)
+    : OracleBase("ForwardWrapper(" + nextOracle->name() + ")", nextOracle), _host(host)
   {
     initializeSpace(nextOracle->space());
   }

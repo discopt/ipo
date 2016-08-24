@@ -19,7 +19,7 @@ namespace ipo {
      * explicitly.
      */
 
-    CacheOracle(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle);
+    CacheOracle(const std::shared_ptr<OracleBase>& nextOracle);
 
     /**
      * \brief Destructor.

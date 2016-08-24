@@ -221,13 +221,13 @@ namespace ipo {
 
       ProjectionData* projectionData = new ProjectionData(originalSpace, projectionVariables);
       _projection = new Projection(projectionData);
-      _projectionOracle =  std::make_shared<ProjectionOracle>("projection of " + oracle->name(), *_projection, oracle);
+      _projectionOracle =  std::make_shared<ProjectionOracle>(*_projection, oracle);
       oracle = _projectionOracle;
     }
 
     if (_optionCache)
     {
-      _cacheOracle = std::make_shared<CacheOracle>("cached " + oracle->name(), oracle);
+      _cacheOracle = std::make_shared<CacheOracle>(oracle);
       _oracle = _cacheOracle;
     }
     else

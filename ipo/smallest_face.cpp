@@ -203,7 +203,7 @@ std::size_t numRays,
         Space normalConeSpace(normalConeSpaceData);
 
         _normalConeMainOracle = std::make_shared<NormalConeOracle>(normalConeSpace, _originalOracle, targetPoint, _output);
-        _normalConeCachedOracle = std::make_shared<CacheOracle>("cached " + _normalConeMainOracle->name(), _normalConeMainOracle);
+        _normalConeCachedOracle = std::make_shared<CacheOracle>(_normalConeMainOracle);
 
         /// Initialize points and directions.
         Vector zeroVector(0);
