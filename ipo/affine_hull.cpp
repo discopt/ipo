@@ -369,16 +369,16 @@ namespace ipo {
   {
   public:
     XAffineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
-      std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, std::vector<LinearConstraint>& resultEquations)
-      : _handlers(handlers), _oracle(oracle), _points(resultPoints), _rays(resultRays), _equations(resultEquations),
+      InnerDescription& resultInnerDescription, AffineOuterDescription& resultOuterDescription)
+      : _handlers(handlers), _oracle(oracle), _innerDescription(resultInnerDescription), _equations(resultOuterDescription),
       _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(plusInfinity), 
       _objectiveValueNegative(plusInfinity),
       _verifyIndex(std::numeric_limits<std::size_t>::max()),
       _verifySuccess(true), _lastApproximateDirectionSolves(0), _lastExactDirectionSolves(0),
       _lastExactDirectionNonzeros(0), _lastExactDirectionBitsize(std::numeric_limits<std::size_t>::max())
     {
-      _points.clear();
-      _rays.clear();
+      _innerDescription.points.clear();
+      _innerDescription.rays.clear();
       _equations.clear();
       _directionPositiveVector.reDim(_n, false);
       _directionNegativeVector.reDim(_n, false);
@@ -398,12 +398,12 @@ namespace ipo {
     
     virtual std::size_t numPoints() const
     {
-      return _points.size();
+      return _innerDescription.points.size();
     }
         
     virtual std::size_t numRays() const
     {
-      return _rays.size();
+      return _innerDescription.rays.size();
     }
 
     virtual std::size_t numEquations() const
@@ -499,17 +499,12 @@ namespace ipo {
       return _result.rays.size();
     }
 
-    virtual const std::vector<Vector>& spanningPoints() const
+    virtual const InnerDescription& innerDescription() const
     {
-      return _points;
+      return _innerDescription;
     }
 
-    virtual const std::vector<Vector>& spanningRays() const
-    {
-      return _rays;
-    }
-
-    virtual const std::vector<LinearConstraint>& equations() const
+    virtual const AffineOuterDescription& outerDescription() const
     {
       return _equations;
     }
@@ -640,7 +635,7 @@ namespace ipo {
 
     void addPoint(Vector& point, std::size_t column, bool invalidate)
     {
-      _points.push_back(point);
+      _innerDescription.points.push_back(point);
 
       notify(AffineHullHandler::POINT_BEGIN);
 
@@ -676,7 +671,7 @@ namespace ipo {
 
     void addRay(Vector& ray, std::size_t column, bool invalidate)
     {
-      _rays.push_back(ray);
+      _innerDescription.rays.push_back(ray);
 
       notify(AffineHullHandler::RAY_BEGIN);      
       
@@ -739,7 +734,7 @@ namespace ipo {
       }
       else if (_result.isFeasible())
         addPoint(_result.points.front().vector, _n, false);
-      else if (!_rays.empty())
+      else if (!_innerDescription.rays.empty())
       {
         throw std::runtime_error("Oracle claims infeasible after returning points or rays.");
       }
@@ -753,7 +748,7 @@ namespace ipo {
 
         // Zero objective case.
 
-        if (_points.empty() && _rays.size() == candidateUpperBound())
+        if (_innerDescription.points.empty() && _innerDescription.rays.size() == candidateUpperBound())
         {
           findLastPoint();
           return;
@@ -796,14 +791,14 @@ namespace ipo {
         while (checkDirectionDepends(_directionColumn));
         _directionNegativeVector = -_directionPositiveVector;
 
-        if (_points.empty())
+        if (_innerDescription.points.empty())
         {
           _objectiveValuePositive = plusInfinity;
           _objectiveValueNegative = plusInfinity;
         }
         else
         {
-          _objectiveValuePositive = *_points.begin() * _directionPositiveVector;
+          _objectiveValuePositive = *_innerDescription.points.begin() * _directionPositiveVector;
           _objectiveValueNegative = -_objectiveValuePositive;
         }
 
@@ -846,7 +841,7 @@ namespace ipo {
 
           if (_result.isInfeasible())
           {
-            assert(_points.empty() && _rays.empty());
+            assert(_innerDescription.points.empty() && _innerDescription.rays.empty());
             _infeasible = true;
             _equations.clear();
             _equations.push_back(LinearConstraint('=', zeroVector(), Rational(1)));
@@ -871,7 +866,7 @@ namespace ipo {
               if (value == *pObjectiveValue)
                 continue;
               
-              if (_points.empty())
+              if (_innerDescription.points.empty())
               {
                 addPoint(vector, _n, true);
                 _objectiveValuePositive = value;
@@ -990,8 +985,7 @@ namespace ipo {
   protected:
     std::vector<AffineHullHandler*>& _handlers;
     std::shared_ptr<OracleBase> _oracle;
-    std::vector<Vector>& _points;
-    std::vector<Vector>& _rays;
+    InnerDescription& _innerDescription;
     std::vector<LinearConstraint>& _equations;
     std::vector<LinearConstraint> _candidateEquations;
     bool _infeasible;
@@ -1030,11 +1024,12 @@ namespace ipo {
     
   }
 
-  void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
-    HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription, 
+    std::vector<LinearConstraint>& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, 
+    HeuristicLevel lastCheapHeuristic, HeuristicLevel lastModerateHeuristic,
+    const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
   {
-    XAffineHull algorithm(handlers, oracle, resultPoints, resultRays, resultEquations);
+    XAffineHull algorithm(handlers, oracle, resultInnerDescription, resultOuterDescription);
     algorithm.paramLastCheapHeuristic = lastCheapHeuristic;
     algorithm.paramLastModerateHeuristic = lastModerateHeuristic;
     algorithm.paramApproximateDirections = approximateDirections;
@@ -1138,7 +1133,7 @@ namespace ipo {
         if (_printPointsAndRays)
         {
           _stream << "AH: ";
-          state.space().printVector(_stream, state.spanningPoints().back());
+          state.space().printVector(_stream, state.innerDescription().points.back());
           _stream << "\n";
         }
       break;
@@ -1150,7 +1145,7 @@ namespace ipo {
         if (_printPointsAndRays)
         {
           _stream << "AH: ";
-          state.space().printVector(_stream, state.spanningRays().back());
+          state.space().printVector(_stream, state.innerDescription().rays.back());
           _stream << "\n";
         }
       break;
@@ -1171,7 +1166,7 @@ namespace ipo {
         if (_printEquations)
         {
           _stream << "AH: ";
-          state.space().printLinearConstraint(_stream, state.equations().back());
+          state.space().printLinearConstraint(_stream, state.outerDescription().back());
           _stream << "\n";
         }
       break;

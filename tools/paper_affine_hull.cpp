@@ -51,9 +51,9 @@ int main(int argc, char** argv)
   handlers.push_back(&debugHandler);
   handlers.push_back(&statsHandler);
 
-  std::vector<Vector> points, rays;
-  std::vector<LinearConstraint> equations;
-  affineHull(oracle, points, rays, equations, handlers, 2, 0);
+  InnerDescription inner;
+  AffineOuterDescription outer;
+  affineHull(oracle, inner, outer, handlers, 2, 0);
 
   std::cout << "\n";
   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 

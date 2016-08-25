@@ -643,6 +643,12 @@ namespace ipo {
   Vector operator-(const Vector& a, const Vector& b);
   MutableVector operator-(const ReferenceCountedVector& source);
 
+  struct InnerDescription
+  {
+    std::vector<Vector> points;
+    std::vector<Vector> rays;
+  };
+
 } /* namespace ipo */
 
 #endif /* IPO_VECTORS_H_ */

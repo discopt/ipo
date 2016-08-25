@@ -217,20 +217,12 @@ namespace ipo {
     virtual std::size_t oracleNumRays() const = 0;
 
     /**
-     * \brief Returns the current set of spanning points.
+     * \brief Returns the current set of spanning points and rays.
      * 
-     * Returns a const-reference to the current set of spanning points.
+     * Returns a const-reference to the current set of spanning points and rays.
      */
 
-    virtual const std::vector<Vector>& spanningPoints() const = 0;
-
-    /**
-     * \brief Returns the current set of spanning rays.
-     * 
-     * Returns a const-reference to the current set of spanning rays.
-     */
-
-    virtual const std::vector<Vector>& spanningRays() const = 0;
+    virtual const InnerDescription& innerDescription() const = 0;
 
     /**
      * \brief Returns the current set of valid independent equations.
@@ -238,7 +230,7 @@ namespace ipo {
      * Returns a const-reference to the current set of valid independent equations.
      */
 
-    virtual const std::vector<LinearConstraint>& equations() const = 0;
+    virtual const AffineOuterDescription& outerDescription() const = 0;
 
     /**
      * \brief Returns the current set of candidate equations.
@@ -330,8 +322,8 @@ namespace ipo {
    *                              direction vectors should be computed exactly.
    */
 
-  void affineHull(const std::shared_ptr<OracleBase>& oracle, std::vector<Vector>& resultPoints, std::vector<Vector>& resultRays, 
-    std::vector<LinearConstraint>& resultEquations, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription, 
+    AffineOuterDescription& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
     HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(), 
     bool approximateDirections = true);
 
