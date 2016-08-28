@@ -116,10 +116,8 @@ if (_SOPLEX_INCLUDE)
     PATHS ${_SOPLEX_ROOT_PATHS} PATH_SUFFIXES lib)
   if (_SOPLEX_LIB)
     string(REGEX REPLACE "^.*libsoplex-(.*)\\.a$" "\\1" SOPLEX_VERSION_STRING "${_SOPLEX_LIB}")
-    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES})
+    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES} -lubsan)
   endif()
-
-  set(CMAKE_EXE_LINKER_FLAGS ${CMAKE_EXE_LINKER_FLAGS} -fsanitize=undefined)
 endif()
 
 # Let cmake process everything.
