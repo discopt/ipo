@@ -29,21 +29,34 @@ using namespace ipo;
 
 int main(int argc, char** argv)
 {
+  // Read instance and create MixedIntegerSet.
+
   SCIP* scip = NULL;
   SCIP_CALL_EXC(SCIPcreate(&scip));
   SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
+  SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", scip);
+  std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
+
+  
+
+  // Initialize oracles.
+  
+  std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
+    "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
+  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");  
+  std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
+
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", 
+    mixedIntegerSet, exactScipOracleStats);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
   std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
-
-  SCIP_CALL_EXC(SCIPfree(&scip));
 
   std::vector<AffineHullHandler*> handlers;
   DebugAffineHullHandler debugHandler(std::cout);

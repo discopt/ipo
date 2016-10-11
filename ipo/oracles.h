@@ -179,7 +179,7 @@ namespace ipo {
     bool strict;
 
     inline ObjectiveBound() 
-      : value(plusInfinity), strict(false)
+      : value(soplex::infinity), strict(false)
     {
 
     }

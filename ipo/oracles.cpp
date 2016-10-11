@@ -11,7 +11,7 @@ namespace ipo {
   OracleResult::Point::Point(Vector& vec)
     : vector(vec)
   {
-    this->objectiveValue = minusInfinity;
+    this->objectiveValue = -infinity;
   }
   
   OracleResult::Point::Point(Vector& vec, const Rational& value)
@@ -49,7 +49,7 @@ namespace ipo {
   {
     for (std::size_t i = 0; i < points.size(); ++i)
     {
-      if (points[i].objectiveValue == minusInfinity)
+      if (points[i].objectiveValue == -infinity)
       {
         points[i].objectiveValue = *_objective * points[i].vector;
       }
@@ -145,16 +145,8 @@ namespace ipo {
       checkDuplicates);
 
     // Compute missing objective values.
-    // TODO: Code duplication?
-
-    for (std::size_t i = 0; i < result.points.size(); ++i)
-    {
-      if (result.points[i].objectiveValue == minusInfinity)
-      {
-        result.points[i].objectiveValue = objective * result.points[i].vector;
-      }
-    }
-
+    result.computeMissingObjectiveValues();
+   
     // If requested, sort all points by objective value.
 
     if (sort)

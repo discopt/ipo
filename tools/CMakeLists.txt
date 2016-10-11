@@ -46,3 +46,18 @@ target_link_libraries(ipo-paper-affine-hull
 if (SCIP_FOUND)
   target_link_libraries(ipo-paper-affine-hull ${SCIP_LIBRARIES})
 endif()
+
+
+# paper-facets
+
+add_executable(ipo-paper-facets
+  paper_facets.cpp
+)
+
+target_link_libraries(ipo-paper-facets
+  ${IPO_LIBRARIES}
+)
+
+if (SCIP_FOUND)
+  target_link_libraries(ipo-paper-facets ${SCIP_LIBRARIES})
+endif()

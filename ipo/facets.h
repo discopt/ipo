@@ -10,6 +10,233 @@
 
 namespace ipo {
 
+  class FacetSeparationState
+  {
+  public:
+    /**
+     * \brief Constructor.
+     * 
+     */
+
+    FacetSeparationState();
+
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~FacetSeparationState();
+
+    /**
+     * \brief Returns the space of the oracle.
+     * 
+     * Returns a const-reference to the space of the oracle.
+     */
+
+    virtual const Space& oracleSpace() const = 0;
+
+    /**
+     * \brief Returns the space of the polar LP.
+     * 
+     * Returns a const-reference to the space of the polar LP.
+     */
+
+    virtual const Space& polarSpace() const = 0;
+
+    /**
+     * \brief Returns the number of spanning points that are currently in the LP.
+     * 
+     * Returns the number of spanning points that are currently in the LP.
+     */
+
+    virtual std::size_t polarNumPoints() const = 0;
+
+    /**
+     * \brief Returns the number of spanning rays that are currently in the LP.
+     * 
+     * Returns the number of spanning rays found that are currently in the LP.
+     */
+
+    virtual std::size_t polarNumRays() const = 0;
+
+    /**
+     * \brief Returns the number of rows of the current LP.
+     * 
+     * Returns the number of rows of the current LP.
+     */
+
+    virtual std::size_t polarNumRowsLP() const = 0;
+
+    /**
+     * \brief Returns the number of columns of the current LP.
+     * 
+     * Returns the number of columns of the current LP.
+     */
+
+    virtual std::size_t polarNumColumnsLP() const = 0;
+
+    /**
+     * \brief Returns the number of nonzeros of the current LP.
+     * 
+     * Returns the number of nonzeros of the current LP.
+     */
+
+    virtual std::size_t polarNumNonzerosLP() const = 0;
+
+    /**
+     * \brief Returns true iff we are currently solving an approximate LP.
+     * 
+     * Returns true iff we are currently solving an approximate LP.
+     */
+
+    virtual bool approximateSolve() const = 0;
+    
+    /**
+     * \brief Returns true iff we are currently solving an exact LP.
+     * 
+     * Returns true iff we are currently solving an exact LP.
+     */
+
+    virtual bool exactSolve() const = 0;
+
+    /**
+     * \brief Returns the maximum allowed heuristic level of the current oracle call.
+     * 
+     * Returns the maximum allowed heuristic level of the current oracle call.
+     */
+
+    virtual HeuristicLevel oracleMaxHeuristicLevel() const = 0;
+
+    /**
+     * \brief Returns the minimum allowed heuristic level of the current oracle call.
+     * 
+     * Returns the minimum allowed heuristic level of the current oracle call.
+     */
+
+    virtual HeuristicLevel oracleMinHeuristicLevel() const = 0;
+
+    /**
+     * \brief Returns the heuristic level of the oracle's last answer.
+     * 
+     * Returns the heuristic level of the oracle's last answer.
+     */
+
+    virtual HeuristicLevel oracleResultHeuristicLevel() const = 0;
+
+    /**
+     * \brief Returns the number of points returned by the last oracle call.
+     * 
+     * Returns the number of points returned by the last oracle call.
+     */
+
+    virtual std::size_t oracleNumPoints() const = 0;
+
+    /**
+     * \brief Returns the number of rays returned by the last oracle call.
+     * 
+     * Returns the number of rays returned by the last oracle call.
+     */
+
+    virtual std::size_t oracleNumRays() const = 0;
+
+    /**
+     * \brief Returns true iff we are separating a ray.
+     * 
+     * Returns true iff we are separating a ray.
+     */
+
+    virtual bool separatingRay() const = 0;   
+  };
+
+  /**
+   * \brief Base class for an observer for affine-hull computations.
+   * 
+   * Base class for an observer for affine-hull computations.
+   */
+
+  class FacetSeparationHandler
+  {
+  public:
+    enum Event
+    {
+      BEGIN,
+      EQUATIONS_INITIALIZED,
+      LOOP,
+      APPROXIMATE_SOLVE_BEGIN,
+      APPROXIMATE_SOLVE_END,
+      EXACT_SOLVE_BEGIN,
+      EXACT_SOLVE_END,
+      ORACLE_BEGIN,
+      ORACLE_END = ORACLE_BEGIN + 1,
+      POINT_BEGIN,
+      POINT_END,
+      RAY_BEGIN,
+      RAY_END,
+      END,
+    };
+
+    /**
+     * \brief Default constructor.
+     * 
+     * Default constructor.
+     */
+
+    FacetSeparationHandler();
+
+    /**
+     * \brief Destructor.
+     * 
+     * Destructor.
+     */
+
+    virtual ~FacetSeparationHandler();
+
+    /**
+     * \brief This method is called by the algorithm.
+     * 
+     * This method is called by the algorithm in certain steps.
+     */
+
+    virtual void notify(Event event, FacetSeparationState& state) = 0;
+  };
+
+  /**
+   * \brief Separates a given \p point by a facet or an equation.
+   * 
+   * Separates a given \p point by a facet or an equation.
+   * 
+   * \param oracle      Oracle defining the polyhedron P.
+   * \param point       Point to be separated.
+   * \param spanning    Points and rays spanning P's affine hull.
+   * \param handlers    Set of \ref FacetSeparationHandler objects whose notify() methods are called appropriately.
+   * \param constraint  If the \p point lies outside P, this variable will contain the separating inequality.
+   * \param certificate If not \c NULL, it will contain points and rays that span the facet or equation.
+   * 
+   * \return True iff \p point can be separated.
+   */
+
+  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning, 
+    std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate = NULL);
+
+  /**
+   * \brief Separates a given \p ray by a facet or an equation.
+   * 
+   * Separates a given \p ray by a facet or an equation.
+   * 
+   * \param oracle      Oracle defining the polyhedron P.
+   * \param ray         Ray to be separated.
+   * \param spanning    Points and rays spanning P's affine hull.
+   * \param handlers    Set of \ref FacetSeparationHandler objects whose notify() methods are called appropriately.
+   * \param constraint  If the \p ray lies outside P's recession cone, this variable will contain the separating inequality.
+   * \param certificate If not \c NULL, it will contain points and rays that span the facet or equation.
+   * 
+   * \return True iff \p ray can be separated.
+   */  
+
+  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning, 
+    std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate = NULL);
+
+  ///////////////// OLD ////////////////////
+  
   /**
    * \brief Facet-separation for a polyhedron.
    *

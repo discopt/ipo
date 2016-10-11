@@ -17,7 +17,6 @@
   #include <scip/scip.h>
 #endif
 
-
 namespace ipo {
 
   class MIPOracleBase;
@@ -62,14 +61,10 @@ namespace ipo {
   /**
    * \brief An oracle based on the SCIP solver.
    *
-   * An oracle for the convex hull of the solutions returned by the SCIP instance. The computed
-   * floating-point solutions are turned into rational ones using rational-reconstruction
-   * techniques. This may in principle lead to infeasible solutions, in particular if continuous
-   * solutions are present. To produce correct solutions one may use a
-   * \ref MixedIntegerProgramCorrectorOracle that postprocesses the solutions.
+   * An oracle for the convex hull of the solutions returned by the SCIP instance. The computed floating-point solutions are 
+   * turned into rational ones by the underlying \ref MIPOracleBase.
    *
-   * An instance is either constructed from a \c SCIP instance
-   * or from a \ref MIP.
+   * An instance is either constructed from a \c SCIP instance or from a \ref MixedIntegerSet.
    */
 
   class SCIPOracle: public MIPOracleBase
@@ -78,7 +73,7 @@ namespace ipo {
     /**
      * \brief Constructs a SCIP oracle with given \p name, optionally associated to \p nextOracle.
      *
-     * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is equal
+     * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is
      * defined via the \p originalSCIP instance (and must be equal to that of \p nextOracle). The oracle is implemented by 
      * calling SCIP on a copy of the given \p originalSCIP instance.
      */
@@ -128,14 +123,110 @@ namespace ipo {
     SCIP_CONS* _faceConstraint; // Special equation constraint for optimizing over a face.
   };
 
-//   /**
-//    * \brief An oracle based on ExactSCIP.
-//    *
-//    * A oracle for the polyhedron \f$ P \f$
-//    * that uses SCIP to optimize.
-//    * An instance is constructed from a \ref MIP.
-//    */
-//
+  /**
+   * \brief An oracle based on the exact IP solver scip-ex.
+   *
+   * An oracle for the given \ref MixedIntegerSet that uses scip-ex (via an external call) to optimize.
+   */
+  
+  class ExactSCIPOracle : public OracleBase
+  {
+  public:
+    /**
+     * \brief Constructs an exact SCIP oracle with given \p name in given \p space.
+     *
+     * Constructs an exact SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is 
+     * equal to that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling
+     * scip-ex to solve mixed-integer programs over the \p mixedIntegerSet.
+     */
+
+    ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, 
+      const std::shared_ptr<OracleBase>& nextOracle = NULL);
+
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~ExactSCIPOracle();
+
+    /**
+     * \brief Sets the path of the scip-ex binary used.
+     * 
+     * Sets the path of the scip-ex binary used.
+     */
+
+    void setBinaryPath(const std::string& path);
+
+    /**
+     * \brief Returns the path of the scip-ex binary used.
+     * 
+     * Returns the path of the scip-ex binary used.
+     */
+
+    inline const std::string& binaryPath() const
+    {
+      return _binary;
+    }
+
+    /**
+     * \brief Restricts the oracle to the face defined by \p newFace.
+     *
+     * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
+     * For \p newFace equal to \c NULL we define \f$ F := P \f$.
+     *
+     * This implementation adds an equation to the underlying SCIP instance.
+     */
+
+    virtual void setFace(const LinearConstraint& newFace = completeFace());
+
+  protected:
+    
+    /**
+     * \brief Creates a temporary directory to work in.
+     * 
+     * Creates a temporary directory to work in.
+     */
+    
+    void createWorkingDirectory();
+    
+    /**
+     * \brief Removes the temporary directory.
+     * 
+     * Removes the temporary directory created by createWorkingDirectory().
+     */
+    
+    void deleteWorkingDirectory();
+
+    /**
+     * \brief Oracle's implementation to maximize the dense rational \p objective.
+     *
+     * This method is called by maximizeController() and contains the implementation of the oracle.
+     *
+     * \param result         After the call, contains the oracle's answer.
+     * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
+     * \param objectiveBound Objective value \f$ \gamma \f$ that should be exceeded.
+     * \param sort           Set this variable to true if points must be sorted.
+     * \param checkDups      Set this variable to true if points or rays must be checked for duplicates.
+     *
+     * This implementation creates a ZIMPL file containing the model and calls the scip-ex binary to solve it.
+     */
+
+    virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
+      bool& checkDups);
+    
+    void writeModel(const soplex::VectorRational& objective);
+    
+    void solveModel();
+    
+    VectorData* parseOutput();
+
+  protected:
+    std::string _binary;
+    std::string _workingDirectory;
+    std::shared_ptr<MixedIntegerSet> _mixedIntegerSet;
+  };
+
 //   class ExactSCIPOptimizationOracle: public FaceOptimizationOracleBase
 //   {
 //   public:

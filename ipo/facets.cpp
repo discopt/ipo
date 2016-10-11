@@ -10,6 +10,273 @@ using namespace soplex;
 
 namespace ipo {
 
+  FacetSeparationState::FacetSeparationState()
+  {
+
+  }
+
+  FacetSeparationState::~FacetSeparationState()
+  {
+
+  }
+
+  class FacetSeparation: public FacetSeparationState, PolarLPHandler
+  {
+  public:
+    FacetSeparation(std::vector<FacetSeparationHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle, 
+      const Vector& targetVector, bool separatingRay)
+      : _handlers(handlers), _oracle(oracle), _targetVector(targetVector), _separatingRay(separatingRay),
+      _approximateLP(oracle, *this, true), _exactLP(oracle, *this, false), _approximateSolve(false), _exactSolve(false)
+    {
+
+    }
+
+    virtual ~FacetSeparation()
+    {
+      
+    }
+
+    virtual const Space& oracleSpace() const
+    {
+      return _oracle->space();
+    }
+
+    virtual const Space& polarSpace() const
+    {
+      return _approximateLP.polarSpace();
+    }
+
+    virtual std::size_t polarNumPoints() const
+    {
+      
+    }
+
+    virtual std::size_t polarNumRays() const
+    {
+      
+    }
+
+    virtual std::size_t polarNumRowsLP() const
+    {
+      
+    }
+
+    virtual std::size_t polarNumColumnsLP() const
+    {
+      
+    }
+
+    virtual std::size_t polarNumNonzerosLP() const
+    {
+      
+    }
+        
+    virtual bool approximateSolve() const
+    {
+      return _approximateSolve;
+    }
+
+    virtual bool exactSolve() const
+    {
+      return _exactSolve;
+    }
+
+    virtual HeuristicLevel oracleMaxHeuristicLevel() const
+    {
+      
+    }
+
+    virtual HeuristicLevel oracleMinHeuristicLevel() const
+    {
+      
+    }
+
+    virtual HeuristicLevel oracleResultHeuristicLevel() const
+    {
+      
+    }
+
+    virtual std::size_t oracleNumPoints() const
+    {
+      
+    }
+
+    virtual std::size_t oracleNumRays() const
+    {
+      
+    }
+
+    virtual bool separatingRay() const
+    {
+      return _separatingRay;
+    }
+
+    virtual void notify(PolarLPHandler::Event event, XPolarLP& polarLP)
+    {
+      
+    }
+    
+  protected:
+
+    void notify(FacetSeparationHandler::Event event)
+    {
+      for (std::size_t i = 0; i < _handlers.size(); ++i)
+        _handlers[i]->notify(event, *this);
+    }
+
+  public:
+
+    bool run(const InnerDescription& spanning, LinearConstraint& constraint, InnerDescription* certificate)
+    {
+      DVectorRational dense;
+      dense.reDim(polarSpace().dimension());
+
+      if (separatingRay())
+      {
+        assert(false);
+      }
+      else
+      {
+        // Normalization constraint.
+
+        for (std::size_t i = 0; i < spanning.points.size(); ++i)
+        {
+          dense -= spanning.points[i];
+          _approximateLP.addPointRow(spanning.points[i], false);
+          _exactLP.addPointRow(spanning.points[i], false);
+        }
+        for (std::size_t i = 0; i < spanning.rays.size(); ++i)
+        {
+          dense -= spanning.rays[i];
+          _approximateLP.addPointRow(spanning.rays[i], false);
+          _exactLP.addPointRow(spanning.rays[i], false);
+        }
+        dense /= int(spanning.points.size() + spanning.rays.size());
+
+        for (std::size_t p = 0; p < _targetVector.size(); ++p)
+          dense[_targetVector.index(p)] += _targetVector.value(p);
+
+        DSVectorRational sparse(dense);
+        _approximateLP.addRow(-soplex::infinity, sparse, Rational(1), false);
+        _exactLP.addRow(-soplex::infinity, sparse, Rational(1), false);
+
+        // Objective.
+
+        dense.clear();
+        for (std::size_t p = 0; p < _targetVector.size(); ++p)
+          dense[_targetVector.index(p)] = _targetVector.value(p);
+        dense[polarSpace().dimension() - 1] = -1;
+        _approximateLP.setObjective(dense);
+        _exactLP.setObjective(dense);
+      }
+
+      // Solve approximate polar LP.
+      
+//       std::cout << "before approx." << std::endl;
+// 
+//       _approximateSolve = true;
+//       _approximateLP.solve();
+//       _approximateSolve = false;
+// 
+//       std::cout << "after approx." << std::endl;
+//       
+//       // Copy relevant rows from approximate to exact LP.
+// 
+      InnerDescription pointsRays;
+//       _approximateLP.getTightPointsRays(pointsRays, true);
+//       for (std::size_t i = 0; i < pointsRays.points.size(); ++i)
+//         _exactLP.addPointRow(pointsRays.points[i], true);
+//       for (std::size_t i = 0; i < pointsRays.rays.size(); ++i)
+//         _exactLP.addRayRow(pointsRays.rays[i], true);
+
+      // Solve exact polar LP.
+
+      std::cout << "before exact." << std::endl;
+      
+      _exactSolve = true;
+      _exactLP.solve();
+      _exactSolve = false;
+      
+      std::cout << "after exact." << std::endl;
+
+      if (_exactLP.getObjectiveValue() == 0)
+        return false;
+
+      // Extract tight points and rays.
+
+      _exactLP.getTightPointsRays(pointsRays);
+      if (certificate != NULL)
+        *certificate = pointsRays;
+
+      constraint = _exactLP.getOptimum();
+      std::size_t resultDimMinus1 = pointsRays.points.size() + pointsRays.rays.size();
+      std::size_t givenDimMinus1 = spanning.points.size() + spanning.rays.size();
+      if (resultDimMinus1 == givenDimMinus1)
+        constraint = LinearConstraint('=', constraint.normal(), constraint.rhs());
+      return true;
+    }
+
+  public:
+    std::size_t paramMaxAge;
+
+  protected:
+    std::vector<FacetSeparationHandler*>& _handlers;
+    std::shared_ptr<OracleBase> _oracle;
+    const Vector& _targetVector;
+    bool _separatingRay;
+    XPolarLP _approximateLP;
+    XPolarLP _exactLP;
+
+    bool _approximateSolve;
+    bool _exactSolve;
+  };
+
+  FacetSeparationHandler::FacetSeparationHandler()
+  {
+
+  }
+
+  FacetSeparationHandler::~FacetSeparationHandler()
+  {
+
+  }
+  
+  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning, 
+    std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate)
+  {
+    FacetSeparation algorithm(handlers, oracle, point, false);
+    algorithm.paramMaxAge = 10;
+    return algorithm.run(spanning, constraint, certificate);
+  }
+
+  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning, 
+    std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate)
+  {
+    FacetSeparation algorithm(handlers, oracle, ray, true);
+    algorithm.paramMaxAge = 10;
+    return algorithm.run(spanning, constraint, certificate);
+  }
+
+
+//   LinearConstraint separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point,
+//     const InnerDescription& spanning, std::vector<FacetSeparationHandler*>& handlers, InnerDescription* certificate)
+//   {
+//     FacetSeparation algorithm(handlers, oracle, point, false);
+//     algorithm.paramMaxAge = 10;
+//     return algorithm.run(spanning, certificate);
+//   }
+// 
+//   LinearConstraint separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray,
+//     const InnerDescription& spanning, std::vector<FacetSeparationHandler*>& handlers, InnerDescription* certificate)
+//   {
+//     FacetSeparation algorithm(handlers, oracle, ray, true);
+//     algorithm.paramMaxAge = 10;
+//     return algorithm.run(spanning, certificate);
+//   }
+
+  
+  
+
   namespace Separation {
 
     class Implementation: public PolarLP

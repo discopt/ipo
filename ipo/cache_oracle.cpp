@@ -129,7 +129,7 @@ namespace ipo {
 
     // Search points.
 
-    search(_facePoints, approximateObjective, objectiveBound.value > minusInfinity ? double(objectiveBound.value) : 0.0, true, 
+    search(_facePoints, approximateObjective, objectiveBound.value > -infinity ? double(objectiveBound.value) : 0.0, true, 
       searchResult);
 
     bool foundSatisfying = false;
@@ -144,6 +144,7 @@ namespace ipo {
         result.points.back().objectiveValue = activity;
       }
     }
+    sort = true;
 
     return heuristicLevel();
   }

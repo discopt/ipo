@@ -371,8 +371,8 @@ namespace ipo {
     XAffineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
       InnerDescription& resultInnerDescription, AffineOuterDescription& resultOuterDescription)
       : _handlers(handlers), _oracle(oracle), _innerDescription(resultInnerDescription), _equations(resultOuterDescription),
-      _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(plusInfinity), 
-      _objectiveValueNegative(plusInfinity),
+      _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(soplex::infinity), 
+      _objectiveValueNegative(soplex::infinity),
       _verifyIndex(std::numeric_limits<std::size_t>::max()),
       _verifySuccess(true), _lastApproximateDirectionSolves(0), _lastExactDirectionSolves(0),
       _lastExactDirectionNonzeros(0), _lastExactDirectionBitsize(std::numeric_limits<std::size_t>::max())
@@ -793,8 +793,8 @@ namespace ipo {
 
         if (_innerDescription.points.empty())
         {
-          _objectiveValuePositive = plusInfinity;
-          _objectiveValueNegative = plusInfinity;
+          _objectiveValuePositive = soplex::infinity;
+          _objectiveValueNegative = soplex::infinity;
         }
         else
         {
@@ -1054,7 +1054,7 @@ namespace ipo {
     switch (event)
     {
       case ipo::AffineHullHandler::BEGIN:
-        _stream << "AH: Computing affine hull in ambient space of dimension " << state.space().dimension() << "\n";
+        _stream << "AH: Computing affine hull in ambient space of dimension " << state.space().dimension() << ".\n";
       break;
       case ipo::AffineHullHandler::LOOP:
         _stream << "AH: " << state.lowerBound() << " <= dimension ";
@@ -1990,7 +1990,7 @@ namespace ipo {
           }
 
           if (_spanningPoints.empty())
-            _commonValue = plusInfinity;
+            _commonValue = soplex::infinity;
           else
             _commonValue = *_spanningPoints.begin() * _directionVector;
 

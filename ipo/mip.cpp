@@ -11,7 +11,7 @@
 namespace ipo {
   
   MixedIntegerSet::Variable::Variable()
-    : lowerBound(minusInfinity), upperBound(plusInfinity), integral(false)
+    : lowerBound(-soplex::infinity), upperBound(soplex::infinity), integral(false)
   {
 
   }
@@ -46,12 +46,12 @@ namespace ipo {
       if (realLower > -SCIPinfinity(scip))
         reconstruct(realLower, _variables[v].lowerBound, SCIPfeastol(scip));
       else
-        _variables[v].lowerBound = minusInfinity;
+        _variables[v].lowerBound = -soplex::infinity;
       double realUpper = SCIPvarGetUbGlobal(origVars[v]);
       if (realUpper < SCIPinfinity(scip))
         reconstruct(realUpper, _variables[v].upperBound, SCIPfeastol(scip));
       else
-        _variables[v].upperBound = plusInfinity;
+        _variables[v].upperBound = soplex::infinity;
       _variables[v].integral = SCIPvarGetType(origVars[v]) != SCIP_VARTYPE_CONTINUOUS;
 
       spaceData->addVariable(SCIPvarGetName(origVars[v]));
@@ -363,7 +363,7 @@ namespace ipo {
     assert(_points.empty());
     assert(_rays.empty());
     
-    solverMaximize(_objective, plusInfinity, _points, _rays);
+    solverMaximize(_objective, soplex::infinity, _points, _rays);
 
     if (!_points.empty())
     {

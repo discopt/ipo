@@ -4,11 +4,265 @@
 #include <random>
 #include <vector>
 
+// DEBUGGING
+#include "soplex_reproduce.h"
+
 using namespace soplex;
 
 //#define CUT_AGING_BASIC
 
 namespace ipo {
+
+  PolarLPHandler::PolarLPHandler()
+  {
+
+  }
+
+  PolarLPHandler::~PolarLPHandler()
+  {
+
+  }
+
+  XPolarLP::RowInfo::RowInfo(bool dyn)
+    : dynamic(dyn), type('c'), vector(), age(-1)
+  {
+
+  }
+  
+  XPolarLP::RowInfo::RowInfo(bool dyn, char t, const Vector& v, int a)
+    : dynamic(dyn), type(t), vector(v), age(a)
+  {
+
+  }
+
+  XPolarLP::XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate)
+    : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0)
+  {
+    SpaceData* data = new SpaceData();
+    for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
+      data->addVariable("a_" + oracle->space()[v]);
+    data->addVariable("beta");
+    _space = new Space(data);
+    
+    _spx = new ReproSoPlex;
+    _spx->setIntParam(SoPlex::SOLVEMODE, approximate ? SoPlex::SOLVEMODE_REAL : SoPlex::SOLVEMODE_RATIONAL);
+    _spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    if (!approximate)
+    {
+      _spx->setRealParam(SoPlex::FEASTOL, 0.0);
+      _spx->setBoolParam(SoPlex::RATREC, true);
+      _spx->setBoolParam(SoPlex::RATFAC, true);
+    }
+    _spx->setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_AUTO);
+    _spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+
+    // Initialize LP columns.
+
+    LPColSetRational colSet;
+    DSVectorRational zeroVector;
+    for (std::size_t v = 0; v < data->dimension(); ++v)
+    {
+      colSet.add(0, -infinity, zeroVector, infinity);
+    }
+    _spx->addColsRational(colSet);
+
+    _oracleObjective.reDim(oracle->space().dimension(), false);
+    _solution.reDim(_space->dimension(), false);
+    _denseColumnVector.reDim(_space->dimension(), false);
+  }
+
+  XPolarLP::~XPolarLP()
+  {
+    delete _spx;
+  }
+
+  void XPolarLP::setObjective(const VectorRational& objective)
+  {
+    _denseColumnVector.clear();
+    assert(objective.dim() == _space->dimension());
+    for (std::size_t c = 0; c < _space->dimension(); ++c)
+    {
+      _denseColumnVector[c] = objective[c];
+    }
+    
+    _spx->changeObjRational(_denseColumnVector);
+    notify(PolarLPHandler::OBJECTIVE_SET);
+  }
+
+  std::size_t XPolarLP::addRow(const Rational& lhs, const SVectorRational& normalVector, const Rational& rhs, bool dynamic)
+  {
+    _spx->addRowRational(LPRowRational(lhs, normalVector, rhs));
+    _rows.push_back(RowInfo(dynamic));
+    if (!dynamic)
+      _firstDynamicRow = _spx->numRowsRational();
+
+    notify(PolarLPHandler::ROW_ADDED);
+    return _spx->numRowsRational() - 1;
+  }
+
+  void XPolarLP::updateRow(std::size_t row, const Rational& lhs, const SVectorRational& normalVector, const Rational& rhs)
+  {
+    _spx->changeRowRational(row, LPRowRational(lhs, normalVector, rhs));
+
+    notify(PolarLPHandler::ROW_UPDATED);
+  }
+
+  void XPolarLP::addPointRow(const Vector& point, bool dynamic)
+  {
+    notify(PolarLPHandler::POINT_BEGIN);
+
+    _sparseColumnVector.clear();
+    _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), point.size() + 1));
+    vectorToSparse(point, _sparseColumnVector);
+    _sparseColumnVector.add(_oracle->space().dimension(), Rational(-1));
+
+    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(0)));
+    _rows.push_back(RowInfo(dynamic, 'p', point));
+    if (!dynamic)
+      _firstDynamicRow = _spx->numRowsRational();
+
+    notify(PolarLPHandler::POINT_END);
+  }
+
+  void XPolarLP::addRayRow(const Vector& ray, bool dynamic)
+  {
+    notify(PolarLPHandler::RAY_BEGIN);
+
+    _sparseColumnVector.clear();
+    _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), ray.size()));
+    vectorToSparse(ray, _sparseColumnVector);
+   
+    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(0)));
+    _rows.push_back(RowInfo(dynamic, 'r', ray));
+    if (!dynamic)
+      _firstDynamicRow = _spx->numRowsRational();
+
+    notify(PolarLPHandler::RAY_END);
+  }
+
+  void XPolarLP::solve()
+  {
+    std::cout << "solve begin." << std::endl;
+    
+    notify(PolarLPHandler::SOLVE_BEGIN);
+
+    for (bool progress = true; progress; )
+    {
+      std::cout << "Solving Polar LP with tolerance " << _spx->realParam(SoPlex::FEASTOL) << std::endl;
+      std::cout << "Size = " << _spx->numRowsRational() << " x " << _spx->numColsRational()
+        << ", #nonzeros = " << _spx->numNonzerosRational() << std::endl;
+
+//       _spx->writeFileRational("polar.lp");
+
+//       if (_spx->realParam(SoPlex::FEASTOL) == 0.0)
+//       {
+//         _spx->reproduceSolve("reproduce.cpp");
+//       }
+
+      SPxSolver::Status status = _spx->solve();
+      
+      if (status == SPxSolver::OPTIMAL)
+      {
+        _spx->getPrimalRational(_solution);
+
+        DVectorReal solReal = _solution;
+        std::cout << "Current Polar LP solution: " << solReal << std::endl;
+
+        for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)
+          _oracleObjective[v] = _solution[v];
+        Rational objectiveValue = _solution[_oracle->space().dimension()];
+
+        std::cout << "Objective value from Polar LP: " << double(objectiveValue) << std::endl;
+
+        notify(PolarLPHandler::ORACLE_BEGIN);
+        _oracle->maximize(_result, _oracleObjective, ObjectiveBound(objectiveValue, true));
+        notify(PolarLPHandler::ORACLE_END);
+
+        std::cout << "Objective value of Oracle:     " << double(_result.points.front().objectiveValue) << std::endl;
+
+        progress = false;
+        if (_result.isInfeasible())
+          throw std::runtime_error("Polar LP: Oracle claims infeasible!");
+        else if (_result.isUnbounded())
+        {
+          // TODO: Do we create duplicate LP rows?
+
+          for (std::size_t i = 0; i < _result.rays.size(); ++i)
+          {
+            addRayRow(_result.rays[i].vector, true);
+            progress = true;
+          }
+        }
+        else
+        {
+          std::cout << "A" << std::endl;
+          assert(_result.isFeasible());
+
+          for (std::size_t i = 0; i < _result.points.size(); ++i)
+          {
+            if (_result.points[i].objectiveValue > objectiveValue + 1.e-6) // TODO: constant! relative error instead?
+            {
+              addPointRow(_result.points[i].vector, true);
+              progress = true;
+            }
+          }
+          
+          std::cout << "B: progress = " << progress << std::endl;
+        }
+      }
+    }
+    
+    std::cout << "C" << std::endl;
+    
+    notify(PolarLPHandler::SOLVE_END);
+    
+    std::cout << "solve done." << std::endl;
+  }
+
+  LinearConstraint XPolarLP::getOptimum()
+  {
+    std::size_t size = 0;
+    for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)
+    {
+      if (_solution[v] != 0)
+        ++size;
+    }
+    VectorData* data = new VectorData(size);
+    for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)
+    {
+      if (_solution[v] != 0)
+        data->add(v, _solution[v]);
+    }
+
+    return LinearConstraint('<', Vector(data), _solution[_oracle->space().dimension()]);
+  }
+    
+  void XPolarLP::getTightPointsRays(InnerDescription& tightPointsRays, bool dynamicOnly)
+  {
+    tightPointsRays.points.clear();
+    tightPointsRays.rays.clear();
+
+    std::vector<SPxSolver::VarStatus> rowStatus(_spx->numRowsRational());
+    _spx->getBasis(&rowStatus[0], NULL);
+    for (std::size_t r = dynamicOnly ? _firstDynamicRow : 0; r < _spx->numRowsRational(); ++r)
+    {
+      if (rowStatus[r] != SPxSolver::VarStatus::ON_UPPER)
+        continue;
+
+      if (_rows[r].type == 'p')
+        tightPointsRays.points.push_back(_rows[r].vector);
+      else if (_rows[r].type == 'r')
+        tightPointsRays.rays.push_back(_rows[r].vector);
+    }
+  }
+
+  void XPolarLP::notify(PolarLPHandler::Event event)
+  {
+    _handler.notify(event, *this);
+  }
+  
+  /////////////////// OLD //////////////////////////
 
   PolarLP::RowInfo::RowInfo()
     : type(' '), age(std::numeric_limits<int>::min())
@@ -957,7 +1211,7 @@ soplex::VectorRational& normal,
       DSVectorReal vector;
       for (std::size_t p = 0; p < ray.size(); ++p)
         vector.add(ray.index(p), ray.approximation(p));
-      _stabLP->addRowReal(LPRowReal(minusInfinity, vector, 0.0));
+      _stabLP->addRowReal(LPRowReal(-soplex::infinity, vector, 0.0));
       _stabRowInfos.push_back(ri);
     }
     else
@@ -965,7 +1219,7 @@ soplex::VectorRational& normal,
       DSVectorRational vector;
       for (std::size_t p = 0; p < ray.size(); ++p)
         vector.add(ray.index(p), ray.value(p));
-      _mainLP->addRowRational(LPRowRational(minusInfinity, vector, Rational(0)));
+      _mainLP->addRowRational(LPRowRational(-soplex::infinity, vector, Rational(0)));
       _rowInfos.push_back(ri);
     }
   }

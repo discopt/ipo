@@ -10,9 +10,6 @@
 
 namespace ipo {
 
-  const double plusInfinity = soplex::infinity;
-  const double minusInfinity = -soplex::infinity;
-
   typedef soplex::Rational Rational;
   
   bool isIntegral(const Rational& number);

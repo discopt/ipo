@@ -11,7 +11,256 @@
 
 #define IPO_POLAR_STABIL_HIST_SIZE 2
 
+#include "soplex_reproduce.h"
+
 namespace ipo {
+
+  class XPolarLP;
+  
+  /**
+   * \brief Base class for an observer for polar-LP computations.
+   * 
+   * Base class for an observer for polar-LP computations.
+   */
+
+  class PolarLPHandler
+  {
+  public:
+    enum Event
+    {
+      OBJECTIVE_SET,
+      ROW_ADDED,
+      ROW_UPDATED,
+      SOLVE_BEGIN,
+      SOLVE_END,
+      ORACLE_BEGIN,
+      ORACLE_END = ORACLE_BEGIN + 1,
+      POINT_BEGIN,
+      POINT_END,
+      RAY_BEGIN,
+      RAY_END,
+    };
+
+    /**
+     * \brief Default constructor.
+     * 
+     * Default constructor.
+     */
+
+    PolarLPHandler();
+
+    /**
+     * \brief Destructor.
+     * 
+     * Destructor.
+     */
+
+    virtual ~PolarLPHandler();
+
+    /**
+     * \brief This method is called by the algorithm.
+     * 
+     * This method is called by the algorithm in certain steps.
+     */
+
+    virtual void notify(Event event, XPolarLP& polarLP) = 0;
+  };
+
+  class XPolarLP
+  {
+  protected:
+
+    struct RowInfo
+    {
+      bool dynamic;
+      char type;
+      Vector vector;
+      int age;
+
+      RowInfo(bool dynamic);
+//       RowInfo(char type, int age = -1);
+      RowInfo(bool dynamic, char type, const Vector& vector, int age = -1);
+    };
+
+  public:
+
+    XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate);
+
+    ~XPolarLP();
+
+    void setObjective(const soplex::VectorRational& objective);
+
+    std::size_t addRow(const Rational& lhs, const soplex::SVectorRational& normalVector, const Rational& rhs, bool dynamic);
+
+    void updateRow(std::size_t row, const Rational& lhs, const soplex::SVectorRational& normalVector, const Rational& rhs);
+
+    void addPointRow(const Vector& point, bool dynamic);
+
+    void addRayRow(const Vector& ray, bool dynamic);
+
+    void solve();
+
+    inline Rational getObjectiveValue() const
+    {
+      return _spx->objValueRational();
+    }
+
+    LinearConstraint getOptimum();
+
+    void getTightPointsRays(InnerDescription& tightPointsRays, bool dynamicOnly = false);
+
+    /**
+     * \brief Returns the space of the polar LP.
+     * 
+     * Returns a const-reference to the space of the polar LP.
+     */
+
+    inline const Space& polarSpace() const
+    {
+      return *_space;
+    }
+
+    /**
+     * \brief Returns the number of spanning points that are currently in the LP.
+     * 
+     * Returns the number of spanning points that are currently in the LP.
+     */
+
+    inline std::size_t polarNumPointsLP() const
+    {
+      return _numPointsLP;
+    }
+
+    /**
+     * \brief Returns the number of spanning rays that are currently in the LP.
+     * 
+     * Returns the number of spanning rays found that are currently in the LP.
+     */
+
+    inline std::size_t polarNumRaysLP() const
+    {
+      return _numRaysLP;
+    }
+
+    /**
+     * \brief Returns the number of rows of the current LP.
+     * 
+     * Returns the number of rows of the current LP.
+     */
+
+    inline std::size_t polarNumRowsLP() const
+    {
+      return _spx->numRowsRational();
+    }
+
+    /**
+     * \brief Returns the number of columns of the current LP.
+     * 
+     * Returns the number of columns of the current LP.
+     */
+
+    inline std::size_t polarNumColumnsLP() const
+    {
+      return _spx->numColsRational();
+    }
+
+    /**
+     * \brief Returns the number of nonzeros of the current LP.
+     * 
+     * Returns the number of nonzeros of the current LP.
+     */
+
+    inline std::size_t polarNumNonzerosLP() const
+    {
+      return _spx->numNonzerosRational();
+    }
+
+    /**
+     * \brief Returns the maximum allowed heuristic level of the current oracle call.
+     * 
+     * Returns the maximum allowed heuristic level of the current oracle call.
+     */
+
+    inline HeuristicLevel oracleMaxHeuristicLevel() const
+    {
+      return _lastMaxHeuristicLevel;
+    }
+
+    /**
+     * \brief Returns the minimum allowed heuristic level of the current oracle call.
+     * 
+     * Returns the minimum allowed heuristic level of the current oracle call.
+     */
+
+    inline HeuristicLevel oracleMinHeuristicLevel() const
+    {
+      return _lastMinHeuristicLevel;
+    }
+
+    /**
+     * \brief Returns the heuristic level of the oracle's last answer.
+     * 
+     * Returns the heuristic level of the oracle's last answer.
+     */
+
+    inline HeuristicLevel oracleResultHeuristicLevel() const
+    {
+      return _result.heuristicLevel();
+    }
+
+    /**
+     * \brief Returns the number of points returned by the last oracle call.
+     * 
+     * Returns the number of points returned by the last oracle call.
+     */
+
+    inline std::size_t oracleNumPoints() const
+    {
+      return _result.points.size();
+    }
+
+    /**
+     * \brief Returns the number of rays returned by the last oracle call.
+     * 
+     * Returns the number of rays returned by the last oracle call.
+     */
+
+    inline std::size_t oracleNumRays() const
+    {
+      return _result.rays.size();
+    }
+
+    inline bool isApproximate() const
+    {
+      return _spx->realParam(soplex::SoPlex::FEASTOL) != 0.0;
+    }
+
+  protected:
+
+    void notify(PolarLPHandler::Event event);
+
+  protected:
+
+    bool _approximate;
+    Space* _space;
+    std::shared_ptr<OracleBase> _oracle;
+    soplex::DVectorRational _oracleObjective;
+    OracleResult _result;
+    PolarLPHandler& _handler;
+    soplex::SoPlex* _spx;
+    soplex::DVectorRational _solution;
+    soplex::DVectorRational _denseColumnVector;
+    soplex::DSVectorRational _sparseColumnVector;
+    std::vector<RowInfo> _rows;
+    std::size_t _firstDynamicRow;
+
+    std::size_t _numPointsLP;
+    std::size_t _numRaysLP;
+    HeuristicLevel _lastMaxHeuristicLevel;
+    HeuristicLevel _lastMinHeuristicLevel;
+  };
+
+  /////////////////////// OLD INTERFACE ///////////////////////
 
   /// Class for solving polar LPs using lazy separation, cut aging and stabilization.
 
