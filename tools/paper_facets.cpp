@@ -45,7 +45,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   // Initialize oracles.
-  
+
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
   exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");  

@@ -32,10 +32,10 @@ namespace ipo {
       LP_END,
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
-      POINT_BEGIN,
-      POINT_END,
-      RAY_BEGIN,
-      RAY_END,
+      POINTS_BEGIN,
+      POINTS_END,
+      RAYS_BEGIN,
+      RAYS_END,
       OBJECTIVE_SET,
       ROW_ADDED,
       ROW_UPDATED,
@@ -141,9 +141,9 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the number of spanning points that are currently in the LP.
+     * \brief Returns the number of points that are currently in the LP.
      * 
-     * Returns the number of spanning points that are currently in the LP.
+     * Returns the number of points that are currently in the LP.
      */
 
     inline std::size_t numPointsLP() const
@@ -152,14 +152,36 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the number of spanning rays that are currently in the LP.
+     * \brief Returns the number of rays that are currently in the LP.
      * 
-     * Returns the number of spanning rays found that are currently in the LP.
+     * Returns the number of rays found that are currently in the LP.
      */
 
     inline std::size_t numRaysLP() const
     {
       return _numRaysLP;
+    }
+
+    /**
+     * \brief Returns the number of points that were added in this iteration.
+     * 
+     * Returns the number of points that were added in this iteration.
+     */
+
+    inline std::size_t numPointsAdded() const
+    {
+      return _numPointsAdded;
+    }
+
+    /**
+     * \brief Returns the number of rays that were added in this iteration.
+     * 
+     * Returns the number of rays that were added in this iteration.
+     */
+
+    inline std::size_t numRaysAdded() const
+    {
+      return _numRaysAdded;
     }
 
     /**
@@ -278,6 +300,8 @@ namespace ipo {
 
     std::size_t _numPointsLP;
     std::size_t _numRaysLP;
+    std::size_t _numPointsAdded;
+    std::size_t _numRaysAdded;
     HeuristicLevel _oracleMaxHeuristicLevel;
     HeuristicLevel _oracleMinHeuristicLevel;
     soplex::Rational _oracleObjectiveValue;

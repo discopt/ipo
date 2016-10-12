@@ -62,6 +62,16 @@ namespace ipo {
       return _approximateSolve ? _approximateLP.numRaysLP() : _exactLP.numRaysLP();
     }
 
+    virtual std::size_t polarNumPointsAdded() const
+    {
+      return _approximateSolve ? _approximateLP.numPointsAdded() : _exactLP.numPointsAdded();
+    }
+
+    virtual std::size_t polarNumRaysAdded() const
+    {
+      return _approximateSolve ? _approximateLP.numRaysAdded() : _exactLP.numRaysAdded();
+    }
+
     virtual std::size_t polarNumRowsLP() const
     {
       return _approximateSolve ? _approximateLP.numRowsLP() : _exactLP.numRowsLP();
@@ -122,6 +132,11 @@ namespace ipo {
       return _approximateSolve ? _approximateLP.oracleNumRays() : _exactLP.oracleNumRays();
     }
 
+    virtual Vector separationTarget() const
+    {
+      return _targetVector;
+    }
+
     virtual bool separatingRay() const
     {
       return _separatingRay;
@@ -143,20 +158,20 @@ namespace ipo {
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::LP_END) == FacetSeparationHandler::LP_END);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_BEGIN) == FacetSeparationHandler::ORACLE_BEGIN);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_END) == FacetSeparationHandler::ORACLE_END);
-      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINT_BEGIN) == FacetSeparationHandler::POINT_BEGIN);
-      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINT_END) == FacetSeparationHandler::POINT_END);
-      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAY_BEGIN) == FacetSeparationHandler::RAY_BEGIN);
-      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAY_END) == FacetSeparationHandler::RAY_END);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINTS_BEGIN) == FacetSeparationHandler::POINTS_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINTS_END) == FacetSeparationHandler::POINTS_END);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAYS_BEGIN) == FacetSeparationHandler::RAYS_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAYS_END) == FacetSeparationHandler::RAYS_END);
       switch (event)
       {
         case LP_BEGIN:
         case LP_END:
         case ORACLE_BEGIN:
         case ORACLE_END:
-        case POINT_BEGIN:
-        case POINT_END:
-        case RAY_BEGIN:
-        case RAY_END:
+        case POINTS_BEGIN:
+        case POINTS_END:
+        case RAYS_BEGIN:
+        case RAYS_END:
           notify(static_cast<FacetSeparationHandler::Event>(event));
         break;
       }
@@ -322,7 +337,13 @@ namespace ipo {
     switch (event)
     {
       case  BEGIN:
-        _stream << "FS: Separating " << (state.separatingRay() ? "ray" : "point") << ".\n";
+        _stream << "FS: Separating " << (state.separatingRay() ? "ray" : "point");
+        if (_printPointsAndRays)
+        {
+          _stream << " ";
+          state.oracleSpace().printVector(_stream, state.separationTarget());
+        }
+        _stream << ".\n";
       break;
       case INITIALIZED:
         _stream << "FS: Initialized LPs.\n";
@@ -383,29 +404,23 @@ namespace ipo {
           _stream << "FS: Oracle claimed infeasible";
         _stream << ", heurLevel = " << state.oracleResultHeuristicLevel() << "\n";
       break;
-      case POINT_BEGIN:
-        _stream << "FS: Adding a point.\n";
+      case POINTS_BEGIN:
+        _stream << "FS: Adding points.\n";
+      break;
+      case POINTS_END:
+        _stream << "FS: Added " << state.polarNumPointsAdded() << " points.\n";
+      break;
+      case RAYS_BEGIN:
+        _stream << "FS: Adding rays.\n";
         if (_printPointsAndRays)
         {
-          _stream << "FS: ";
-//           state.space().printVector(_stream, state.innerDescription().points.back()); TODO: ???
-          _stream << "\n";
-        }
-      break;
-      case POINT_END:
-        _stream << "FS: Added a point.\n";
-      break;
-      case RAY_BEGIN:
-        _stream << "FS: Adding a ray.\n";
-        if (_printPointsAndRays)
-        {
-          _stream << "FS: ";
+//           _stream << "FS: ";
 //           state.space().printVector(_stream, state.innerDescription().rays.back()); // TODO: ???
-          _stream << "\n";
+//           _stream << "\n";
         }
       break;
-      case RAY_END:
-        _stream << "FS: Added a ray.\n";
+      case RAYS_END:
+        _stream << "FS: Added " << state.polarNumRaysAdded() << " rays.\n";
       break;
       default:
         _stream << "FS: Unhandled event " << event << ".\n" << std::endl;

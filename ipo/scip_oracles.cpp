@@ -366,6 +366,9 @@ namespace ipo {
       throw std::runtime_error("ExactSCIPOracle failed to initialze: Path of binary not specified.");
     }
 
+    sort = !result.points.empty();
+    checkDups = !result.points.empty();
+
     writeModel(objective);
     solveModel();
     VectorData* pointData = parseOutput();
@@ -375,8 +378,6 @@ namespace ipo {
       result.points.push_back(OracleResult::Point(point));
       result.computeMissingObjectiveValues();
     }
-    sort = false;
-    checkDups = false;
     return heuristicLevel();
   }
   

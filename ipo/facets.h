@@ -67,6 +67,22 @@ namespace ipo {
     virtual std::size_t polarNumRays() const = 0;
 
     /**
+     * \brief Returns the number of points that were added in this iteration.
+     * 
+     * Returns the number of points that were added in this iteration.
+     */
+
+    virtual std::size_t polarNumPointsAdded() const = 0;
+
+    /**
+     * \brief Returns the number of rays that were added in this iteration.
+     * 
+     * Returns the number of rays that were added in this iteration.
+     */
+
+    virtual std::size_t polarNumRaysAdded() const = 0;
+
+    /**
      * \brief Returns the number of rows of the current LP.
      * 
      * Returns the number of rows of the current LP.
@@ -164,6 +180,14 @@ namespace ipo {
     virtual std::size_t oracleNumRays() const = 0;
 
     /**
+     * \brief Returns the point or ray to be separated.
+     * 
+     * Returns the point or ray to be separated.
+     */
+
+    virtual Vector separationTarget() const = 0;
+
+    /**
      * \brief Returns true iff we are separating a ray.
      * 
      * Returns true iff we are separating a ray.
@@ -203,10 +227,10 @@ namespace ipo {
       LP_END,
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
-      POINT_BEGIN,
-      POINT_END,
-      RAY_BEGIN,
-      RAY_END,
+      POINTS_BEGIN,
+      POINTS_END,
+      RAYS_BEGIN,
+      RAYS_END,
       BEGIN,
       INITIALIZED,
       APPROXIMATE_SOLVE_BEGIN,

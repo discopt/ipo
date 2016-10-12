@@ -124,8 +124,6 @@ namespace ipo {
 
   void XPolarLP::addPointRow(const Vector& point, bool dynamic)
   {
-    notify(PolarLPHandler::POINT_BEGIN);
-
     _sparseColumnVector.clear();
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), point.size() + 1));
     vectorToSparse(point, _sparseColumnVector);
@@ -137,13 +135,10 @@ namespace ipo {
       _firstDynamicRow = _spx->numRowsRational();
 
     _numPointsLP++;
-    notify(PolarLPHandler::POINT_END);
   }
 
   void XPolarLP::addRayRow(const Vector& ray, bool dynamic)
   {
-    notify(PolarLPHandler::RAY_BEGIN);
-
     _sparseColumnVector.clear();
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), ray.size()));
     vectorToSparse(ray, _sparseColumnVector);
@@ -154,7 +149,6 @@ namespace ipo {
       _firstDynamicRow = _spx->numRowsRational();
 
     _numRaysLP++;
-    notify(PolarLPHandler::RAY_END);
   }
 
   void XPolarLP::solve()
@@ -172,15 +166,11 @@ namespace ipo {
         _spx->getPrimalRational(_solution);
 
         DVectorReal solReal = _solution;
-        std::cout << "Current Polar LP solution: " << solReal << std::endl;
-
         for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)
           _oracleObjective[v] = _solution[v];
         Rational inequalityRhs = _solution[_oracle->space().dimension()];
 
         notify(PolarLPHandler::LP_END);
-
-        std::cout << "Rhs value from Polar LP: " << double(inequalityRhs) << std::endl;
 
         _oracleMaxHeuristicLevel = std::numeric_limits<std::size_t>::max();
         _oracleMinHeuristicLevel = 0;
@@ -189,31 +179,41 @@ namespace ipo {
         _oracleObjectiveValue = _result.objectiveValue();
         notify(PolarLPHandler::ORACLE_END);
 
-        std::cout << "Objective value of Oracle:     " << double(_result.points.front().objectiveValue) << std::endl;
-
         progress = false;
         if (_result.isInfeasible())
           throw std::runtime_error("Polar LP: Oracle claims infeasible!");
         else if (_result.isUnbounded())
-        { 
+        {
+          _numRaysAdded = 0;
+          notify(PolarLPHandler::RAYS_BEGIN);
           for (std::size_t i = 0; i < _result.rays.size(); ++i)
           {
             addRayRow(_result.rays[i].vector, true);
             progress = true;
           }
+          _numRaysAdded = _result.rays.size();
+          notify(PolarLPHandler::RAYS_END);
         }
         else
         {
           assert(_result.isFeasible());
 
+          _numPointsAdded = 0;
           for (std::size_t i = 0; i < _result.points.size(); ++i)
           {
             if (_result.points[i].objectiveValue > inequalityRhs + 1.e-6) // TODO: constant! relative error instead?
             {
+              if (!progress)
+              {
+                progress = true;
+                notify(PolarLPHandler::POINTS_BEGIN);
+              }
               addPointRow(_result.points[i].vector, true);
-              progress = true;
+              _numPointsAdded++;
             }
           }
+          if (progress)
+            notify(PolarLPHandler::POINTS_END);
         }
       }
       else
@@ -724,12 +724,6 @@ soplex::VectorRational& normal,
       dualSolution.reDim(numRows, false);
       if (!_stabLP->getDualReal(dualSolution))
         throw std::runtime_error("Stabilization: No dual solution available.");
-
-      // TODO: SOLUTION DUMP
-//      std::cout << "\nSOLUTION:" << std::setw(5) << std::setprecision(3) << iteration << " " <<
-// std::setw(6)
-//          << primalSolution[10] << " " << std::setw(6) << primalSolution[11] << std::endl;
-//      ++iteration;
 
       _lastMainObjective = 0;
       for (std::size_t c = 0; c < _d; ++c)
