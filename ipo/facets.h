@@ -43,6 +43,14 @@ namespace ipo {
     virtual const Space& polarSpace() const = 0;
 
     /**
+     * \brief Returns the feasibility / optimality tolerance of the LP.
+     * 
+     * Returns the feasibility / optimality tolerance of the LP.
+     */
+
+    virtual double polarTolerance() const = 0;
+
+    /**
      * \brief Returns the number of spanning points that are currently in the LP.
      * 
      * Returns the number of spanning points that are currently in the LP.
@@ -81,6 +89,23 @@ namespace ipo {
      */
 
     virtual std::size_t polarNumNonzerosLP() const = 0;
+
+    /**
+     * \brief Returns the last solution of the polar LP as an inequality.
+     * 
+     * Returns the last solution of the polar LP as an inequality.
+     */
+
+    virtual LinearConstraint currentInequality() const = 0;
+
+    /**
+     * \brief Returns the objective value of the last oracle call.
+     * 
+     * Returns the objective value of the last oracle call, i.e., the smallest right-hand side for currentInequality()
+     * that is valid.
+     */
+
+    virtual soplex::Rational oracleObjectiveValue() const = 0;
 
     /**
      * \brief Returns true iff we are currently solving an approximate LP.
@@ -145,12 +170,28 @@ namespace ipo {
      */
 
     virtual bool separatingRay() const = 0;   
+
+    /**
+     * \brief Returns true iff we just separated by a facet.
+     * 
+     * Returns true iff we just separated by a facet (if at all).
+     */
+
+    virtual bool separatedByFacet() const = 0;
+
+    /**
+     * \brief Returns true iff we just separated by an equation.
+     * 
+     * Returns true iff we just separated by an equation (if at all).
+     */
+
+    virtual bool separatedByEquation() const = 0; 
   };
 
   /**
-   * \brief Base class for an observer for affine-hull computations.
+   * \brief Base class for an observer for facet computations.
    * 
-   * Base class for an observer for affine-hull computations.
+   * Base class for an observer for facet computations.
    */
 
   class FacetSeparationHandler
@@ -158,20 +199,21 @@ namespace ipo {
   public:
     enum Event
     {
-      BEGIN,
-      EQUATIONS_INITIALIZED,
-      LOOP,
-      APPROXIMATE_SOLVE_BEGIN,
-      APPROXIMATE_SOLVE_END,
-      EXACT_SOLVE_BEGIN,
-      EXACT_SOLVE_END,
+      LP_BEGIN,
+      LP_END,
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
       POINT_BEGIN,
       POINT_END,
       RAY_BEGIN,
       RAY_END,
-      END,
+      BEGIN,
+      INITIALIZED,
+      APPROXIMATE_SOLVE_BEGIN,
+      APPROXIMATE_SOLVE_END,
+      EXACT_SOLVE_BEGIN,
+      EXACT_SOLVE_END,
+      END
     };
 
     /**
@@ -198,6 +240,185 @@ namespace ipo {
 
     virtual void notify(Event event, FacetSeparationState& state) = 0;
   };
+  
+  
+  /**
+   * \brief Class for debugging facet computations.
+   * 
+   * Class for debugging facet computations. It prints at least one line for each notification.
+   */
+
+  class DebugFacetSeparationHandler: public FacetSeparationHandler
+  {
+  public:
+    /**
+     * \brief Constructor.
+     * 
+     * Constructor.
+     * 
+     * \param stream Where the output will be written to.
+     */
+
+    DebugFacetSeparationHandler(std::ostream& stream, bool printPointsAndRays = false, bool printInequalities = false);
+
+    /**
+     * \brief Destructor.
+     * 
+     * Destructor.
+     */
+
+    virtual ~DebugFacetSeparationHandler();
+
+    /**
+     * \brief Notification method, see \ref FacetSeparationHandler.
+     * 
+     * Notification method, see \ref FacetSeparationHandler.
+     */
+
+    virtual void notify(Event event, FacetSeparationState& state);
+
+  protected:
+    std::ostream& _stream;
+    bool _printPointsAndRays;
+    bool _printInequalities;
+  };
+  
+  /**
+    * \brief Class for collecting statistics of a facet computation.
+    * 
+    * Class for collecting statistics of a facet computation.
+    */
+
+  class StatisticsFacetSeparationHandler: public FacetSeparationHandler
+  {
+  public:
+    /**
+      * \brief Constructor.
+      * 
+      * Constructor.
+      */
+
+    StatisticsFacetSeparationHandler();
+
+    /**
+      * \brief Destructor.
+      * 
+      * Destructor.
+      */
+
+    virtual ~StatisticsFacetSeparationHandler();
+
+    /**
+      * \brief Notification method, see \ref FacetSeparationHandler.
+      * 
+      * Notification method, see \ref FacetSeparationHandler.
+      */
+
+    virtual void notify(Event event, FacetSeparationState& state);
+
+    /**
+     * \brief Resets all statistics.
+     * 
+     * Resets all statistics.
+     */
+
+    void reset();
+
+    /**
+     * \brief Returns the number of oracle queries.
+     * 
+     * Returns the number of oracle queries.
+     */
+
+    inline std::size_t numOracleQueries() const
+    {
+      return _numOracleQueries;
+    }
+
+    /**
+     * \brief Returns the vector storing how often an oracle returned with each heuristicLevel.
+     * 
+     * Returns the vector storing how often an oracle returned with each heuristicLevel.
+     */
+
+    inline const std::vector<std::size_t>& numHeuristicLevelAnswers() const
+    {
+      return _numHeuristicLevelAnswers;
+    }
+
+    /**
+     * \brief Returns how many approximate LPs were solved.
+     * 
+     * Returns how many approximate LPs were solved.
+     */
+
+    inline std::size_t numApproximateLPSolves() const
+    {
+      return _numApproximateLPSolves;
+    }
+
+    /**
+     * \brief Returns how many exact LPs were solved.
+     * 
+     * Returns how many exact LPs were solved.
+     */
+
+    inline std::size_t numExactLPSolves() const
+    {
+      return _numExactLPSolves;
+    }
+
+    /**
+     * \brief Returns the total running time for solving approximate LPs.
+     * 
+     * Returns the total running time for solving approximate LPs.
+     */
+
+    inline double timeApproximateLPs() const
+    {
+      return _timeApproximateLPs;
+    }
+
+    /**
+     * \brief Returns the total running time for solving exact LPs.
+     * 
+     * Returns the total running time for solving exact LPs.
+     */
+
+    inline double timeExactLPs() const
+    {
+      return _timeExactLPs;
+    }
+    
+    /**
+     * \brief Returns the total running time for oracles.
+     * 
+     * Returns the total running time for oracles.
+     */
+
+    inline double timeOracles() const
+    {
+      return _timeOracles;
+    }
+
+  protected:
+    Timer _timer;
+    std::size_t _numOracleQueries;
+    std::vector<std::size_t> _numHeuristicLevelAnswers;
+    std::size_t _numApproximateLPSolves;
+    std::size_t _numExactLPSolves;
+    double _timeApproximateLPs;
+    double _timeExactLPs;
+    double _timeOracles;
+    double _timeLastEvent;
+
+#ifdef IPO_DEBUG
+    Event _lastEvent;
+#endif
+  };
+
+
+
 
   /**
    * \brief Separates a given \p point by a facet or an equation.

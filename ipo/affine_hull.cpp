@@ -935,9 +935,6 @@ namespace ipo {
           _verifyIndex = i;
           oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector, 
             ObjectiveBound(_objectiveValuePositive, true));
-          
-          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector, 
-            ObjectiveBound(_objectiveValuePositive, true));
         }
 
         // Last oracle call.
@@ -1053,31 +1050,31 @@ namespace ipo {
   {
     switch (event)
     {
-      case ipo::AffineHullHandler::BEGIN:
+      case BEGIN:
         _stream << "AH: Computing affine hull in ambient space of dimension " << state.space().dimension() << ".\n";
       break;
-      case ipo::AffineHullHandler::LOOP:
+      case LOOP:
         _stream << "AH: " << state.lowerBound() << " <= dimension ";
         if (state.candidateUpperBound() < state.upperBound())
           _stream << "<?= " << state.candidateUpperBound();
         _stream << "<= " << state.upperBound() << ".\n";
       break;
-      case ipo::AffineHullHandler::EQUATIONS_INITIALIZED:
+      case EQUATIONS_INITIALIZED:
         _stream << "AH: Initialized " << state.numEquations() << " given independent equations.\n";
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_BEGIN:
+      case DIRECTIONS_APPROXIMATE_BEGIN:
         _stream << "AH: Computing approximate directions.\n";
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_END:
+      case DIRECTIONS_APPROXIMATE_END:
         _stream << "AH: Computed " << state.directionApproximateSolves() << " approximate directions.\n";
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_BEGIN:
+      case DIRECTIONS_EXACT_BEGIN:
         _stream << "AH: Computed an exact direction.\n";
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_COMPUTED:
+      case DIRECTIONS_EXACT_COMPUTED:
         _stream << "AH: Computing exact directions.\n";
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_END:
+      case DIRECTIONS_EXACT_END:
         _stream << "AH: Computed " << state.directionExactSolves() << " exact directions.\n";
         _stream << "AH: Current direction vector has " << state.directionNonzeros() << " nonzeros and an encoding length of "
           << state.directionBitsize() << " bits.\n";
@@ -1088,38 +1085,38 @@ namespace ipo {
           _stream << "\n";
         }
       break;
-      case ipo::AffineHullHandler::ORACLE_ZERO_BEGIN:
+      case ORACLE_ZERO_BEGIN:
         _stream << "AH: Maximizing zero objective";
         if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
-      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_BEGIN:
+      case ORACLE_MAXIMIZE_BEGIN:
         _stream << "AH: Maximizing direction objective";
         if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
-      case ipo::AffineHullHandler::ORACLE_MINIMIZE_BEGIN:
+      case ORACLE_MINIMIZE_BEGIN:
         _stream << "AH: Minimizing direction objective";
         if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
-      case ipo::AffineHullHandler::ORACLE_VERIFY_BEGIN:
+      case ORACLE_VERIFY_BEGIN:
         _stream << "AH: Maximizing verification objective";
         if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
           _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
         else
           _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
       break;
-      case ipo::AffineHullHandler::ORACLE_ZERO_END:
-      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_END:
-      case ipo::AffineHullHandler::ORACLE_MINIMIZE_END:
-      case ipo::AffineHullHandler::ORACLE_VERIFY_END:
+      case ORACLE_ZERO_END:
+      case ORACLE_MAXIMIZE_END:
+      case ORACLE_MINIMIZE_END:
+      case ORACLE_VERIFY_END:
         if (state.oracleNumPoints() > 0)
           _stream << "AH: Oracle returned " << state.oracleNumPoints() << " points";
         else if (state.oracleNumRays() > 0)
@@ -1128,7 +1125,7 @@ namespace ipo {
           _stream << "AH: Oracle claimed infeasible";
         _stream << ", heurLevel = " << state.oracleResultHeuristicLevel() << "\n";
       break;
-      case ipo::AffineHullHandler::POINT_BEGIN:
+      case POINT_BEGIN:
         _stream << "AH: Adding a point.\n";
         if (_printPointsAndRays)
         {
@@ -1137,10 +1134,10 @@ namespace ipo {
           _stream << "\n";
         }
       break;
-      case ipo::AffineHullHandler::POINT_END:
+      case POINT_END:
         _stream << "AH: Added a point.\n";
       break;
-      case ipo::AffineHullHandler::RAY_BEGIN:
+      case RAY_BEGIN:
         _stream << "AH: Adding a ray.\n";
         if (_printPointsAndRays)
         {
@@ -1149,10 +1146,10 @@ namespace ipo {
           _stream << "\n";
         }
       break;
-      case ipo::AffineHullHandler::RAY_END:
+      case RAY_END:
         _stream << "AH: Added a ray.\n";
       break;
-      case ipo::AffineHullHandler::EQUATION_CANDIDATE:
+      case EQUATION_CANDIDATE:
         _stream << "AH: Added a candidate equation.\n";
         if (_printEquations)
         {
@@ -1161,7 +1158,7 @@ namespace ipo {
           _stream << "\n";
         }
       break;
-      case ipo::AffineHullHandler::EQUATION_FINAL:
+      case EQUATION_FINAL:
         _stream << "AH: Added an equation.\n";
         if (_printEquations)
         {
@@ -1170,16 +1167,16 @@ namespace ipo {
           _stream << "\n";
         }
       break;
-      case ipo::AffineHullHandler::VERIFY_BEGIN:
+      case VERIFY_BEGIN:
         _stream << "AH: Starting to verify " << state.numCandidateEquations() << " candidate equations.\n";
       break;
-      case ipo::AffineHullHandler::VERIFY_END:
+      case VERIFY_END:
         if (state.verifySuccess())
           _stream << "AH: Verified " << state.numCandidateEquations() << " candidate equations.\n";
         else
           _stream << "AH: Failed to verify " << state.numCandidateEquations() << " candidate equations.\n";
       break;
-      case ipo::AffineHullHandler::END:
+      case END:
         _stream << "AH: Dimension is equal to " << state.lowerBound() << "." << std::endl;
       break;
       default:
@@ -1219,12 +1216,12 @@ namespace ipo {
     _timeLastMainLoop = 0.0;
     _timeLastVerification = 0.0;
     _timeLastEvent = 0.0;
-    _lastEvent = ipo::AffineHullHandler::END;
+    _lastEvent = END;
   }
 
   void StatisticsAffineHullHandler::notify(AffineHullHandler::Event event, AffineHullState& state)
   {
-    if (event == ipo::AffineHullHandler::BEGIN)
+    if (event == BEGIN)
     {
       _timer.reset();
       _timer.start();
@@ -1233,29 +1230,29 @@ namespace ipo {
     double time = _timer.time();
     switch (event)
     {
-      case ipo::AffineHullHandler::BEGIN:
+      case BEGIN:
         _timeLastMainLoop = time;
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_APPROXIMATE_END:
+      case DIRECTIONS_APPROXIMATE_END:
         _numDirectionApproximateSolves += state.directionApproximateSolves();
         assert(_lastEvent == DIRECTIONS_APPROXIMATE_BEGIN);
         _timeApproximateDirections += time - _timeLastEvent;
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_BEGIN:
+      case DIRECTIONS_EXACT_BEGIN:
         _timeLastExactDirectionBegin = time;
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_COMPUTED:
+      case DIRECTIONS_EXACT_COMPUTED:
         _numDirectionExactSolves++;
         _sumDirectionNonzeros += state.directionNonzeros();
         _maxDirectionBitsize = std::max(_maxDirectionBitsize, state.directionBitsize());
       break;
-      case ipo::AffineHullHandler::DIRECTIONS_EXACT_END:
+      case DIRECTIONS_EXACT_END:
         _timeExactDirections += time - _timeLastExactDirectionBegin;
       break;
-      case ipo::AffineHullHandler::ORACLE_ZERO_END:
-      case ipo::AffineHullHandler::ORACLE_MAXIMIZE_END:
-      case ipo::AffineHullHandler::ORACLE_MINIMIZE_END:
-      case ipo::AffineHullHandler::ORACLE_VERIFY_END:
+      case ORACLE_ZERO_END:
+      case ORACLE_MAXIMIZE_END:
+      case ORACLE_MINIMIZE_END:
+      case ORACLE_VERIFY_END:
         assert(_lastEvent == ORACLE_ZERO_BEGIN || _lastEvent == ORACLE_MAXIMIZE_BEGIN || _lastEvent == ORACLE_MINIMIZE_BEGIN
           || _lastEvent == ORACLE_VERIFY_BEGIN);
         _numOracleQueries++;
@@ -1263,21 +1260,21 @@ namespace ipo {
         assert(state.oracleResultHeuristicLevel() < _numHeuristicLevelAnswers.size());
         _numHeuristicLevelAnswers[state.oracleResultHeuristicLevel()]++;
       break;
-      case ipo::AffineHullHandler::POINT_END:
-      case ipo::AffineHullHandler::RAY_END:
+      case POINT_END:
+      case RAY_END:
         _numFactorizations++;
         assert(_lastEvent == POINT_BEGIN || _lastEvent == RAY_BEGIN);
         _timeFactorizations += time - _timeLastEvent;
       break;
-      case ipo::AffineHullHandler::VERIFY_BEGIN:
+      case VERIFY_BEGIN:
         _timeMainLoop += time - _timeLastMainLoop;
         _timeLastVerification = time;
       break;
-      case ipo::AffineHullHandler::VERIFY_END:
+      case VERIFY_END:
         _timeVerification += time - _timeLastVerification;
         _timeLastMainLoop = time;
       break;
-      case ipo::AffineHullHandler::END:
+      case END:
         _timeMainLoop += time - _timeLastMainLoop;
       break;
     }

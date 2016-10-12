@@ -36,14 +36,16 @@ namespace ipo {
   }
 
   XPolarLP::XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate)
-    : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0)
+    : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0), 
+    _oracleMaxHeuristicLevel(std::numeric_limits<std::size_t>::max()), _oracleMinHeuristicLevel(0), 
+    _oracleObjectiveValue(infinity)
   {
     SpaceData* data = new SpaceData();
     for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
       data->addVariable("a_" + oracle->space()[v]);
     data->addVariable("beta");
     _space = new Space(data);
-    
+
     _spx = new ReproSoPlex;
     _spx->setIntParam(SoPlex::SOLVEMODE, approximate ? SoPlex::SOLVEMODE_REAL : SoPlex::SOLVEMODE_RATIONAL);
     _spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
@@ -57,24 +59,36 @@ namespace ipo {
     _spx->setIntParam(SoPlex::SIMPLIFIER, SoPlex::SIMPLIFIER_AUTO);
     _spx->setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
 
-    // Initialize LP columns.
+    // Setup initial LP.
 
-    LPColSetRational colSet;
     DSVectorRational zeroVector;
     for (std::size_t v = 0; v < data->dimension(); ++v)
-    {
-      colSet.add(0, -infinity, zeroVector, infinity);
-    }
-    _spx->addColsRational(colSet);
+      _initialColumns.add(0, -infinity, zeroVector, infinity);
+
+    // Initialize LP.
+
+    _spx->addColsRational(_initialColumns);
+    _spx->addRowsRational(_initialRows);
 
     _oracleObjective.reDim(oracle->space().dimension(), false);
     _solution.reDim(_space->dimension(), false);
     _denseColumnVector.reDim(_space->dimension(), false);
+    _numPointsLP = 0;
+    _numRaysLP = 0;
   }
 
   XPolarLP::~XPolarLP()
   {
     delete _spx;
+  }
+
+  void XPolarLP::clear()
+  {
+    _spx->clearLPRational();
+    _spx->addColsRational(_initialColumns);
+    _spx->addRowsRational(_initialRows);
+    _numPointsLP = 0;
+    _numRaysLP = 0;
   }
 
   void XPolarLP::setObjective(const VectorRational& objective)
@@ -122,6 +136,7 @@ namespace ipo {
     if (!dynamic)
       _firstDynamicRow = _spx->numRowsRational();
 
+    _numPointsLP++;
     notify(PolarLPHandler::POINT_END);
   }
 
@@ -138,30 +153,20 @@ namespace ipo {
     if (!dynamic)
       _firstDynamicRow = _spx->numRowsRational();
 
+    _numRaysLP++;
     notify(PolarLPHandler::RAY_END);
   }
 
   void XPolarLP::solve()
   {
-    std::cout << "solve begin." << std::endl;
-    
     notify(PolarLPHandler::SOLVE_BEGIN);
 
     for (bool progress = true; progress; )
     {
-      std::cout << "Solving Polar LP with tolerance " << _spx->realParam(SoPlex::FEASTOL) << std::endl;
-      std::cout << "Size = " << _spx->numRowsRational() << " x " << _spx->numColsRational()
-        << ", #nonzeros = " << _spx->numNonzerosRational() << std::endl;
-
-//       _spx->writeFileRational("polar.lp");
-
-//       if (_spx->realParam(SoPlex::FEASTOL) == 0.0)
-//       {
-//         _spx->reproduceSolve("reproduce.cpp");
-//       }
+      notify(PolarLPHandler::LP_BEGIN);
 
       SPxSolver::Status status = _spx->solve();
-      
+
       if (status == SPxSolver::OPTIMAL)
       {
         _spx->getPrimalRational(_solution);
@@ -171,12 +176,17 @@ namespace ipo {
 
         for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)
           _oracleObjective[v] = _solution[v];
-        Rational objectiveValue = _solution[_oracle->space().dimension()];
+        Rational inequalityRhs = _solution[_oracle->space().dimension()];
 
-        std::cout << "Objective value from Polar LP: " << double(objectiveValue) << std::endl;
+        notify(PolarLPHandler::LP_END);
 
+        std::cout << "Rhs value from Polar LP: " << double(inequalityRhs) << std::endl;
+
+        _oracleMaxHeuristicLevel = std::numeric_limits<std::size_t>::max();
+        _oracleMinHeuristicLevel = 0;
         notify(PolarLPHandler::ORACLE_BEGIN);
-        _oracle->maximize(_result, _oracleObjective, ObjectiveBound(objectiveValue, true));
+        _oracle->maximize(_result, _oracleObjective, ObjectiveBound(inequalityRhs, true));
+        _oracleObjectiveValue = _result.objectiveValue();
         notify(PolarLPHandler::ORACLE_END);
 
         std::cout << "Objective value of Oracle:     " << double(_result.points.front().objectiveValue) << std::endl;
@@ -185,9 +195,7 @@ namespace ipo {
         if (_result.isInfeasible())
           throw std::runtime_error("Polar LP: Oracle claims infeasible!");
         else if (_result.isUnbounded())
-        {
-          // TODO: Do we create duplicate LP rows?
-
+        { 
           for (std::size_t i = 0; i < _result.rays.size(); ++i)
           {
             addRayRow(_result.rays[i].vector, true);
@@ -196,31 +204,31 @@ namespace ipo {
         }
         else
         {
-          std::cout << "A" << std::endl;
           assert(_result.isFeasible());
 
           for (std::size_t i = 0; i < _result.points.size(); ++i)
           {
-            if (_result.points[i].objectiveValue > objectiveValue + 1.e-6) // TODO: constant! relative error instead?
+            if (_result.points[i].objectiveValue > inequalityRhs + 1.e-6) // TODO: constant! relative error instead?
             {
               addPointRow(_result.points[i].vector, true);
               progress = true;
             }
           }
-          
-          std::cout << "B: progress = " << progress << std::endl;
         }
+      }
+      else
+      {
+        notify(PolarLPHandler::LP_END);
+        std::stringstream ss;
+        ss << "Polar LP: Unexpected LP status " << status << "!";
+        throw std::runtime_error(ss.str());
       }
     }
     
-    std::cout << "C" << std::endl;
-    
     notify(PolarLPHandler::SOLVE_END);
-    
-    std::cout << "solve done." << std::endl;
   }
 
-  LinearConstraint XPolarLP::getOptimum()
+  LinearConstraint XPolarLP::currentInequality() const
   {
     std::size_t size = 0;
     for (std::size_t v = 0; v < _oracle->space().dimension(); ++v)

@@ -304,7 +304,7 @@ namespace ipo {
 
     virtual void notify(Event event, AffineHullState& state) = 0;
   };
-  
+
   /**
    * \brief Computes the affine hull of a polyhedron defined by the given \p oracle.
    * 

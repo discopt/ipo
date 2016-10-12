@@ -287,7 +287,7 @@ namespace ipo {
   {
     // TODO: If ExactSCIP specified, then default-initialize here.
     // setBinary(DEFAULT_);
-    
+
     initializeSpace(_mixedIntegerSet->space());
   }
 
@@ -299,8 +299,6 @@ namespace ipo {
   void ExactSCIPOracle::setFace(const LinearConstraint& newFace)
   {
     OracleBase::setFace(newFace);
-    
-    // TODO: implement!
   }
   
   void ExactSCIPOracle::setBinaryPath(const std::string& path)
@@ -342,11 +340,11 @@ namespace ipo {
     std::ofstream file((_workingDirectory + "/script.sh").c_str());
     file << "#!/bin/bash\n\n";
     file << "cd " << _workingDirectory << "\n";
-//     file << binary << " " << parameters << " " << commands << " > solve.log 2>&1\n";
-//     file << "retcode=$?\n";
-//     file << "if [[ $retcode != 0 ]]; then\n";
-    file << "  " << binary << parameters << failureParameters << commands << " > solve.log 2>&1\n";
-//     file << "fi\n";
+    file << binary << " " << parameters << failureParameters << commands << " > solve.log 2>&1\n";
+    file << "retcode=$?\n";
+    file << "if [[ $retcode != 0 ]]; then\n";
+    file << "  " << binary << parameters << commands << " > solve.log 2>&1\n";
+    file << "fi\n";
     file.close();
     chmod((_workingDirectory + "/script.sh").c_str(), 00700);
   }
@@ -416,9 +414,9 @@ namespace ipo {
     if (first)
       file << "0*x0";
     file << ";\n\n";
-    for (std::size_t r = 0; r < _mixedIntegerSet->numRows(); ++r)
+    for (std::size_t r = 0; r <= _mixedIntegerSet->numRows(); ++r)
     {
-      const LinearConstraint& row = _mixedIntegerSet->rowConstraint(r);
+      const LinearConstraint& row = r < _mixedIntegerSet->numRows() ? _mixedIntegerSet->rowConstraint(r) : currentFace();
       file << "\nsubto row" << r << ":";
       first = true;
       for (std::size_t p = 0; p < row.normal().size(); ++p)
@@ -496,292 +494,5 @@ namespace ipo {
 
     return pointData;
   }
-
-
-
-//   ExactSCIPOptimizationOracle::ExactSCIPOptimizationOracle(const std::string& name, const std::string& exactBinary,
-//       MixedIntegerProgram& mip, FaceOptimizationOracleBase* heuristic, double timeLimit) :
-//       FaceOptimizationOracleBase(name, mip.space()), scaleObjective(true), _binary(exactBinary),
-// _mip(mip), _heuristic(heuristic), _timeLimit(
-//           timeLimit)
-//   {
-//     if (_heuristic != NULL)
-//     {
-//       if (_heuristic->space() != space())
-//         throw std::runtime_error("Spaces of MixedIntegerProgram and heuristic differ.");
-//     }
-//
-//     createTempDirectory();
-//   }
-//
-//   ExactSCIPOptimizationOracle::~ExactSCIPOptimizationOracle()
-//   {
-//     deleteTempDirectory();
-//   }
-//
-//   void ExactSCIPOptimizationOracle::run(OptimizationResult& result, const VectorRational& objective,
-//       const Rational* improveValue, bool forceOptimal)
-//   {
-//     /// Run approximate oracle first.
-//
-//     Rational primalObjective = improveValue != NULL ? *improveValue : Rational(-infinity);
-//     if (_heuristic && !forceOptimal)
-//     {
-// //       TODO:
-// //       if (improveValue != NULL)
-// //         _heuristic->improve(result, objective, *improveValue, forceOptimal);
-// //       else
-//         _heuristic->maximize(result, objective, forceOptimal);
-//
-//       if (result.isUnbounded() || result.isInfeasible())
-//         return;
-//
-//       if (result.isFeasible())
-//       {
-//         if (!forceOptimal || result.bestValue > *improveValue)
-//           return;
-//         primalObjective = result.bestValue;
-//       }
-//     }
-//
-//     /// TODO: Change model such that only solutions better than primalObjective are searched for.
-//
-//     /// Solve model.
-//
-//     writeModel(objective);
-//     callSolver();
-//     DSVectorRational* optimum = parseOutput();
-//     result.optimal = true;
-//     if (optimum != NULL)
-//     {
-//       Rational optimalValue = *optimum * objective;
-//       if (optimalValue > result.bestValue)
-//       {
-//         result.points.push_back(optimum);
-//         result.objectives.push_back(optimalValue);
-//         result.bestIndex = 0;
-//         result.bestValue = optimalValue;
-//       }
-//     }
-//     else if (optimum == NULL && result.isInfeasible())
-//     {
-//       result.optimal = true;
-//     }
-//     else
-//     {
-//       throw std::runtime_error("Feasibility stati of oracles differ!");
-//     }
-//   }
-//
-//   void ExactSCIPOptimizationOracle::faceEnabled(Face* face)
-//   {
-//     _mip.faceEnabled(face);
-//     if (_heuristic != NULL)
-//       _heuristic->setFace(face);
-//   }
-//
-//   void ExactSCIPOptimizationOracle::faceDisabled(Face* face)
-//   {
-//     if (_heuristic != NULL)
-//       _heuristic->setFace(NULL);
-//     _mip.faceDisabled(face);
-//   }
-//
-//   void ExactSCIPOptimizationOracle::createTempDirectory()
-//   {
-//     char buffer[256] = "/tmp/ipo-ExactSCIPOptimizationOracle-XXXXXX";
-//     char* name = mkdtemp(buffer);
-//     if (name == NULL)
-//       throw std::runtime_error("Cannot create temporary directory!");
-//     _path = std::string(name);
-//
-//     std::string binary = "/usr/bin/time -o '" + _path + "/timing.log' -f '%U' " + _binary + " ";
-//     std::string parameters = "";
-//     if (_timeLimit < std::numeric_limits<double>::max())
-//     {
-//       std::stringstream ss;
-//       ss << " -c \"set limits time ";
-//       ss << _timeLimit;
-//       ss << "\"";
-//       parameters += ss.str();
-//     }
-//     std::string failureParameters = " -c \"set misc usefprelax FALSE\" -c \"set presolving maxrounds 0\" ";
-//     std::string commands = "-c \"read model.zpl\" -c optimize -c \"display solution\" -c quit ";
-//
-//     std::ofstream file((_path + "/script.sh").c_str());
-//     file << "#!/bin/bash\n\n";
-//     file << "cd " << _path << "\n";
-//     file << binary << " " << parameters << " " << commands << " > solve.log 2>&1\n";
-//     file << "retcode=$?\n";
-//     file << "if [[ $retcode != 0 ]]; then\n";
-//     file << "  " << binary << parameters << failureParameters << commands << " > solve.log 2>&1\n";
-//     file << "fi\n";
-//     file.close();
-//     chmod((_path + "/script.sh").c_str(), 00700);
-//   }
-//
-//   void ExactSCIPOptimizationOracle::deleteTempDirectory()
-//   {
-//     unlink((_path + "/solve.log").c_str());
-//     unlink((_path + "/script.sh").c_str());
-//     unlink((_path + "/model.zpl").c_str());
-//     rmdir(_path.c_str());
-//   }
-//
-//   void ExactSCIPOptimizationOracle::writeModel(const VectorRational& objective)
-//   {
-//     std::ofstream file((_path + "/model.zpl").c_str());
-//
-//     const LPColSetRational& columns = _mip.columns();
-//     const LPRowSetRational& rows = _mip.rows();
-//     for (std::size_t v = 0; v < space().dimension(); ++v)
-//     {
-//       file << "var x" << v;
-//       if (_mip.isIntegral(v))
-//         file << " integer";
-//       else
-//         file << " real";
-//       if (columns.lower(v) > -infinity)
-//         file << " >= " << columns.lower(v);
-//       if (columns.upper(v) < infinity)
-//         file << " <= " << columns.upper(v);
-//       file << ";\n";
-//     }
-//     file << "\nmaximize cost:";
-//     bool first = true;
-//     for (std::size_t v = 0; v < space().dimension(); ++v)
-//     {
-//       if (objective[v] == 0)
-//         continue;
-//       file << "\n";
-//       if (first)
-//         first = false;
-//       else
-//         file << " + ";
-//       file << objective[v] << "*x" << v;
-//     }
-//     if (first)
-//       file << "0*x0";
-//     file << ";\n\n";
-//     for (int r = 0; r < rows.num(); ++r)
-//     {
-//       const SVectorRational& vector = rows.rowVector(r);
-//       if (rows.lhs(r) == rows.rhs(r))
-//       {
-//         file << "\nsubto row" << r << ":";
-//         first = true;
-//         for (int p = vector.size() - 1; p >= 0; --p)
-//         {
-//           file << "\n";
-//           if (first)
-//             first = false;
-//           else
-//             file << " + ";
-//           file << vector.value(p) << "*x" << vector.index(p);
-//         }
-//         if (first)
-//           file << "x0 - x0";
-//         file << " == " << rows.lhs(r) << ";\n\n";
-//         continue;
-//       }
-//       if (rows.lhs(r) > -infinity)
-//       {
-//         file << "\nsubto row" << r << "lhs:";
-//         first = true;
-//         for (int p = vector.size() - 1; p >= 0; --p)
-//         {
-//           file << "\n";
-//           if (first)
-//             first = false;
-//           else
-//             file << " + ";
-//           file << vector.value(p) << "*x" << vector.index(p);
-//         }
-//         if (first)
-//           file << "x0 - x0";
-//         file << " >= " << rows.lhs(r) << ";\n\n";
-//       }
-//       if (rows.rhs(r) < infinity)
-//       {
-//         file << "\nsubto row" << r << "rhs:";
-//         first = true;
-//         for (int p = vector.size() - 1; p >= 0; --p)
-//         {
-//           file << "\n";
-//           if (first)
-//             first = false;
-//           else
-//             file << " + ";
-//           file << vector.value(p) << "*x" << vector.index(p);
-//         }
-//
-//         /// Handle trivially violated constraints explicitly.
-//
-//         if (first)
-//           file << "x0 - x0";
-//         file << " <= " << rows.rhs(r) << ";\n\n";
-//       }
-//     }
-//     file.close();
-//   }
-//
-//   void ExactSCIPOptimizationOracle::callSolver()
-//   {
-//     if (system((_path + "/script.sh").c_str()) != 0)
-//     {
-//       throw std::runtime_error("Exact SCIP solver returned with nonzero exit status.");
-//     }
-//   }
-//
-//   DSVectorRational* ExactSCIPOptimizationOracle::parseOutput()
-//   {
-//     std::ifstream log((_path + "/solve.log").c_str());
-//     std::string line;
-//     bool startedSolutionSection = false;
-//     bool timeLimitReached = false;
-//     DSVectorRational* result = NULL;
-//     while (std::getline(log, line))
-//     {
-//       if (line.substr(0, 16) == "objective value:")
-//       {
-//         startedSolutionSection = true;
-//         result = new DSVectorRational;
-//       }
-//
-//       if (startedSolutionSection && !line.empty() && line[0] == 'x')
-//       {
-//         std::size_t var;
-//         std::string valueStr;
-//         std::stringstream ss(line.substr(1, std::string::npos));
-//         ss >> var >> valueStr;
-//         Rational value;
-//         if (!value.readString(valueStr.c_str()))
-//           throw std::runtime_error("parseOutput failed when reading a number.");
-//         assert(result != NULL);
-//         result->add(var, value);
-//       }
-//
-//       if (line == "no solution available")
-//       {
-//         return NULL;
-//       }
-//       if (line == "SCIP Status        : solving was interrupted [time limit reached]")
-//       {
-//         timeLimitReached = true;
-//         throw std::runtime_error("Time limit for ExactSCIPOptimizationOracle reached.");
-//       }
-//     }
-//
-//     std::ifstream timing((_path + "/timing.log").c_str());
-//     double time;
-//     timing >> time;
-//     addTimeToActiveTimers(time);
-//
-//     if (!startedSolutionSection)
-//       throw std::runtime_error(
-//           "ExactSCIPOptimizationOracle did not return useful results (see " + _path + "/solve.log)");
-//
-//     return result;
-//   }
 
 } /* namespace ipo */

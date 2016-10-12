@@ -3,7 +3,7 @@
 namespace ipo {
   
   LinearConstraint::LinearConstraint()
-    : _type(','), _normal(), _rhs(0)
+    : _type('<'), _normal(), _rhs(0)
   {
     
   }

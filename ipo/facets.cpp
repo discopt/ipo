@@ -26,7 +26,8 @@ namespace ipo {
     FacetSeparation(std::vector<FacetSeparationHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle, 
       const Vector& targetVector, bool separatingRay)
       : _handlers(handlers), _oracle(oracle), _targetVector(targetVector), _separatingRay(separatingRay),
-      _approximateLP(oracle, *this, true), _exactLP(oracle, *this, false), _approximateSolve(false), _exactSolve(false)
+      _approximateLP(oracle, *this, true), _exactLP(oracle, *this, false), _approximateSolve(false), _exactSolve(false),
+      _separatedByFacet(false), _separatedByEquation(false)
     {
 
     }
@@ -46,29 +47,44 @@ namespace ipo {
       return _approximateLP.polarSpace();
     }
 
+    virtual double polarTolerance() const
+    {
+      return _approximateSolve ? _approximateLP.getTolerance() : _exactLP.getTolerance();
+    }
+
     virtual std::size_t polarNumPoints() const
     {
-      
+      return _approximateSolve ? _approximateLP.numPointsLP() : _exactLP.numPointsLP();
     }
 
     virtual std::size_t polarNumRays() const
     {
-      
+      return _approximateSolve ? _approximateLP.numRaysLP() : _exactLP.numRaysLP();
     }
 
     virtual std::size_t polarNumRowsLP() const
     {
-      
+      return _approximateSolve ? _approximateLP.numRowsLP() : _exactLP.numRowsLP();
     }
 
     virtual std::size_t polarNumColumnsLP() const
     {
-      
+      return _approximateSolve ? _approximateLP.numColumnsLP() : _exactLP.numColumnsLP();
     }
 
     virtual std::size_t polarNumNonzerosLP() const
     {
-      
+      return _approximateSolve ? _approximateLP.numNonzerosLP() : _exactLP.numNonzerosLP();
+    }
+
+    virtual LinearConstraint currentInequality() const
+    {
+      return _approximateSolve ? _approximateLP.currentInequality() : _exactLP.currentInequality();
+    }
+
+    virtual soplex::Rational oracleObjectiveValue() const
+    {
+      return _approximateSolve ? _approximateLP.oracleObjectiveValue() : _exactLP.oracleObjectiveValue();
     }
         
     virtual bool approximateSolve() const
@@ -83,27 +99,27 @@ namespace ipo {
 
     virtual HeuristicLevel oracleMaxHeuristicLevel() const
     {
-      
+      return _approximateSolve ? _approximateLP.oracleMaxHeuristicLevel() : _exactLP.oracleMaxHeuristicLevel();
     }
 
     virtual HeuristicLevel oracleMinHeuristicLevel() const
     {
-      
+      return _approximateSolve ? _approximateLP.oracleMinHeuristicLevel() : _exactLP.oracleMinHeuristicLevel();
     }
 
     virtual HeuristicLevel oracleResultHeuristicLevel() const
     {
-      
+      return _approximateSolve ? _approximateLP.oracleResultHeuristicLevel() : _exactLP.oracleResultHeuristicLevel();
     }
 
     virtual std::size_t oracleNumPoints() const
     {
-      
+      return _approximateSolve ? _approximateLP.oracleNumPoints() : _exactLP.oracleNumPoints();
     }
 
     virtual std::size_t oracleNumRays() const
     {
-      
+      return _approximateSolve ? _approximateLP.oracleNumRays() : _exactLP.oracleNumRays();
     }
 
     virtual bool separatingRay() const
@@ -111,11 +127,41 @@ namespace ipo {
       return _separatingRay;
     }
 
+    virtual bool separatedByFacet() const
+    {
+      return _separatedByFacet;
+    }
+
+    virtual bool separatedByEquation() const
+    {
+      return _separatedByEquation;
+    }
+
     virtual void notify(PolarLPHandler::Event event, XPolarLP& polarLP)
     {
-      
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::LP_BEGIN) == FacetSeparationHandler::LP_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::LP_END) == FacetSeparationHandler::LP_END);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_BEGIN) == FacetSeparationHandler::ORACLE_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_END) == FacetSeparationHandler::ORACLE_END);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINT_BEGIN) == FacetSeparationHandler::POINT_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINT_END) == FacetSeparationHandler::POINT_END);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAY_BEGIN) == FacetSeparationHandler::RAY_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAY_END) == FacetSeparationHandler::RAY_END);
+      switch (event)
+      {
+        case LP_BEGIN:
+        case LP_END:
+        case ORACLE_BEGIN:
+        case ORACLE_END:
+        case POINT_BEGIN:
+        case POINT_END:
+        case RAY_BEGIN:
+        case RAY_END:
+          notify(static_cast<FacetSeparationHandler::Event>(event));
+        break;
+      }
     }
-    
+
   protected:
 
     void notify(FacetSeparationHandler::Event event)
@@ -128,8 +174,14 @@ namespace ipo {
 
     bool run(const InnerDescription& spanning, LinearConstraint& constraint, InnerDescription* certificate)
     {
+      _separatedByEquation = false;
+      _separatedByFacet = false;
+      notify(FacetSeparationHandler::BEGIN);
+
       DVectorRational dense;
       dense.reDim(polarSpace().dimension());
+      _approximateLP.clear();
+      _exactLP.clear();
 
       if (separatingRay())
       {
@@ -170,37 +222,38 @@ namespace ipo {
         _exactLP.setObjective(dense);
       }
 
+      notify(FacetSeparationHandler::INITIALIZED);
+
       // Solve approximate polar LP.
-      
-//       std::cout << "before approx." << std::endl;
-// 
-//       _approximateSolve = true;
-//       _approximateLP.solve();
-//       _approximateSolve = false;
-// 
-//       std::cout << "after approx." << std::endl;
-//       
-//       // Copy relevant rows from approximate to exact LP.
-// 
+
+      _approximateSolve = true;
+      notify(FacetSeparationHandler::APPROXIMATE_SOLVE_BEGIN);
+      _approximateLP.solve();
+      notify(FacetSeparationHandler::APPROXIMATE_SOLVE_END);
+      _approximateSolve = false;
+
+      // Copy relevant rows from approximate to exact LP.
+
       InnerDescription pointsRays;
-//       _approximateLP.getTightPointsRays(pointsRays, true);
-//       for (std::size_t i = 0; i < pointsRays.points.size(); ++i)
-//         _exactLP.addPointRow(pointsRays.points[i], true);
-//       for (std::size_t i = 0; i < pointsRays.rays.size(); ++i)
-//         _exactLP.addRayRow(pointsRays.rays[i], true);
+      _approximateLP.getTightPointsRays(pointsRays, true);
+      for (std::size_t i = 0; i < pointsRays.points.size(); ++i)
+        _exactLP.addPointRow(pointsRays.points[i], true);
+      for (std::size_t i = 0; i < pointsRays.rays.size(); ++i)
+        _exactLP.addRayRow(pointsRays.rays[i], true);
 
       // Solve exact polar LP.
 
-      std::cout << "before exact." << std::endl;
-      
       _exactSolve = true;
+      notify(FacetSeparationHandler::EXACT_SOLVE_BEGIN);
       _exactLP.solve();
+      notify(FacetSeparationHandler::EXACT_SOLVE_END);
       _exactSolve = false;
-      
-      std::cout << "after exact." << std::endl;
 
       if (_exactLP.getObjectiveValue() == 0)
+      {
+        notify(FacetSeparationHandler::END);
         return false;
+      }
 
       // Extract tight points and rays.
 
@@ -208,11 +261,21 @@ namespace ipo {
       if (certificate != NULL)
         *certificate = pointsRays;
 
-      constraint = _exactLP.getOptimum();
+      constraint = _exactLP.currentInequality();
       std::size_t resultDimMinus1 = pointsRays.points.size() + pointsRays.rays.size();
       std::size_t givenDimMinus1 = spanning.points.size() + spanning.rays.size();
       if (resultDimMinus1 == givenDimMinus1)
+      {
+        _separatedByEquation = true;
         constraint = LinearConstraint('=', constraint.normal(), constraint.rhs());
+      }
+      else
+      {
+        _separatedByFacet = true;
+      }
+
+      notify(FacetSeparationHandler::END);
+
       return true;
     }
 
@@ -229,6 +292,8 @@ namespace ipo {
 
     bool _approximateSolve;
     bool _exactSolve;
+    bool _separatedByFacet;
+    bool _separatedByEquation;
   };
 
   FacetSeparationHandler::FacetSeparationHandler()
@@ -240,7 +305,135 @@ namespace ipo {
   {
 
   }
-  
+
+  DebugFacetSeparationHandler::DebugFacetSeparationHandler(std::ostream& stream, bool printPointsAndRays, bool printInequalities)
+    : _stream(stream), _printPointsAndRays(printPointsAndRays), _printInequalities(printInequalities)
+  {
+
+  }
+
+  DebugFacetSeparationHandler::~DebugFacetSeparationHandler()
+  {
+
+  }
+
+  void DebugFacetSeparationHandler::notify(FacetSeparationHandler::Event event, FacetSeparationState& state)
+  {
+    switch (event)
+    {
+      case  BEGIN:
+        _stream << "FS: Separating " << (state.separatingRay() ? "ray" : "point") << ".\n";
+      break;
+      case INITIALIZED:
+        _stream << "FS: Initialized LPs.\n";
+      break;
+      case APPROXIMATE_SOLVE_BEGIN:
+        _stream << "FS: Entering approximate mode.\n";
+      break;
+      case APPROXIMATE_SOLVE_END:
+        _stream << "FS: Leaving approximate mode.\n";
+      break;
+      case EXACT_SOLVE_BEGIN:
+        _stream << "FS: Entering exact mode.\n";
+      break;
+      case EXACT_SOLVE_END:
+        _stream << "FS: Leaving exact mode.\n";
+      break;
+      case END:
+        if (state.separatedByFacet())
+          _stream << "FS: Separated " << (state.separatingRay() ? "ray" : "point") << " by a facet.\n";
+        else if (state.separatedByEquation())
+          _stream << "FS: Separated " << (state.separatingRay() ? "ray" : "point") << " by an equation.\n";
+        else if (state.separatingRay())
+          _stream << "FS: Given ray lies in recession cone.\n";
+        else
+          _stream << "FS: Given point lies in polyhedron.\n";
+      break;
+      case LP_BEGIN:
+        _stream << "FS: Solving polar LP of size " << state.polarNumRowsLP() << "x" << state.polarNumColumnsLP() 
+          << ", #nonzeros: " << state.polarNumNonzerosLP() << ", #points: " << state.polarNumPoints() << ", #rays: " 
+          << state.polarNumRays() << ", tolerance: " << state.polarTolerance() << ".\n";
+      break;
+      case LP_END:
+        _stream << "FS: Solved polar LP.\n";
+        if (_printInequalities)
+        {
+          _stream << "FS: Current inequality: ";
+          state.oracleSpace().printLinearConstraint(_stream, state.currentInequality());
+          _stream << "\n";
+        }
+      break;
+      case ORACLE_BEGIN:
+        _stream << "FS: Maximizing current normal vector";
+        if (state.oracleMaxHeuristicLevel() == std::numeric_limits<HeuristicLevel>::max())
+          _stream << " (heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+        else
+          _stream << " (" << state.oracleMaxHeuristicLevel() << " >= heurLevel >= " << state.oracleMinHeuristicLevel() << ")\n";
+      break;
+      case ORACLE_END:
+        if (state.oracleNumPoints() > 0)
+        {
+          _stream << "FS: Oracle returned " << state.oracleNumPoints() << " points";
+          if (_printInequalities)
+            _stream << ", the best one having rhs " << state.oracleObjectiveValue();
+        }
+        else if (state.oracleNumRays() > 0)
+          _stream << "FS: Oracle returned " << state.oracleNumRays() << " rays";
+        else
+          _stream << "FS: Oracle claimed infeasible";
+        _stream << ", heurLevel = " << state.oracleResultHeuristicLevel() << "\n";
+      break;
+      case POINT_BEGIN:
+        _stream << "FS: Adding a point.\n";
+        if (_printPointsAndRays)
+        {
+          _stream << "FS: ";
+//           state.space().printVector(_stream, state.innerDescription().points.back()); TODO: ???
+          _stream << "\n";
+        }
+      break;
+      case POINT_END:
+        _stream << "FS: Added a point.\n";
+      break;
+      case RAY_BEGIN:
+        _stream << "FS: Adding a ray.\n";
+        if (_printPointsAndRays)
+        {
+          _stream << "FS: ";
+//           state.space().printVector(_stream, state.innerDescription().rays.back()); // TODO: ???
+          _stream << "\n";
+        }
+      break;
+      case RAY_END:
+        _stream << "FS: Added a ray.\n";
+      break;
+      default:
+        _stream << "FS: Unhandled event " << event << ".\n" << std::endl;
+      break;
+    }
+    _stream << std::flush;
+  }
+
+  StatisticsFacetSeparationHandler::StatisticsFacetSeparationHandler()
+  {
+
+  }
+
+  StatisticsFacetSeparationHandler::~StatisticsFacetSeparationHandler()
+  {
+
+  }
+
+  void StatisticsFacetSeparationHandler::reset()
+  {
+
+  }
+
+  void StatisticsFacetSeparationHandler::notify(FacetSeparationHandler::Event event, FacetSeparationState& state)
+  {
+
+  }
+
   bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning, 
     std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate)
   {

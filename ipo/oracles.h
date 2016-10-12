@@ -136,6 +136,23 @@ namespace ipo {
     
     void computeMissingObjectiveValues();
 
+    /**
+     * \brief Returns the objective value.
+     * 
+     * Returns the objective value, i.e., the maximum objective value of all points, or infinity if unbounded, or -infinity
+     * if infeasible.
+     */
+
+    inline soplex::Rational objectiveValue() const
+    {
+      if (!points.empty())
+        return points.front().objectiveValue;
+      else if (!rays.empty())
+        return soplex::infinity;
+      else
+        return -soplex::infinity;
+    }
+
   protected:
 
     /**

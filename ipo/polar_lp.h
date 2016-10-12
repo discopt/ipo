@@ -28,17 +28,19 @@ namespace ipo {
   public:
     enum Event
     {
-      OBJECTIVE_SET,
-      ROW_ADDED,
-      ROW_UPDATED,
-      SOLVE_BEGIN,
-      SOLVE_END,
+      LP_BEGIN,
+      LP_END,
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
       POINT_BEGIN,
       POINT_END,
       RAY_BEGIN,
       RAY_END,
+      OBJECTIVE_SET,
+      ROW_ADDED,
+      ROW_UPDATED,
+      SOLVE_BEGIN,
+      SOLVE_END,
     };
 
     /**
@@ -88,6 +90,8 @@ namespace ipo {
 
     ~XPolarLP();
 
+    void clear();
+
     void setObjective(const soplex::VectorRational& objective);
 
     std::size_t addRow(const Rational& lhs, const soplex::SVectorRational& normalVector, const Rational& rhs, bool dynamic);
@@ -105,7 +109,12 @@ namespace ipo {
       return _spx->objValueRational();
     }
 
-    LinearConstraint getOptimum();
+    LinearConstraint currentInequality() const;
+
+    inline soplex::Rational oracleObjectiveValue() const
+    {
+      return _oracleObjectiveValue;
+    }
 
     void getTightPointsRays(InnerDescription& tightPointsRays, bool dynamicOnly = false);
 
@@ -121,12 +130,23 @@ namespace ipo {
     }
 
     /**
+      * \brief Returns the feasibility / optimality tolerance of the LP.
+      * 
+      * Returns the feasibility / optimality tolerance of the LP.
+      */
+
+    inline double getTolerance() const
+    {
+      return _spx->realParam(soplex::SoPlex::FEASTOL);
+    }
+
+    /**
      * \brief Returns the number of spanning points that are currently in the LP.
      * 
      * Returns the number of spanning points that are currently in the LP.
      */
 
-    inline std::size_t polarNumPointsLP() const
+    inline std::size_t numPointsLP() const
     {
       return _numPointsLP;
     }
@@ -137,7 +157,7 @@ namespace ipo {
      * Returns the number of spanning rays found that are currently in the LP.
      */
 
-    inline std::size_t polarNumRaysLP() const
+    inline std::size_t numRaysLP() const
     {
       return _numRaysLP;
     }
@@ -148,7 +168,7 @@ namespace ipo {
      * Returns the number of rows of the current LP.
      */
 
-    inline std::size_t polarNumRowsLP() const
+    inline std::size_t numRowsLP() const
     {
       return _spx->numRowsRational();
     }
@@ -159,7 +179,7 @@ namespace ipo {
      * Returns the number of columns of the current LP.
      */
 
-    inline std::size_t polarNumColumnsLP() const
+    inline std::size_t numColumnsLP() const
     {
       return _spx->numColsRational();
     }
@@ -170,7 +190,7 @@ namespace ipo {
      * Returns the number of nonzeros of the current LP.
      */
 
-    inline std::size_t polarNumNonzerosLP() const
+    inline std::size_t numNonzerosLP() const
     {
       return _spx->numNonzerosRational();
     }
@@ -183,7 +203,7 @@ namespace ipo {
 
     inline HeuristicLevel oracleMaxHeuristicLevel() const
     {
-      return _lastMaxHeuristicLevel;
+      return _oracleMaxHeuristicLevel;
     }
 
     /**
@@ -194,7 +214,7 @@ namespace ipo {
 
     inline HeuristicLevel oracleMinHeuristicLevel() const
     {
-      return _lastMinHeuristicLevel;
+      return _oracleMinHeuristicLevel;
     }
 
     /**
@@ -242,6 +262,8 @@ namespace ipo {
   protected:
 
     bool _approximate;
+    soplex::LPColSetRational _initialColumns;
+    soplex::LPRowSetRational _initialRows;
     Space* _space;
     std::shared_ptr<OracleBase> _oracle;
     soplex::DVectorRational _oracleObjective;
@@ -256,9 +278,11 @@ namespace ipo {
 
     std::size_t _numPointsLP;
     std::size_t _numRaysLP;
-    HeuristicLevel _lastMaxHeuristicLevel;
-    HeuristicLevel _lastMinHeuristicLevel;
+    HeuristicLevel _oracleMaxHeuristicLevel;
+    HeuristicLevel _oracleMinHeuristicLevel;
+    soplex::Rational _oracleObjectiveValue;
   };
+
 
   /////////////////////// OLD INTERFACE ///////////////////////
 

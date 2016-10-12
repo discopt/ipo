@@ -31,6 +31,8 @@ using namespace soplex;
 
 int main(int argc, char** argv)
 {
+  // Read instance and create MixedIntegerSet.
+
   SCIP* scip = NULL;
   SCIP_CALL_EXC(SCIPcreate(&scip));
   SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
@@ -38,15 +40,25 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", scip);
+  std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
+
+  SCIP_CALL_EXC(SCIPfree(&scip));
+
+  // Initialize oracles.
+  
+  std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
+    "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
+  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");  
+  std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
+
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", 
+    mixedIntegerSet, exactScipOracleStats);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
   std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
-
-  SCIP_CALL_EXC(SCIPfree(&scip));
 
   std::vector<AffineHullHandler*> affineHullHandlers;
   InnerDescription inner;
@@ -55,6 +67,10 @@ int main(int argc, char** argv)
   std::cout << "Dimension: " << (long(inner.points.size() + inner.rays.size()) - 1) << std::endl;
 
   std::vector<FacetSeparationHandler*> facetSeparationHandlers;
+  DebugFacetSeparationHandler debugHandler(std::cout, true, true);
+  StatisticsFacetSeparationHandler statsHandler;
+  facetSeparationHandlers.push_back(&debugHandler);
+  facetSeparationHandlers.push_back(&statsHandler);
   
   SoPlex spx;
   spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
@@ -105,7 +121,30 @@ int main(int argc, char** argv)
       assert(false);
   }
   
-  std::cout << "Cut loop done." << std::endl;
+//   std::cout << "\n";
+//   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
+//     << "  +  verification time: " << statsHandler.timeVerification() << "\n";
+//   std::cout << std::endl;
+//   std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " << 
+//     statsHandler.timeApproximateDirections() << " seconds.\n";
+//   std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " << 
+//     statsHandler.timeExactDirections() << " seconds.\n";
+//   std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations() 
+//     << " seconds.\n";
+//   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
+//     << " seconds.\n";
+
+  for (std::shared_ptr<OracleBase> o = oracle; o != NULL; o = o->nextOracle())
+  {
+    std::size_t h = o->heuristicLevel();
+    std::cout << "Oracle " << h << ": " << o->name() << "\n";
+    std::shared_ptr<StatisticsOracle> s = std::dynamic_pointer_cast<StatisticsOracle>(o);
+    std::cout << "  #calls:   " << s->numCalls() << "\n";
+    std::cout << "  #success: " << s->numSuccess() << "\n";
+    std::cout << "  time:     " << s->time() << "\n";
+  }
+  std::cout << std::endl;
+
 
   return 0;
 }

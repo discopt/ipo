@@ -39,8 +39,8 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
-
   
+  SCIP_CALL_EXC(SCIPfree(&scip));
 
   // Initialize oracles.
   
@@ -66,7 +66,7 @@ int main(int argc, char** argv)
 
   InnerDescription inner;
   AffineOuterDescription outer;
-  affineHull(oracle, inner, outer, handlers, 2, 0);
+  affineHull(oracle, inner, outer, handlers, 2, 1);
 
   std::cout << "\n";
   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
@@ -89,7 +89,6 @@ int main(int argc, char** argv)
     std::cout << "  #calls:   " << s->numCalls() << "\n";
     std::cout << "  #success: " << s->numSuccess() << "\n";
     std::cout << "  time:     " << s->time() << "\n";
-//     std::cout << "Number of answers of oracle with heuristic-level " << h << ": " << numHeuristicLevelAnswers[h] << "\n";
   }
   std::cout << std::endl;
 
