@@ -23,7 +23,7 @@ namespace ipo {
   class FacetSeparation: public FacetSeparationState, PolarLPHandler
   {
   public:
-    FacetSeparation(std::vector<FacetSeparationHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle, 
+    FacetSeparation(std::vector<FacetSeparationHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
       const Vector& targetVector, bool separatingRay)
       : _handlers(handlers), _oracle(oracle), _targetVector(targetVector), _separatingRay(separatingRay),
       _approximateLP(oracle, *this, true), _exactLP(oracle, *this, false), _approximateSolve(false), _exactSolve(false),
@@ -34,7 +34,7 @@ namespace ipo {
 
     virtual ~FacetSeparation()
     {
-      
+
     }
 
     virtual const Space& oracleSpace() const
@@ -96,7 +96,7 @@ namespace ipo {
     {
       return _approximateSolve ? _approximateLP.oracleObjectiveValue() : _exactLP.oracleObjectiveValue();
     }
-        
+
     virtual bool approximateSolve() const
     {
       return _approximateSolve;
@@ -371,8 +371,8 @@ namespace ipo {
           _stream << "FS: Given point lies in polyhedron.\n";
       break;
       case LP_BEGIN:
-        _stream << "FS: Solving polar LP of size " << state.polarNumRowsLP() << "x" << state.polarNumColumnsLP() 
-          << ", #nonzeros: " << state.polarNumNonzerosLP() << ", #points: " << state.polarNumPoints() << ", #rays: " 
+        _stream << "FS: Solving polar LP of size " << state.polarNumRowsLP() << "x" << state.polarNumColumnsLP()
+          << ", #nonzeros: " << state.polarNumNonzerosLP() << ", #points: " << state.polarNumPoints() << ", #rays: "
           << state.polarNumRays() << ", tolerance: " << state.polarTolerance() << ".\n";
       break;
       case LP_END:
@@ -449,7 +449,7 @@ namespace ipo {
 
   }
 
-  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning, 
+  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning,
     std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate)
   {
     FacetSeparation algorithm(handlers, oracle, point, false);
@@ -457,7 +457,7 @@ namespace ipo {
     return algorithm.run(spanning, constraint, certificate);
   }
 
-  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning, 
+  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning,
     std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate)
   {
     FacetSeparation algorithm(handlers, oracle, ray, true);
@@ -473,7 +473,7 @@ namespace ipo {
 //     algorithm.paramMaxAge = 10;
 //     return algorithm.run(spanning, certificate);
 //   }
-// 
+//
 //   LinearConstraint separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray,
 //     const InnerDescription& spanning, std::vector<FacetSeparationHandler*>& handlers, InnerDescription* certificate)
 //   {
@@ -482,8 +482,8 @@ namespace ipo {
 //     return algorithm.run(spanning, certificate);
 //   }
 
-  
-  
+
+
 
   namespace Separation {
 
@@ -491,7 +491,7 @@ namespace ipo {
     {
     public:
       Implementation(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays,
-        const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle) 
+        const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle)
         : PolarLP(oracle, 16.0, 30), _separatingPoint(false), _output(NULL), _separatedEquation(false), _separatedFacet(false)
       {
         SVectorRational vector;
@@ -702,7 +702,7 @@ namespace ipo {
       bool _separatedEquation;
     };
 
-    Result::Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
+    Result::Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays,
       const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle)
     {
       _implementation = new Implementation(spanningPoints, spanningRays, columnBasis, oracle);
@@ -739,7 +739,7 @@ namespace ipo {
       return _implementation->run(targetRay, false, output);
     }
 
-    InformationBase::InformationBase() 
+    InformationBase::InformationBase()
       : _implementation(NULL)
     {
 

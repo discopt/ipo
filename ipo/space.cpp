@@ -3,7 +3,7 @@
 using namespace soplex;
 
 namespace ipo {
-  
+
 static SpaceData* emptySpace = NULL;
 
   SpaceData::SpaceData()
@@ -39,7 +39,7 @@ static SpaceData* emptySpace = NULL;
 #endif
     _variableNames.push_back(name);
   }
-  
+
   void SpaceData::unmarkUsed()
   {
     _usage--;

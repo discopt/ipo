@@ -516,7 +516,7 @@ namespace ipo {
       optPi = 0;
       return;
     }
-    
+
     if (alpha == 1 && gamma == 1)
       return manhattanNormShortestLatticeCombination(u, v, optLambda.get_num(), optMu.get_num(), optPi);
 
@@ -539,7 +539,7 @@ namespace ipo {
     optMu = (mpq_class(mu) - mpq_class(beta, gamma) * lambda) / alpha;
   }
 
-  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source,
     Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm)
   {
     std::vector<mpz_class> u(n);
@@ -647,7 +647,7 @@ namespace ipo {
     return result;
   }
 
-  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source,
     Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm)
   {
     std::vector<mpz_class> u(n);
@@ -702,11 +702,11 @@ namespace ipo {
             continue;
 
           Rational targetMultiplier, sourceMultiplier, newNorm;
-          if (manhattanNormGreedyCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier, 
+          if (manhattanNormGreedyCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier,
             sourceMultiplier, newNorm))
           {
             improved = true;
-            equations[i] = LinearConstraint('=', newTarget, targetMultiplier * equations[i].rhs() + sourceMultiplier * 
+            equations[i] = LinearConstraint('=', newTarget, targetMultiplier * equations[i].rhs() + sourceMultiplier *
               equations[j].rhs());
           }
         }
@@ -724,11 +724,11 @@ namespace ipo {
             continue;
 
           Rational targetMultiplier, sourceMultiplier, newNorm;
-          if (manhattanNormShortestCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier, 
+          if (manhattanNormShortestCombination(n, newTarget, equations[i].normal(), equations[j].normal(), targetMultiplier,
             sourceMultiplier, newNorm))
           {
             improved = true;
-            equations[i] = LinearConstraint('=', newTarget, 
+            equations[i] = LinearConstraint('=', newTarget,
               targetMultiplier * equations[i].rhs() + sourceMultiplier * equations[j].rhs());
           }
         }

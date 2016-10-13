@@ -28,7 +28,7 @@ namespace ipo {
   {
 
   }
-  
+
   XPolarLP::RowInfo::RowInfo(bool dyn, char t, const Vector& v, int a)
     : dynamic(dyn), type(t), vector(v), age(a)
   {
@@ -36,8 +36,8 @@ namespace ipo {
   }
 
   XPolarLP::XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate)
-    : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0), 
-    _oracleMaxHeuristicLevel(std::numeric_limits<std::size_t>::max()), _oracleMinHeuristicLevel(0), 
+    : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0),
+    _oracleMaxHeuristicLevel(std::numeric_limits<std::size_t>::max()), _oracleMinHeuristicLevel(0),
     _oracleObjectiveValue(infinity)
   {
     SpaceData* data = new SpaceData();
@@ -99,7 +99,7 @@ namespace ipo {
     {
       _denseColumnVector[c] = objective[c];
     }
-    
+
     _spx->changeObjRational(_denseColumnVector);
     notify(PolarLPHandler::OBJECTIVE_SET);
   }
@@ -142,7 +142,7 @@ namespace ipo {
     _sparseColumnVector.clear();
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), ray.size()));
     vectorToSparse(ray, _sparseColumnVector);
-   
+
     _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(0)));
     _rows.push_back(RowInfo(dynamic, 'r', ray));
     if (!dynamic)
@@ -179,7 +179,7 @@ namespace ipo {
         _oracleObjectiveValue = _result.objectiveValue();
         notify(PolarLPHandler::ORACLE_END);
 
-        
+
         progress = false;
         if (_result.isInfeasible())
           throw std::runtime_error("Polar LP: Oracle claims infeasible!");
@@ -225,7 +225,7 @@ namespace ipo {
         throw std::runtime_error(ss.str());
       }
     }
-    
+
     notify(PolarLPHandler::SOLVE_END);
   }
 
@@ -246,7 +246,7 @@ namespace ipo {
 
     return LinearConstraint('<', Vector(data), _solution[_oracle->space().dimension()]);
   }
-    
+
   void XPolarLP::getTightPointsRays(InnerDescription& tightPointsRays, bool dynamicOnly)
   {
     tightPointsRays.points.clear();
@@ -270,13 +270,13 @@ namespace ipo {
   {
     _handler.notify(event, *this);
   }
-  
+
   /////////////////// OLD //////////////////////////
 
   PolarLP::RowInfo::RowInfo()
     : type(' '), age(std::numeric_limits<int>::min())
   {
-    
+
   }
 
   PolarLP::RowInfo::RowInfo(char t, int a)
@@ -284,15 +284,15 @@ namespace ipo {
   {
 
   }
-  
+
   PolarLP::RowInfo::RowInfo(char t, const Vector& vec, int a)
     : type(t), vector(vec), age(a)
   {
 
   }
 
-  PolarLP::PolarLP(const std::shared_ptr<OracleBase>& oracle, double initialPenalty, int maxAge) 
-    : _oracle(oracle), _n(oracle->space().dimension()), _d(oracle->space().dimension() + 1), 
+  PolarLP::PolarLP(const std::shared_ptr<OracleBase>& oracle, double initialPenalty, int maxAge)
+    : _oracle(oracle), _n(oracle->space().dimension()), _d(oracle->space().dimension() + 1),
     _offsetLower(oracle->space().dimension() + 1), _offsetUpper(2 * (oracle->space().dimension() + 1)), _stabilizing(false),
     _maxAge(maxAge), _initialPenalty(initialPenalty), _stabPenalty(0), _lastMainObjective(0.0), _lastPenaltyCosts(0.0)
   {
@@ -579,7 +579,7 @@ soplex::VectorRational& normal,
         solution.add(v, _currentPrimalSolution[v]);
     }
   }
-  
+
   Vector PolarLP::getPrimalSolution()
   {
     _currentPrimalSolution.reDim(_mainLP->numColsRational());

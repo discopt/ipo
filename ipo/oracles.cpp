@@ -13,7 +13,7 @@ namespace ipo {
   {
     this->objectiveValue = -infinity;
   }
-  
+
   OracleResult::Point::Point(Vector& vec, const Rational& value)
     : vector(vec)
   {
@@ -23,7 +23,7 @@ namespace ipo {
   OracleResult::Ray::Ray(Vector& vec)
     : vector(vec)
   {
-    
+
   }
 
   OracleResult::OracleResult() : _heuristicLevel(0)
@@ -44,7 +44,7 @@ namespace ipo {
         throw std::runtime_error("Inconsistent OracleResult: Points are not sorted.");
     }
   }
-  
+
   void OracleResult::computeMissingObjectiveValues()
   {
     for (std::size_t i = 0; i < points.size(); ++i)
@@ -59,7 +59,7 @@ namespace ipo {
   void OracleResult::removeDuplicates()
   {
     // Check points.
-    
+
     UniqueVectors usv(_objective->dim());
     std::size_t write = 0;
     for (std::size_t read = 0; read < points.size(); ++read)
@@ -90,8 +90,8 @@ namespace ipo {
     while (rays.size() > write)
       rays.pop_back();
   }
-  
-  
+
+
 
   OracleBase::OracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
     : _name(name), _nextOracle(nextOracle), _heuristicLevel(nextOracle ? nextOracle->heuristicLevel() + 1 : 0)
@@ -127,7 +127,7 @@ namespace ipo {
     return maximize(result, _tempObjective, objectiveBound, minHeuristic, maxHeuristic);
   }
 
-  void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, 
+  void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound,
     HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic)
   {
     assert(objective.dim() == space().dimension());
@@ -141,12 +141,12 @@ namespace ipo {
     bool sort = false;
     bool checkDuplicates = false;
 
-    result._heuristicLevel = maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, 
+    result._heuristicLevel = maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDuplicates);
 
     // Compute missing objective values.
     result.computeMissingObjectiveValues();
-   
+
     // If requested, sort all points by objective value.
 
     if (sort)
@@ -174,7 +174,7 @@ namespace ipo {
 
     // Call implementation and check whether results are satisfactory.
 
-    HeuristicLevel implHeuristicLevel = maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
+    HeuristicLevel implHeuristicLevel = maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic,
       sort, checkDups);
     if (implHeuristicLevel == 0 || !result.rays.empty())
       return implHeuristicLevel;
@@ -184,7 +184,7 @@ namespace ipo {
       result.computeMissingObjectiveValues();
 
       // Check if one of them satisfies the objective bound.
-      
+
       bool satisfied = false;
       for (std::size_t i = 0; i < result.points.size(); ++i)
       {
@@ -216,7 +216,7 @@ namespace ipo {
     return _currentFace;
   }
 
-  FaceOracleBase::FaceOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle, 
+  FaceOracleBase::FaceOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle,
     std::size_t maxInfeasibleIterations, double initialM)
     : OracleBase(name, nextOracle), _maxInfeasibleIterations(maxInfeasibleIterations), _M(initialM), _completeFace()
   {
@@ -294,10 +294,10 @@ namespace ipo {
             maxObjectiveCoefficient = -objective[v];
         }
       }
-      
+
       // Check if c is the zero vector.
 
-      if (maxObjectiveCoefficient == 0) 
+      if (maxObjectiveCoefficient == 0)
       {
         maximizeImplementation(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
       }
@@ -344,14 +344,14 @@ namespace ipo {
               _modifiedObjective[v] = objective[v] + scaling * faceNormal.value(p);
             }
           }
-          
+
           // Carry out the optimization over P.
-          
-          maximizeImplementation(unrestrictedResult, _modifiedObjective, modifiedObjectiveBound, minHeuristic, maxHeuristic, 
+
+          maximizeImplementation(unrestrictedResult, _modifiedObjective, modifiedObjectiveBound, minHeuristic, maxHeuristic,
             sort, checkDups);
 
           // Check results.
-          
+
           if (!unrestrictedResult.points.empty())
           {
             bool satisfied = false;
@@ -362,7 +362,7 @@ namespace ipo {
               Vector& vector = unrestrictedResult.points[i].vector;
               if (face.evaluatePoint(vector) != 0)
                 continue;
-              
+
               Rational objectiveValue = objective * vector;
               if (objectiveBound.satisfiedBy(objectiveValue))
               {
@@ -399,14 +399,14 @@ namespace ipo {
 
               result.rays.push_back(OracleResult::Ray(vector));
             }
-            
+
             if (!result.rays.empty())
               return heuristicLevel();
           }
           else
           {
             // Infeasible: Forward to next oracle.
-            
+
             break;
           }
 

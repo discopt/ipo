@@ -275,7 +275,7 @@ numEquations);
       bool isVertex(const Vector& targetPoint, OutputBase& output, const soplex::LPRowSetRational& affineHullEquations);
       bool isVertex(const Vector& targetPoint, OutputBase& output);
 
-      bool areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output, 
+      bool areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output,
         const std::vector<Vector>& normalConeElements, bool verifyElements);
       bool areAdjacent(const Vector& firstPoint, const Vector& secondPoint, OutputBase& output,
           const soplex::LPRowSetRational& affineHullEquations);

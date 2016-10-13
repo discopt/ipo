@@ -13,10 +13,10 @@
 namespace ipo {
 
   class StatisticsOracle;
-  
+
   /**
    * \brief Heuristic level for oracles.
-   * 
+   *
    * An oracle without an associated oracle has heuristic level 0, one with an associated oracle has a heuristic level
    * equal to the associated one's plus 1.
    */
@@ -87,7 +87,7 @@ namespace ipo {
     /**
      * \brief Returns \c true iff neither points nor rays are returned.
      *
-     * Returns \c true iff neither points nor rays are returned. In this case, heuristicLevel() must return 0, since a heuristic 
+     * Returns \c true iff neither points nor rays are returned. In this case, heuristicLevel() must return 0, since a heuristic
      * must forward a call if nothing was found.
      */
 
@@ -99,7 +99,7 @@ namespace ipo {
     /**
      * \brief Returns \c true iff points are returned.
      *
-     * Returns \c true iff points (and hence no rays) are returned. If heuristicLevel() returns 0, then the first point is an 
+     * Returns \c true iff points (and hence no rays) are returned. If heuristicLevel() returns 0, then the first point is an
      * optimal one.
      */
 
@@ -127,18 +127,18 @@ namespace ipo {
      */
 
     void checkConsistent();
-    
+
     /**
      * \brief Computes all points' objective values.
-     * 
+     *
      * Computes all points' objective values.
      */
-    
+
     void computeMissingObjectiveValues();
 
     /**
      * \brief Returns the objective value.
-     * 
+     *
      * Returns the objective value, i.e., the maximum objective value of all points, or infinity if unbounded, or -infinity
      * if infeasible.
      */
@@ -162,7 +162,7 @@ namespace ipo {
      */
 
     void removeDuplicates();
-    
+
     friend class OracleBase;
 
   public:
@@ -195,7 +195,7 @@ namespace ipo {
     Rational value;
     bool strict;
 
-    inline ObjectiveBound() 
+    inline ObjectiveBound()
       : value(soplex::infinity), strict(false)
     {
 
@@ -290,7 +290,7 @@ namespace ipo {
 
     /**
      * \brief Returns the next associated oracle.
-     * 
+     *
      * Returns the next associated oracle, or NULL if it has heuristicLevel() = 0.
      */
 
@@ -328,11 +328,11 @@ namespace ipo {
     /**
      * \brief Runs the oracle to maximize the dense rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given dense rational \p objective over the current face \f$ F \f$ (see 
-     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by 
+     * Runs the optimization oracle to maximize the given dense rational \p objective over the current face \f$ F \f$ (see
+     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by
      * \p objectiveBound is not exceeded, then the call must be forwarded to the next oracle.
-     * 
-     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
+     *
+     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense
      * objective vector), and finally postprocesses the result object.
      *
      * \param result            After the call, contains the oracle's answer.
@@ -351,11 +351,11 @@ namespace ipo {
     /**
      * \brief Runs the oracle to maximize the sparse rational \p objective.
      *
-     * Runs the optimization oracle to maximize the given sparse rational \p objective over the current face \f$ F \f$ (see 
-     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by 
+     * Runs the optimization oracle to maximize the given sparse rational \p objective over the current face \f$ F \f$ (see
+     * setFace()) and returns \p result. If \p maxHeuristic is less than thisHeuristic() or if the objective value requested by
      * \p objectiveBound is not exceeded, then the call must be forwarded to the next oracle.
-     * 
-     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense 
+     *
+     * This implementation initializes the \p result data structure, calls the maximizeController() method (with a dense
      * objective vector), and finally postprocesses the result object.
      *
      * \param result            After the call, contains the oracle's answer.
@@ -393,7 +393,7 @@ namespace ipo {
     /**
      * \brief Wrapper method that calls the oracle's implementation.
      *
-     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the
      * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
      *
      * \param result         After the call, contains the oracle's answer.
@@ -406,13 +406,13 @@ namespace ipo {
      */
 
     virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, 
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
       bool& checkDups);
 
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
-     * This method is called by maximizeController() and contains the implementation of the oracle. 
+     * This method is called by maximizeController() and contains the implementation of the oracle.
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
@@ -448,7 +448,7 @@ namespace ipo {
 
   protected:
     friend class FaceOracleBase;
-    
+
     std::string _name; // Name of the oracle.
     Space _space; // Ambient space of the oracle.
     std::shared_ptr<OracleBase> _nextOracle; // Next associated optimization oracle (or NULL if exact).
@@ -460,7 +460,7 @@ namespace ipo {
    * \brief Base class for an optimization oracle without direct handling of faces.
    *
    * This class adds the ability to optimize over faces of \f$ P \f$ by tilting objective vectors.
-   * If \f$ \left<a,x\right> \leq \beta \f$ defines the face, then this implementation attempts to optimize a given objective 
+   * If \f$ \left<a,x\right> \leq \beta \f$ defines the face, then this implementation attempts to optimize a given objective
    * vector \f$ \left<c,x\right> \f$ over \f$ F \f$ by optimizing
    * \f$ \left<c + M \dfrac{ ||a||_{\infty} }{ ||c||_{\infty} } a,x\right> \f$ over \f$ P \f$
    * for sufficiently large \f$ M \in \mathbb{Q} \f$, doubling \f$ M \f$ a certain nummber of times before giving up.
@@ -486,7 +486,7 @@ namespace ipo {
      */
 
     virtual void setFace(const LinearConstraint& newFace);
-    
+
   protected:
 
     /**
@@ -511,11 +511,11 @@ namespace ipo {
      */
 
     void initializeSpace(const Space& space);
-    
+
     /**
      * \brief Wrapper method that calls the oracle's implementation.
      *
-     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the
      * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
      *
      * \param result         After the call, contains the oracle's answer.
@@ -534,13 +534,13 @@ namespace ipo {
     /**
      * \brief Returns the current face.
      *
-     * Returns the current face. \sa setFace(). Since handling of faces is done via modifications of the objective vector, this 
-     * implementation always returns NULL in order to remove face-handling from maximizeImplementation()'s requirements. To 
+     * Returns the current face. \sa setFace(). Since handling of faces is done via modifications of the objective vector, this
+     * implementation always returns NULL in order to remove face-handling from maximizeImplementation()'s requirements. To
      * actually access the current face, call OracleBase::currentFace().
      */
 
     virtual const LinearConstraint& currentFace();
-      
+
   protected:
     LinearConstraint _completeFace;
     std::size_t _maxInfeasibleIterations; // Maximum number of iterations before (heuristically) checking if the face is empty.

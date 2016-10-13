@@ -15,7 +15,7 @@ namespace ipo {
     /**
      * \brief Constructs an oracle that stores points and rays explicitly.
      *
-     * Constructs an oracle with given \p name that stores points and rays returned by the associated oracle \p nextOracle 
+     * Constructs an oracle with given \p name that stores points and rays returned by the associated oracle \p nextOracle
      * explicitly.
      */
 
@@ -45,7 +45,7 @@ namespace ipo {
     /**
      * \brief Wrapper method that calls the oracle's implementation.
      *
-     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the 
+     * This method is called by maximize(), forwards the call to the next oracle if requested, calls the
      * maximizeImplementation() method, and finally forwards the call to the next oracle if necessary.
      *
      * \param result         After the call, contains the oracle's answer.
@@ -60,7 +60,7 @@ namespace ipo {
     virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
       bool& checkDups);
-    
+
     /**
      * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
@@ -82,7 +82,7 @@ namespace ipo {
     bool addPoint(const Vector& point);
 
     bool addRay(const Vector& ray);
-    
+
     inline std::size_t numPoints() const
     {
       return _uniquePoints.size();
@@ -107,7 +107,7 @@ namespace ipo {
       void updateObjective(const soplex::VectorReal& approximateObjective, double approximateObjectiveBound);
       bool operator<(const Data& other) const;
     };
-    
+
     void search(std::vector<Data>& vectors, const soplex::VectorReal& approximateObjective,
       double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result);
 

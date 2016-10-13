@@ -31,7 +31,7 @@ namespace ipo {
     assert(ticksPerSecond > 0);
   }
 
-  Timer::Timer(const Timer& other) 
+  Timer::Timer(const Timer& other)
     : soplex::Timer(), _userAccountedTicks(other._userAccountedTicks), _userTicks(other._userTicks), _lastTime(other._lastTime)
   {
     assert(ticksPerSecond > 0);

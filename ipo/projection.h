@@ -60,7 +60,7 @@ namespace ipo {
 
     /**
      * \brief Increases the usage counter by 1.
-     * 
+     *
      * Increases the usage counter by 1.
      */
 
@@ -71,10 +71,10 @@ namespace ipo {
 
     /**
      * \brief Decreases the usage counter by 1.
-     * 
+     *
      * Decreases the usage counter by 1 and frees it if the latter reached 0.
      */
-    
+
     void unmarkUsed();
 
   protected:
@@ -124,7 +124,7 @@ namespace ipo {
 
       return *_data == *other._data;
     }
-    
+
     inline const Space& sourceSpace() const
     {
       return _data->sourceSpace();
@@ -166,7 +166,7 @@ namespace ipo {
      *
      * If possible, projects a linear constraint into the projected space. Otherwise, returns the completeFace().
      *
-     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,x\right> = \beta \f$ be the equation defining the 
+     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,x\right> = \beta \f$ be the equation defining the
      * given (boundary) hyperplane. The hyperplane defined by \f$ \left<c,x\right> = \delta \f$ is its projection if
      * \f$ c^\intercal A  = a^\intercal \f$ and \f$\delta - c^\intercal b = \beta\f$ hold. If this system has no solution, then
      * completeFace() is returned.
@@ -179,10 +179,10 @@ namespace ipo {
      *
      * Lifts a linear \p constraint into the source space.
      *
-     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,y\right> = \beta \f$ be the equation defining the 
+     * Let the projection map be \f$ y = Ax + b \f$ and let \f$ \left<a,y\right> = \beta \f$ be the equation defining the
      * (boundary) hyperplane. Its lifted version is then defined by \f$ \left<a^\intercal A,x\right> = \beta - a^\intercal b \f$.
      */
-  
+
     LinearConstraint liftLinearConstraint(const LinearConstraint& constraint) const;
 
   protected:
@@ -242,7 +242,7 @@ namespace ipo {
      */
 
     virtual void setFace(const LinearConstraint& newFace = completeFace());
-    
+
     /**
      * \brief Returns the ambient \c space.
      *
@@ -256,7 +256,7 @@ namespace ipo {
 
     /**
      * \brief Returns the associated projection.
-     * 
+     *
      * Returns a const-reference to the associated projection.
      */
 
@@ -271,7 +271,7 @@ namespace ipo {
      * \brief Oracle's implementation to maximize the dense rational \p objective.
      *
      * This method is called by maximizeController() and contains the implementation of the oracle.
-     * 
+     *
      *
      * \param result         After the call, contains the oracle's answer.
      * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.

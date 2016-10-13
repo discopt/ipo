@@ -42,7 +42,7 @@ namespace ipo {
       {
         return const_cast<Vector&>(_iter->vector);
       }
-      
+
       inline bool operator==(const Iterator& other) const
       {
         return _iter == other._iter;
@@ -52,7 +52,7 @@ namespace ipo {
       {
         return ! (*this == other);
       }
-      
+
     private:
       std::set<Data>::iterator _iter;
     };

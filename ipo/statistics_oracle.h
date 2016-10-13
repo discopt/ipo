@@ -12,7 +12,7 @@ namespace ipo {
   public:
     /**
      * \brief Constructor.
-     * 
+     *
      * Constructor. The \p targetOracle is the one for which this wrapper collects statistics.
      */
 
@@ -20,7 +20,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -33,13 +33,13 @@ namespace ipo {
      * For \p newFace equal to \c NULL we define \f$ F := P \f$.
      *
      * This implementation forwards it to the target oracle.
-     */    
-    
+     */
+
     virtual void setFace(const LinearConstraint& newFace);
-    
+
     /**
      * \brief Returns the wrapped oracle.
-     * 
+     *
      * Returns the wrapped oracle.
      */
 
@@ -50,7 +50,7 @@ namespace ipo {
 
     /**
      * \brief Resets all values.
-     * 
+     *
      * Resets all values.
      */
 
@@ -58,7 +58,7 @@ namespace ipo {
 
     /**
      * \brief Returns how often the oracle was called.
-     * 
+     *
      * Returns how often the oracle was called.
      */
 
@@ -69,7 +69,7 @@ namespace ipo {
 
     /**
      * \brief Returns how often the oracle had to forward the call to the next oracle.
-     * 
+     *
      * Returns how often the oracle had to forward the call to the next oracle.
      */
 
@@ -80,7 +80,7 @@ namespace ipo {
 
     /**
      * \brief Returns how often the oracle's own answer was satisfactory.
-     * 
+     *
      * Returns how often the oracle's own answer was satisfactory.
      */
 
@@ -91,7 +91,7 @@ namespace ipo {
 
     /**
      * \brief Returns the cumulative time used for this oracle, excluding the time used for forwarded calls.
-     * 
+     *
      * Returns the cumulative time used for this oracle, excluding the time used for forwarded calls.
      */
 
@@ -133,7 +133,7 @@ namespace ipo {
     virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
       bool& checkDups);
-  
+
   protected:
 
     std::shared_ptr<OracleBase> _targetOracle;
@@ -141,7 +141,7 @@ namespace ipo {
     std::size_t _numForwards;
     Timer _timer;
   };
-  
+
 } /* namespace */
 
 #endif /* STATISTICS_ORACLE_H_ */

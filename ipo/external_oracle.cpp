@@ -10,7 +10,7 @@ using namespace soplex;
 
 namespace ipo {
 
-  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program, const std::string& instance, 
+  ExternalOracle::ExternalOracle(const std::string& name, const std::string& program, const std::string& instance,
     const std::shared_ptr<OracleBase>& nextOracle, std::size_t maxInfeasibleIterations, double initialM)
     : FaceOracleBase(name, nextOracle, maxInfeasibleIterations, initialM)
   {
@@ -57,7 +57,7 @@ namespace ipo {
           "Error in ~ExternalOracle: Temporary directory \"" + _path + "\" is not in /tmp/.");
     int status = system(("rm -r " + _path).c_str());
   }
-  
+
   std::size_t ExternalOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
     const ObjectiveBound& objectiveBound, std::size_t minHeuristic, std::size_t maxHeuristic, bool& sort, bool& checkDups)
   {
@@ -82,7 +82,7 @@ namespace ipo {
     if (status == "unbounded")
     {
       Vector solution = parseSolution(output);
-      result.rays.push_back(OracleResult::Ray(solution));  
+      result.rays.push_back(OracleResult::Ray(solution));
     }
     else if (status == "optimal")
     {
@@ -93,7 +93,7 @@ namespace ipo {
     }
     else if (status != "infeasible")
       throw std::runtime_error("ExternalOracle: Invalid status \"" + status + "\".");
-    
+
     return heuristicLevel();
   }
 
@@ -103,18 +103,18 @@ namespace ipo {
 //   {
 //     assert((heuristicLevel() == 0 && _nextOracle == NULL)
 //       || heuristicLevel() > 0 && _nextOracle != NULL);
-// 
+//
 //     // Forward call if requested.
-// 
+//
 //     if (heuristicLevel() > maxHeuristic)
 //     {
 //       return _nextOracle->maximize(result, originalObjective, orginalObjectiveBound, maxHeuristic,
 //         minHeuristic);
 //     }
-// 
+//
 //     DVectorRational scaledObjective;
 //     scaleVectorIntegral(objective, scaledObjective);
-// 
+//
 //     std::stringstream param, output;
 //     param << "--maximize \"";
 //     for (std::size_t v = 0; v < space().dimension(); ++v)
@@ -124,9 +124,9 @@ namespace ipo {
 //       param << scaledObjective[v];
 //     }
 //     param << "\"";
-// 
+//
 //     call(param.str(), output);
-// 
+//
 //     std::string status;
 //     output >> status;
 //     result.buildStart(objective);

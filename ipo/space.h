@@ -15,7 +15,7 @@ namespace ipo {
 
   /**
    * \brief Storage class of a \ref Space.
-   * 
+   *
    * Storage class of a \ref Space. Stores the variable names and a reference counter.
    */
 
@@ -24,7 +24,7 @@ namespace ipo {
   public:
     /**
      * \brief Constructs without variables. Use addVariable() to add them.
-     * 
+     *
      * Constructs without variables. Use addVariable() to add them.
      */
 
@@ -32,7 +32,7 @@ namespace ipo {
 
     /**
      * \brief Constructs with given \p variableNames.
-     * 
+     *
      * Constructs with given \p variableNames. Use addVariable() to add further ones.
      */
 
@@ -40,7 +40,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -48,7 +48,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff all variables coincide.
-     * 
+     *
      * Returns true iff all variables coincide.
      */
 
@@ -56,7 +56,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff not all variables coincide.
-     * 
+     *
      * Returns true iff not all variables coincide.
      */
 
@@ -67,7 +67,7 @@ namespace ipo {
 
     /**
      * \brief Returns the dimension of the space.
-     * 
+     *
      * Returns the dimension of the space.
      */
 
@@ -78,7 +78,7 @@ namespace ipo {
 
     /**
      * \brief Returns the name of the given \p variable.
-     * 
+     *
      * Returns a const-reference to the name of the given \p variable.
      */
 
@@ -89,15 +89,15 @@ namespace ipo {
 
     /**
      * \brief Adds a variable with given \p name.
-     * 
+     *
      * Adds a variable with given \p name to the space.
      */
-    
+
     void addVariable(const std::string& name);
 
     /**
      * \brief Increases the usage counter by 1.
-     * 
+     *
      * Increases the usage counter by 1.
      */
 
@@ -108,10 +108,10 @@ namespace ipo {
 
     /**
      * \brief Decreases the usage counter by 1.
-     * 
+     *
      * Decreases the usage counter by 1 and frees it if the latter reached 0.
      */
-    
+
     void unmarkUsed();
 
     friend class Space;
@@ -124,7 +124,7 @@ namespace ipo {
   /**
    * \brief Defines the ambient space for polyhedra.
    *
-   * Defines the ambient space for polyhedra defined by more oracles and stores the names of variables. Contains relevant methods 
+   * Defines the ambient space for polyhedra defined by more oracles and stores the names of variables. Contains relevant methods
    * for printing vectors, linear forms and linear constraints. Implementation is by reference counting, i.e., copying is cheap
    * and ownership is managed automatically.
    */
@@ -134,7 +134,7 @@ namespace ipo {
   public:
     /**
      * \brief Constructs the empty space.
-     * 
+     *
      * Constructs the empty space.
      */
 
@@ -142,7 +142,7 @@ namespace ipo {
 
     /**
      * \brief Constructs from \ref SpaceData object.
-     * 
+     *
      * Constructs from \ref SpaceData object.
      */
 
@@ -154,7 +154,7 @@ namespace ipo {
 
     /**
      * \brief Copy constructor.
-     * 
+     *
      * Copy constructor.
      */
 
@@ -166,7 +166,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -177,7 +177,7 @@ namespace ipo {
 
     /**
      * \brief Assignment operator.
-     * 
+     *
      * Assignment operator.
      */
 
@@ -194,7 +194,7 @@ namespace ipo {
 
     /**
      * \brief Returns true if spaces are equal.
-     * 
+     *
      * Returns true if spaces are equal, including variable names.
      */
 
@@ -204,10 +204,10 @@ namespace ipo {
         return true;
       return *_data == *other._data;
     }
-    
+
     /**
      * \brief Returns true if spaces are not equal.
-     * 
+     *
      * Returns true if spaces are not equal, also considering variable names.
      */
 
@@ -218,7 +218,7 @@ namespace ipo {
 
     /**
      * \brief Returns the dimension of the space.
-     * 
+     *
      * Returns the dimension of the space.
      */
 
@@ -229,7 +229,7 @@ namespace ipo {
 
     /**
      * \brief Returns the name of the given \p variable.
-     * 
+     *
      * Returns a const-reference to the name of the given \p variable.
      */
 
@@ -240,7 +240,7 @@ namespace ipo {
 
     /**
      * \brief Prints given \p vector to given \p stream.
-     * 
+     *
      * Prints given \p vector to given \p stream, using stored variable names. Nonzeros are delimited by a comma.
      */
 
@@ -248,7 +248,7 @@ namespace ipo {
 
     /**
      * \brief Prints given \p linearForm to given \p stream.
-     * 
+     *
      * Prints given \p linearForm to given \p stream, using stored variable names. Nonzeros are delimited by the sign of the next
      * entry.
      */
@@ -257,8 +257,8 @@ namespace ipo {
 
     /**
      * \brief Prints given linear \p constraint to given \p stream.
-     * 
-     * Prints given linear \p constraint to given \p stream, using stored variable names. Nonzeros are delimited by the sign of 
+     *
+     * Prints given linear \p constraint to given \p stream, using stored variable names. Nonzeros are delimited by the sign of
      * the next entry.
      */
 

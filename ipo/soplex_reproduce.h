@@ -15,12 +15,12 @@ class ReproSoPlex : public soplex::SoPlex
 public:
   ReproSoPlex()
   {
-    
+
   }
 
   ~ReproSoPlex()
   {
-    
+
   }
 
   double intParam(const SoPlex::IntParam param)
@@ -32,7 +32,7 @@ public:
   {
     return _spx.realParam(param);
   }
-  
+
   void setIntParam(const SoPlex::IntParam param, const int value)
   {
     _stream << "spx.setIntParam(SoPlex::IntParam(" << int(param) << "), " << value << ");\n";
@@ -60,12 +60,12 @@ public:
   {
     return _spx.numRowsRational();
   }
-  
+
   int numColsRational() const
   {
     return _spx.numColsRational();
   }
-  
+
   int numNonzerosRational() const
   {
     return _spx.numNonzerosRational();
@@ -196,7 +196,7 @@ static void DUMP_printRational(const soplex::Rational& x)
 }
 
 
-static void DUMP_addRowRationalLPRowRational(const soplex::Rational& lhs, const soplex::SVectorRational& vector, const 
+static void DUMP_addRowRationalLPRowRational(const soplex::Rational& lhs, const soplex::SVectorRational& vector, const
 soplex::Rational& rhs, const std::string& spxAccess = "spx.", const std::string& prefix = "")
 {
   std::cout << prefix << "{\n";

@@ -27,14 +27,14 @@ namespace ipo {
       T& valueStorage)
       : Parameter(group), _name(name), _description(description), _defaultValue(defaultValue), _valueStorage(valueStorage)
     {
-      
+
     }
 
     virtual ~TypeParameter()
     {
 
     }
-    
+
     virtual bool set(const std::string& valueString) = 0;
     virtual void get(std::ostream& stream) = 0;
 

@@ -11,9 +11,9 @@
 namespace ipo {
 
   typedef soplex::Rational Rational;
-  
+
   bool isIntegral(const Rational& number);
-  
+
   class IntegralScaler
   {
   public:

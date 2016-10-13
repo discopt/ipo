@@ -15,7 +15,7 @@ namespace ipo {
   public:
     /**
      * \brief Constructor.
-     * 
+     *
      */
 
     FacetSeparationState();
@@ -28,7 +28,7 @@ namespace ipo {
 
     /**
      * \brief Returns the space of the oracle.
-     * 
+     *
      * Returns a const-reference to the space of the oracle.
      */
 
@@ -36,7 +36,7 @@ namespace ipo {
 
     /**
      * \brief Returns the space of the polar LP.
-     * 
+     *
      * Returns a const-reference to the space of the polar LP.
      */
 
@@ -44,7 +44,7 @@ namespace ipo {
 
     /**
      * \brief Returns the feasibility / optimality tolerance of the LP.
-     * 
+     *
      * Returns the feasibility / optimality tolerance of the LP.
      */
 
@@ -52,7 +52,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of spanning points that are currently in the LP.
-     * 
+     *
      * Returns the number of spanning points that are currently in the LP.
      */
 
@@ -60,7 +60,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of spanning rays that are currently in the LP.
-     * 
+     *
      * Returns the number of spanning rays found that are currently in the LP.
      */
 
@@ -68,7 +68,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points that were added in this iteration.
-     * 
+     *
      * Returns the number of points that were added in this iteration.
      */
 
@@ -76,7 +76,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays that were added in this iteration.
-     * 
+     *
      * Returns the number of rays that were added in this iteration.
      */
 
@@ -84,7 +84,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rows of the current LP.
-     * 
+     *
      * Returns the number of rows of the current LP.
      */
 
@@ -92,7 +92,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of columns of the current LP.
-     * 
+     *
      * Returns the number of columns of the current LP.
      */
 
@@ -100,7 +100,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of nonzeros of the current LP.
-     * 
+     *
      * Returns the number of nonzeros of the current LP.
      */
 
@@ -108,7 +108,7 @@ namespace ipo {
 
     /**
      * \brief Returns the last solution of the polar LP as an inequality.
-     * 
+     *
      * Returns the last solution of the polar LP as an inequality.
      */
 
@@ -116,7 +116,7 @@ namespace ipo {
 
     /**
      * \brief Returns the objective value of the last oracle call.
-     * 
+     *
      * Returns the objective value of the last oracle call, i.e., the smallest right-hand side for currentInequality()
      * that is valid.
      */
@@ -125,15 +125,15 @@ namespace ipo {
 
     /**
      * \brief Returns true iff we are currently solving an approximate LP.
-     * 
+     *
      * Returns true iff we are currently solving an approximate LP.
      */
 
     virtual bool approximateSolve() const = 0;
-    
+
     /**
      * \brief Returns true iff we are currently solving an exact LP.
-     * 
+     *
      * Returns true iff we are currently solving an exact LP.
      */
 
@@ -141,7 +141,7 @@ namespace ipo {
 
     /**
      * \brief Returns the maximum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the maximum allowed heuristic level of the current oracle call.
      */
 
@@ -149,7 +149,7 @@ namespace ipo {
 
     /**
      * \brief Returns the minimum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the minimum allowed heuristic level of the current oracle call.
      */
 
@@ -157,7 +157,7 @@ namespace ipo {
 
     /**
      * \brief Returns the heuristic level of the oracle's last answer.
-     * 
+     *
      * Returns the heuristic level of the oracle's last answer.
      */
 
@@ -165,7 +165,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points returned by the last oracle call.
-     * 
+     *
      * Returns the number of points returned by the last oracle call.
      */
 
@@ -173,7 +173,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays returned by the last oracle call.
-     * 
+     *
      * Returns the number of rays returned by the last oracle call.
      */
 
@@ -181,7 +181,7 @@ namespace ipo {
 
     /**
      * \brief Returns the point or ray to be separated.
-     * 
+     *
      * Returns the point or ray to be separated.
      */
 
@@ -189,15 +189,15 @@ namespace ipo {
 
     /**
      * \brief Returns true iff we are separating a ray.
-     * 
+     *
      * Returns true iff we are separating a ray.
      */
 
-    virtual bool separatingRay() const = 0;   
+    virtual bool separatingRay() const = 0;
 
     /**
      * \brief Returns true iff we just separated by a facet.
-     * 
+     *
      * Returns true iff we just separated by a facet (if at all).
      */
 
@@ -205,16 +205,16 @@ namespace ipo {
 
     /**
      * \brief Returns true iff we just separated by an equation.
-     * 
+     *
      * Returns true iff we just separated by an equation (if at all).
      */
 
-    virtual bool separatedByEquation() const = 0; 
+    virtual bool separatedByEquation() const = 0;
   };
 
   /**
    * \brief Base class for an observer for facet computations.
-   * 
+   *
    * Base class for an observer for facet computations.
    */
 
@@ -242,7 +242,7 @@ namespace ipo {
 
     /**
      * \brief Default constructor.
-     * 
+     *
      * Default constructor.
      */
 
@@ -250,7 +250,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -258,17 +258,17 @@ namespace ipo {
 
     /**
      * \brief This method is called by the algorithm.
-     * 
+     *
      * This method is called by the algorithm in certain steps.
      */
 
     virtual void notify(Event event, FacetSeparationState& state) = 0;
   };
-  
-  
+
+
   /**
    * \brief Class for debugging facet computations.
-   * 
+   *
    * Class for debugging facet computations. It prints at least one line for each notification.
    */
 
@@ -277,9 +277,9 @@ namespace ipo {
   public:
     /**
      * \brief Constructor.
-     * 
+     *
      * Constructor.
-     * 
+     *
      * \param stream Where the output will be written to.
      */
 
@@ -287,7 +287,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -295,7 +295,7 @@ namespace ipo {
 
     /**
      * \brief Notification method, see \ref FacetSeparationHandler.
-     * 
+     *
      * Notification method, see \ref FacetSeparationHandler.
      */
 
@@ -306,10 +306,10 @@ namespace ipo {
     bool _printPointsAndRays;
     bool _printInequalities;
   };
-  
+
   /**
     * \brief Class for collecting statistics of a facet computation.
-    * 
+    *
     * Class for collecting statistics of a facet computation.
     */
 
@@ -318,7 +318,7 @@ namespace ipo {
   public:
     /**
       * \brief Constructor.
-      * 
+      *
       * Constructor.
       */
 
@@ -326,7 +326,7 @@ namespace ipo {
 
     /**
       * \brief Destructor.
-      * 
+      *
       * Destructor.
       */
 
@@ -334,7 +334,7 @@ namespace ipo {
 
     /**
       * \brief Notification method, see \ref FacetSeparationHandler.
-      * 
+      *
       * Notification method, see \ref FacetSeparationHandler.
       */
 
@@ -342,7 +342,7 @@ namespace ipo {
 
     /**
      * \brief Resets all statistics.
-     * 
+     *
      * Resets all statistics.
      */
 
@@ -350,7 +350,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of oracle queries.
-     * 
+     *
      * Returns the number of oracle queries.
      */
 
@@ -361,7 +361,7 @@ namespace ipo {
 
     /**
      * \brief Returns the vector storing how often an oracle returned with each heuristicLevel.
-     * 
+     *
      * Returns the vector storing how often an oracle returned with each heuristicLevel.
      */
 
@@ -372,7 +372,7 @@ namespace ipo {
 
     /**
      * \brief Returns how many approximate LPs were solved.
-     * 
+     *
      * Returns how many approximate LPs were solved.
      */
 
@@ -383,7 +383,7 @@ namespace ipo {
 
     /**
      * \brief Returns how many exact LPs were solved.
-     * 
+     *
      * Returns how many exact LPs were solved.
      */
 
@@ -394,7 +394,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time for solving approximate LPs.
-     * 
+     *
      * Returns the total running time for solving approximate LPs.
      */
 
@@ -405,7 +405,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time for solving exact LPs.
-     * 
+     *
      * Returns the total running time for solving exact LPs.
      */
 
@@ -413,10 +413,10 @@ namespace ipo {
     {
       return _timeExactLPs;
     }
-    
+
     /**
      * \brief Returns the total running time for oracles.
-     * 
+     *
      * Returns the total running time for oracles.
      */
 
@@ -446,42 +446,42 @@ namespace ipo {
 
   /**
    * \brief Separates a given \p point by a facet or an equation.
-   * 
+   *
    * Separates a given \p point by a facet or an equation.
-   * 
+   *
    * \param oracle      Oracle defining the polyhedron P.
    * \param point       Point to be separated.
    * \param spanning    Points and rays spanning P's affine hull.
    * \param handlers    Set of \ref FacetSeparationHandler objects whose notify() methods are called appropriately.
    * \param constraint  If the \p point lies outside P, this variable will contain the separating inequality.
    * \param certificate If not \c NULL, it will contain points and rays that span the facet or equation.
-   * 
+   *
    * \return True iff \p point can be separated.
    */
 
-  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning, 
+  bool separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point, const InnerDescription& spanning,
     std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate = NULL);
 
   /**
    * \brief Separates a given \p ray by a facet or an equation.
-   * 
+   *
    * Separates a given \p ray by a facet or an equation.
-   * 
+   *
    * \param oracle      Oracle defining the polyhedron P.
    * \param ray         Ray to be separated.
    * \param spanning    Points and rays spanning P's affine hull.
    * \param handlers    Set of \ref FacetSeparationHandler objects whose notify() methods are called appropriately.
    * \param constraint  If the \p ray lies outside P's recession cone, this variable will contain the separating inequality.
    * \param certificate If not \c NULL, it will contain points and rays that span the facet or equation.
-   * 
+   *
    * \return True iff \p ray can be separated.
-   */  
+   */
 
-  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning, 
+  bool separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray, const InnerDescription& spanning,
     std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint, InnerDescription* certificate = NULL);
 
   ///////////////// OLD ////////////////////
-  
+
   /**
    * \brief Facet-separation for a polyhedron.
    *
@@ -699,7 +699,7 @@ namespace ipo {
     class Result: public InformationBase
     {
     public:
-      Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays, 
+      Result(const std::vector<Vector>& spanningPoints, const std::vector<Vector>& spanningRays,
         const std::vector<std::size_t>& columnBasis, const std::shared_ptr<OracleBase>& oracle);
       virtual ~Result();
 

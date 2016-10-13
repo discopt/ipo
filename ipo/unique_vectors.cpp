@@ -66,7 +66,7 @@ namespace ipo {
   {
 
   }
-  
+
   void UniqueVectors::clear()
   {
     _data.clear();

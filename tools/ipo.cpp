@@ -63,7 +63,7 @@ public:
 
   virtual ~IPOConsoleApplication()
   {
-    
+
   }
 
   virtual bool run()
@@ -285,9 +285,9 @@ public:
         }
 
         _scipOracle = std::make_shared<SCIPOracle>(firstArgument, scip);
-        
+
         _instanceObjective = getSCIPObjective(scip);
-        
+
         SCIP_CALL_EXC(SCIPfree(&scip));
       }
       catch (SCIPException& exc)
@@ -341,7 +341,7 @@ public:
     {
       soplex::DVectorRational lower(oracle()->space().dimension());
       soplex::DVectorRational upper(oracle()->space().dimension());
-      const MixedIntegerSet& mis = *_scipOracle->mixedIntegerSet(); 
+      const MixedIntegerSet& mis = *_scipOracle->mixedIntegerSet();
       for (std::size_t v = 0; v < mis.numVariables(); ++v)
       {
         lower[v] = mis.variable(v).lowerBound;

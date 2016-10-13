@@ -127,7 +127,7 @@ namespace ipo {
     }
     return true;
   }
-  
+
   void VectorData::deleteIfUnused()
   {
     if (_mutableUsage == 0 && _immutableUsage == 0)
@@ -207,9 +207,9 @@ namespace ipo {
   {
     return addScaled(a, 1, b, -1);
   }
-  
+
   Vector addScaled(const Vector& a, int scaleA, const Vector& b, int scaleB)
-  { 
+  {
     assert(scaleA != 0);
     assert(scaleB != 0);
 
@@ -240,7 +240,7 @@ namespace ipo {
         else
           break;
       }
-      
+
       if (ia < ib)
       {
         data->add(ia, scaleA * a.value(pa));
@@ -298,7 +298,7 @@ namespace ipo {
           break;
         ia = a.index(pa);
         ib = b.index(pb);
-        
+
       }
     }
 
@@ -360,7 +360,7 @@ namespace ipo {
     data->sort();
     return MutableVector(data);
   }
-  
+
   Rational operator*(const soplex::VectorRational& a, const ReferenceCountedVector& b)
   {
     assert(b.size() == 0 || b.index(b.size()-1) < a.dim());
@@ -375,7 +375,7 @@ namespace ipo {
   {
     return b * a;
   }
-  
+
   soplex::VectorRational& operator+=(soplex::VectorRational& a, const ReferenceCountedVector& b)
   {
     assert(b.size() == 0 || b.index(b.size() - 1) < a.dim());
@@ -395,7 +395,7 @@ namespace ipo {
 
     return a;
   }
-  
+
   MutableVector operator-(const ReferenceCountedVector& source)
   {
     VectorData* data = new VectorData(source.size());
@@ -403,7 +403,7 @@ namespace ipo {
       data->add(source.index(p), -source.value(p));
     return MutableVector(data);
   }
-  
+
   Vector integralScaled(const Vector& vector)
   {
     // Compute scaling factor.

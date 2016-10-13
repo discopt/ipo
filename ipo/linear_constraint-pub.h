@@ -8,7 +8,7 @@ namespace ipo {
 
   /**
    * \brief Linear constraint (inequality or equation).
-   * 
+   *
    * Linear constraint (inequality or equation) whose normal vector is stored in a \ref Vector object.
    */
 
@@ -17,15 +17,15 @@ namespace ipo {
   public:
     /**
      * \brief Constructs constraint <0,x> <= 0.
-     * 
+     *
      * Constructs constraint <0,x> <= 0.
      */
 
     LinearConstraint();
-    
+
     /**
      * \brief Constructs constraint of given \p type with given \p normal vector, right-hand side \p rhs.
-     * 
+     *
      * Constructs constraint of given \p type with given \p normal vector, right-hand side \p rhs.
      */
 
@@ -33,7 +33,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -41,10 +41,10 @@ namespace ipo {
 
     /**
      * \brief Returns true iff the constraints are equal.
-     * 
+     *
      * Returns true iff the constraints are equal. Does not take into account the scaling.
      */
-    
+
     inline bool operator==(const LinearConstraint& other) const
     {
       if (_type != other._type)
@@ -56,7 +56,7 @@ namespace ipo {
 
     /**
      * \brief Returns true for equations.
-     * 
+     *
      * Returns true for equations.
      */
 
@@ -64,7 +64,7 @@ namespace ipo {
     {
       return _type == '=';
     }
-    
+
     /**
      * \brief Returns the type of the constraint, i.e., '<', '>' or '='.
      */
@@ -76,7 +76,7 @@ namespace ipo {
 
     /**
      * \brief Returns the normal vector of the constraint.
-     * 
+     *
      * Returns the normal vector of the constraint.
      */
 
@@ -98,7 +98,7 @@ namespace ipo {
 
     /**
      * \brief Returns the maximum norm of the normal vector.
-     * 
+     *
      * Returns the maximum norm of the normal vector, i.e., the largest absolute value of an entry.
      */
 
@@ -118,7 +118,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff this inequality constraint defines the complete face.
-     * 
+     *
      * Returns true iff the constraint is an inequality constraint that defines the complete face.
      */
 
@@ -134,7 +134,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff this inequality constraint defines the empty face.
-     * 
+     *
      * Returns true iff the constraint is an inequality constraint that defines the empty face.
      */
 
@@ -150,7 +150,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff this inequality constraint defines a trivial face.
-     * 
+     *
      * Returns true iff the constraint is an inequality constraint that defines the trivial (complete or empty) face.
      */
 
@@ -161,8 +161,8 @@ namespace ipo {
 
     /**
      * \brief Returns an integer indicating where the point lies relative to the halfspace/hyperplane.
-     * 
-     * Returns 0 iff the point lies on the hyperplane. It returns a positive number iff the point lies in the interior of the 
+     *
+     * Returns 0 iff the point lies on the hyperplane. It returns a positive number iff the point lies in the interior of the
      * halfspace (happens never for equations). Otherwise, returns a negative number.
      */
 
@@ -170,7 +170,7 @@ namespace ipo {
 
     /**
      * \brief Returns an integer indicating where the ray lies relative to the halfspace/hyperplane.
-     * 
+     *
      * Returns 0 iff the ray is parallel to the hyperplane. It returns a positive number iff the ray has positive scalar product
      * with the halfspace's outer normal vector (happens never for equations). Otherwise, returns a negative number.
      */

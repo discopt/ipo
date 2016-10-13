@@ -13,7 +13,7 @@ using namespace soplex;
 
 
 namespace ipo {
-  
+
   class Factorization
   {
   public:
@@ -371,7 +371,7 @@ namespace ipo {
     XAffineHull(std::vector<AffineHullHandler*>& handlers, const std::shared_ptr<OracleBase>& oracle,
       InnerDescription& resultInnerDescription, AffineOuterDescription& resultOuterDescription)
       : _handlers(handlers), _oracle(oracle), _innerDescription(resultInnerDescription), _equations(resultOuterDescription),
-      _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(soplex::infinity), 
+      _infeasible(false), _n(oracle->space().dimension()), _factorization(_n + 1), _objectiveValuePositive(soplex::infinity),
       _objectiveValueNegative(soplex::infinity),
       _verifyIndex(std::numeric_limits<std::size_t>::max()),
       _verifySuccess(true), _lastApproximateDirectionSolves(0), _lastExactDirectionSolves(0),
@@ -388,19 +388,19 @@ namespace ipo {
 
     virtual ~XAffineHull()
     {
-      
+
     }
 
     virtual const Space& space() const
     {
       return _oracle->space();
     }
-    
+
     virtual std::size_t numPoints() const
     {
       return _innerDescription.points.size();
     }
-        
+
     virtual std::size_t numRays() const
     {
       return _innerDescription.rays.size();
@@ -425,7 +425,7 @@ namespace ipo {
     {
       return _verifyIndex;
     }
-    
+
     virtual bool verifySuccess() const
     {
       return _verifySuccess;
@@ -591,7 +591,7 @@ namespace ipo {
         assert(!_columns[_allowedDirectionColumns[i]].definesEquation);
       }
     }
-    
+
     std::size_t selectDirectionColumnSparseApproximate()
     {
       std::size_t column = _allowedDirectionColumns[0];
@@ -673,8 +673,8 @@ namespace ipo {
     {
       _innerDescription.rays.push_back(ray);
 
-      notify(AffineHullHandler::RAY_BEGIN);      
-      
+      notify(AffineHullHandler::RAY_BEGIN);
+
       _basicColumns.push_back(column);
       _factorization.addRow(ray, Rational(0), column);
 
@@ -700,25 +700,25 @@ namespace ipo {
           }
         }
       }
-      
+
       notify(AffineHullHandler::RAY_END);
     }
 
-    void oracleQuery(AffineHullHandler::Event event, const soplex::DVectorRational& objective, 
-      const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0, 
+    void oracleQuery(AffineHullHandler::Event event, const soplex::DVectorRational& objective,
+      const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0,
       HeuristicLevel maxHeuristicLevel = std::numeric_limits<HeuristicLevel>::max())
     {
       _oracleMaxHeuristicLevel = maxHeuristicLevel;
       _oracleMinHeuristicLevel = minHeuristicLevel;
 
       notify(event);
-      
+
       _oracle->maximize(_result, objective, objectiveBound, minHeuristicLevel, maxHeuristicLevel);
       _oracleResultHeuristicLevel = _result.heuristicLevel();
 
       if (event == AffineHullHandler::ORACLE_VERIFY_BEGIN)
         _verifySuccess = _result.isFeasible() && _result.points.front().objectiveValue == objectiveBound.value;
-      
+
       notify(AffineHullHandler::Event(int(event) + 1));
     }
 
@@ -821,7 +821,7 @@ namespace ipo {
             if (min < lastCheapHeuristic)
               min = lastHeuristic;
             HeuristicLevel max = lastMaximizeHeuristicLevel - 1;
-            oracleQuery(AffineHullHandler::ORACLE_MAXIMIZE_BEGIN, _directionPositiveVector, 
+            oracleQuery(AffineHullHandler::ORACLE_MAXIMIZE_BEGIN, _directionPositiveVector,
               ObjectiveBound(_objectiveValuePositive, true), min, max);
             lastMaximizeHeuristicLevel = _result.heuristicLevel();
           }
@@ -832,7 +832,7 @@ namespace ipo {
             if (min < lastCheapHeuristic)
               min = lastHeuristic;
             HeuristicLevel max = lastMinimizeHeuristicLevel - 1;
-            oracleQuery(AffineHullHandler::ORACLE_MINIMIZE_BEGIN, _directionNegativeVector, 
+            oracleQuery(AffineHullHandler::ORACLE_MINIMIZE_BEGIN, _directionNegativeVector,
               ObjectiveBound(_objectiveValueNegative, true), min, max);
             lastMinimizeHeuristicLevel = _result.heuristicLevel();
           }
@@ -865,7 +865,7 @@ namespace ipo {
               const Rational& value = _result.points[i].objectiveValue;
               if (value == *pObjectiveValue)
                 continue;
-              
+
               if (_innerDescription.points.empty())
               {
                 addPoint(vector, _n, true);
@@ -933,7 +933,7 @@ namespace ipo {
           _objectiveValueNegative -= _objectiveValuePositive;
 
           _verifyIndex = i;
-          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector, 
+          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionPositiveVector,
             ObjectiveBound(_objectiveValuePositive, true));
         }
 
@@ -942,14 +942,14 @@ namespace ipo {
         if (_verifySuccess)
         {
           _verifyIndex = _candidateEquations.size();
-          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionNegativeVector, 
+          oracleQuery(AffineHullHandler::ORACLE_VERIFY_BEGIN, _directionNegativeVector,
             ObjectiveBound(_objectiveValueNegative, true));
         }
         notify(AffineHullHandler::VERIFY_END);
 
         // If successful, make equations regular ones.
-        
-        
+
+
         if (_verifySuccess)
         {
           std::copy(_candidateEquations.begin(), _candidateEquations.end(), std::back_inserter(_equations));
@@ -1018,11 +1018,11 @@ namespace ipo {
 
   AffineHullHandler::~AffineHullHandler()
   {
-    
+
   }
 
-  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription, 
-    std::vector<LinearConstraint>& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, 
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription,
+    std::vector<LinearConstraint>& resultOuterDescription, std::vector<AffineHullHandler*>& handlers,
     HeuristicLevel lastCheapHeuristic, HeuristicLevel lastModerateHeuristic,
     const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
   {
@@ -1038,7 +1038,7 @@ namespace ipo {
     bool printDirections)
     : _stream(stream), _printPointsAndRays(printPointsAndRays), _printEquations(printEquations), _printDirections(printDirections)
   {
-    
+
   }
 
   DebugAffineHullHandler::~DebugAffineHullHandler()
@@ -1284,8 +1284,8 @@ namespace ipo {
     _timeLastEvent = time;
   }
 
-  
-  
+
+
 
   namespace AffineHull {
 
@@ -1696,7 +1696,7 @@ namespace ipo {
 //       {
 // #ifdef IPO_DEBUG
 //         // Check that we first have the irredundant and then the potential equations.
-//         
+//
 //         int lastIrredundant = -1;
 //         for (std::size_t i = 0; i < _irredundantEquations.size(); ++i)
 //         {
@@ -1711,14 +1711,14 @@ namespace ipo {
 //         }
 //         assert(firstPotential > lastIrredundant);
 // #endif
-// 
+//
 //         /// Remove equations.
-// 
+//
 //         std::vector<int> remove;
 //         for (std::size_t i = 0; i < _potentialEquations.size(); ++i)
 //           remove.push_back(_potentialEquations[i]);
 //         _equations->remove(&remove[0], remove.size());
-// 
+//
 //         /// Recompute dependencies.
 //         initializeEquations();
 //       }
@@ -2304,7 +2304,7 @@ namespace ipo {
 
         _output->onEnd();
         _output->_implementation = NULL;
-        
+
         equations = _irredundantEquations;
 
         return int(_spanningPoints.size() + _spanningRays.size()) - 1;
@@ -2476,7 +2476,7 @@ namespace ipo {
     {
       return irredundantEquations().size();
     }
-    
+
     std::size_t InformationBase::numRedundantEquations() const
     {
       return redundantEquations().size();

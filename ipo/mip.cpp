@@ -9,7 +9,7 @@
 #endif
 
 namespace ipo {
-  
+
   MixedIntegerSet::Variable::Variable()
     : lowerBound(-soplex::infinity), upperBound(soplex::infinity), integral(false)
   {
@@ -149,12 +149,12 @@ namespace ipo {
 //     }
 //     return true;
 //   }
-// 
+//
 //   bool MIP::checkPointRows(const SVectorRational* point)
 //   {
 //     _worker.clear();
 //     _worker.assign(*point);
-// 
+//
 //     for (int r = 0; r < _rows.num(); ++r)
 //     {
 //       const Rational activity = _rows.rowVector(r) * _worker;
@@ -165,7 +165,7 @@ namespace ipo {
 //     }
 //     return true;
 //   }
-// 
+//
 //   bool MIP::checkPointIntegral(const SVectorRational* point) const
 //   {
 //     for (int p = point->size() - 1; p >= 0; --p)
@@ -177,12 +177,12 @@ namespace ipo {
 //     }
 //     return true;
 //   }
-// 
+//
 //   bool MIP::checkPoint(const SVectorRational* point)
 //   {
 //     return checkPointIntegral(point) && checkPointBounds(point) && checkPointRows(point);
 //   }
-// 
+//
 //   bool MIP::checkRayBounds(const SVectorRational* ray) const
 //   {
 //     for (int p = ray->size() - 1; p >= 0; --p)
@@ -196,12 +196,12 @@ namespace ipo {
 //     }
 //     return true;
 //   }
-// 
+//
 //   bool MIP::checkRayRows(const SVectorRational* ray)
 //   {
 //     _worker.clear();
 //     _worker.assign(*ray);
-// 
+//
 //     for (int r = 0; r < _rows.num(); ++r)
 //     {
 //       const Rational activity = _rows.rowVector(r) * _worker;
@@ -212,7 +212,7 @@ namespace ipo {
 //     }
 //     return true;
 //   }
-// 
+//
 //   bool MIP::checkRay(const SVectorRational* ray)
 //   {
 //     return checkRayBounds(ray) && checkRayRows(ray);
@@ -244,7 +244,7 @@ namespace ipo {
 //       }
 //       if (!inequalities)
 //         continue;
-// 
+//
 //       if (upper < infinity)
 //       {
 //         rows.add(-infinity, _rows.rowVector(r), upper);
@@ -261,7 +261,7 @@ namespace ipo {
 //       }
 //     }
 //   }
-// 
+//
 //   void MIP::getFixedVariableEquations(LPRowSetRational& rows, std::vector<std::string>* names)
 //   {
 //     DSVectorRational vector;
@@ -269,7 +269,7 @@ namespace ipo {
 //     {
 //       if (_columns.upper(c) != _columns.lower(c))
 //         continue;
-// 
+//
 //       const Rational& value = _columns.upper(c);
 //       vector.clear();
 //       vector.add(c, Rational(1));
@@ -282,8 +282,8 @@ namespace ipo {
   MIPOracleBase::MIPOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
     : OracleBase(name, nextOracle)
   {
-    
-    
+
+
   }
 
   void MIPOracleBase::initialize(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)
@@ -332,7 +332,7 @@ namespace ipo {
     std::size_t n = space().dimension();
 
     // Scale objective vector.
-    
+
     Rational largest = 0;
     for (std::size_t v = 0; v < n; ++v)
     {
@@ -359,10 +359,10 @@ namespace ipo {
       _objective[v] = double(factor * objective[v]);
 
     // Call the solver's method.
-    
+
     assert(_points.empty());
     assert(_rays.empty());
-    
+
     solverMaximize(_objective, soplex::infinity, _points, _rays);
 
     if (!_points.empty())
@@ -404,18 +404,18 @@ namespace ipo {
 
   void MIPOracleBase::separatePoint(const soplex::VectorRational& point, soplex::LPRowSetRational& cuts)
   {
-    
+
   }
-  
+
   void MIPOracleBase::separateRay(const soplex::VectorRational& ray, soplex::LPRowSetRational& cuts)
   {
-    
+
   }
 
   void MIPOracleBase::setFace(const LinearConstraint& newFace)
   {
     OracleBase::setFace(newFace);
-    
+
     throw std::runtime_error("MIPOracleBase::setFace not implemented, yet!");
   }
 
@@ -433,13 +433,13 @@ namespace ipo {
       _lpRowPermutation[i] = 0;
     for (std::size_t i = _numRows; i < _spx->numRowsRational(); ++i)
       _lpRowPermutation[i] = -1;
-    _spx->removeRowsRational(&_lpRowPermutation[0]);    
+    _spx->removeRowsRational(&_lpRowPermutation[0]);
   }
 
   Vector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue)
   {
     std::size_t n = space().dimension();
-    
+
     // Fix variable bounds for the integer variables.
 
     for (std::size_t v = 0; v < n; ++v)
@@ -487,7 +487,7 @@ namespace ipo {
 //         }
 //       }
 //     }
-//     
+//
 //     _spx->clearBasis();
 
     while (true)
@@ -495,11 +495,11 @@ namespace ipo {
 //      _spx->clearBasis();
 //       _spx->writeBasisFile("extend.bas");
 //      _spx->writeFileRational("extend.lp");
-      
+
 //      std::cerr << "Calling solve." << std::endl;
       soplex::SPxSolver::Status status = _spx->solve();
 //      std::cerr << "Called solve: " << status << std::endl;
-      
+
       if (status == soplex::SPxSolver::UNBOUNDED)
       {
         _spx->getPrimalRayRational(_lpResult);
@@ -508,7 +508,7 @@ namespace ipo {
         if (_separateResult.num() == 0)
           throw std::runtime_error("MIPOracle: Claim is bounded, but candidate ray is not separated.");
 
-        _spx->addRowsRational(_separateResult);  
+        _spx->addRowsRational(_separateResult);
       }
       else if (status != soplex::SPxSolver::OPTIMAL)
         throw std::runtime_error("MIPOracle: Claim is bounded, point could not be extended.");

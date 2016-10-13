@@ -147,7 +147,7 @@ namespace ipo {
     for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
     {
       const MixedIntegerSet::Variable& variable = mixedIntegerSet->variable(v);
-      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[v], mixedIntegerSet->space()[v].c_str(), double(variable.lowerBound), 
+      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[v], mixedIntegerSet->space()[v].c_str(), double(variable.lowerBound),
         double(variable.upperBound), 0.0, mixedIntegerSet->isIntegral(v) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
       SCIP_CALL_EXC(SCIPaddVar(_scip, _variables[v]));
     }
@@ -281,7 +281,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPfreeTransform(_scip));
   }
 
-  ExactSCIPOracle::ExactSCIPOracle(const std::string& name, const std::shared_ptr< MixedIntegerSet >& mixedIntegerSet, 
+  ExactSCIPOracle::ExactSCIPOracle(const std::string& name, const std::shared_ptr< MixedIntegerSet >& mixedIntegerSet,
     const std::shared_ptr<OracleBase>& nextOracle)
     : OracleBase(name, nextOracle), _mixedIntegerSet(mixedIntegerSet)
   {
@@ -300,7 +300,7 @@ namespace ipo {
   {
     OracleBase::setFace(newFace);
   }
-  
+
   void ExactSCIPOracle::setBinaryPath(const std::string& path)
   {
     if (_binary != "")
@@ -312,7 +312,7 @@ namespace ipo {
       createWorkingDirectory();
     }
   }
-  
+
   void ExactSCIPOracle::createWorkingDirectory()
   {
     if (_binary.empty())
@@ -380,7 +380,7 @@ namespace ipo {
     }
     return heuristicLevel();
   }
-  
+
   void ExactSCIPOracle::writeModel(const VectorRational& objective)
   {
     std::ofstream file((_workingDirectory + "/model.zpl").c_str());

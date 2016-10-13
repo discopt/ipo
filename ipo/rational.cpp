@@ -11,7 +11,7 @@ namespace ipo {
   IntegralScaler::IntegralScaler()
     : _numScaler(0), _denScaler(1)
   {
-    
+
   }
 
   IntegralScaler::~IntegralScaler()

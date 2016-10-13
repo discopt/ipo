@@ -10,10 +10,10 @@ namespace ipo {
   class Timer: public soplex::Timer
   {
   public:
-    
+
     /**
      * \brief Default constructor.
-     * 
+     *
      * Default constructor.
      */
 
@@ -21,7 +21,7 @@ namespace ipo {
 
     /**
      * \brief Copy constructor.
-     * 
+     *
      * Copy constructor.
      */
 
@@ -29,7 +29,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -43,7 +43,7 @@ namespace ipo {
 
     /**
      * \brief Resets time to zero.
-     * 
+     *
      * Resets time to zero.
      */
 
@@ -56,7 +56,7 @@ namespace ipo {
 
     /**
      * \brief Starts the timer.
-     * 
+     *
      * Starts the timer, resuming accounted user, system and real time.
      */
 
@@ -64,7 +64,7 @@ namespace ipo {
 
     /**
      * \brief Stops the timer and returns the accounted user time.
-     * 
+     *
      * Stops the timer and returns the accounted user time.
      */
 
@@ -72,7 +72,7 @@ namespace ipo {
 
     /**
      * \brief Returns the type of the timer.
-     * 
+     *
      * Returns the type of the timer.
      */
 
@@ -83,7 +83,7 @@ namespace ipo {
 
     /**
      * \brief Adds \p additionalTime to the accounted user time.
-     * 
+     *
      * Adds \p additionalTime to the accounted user time.
      */
 
@@ -91,7 +91,7 @@ namespace ipo {
 
     /**
      * \brief Returns the accounted user time.
-     * 
+     *
      * Returns the accounted user time.
      */
 
@@ -99,7 +99,7 @@ namespace ipo {
 
     /**
      * \brief Returns the time from the last query.
-     * 
+     *
      * Returns the time from the last query.
      */
 
@@ -108,7 +108,7 @@ namespace ipo {
   private:
     /**
      * \brief Converts ticks to seconds.
-     * 
+     *
      * Converts ticks to seconds.
      */
 
@@ -119,12 +119,12 @@ namespace ipo {
 
     /**
      * \brief Updates the ticks from the system.
-     * 
+     *
      * Updates the ticks from the system.
      */
 
     void updateTicks();
-    
+
   protected:
     static const long ticksPerSecond;
 
@@ -135,7 +135,7 @@ namespace ipo {
 
   /**
    * \brief Adds the given number of seconds to all running timers.
-   * 
+   *
    * Adds the given number of seconds to all running timers.
    */
 

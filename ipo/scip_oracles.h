@@ -61,7 +61,7 @@ namespace ipo {
   /**
    * \brief An oracle based on the SCIP solver.
    *
-   * An oracle for the convex hull of the solutions returned by the SCIP instance. The computed floating-point solutions are 
+   * An oracle for the convex hull of the solutions returned by the SCIP instance. The computed floating-point solutions are
    * turned into rational ones by the underlying \ref MIPOracleBase.
    *
    * An instance is either constructed from a \c SCIP instance or from a \ref MixedIntegerSet.
@@ -74,7 +74,7 @@ namespace ipo {
      * \brief Constructs a SCIP oracle with given \p name, optionally associated to \p nextOracle.
      *
      * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is
-     * defined via the \p originalSCIP instance (and must be equal to that of \p nextOracle). The oracle is implemented by 
+     * defined via the \p originalSCIP instance (and must be equal to that of \p nextOracle). The oracle is implemented by
      * calling SCIP on a copy of the given \p originalSCIP instance.
      */
 
@@ -84,11 +84,11 @@ namespace ipo {
      * \brief Constructs a SCIP oracle with given \p name in given \p space.
      *
      * Constructs a SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is equal to
-     * that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling SCIP in order 
+     * that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling SCIP in order
      * to solve mixed-integer programs over the \p mixedIntegerSet.
      */
 
-    SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, 
+    SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
@@ -128,19 +128,19 @@ namespace ipo {
    *
    * An oracle for the given \ref MixedIntegerSet that uses scip-ex (via an external call) to optimize.
    */
-  
+
   class ExactSCIPOracle : public OracleBase
   {
   public:
     /**
      * \brief Constructs an exact SCIP oracle with given \p name in given \p space.
      *
-     * Constructs an exact SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is 
+     * Constructs an exact SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is
      * equal to that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling
      * scip-ex to solve mixed-integer programs over the \p mixedIntegerSet.
      */
 
-    ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, 
+    ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
@@ -151,7 +151,7 @@ namespace ipo {
 
     /**
      * \brief Sets the path of the scip-ex binary used.
-     * 
+     *
      * Sets the path of the scip-ex binary used.
      */
 
@@ -159,7 +159,7 @@ namespace ipo {
 
     /**
      * \brief Returns the path of the scip-ex binary used.
-     * 
+     *
      * Returns the path of the scip-ex binary used.
      */
 
@@ -180,21 +180,21 @@ namespace ipo {
     virtual void setFace(const LinearConstraint& newFace = completeFace());
 
   protected:
-    
+
     /**
      * \brief Creates a temporary directory to work in.
-     * 
+     *
      * Creates a temporary directory to work in.
      */
-    
+
     void createWorkingDirectory();
-    
+
     /**
      * \brief Removes the temporary directory.
-     * 
+     *
      * Removes the temporary directory created by createWorkingDirectory().
      */
-    
+
     void deleteWorkingDirectory();
 
     /**
@@ -214,11 +214,11 @@ namespace ipo {
     virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
       const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
       bool& checkDups);
-    
+
     void writeModel(const soplex::VectorRational& objective);
-    
+
     void solveModel();
-    
+
     VectorData* parseOutput();
 
   protected:

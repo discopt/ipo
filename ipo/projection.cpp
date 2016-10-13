@@ -3,7 +3,7 @@
 using namespace soplex;
 
 namespace ipo {
-  
+
   ProjectionData::ProjectionData(const Space& sourceSpace)
     : _sourceSpace(sourceSpace)
   {
@@ -57,7 +57,7 @@ namespace ipo {
     _map.push_back(coefficients);
     _shift.push_back(shift);
   }
-  
+
   void ProjectionData::addVariable(std::size_t sourceVariable, const Rational& shift)
   {
     _imageSpaceData->addVariable(_sourceSpace[sourceVariable]);
@@ -71,7 +71,7 @@ namespace ipo {
     if (_usage == 0)
       delete this;
   }
-  
+
   Vector Projection::projectPoint(const Vector& point) const
   {
     VectorData* data = new VectorData(imageSpace().dimension());
@@ -114,7 +114,7 @@ namespace ipo {
       const Vector& rowVector = row(variable);
       for (int q = rowVector.size() - 1; q >= 0; --q)
         liftedNormal[rowVector.index(q)] += x * rowVector.value(q);
-      liftedRhs -= x * shift(variable); 
+      liftedRhs -= x * shift(variable);
     }
     return LinearConstraint(constraint.type(), denseToVector(liftedNormal, true), liftedRhs);
   }
@@ -138,7 +138,7 @@ namespace ipo {
 
   ProjectionOracle::~ProjectionOracle()
   {
-    
+
   }
 
 
@@ -156,7 +156,7 @@ namespace ipo {
 
     _oracle->setFace(_liftedFace);
   }
-  
+
   HeuristicLevel ProjectionOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
@@ -169,7 +169,7 @@ namespace ipo {
 
     ObjectiveBound liftedObjectiveBound;
     liftedObjectiveBound.strict = objectiveBound.strict;
-    
+
     OracleResult sourceResult;
     _oracle->maximize(sourceResult, liftedObjective, liftedObjectiveBound, minHeuristic, maxHeuristic);
     if (sourceResult.isFeasible())

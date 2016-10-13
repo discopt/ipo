@@ -40,7 +40,7 @@ namespace ipo {
     stream << _valueStorage;
   }
 
-  DoubleParameter::DoubleParameter(ParameterGroup* group, const std::string& name, const std::string& description,   
+  DoubleParameter::DoubleParameter(ParameterGroup* group, const std::string& name, const std::string& description,
     const double& defaultValue, double& valueStorage)
     : TypeParameter<double>(group, name, description, defaultValue, valueStorage)
   {

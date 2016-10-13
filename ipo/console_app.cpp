@@ -496,7 +496,7 @@ namespace ipo {
     std::cerr << std::flush;
   }
 
-  void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational& 
+  void ConsoleApplicationBase::setRelaxationBounds(const soplex::VectorRational& lowerBounds, const soplex::VectorRational&
 upperBounds)
   {
     if (_projectionOracle)
@@ -969,7 +969,7 @@ upperBounds)
     if (face.definesCompleteFace())
     {
       hull.run(_equations, orac, hullOutput, 1, true);
-      
+
       _basicColumns = hull.basicColumns();
       _spanningPoints.reserve(hull.numSpanningPoints());
       for (std::size_t i = 0; i < hull.numSpanningPoints(); ++i)

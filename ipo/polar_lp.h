@@ -16,10 +16,10 @@
 namespace ipo {
 
   class XPolarLP;
-  
+
   /**
    * \brief Base class for an observer for polar-LP computations.
-   * 
+   *
    * Base class for an observer for polar-LP computations.
    */
 
@@ -45,7 +45,7 @@ namespace ipo {
 
     /**
      * \brief Default constructor.
-     * 
+     *
      * Default constructor.
      */
 
@@ -53,7 +53,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -61,7 +61,7 @@ namespace ipo {
 
     /**
      * \brief This method is called by the algorithm.
-     * 
+     *
      * This method is called by the algorithm in certain steps.
      */
 
@@ -120,7 +120,7 @@ namespace ipo {
 
     /**
      * \brief Returns the space of the polar LP.
-     * 
+     *
      * Returns a const-reference to the space of the polar LP.
      */
 
@@ -131,7 +131,7 @@ namespace ipo {
 
     /**
       * \brief Returns the feasibility / optimality tolerance of the LP.
-      * 
+      *
       * Returns the feasibility / optimality tolerance of the LP.
       */
 
@@ -142,7 +142,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points that are currently in the LP.
-     * 
+     *
      * Returns the number of points that are currently in the LP.
      */
 
@@ -153,7 +153,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays that are currently in the LP.
-     * 
+     *
      * Returns the number of rays found that are currently in the LP.
      */
 
@@ -164,7 +164,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points that were added in this iteration.
-     * 
+     *
      * Returns the number of points that were added in this iteration.
      */
 
@@ -175,7 +175,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays that were added in this iteration.
-     * 
+     *
      * Returns the number of rays that were added in this iteration.
      */
 
@@ -186,7 +186,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rows of the current LP.
-     * 
+     *
      * Returns the number of rows of the current LP.
      */
 
@@ -197,7 +197,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of columns of the current LP.
-     * 
+     *
      * Returns the number of columns of the current LP.
      */
 
@@ -208,7 +208,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of nonzeros of the current LP.
-     * 
+     *
      * Returns the number of nonzeros of the current LP.
      */
 
@@ -219,7 +219,7 @@ namespace ipo {
 
     /**
      * \brief Returns the maximum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the maximum allowed heuristic level of the current oracle call.
      */
 
@@ -230,7 +230,7 @@ namespace ipo {
 
     /**
      * \brief Returns the minimum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the minimum allowed heuristic level of the current oracle call.
      */
 
@@ -241,7 +241,7 @@ namespace ipo {
 
     /**
      * \brief Returns the heuristic level of the oracle's last answer.
-     * 
+     *
      * Returns the heuristic level of the oracle's last answer.
      */
 
@@ -252,7 +252,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points returned by the last oracle call.
-     * 
+     *
      * Returns the number of points returned by the last oracle call.
      */
 
@@ -263,7 +263,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays returned by the last oracle call.
-     * 
+     *
      * Returns the number of rays returned by the last oracle call.
      */
 

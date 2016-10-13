@@ -48,10 +48,10 @@ int main(int argc, char** argv)
 
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
-  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");  
+  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");
   std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", 
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
     mixedIntegerSet, exactScipOracleStats);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
@@ -65,7 +65,7 @@ int main(int argc, char** argv)
   AffineOuterDescription outer;
   affineHull(oracle, inner, outer, affineHullHandlers, 2, 0);
   std::cout << "Dimension: " << (long(inner.points.size() + inner.rays.size()) - 1) << std::endl;
-  
+
   exactScipOracleStats->reset();
   scipOracleStats->reset();
   cacheOracleStats->reset();
@@ -75,7 +75,7 @@ int main(int argc, char** argv)
   StatisticsFacetSeparationHandler statsHandler;
   facetSeparationHandlers.push_back(&debugHandler);
   facetSeparationHandlers.push_back(&statsHandler);
-  
+
   SoPlex spx;
   spx.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
   spx.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
@@ -110,32 +110,32 @@ int main(int argc, char** argv)
       if (separatePoint(oracle, point, inner, facetSeparationHandlers, constraint, &certificate))
       {
         scaleIntegral(constraint);
-        
+
         std::cout << "Separated point with ";
         oracle->space().printLinearConstraint(std::cout, constraint);
         std::cout << std::endl;
-        
+
         addToLP(spx, constraint);
       }
       else
         break;
-      
+
     }
     else
       assert(false);
   }
-  
+
   std::cout << "\n";
-//   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
+//   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop()
 //     << "  +  verification time: " << statsHandler.timeVerification() << "\n";
 //   std::cout << std::endl;
-//   std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " << 
+//   std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " <<
 //     statsHandler.timeApproximateDirections() << " seconds.\n";
-//   std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " << 
+//   std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " <<
 //     statsHandler.timeExactDirections() << " seconds.\n";
-//   std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations() 
+//   std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations()
 //     << " seconds.\n";
-//   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
+//   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles()
 //     << " seconds.\n";
 
   std::cout << "Oracle statistics (without affine hull computation):\n\n";

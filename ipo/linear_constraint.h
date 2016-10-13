@@ -10,7 +10,7 @@ namespace ipo {
   void addToLP(soplex::SoPlex& spx, const LinearConstraint& constraint);
 
   void addToLP(soplex::SoPlex& spx, const std::vector<LinearConstraint>& constraints);
-  
+
   LinearConstraint integralScaled(const LinearConstraint& constraint);
   void scaleIntegral(LinearConstraint& constraint);
   void scaleIntegral(std::vector<LinearConstraint>& constraints);

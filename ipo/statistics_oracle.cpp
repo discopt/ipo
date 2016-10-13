@@ -23,11 +23,11 @@ namespace ipo {
 
     _host.beforeForward();
 
-    HeuristicLevel resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
+    HeuristicLevel resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic,
       sort, checkDups);
 
     _host.afterForward();
-    
+
     return resultLevel;
   }
 
@@ -37,7 +37,7 @@ namespace ipo {
   {
     assert(false);
   }
-  
+
   StatisticsOracle::StatisticsOracle(const std::shared_ptr<OracleBase>& targetOracle)
     : OracleBase(targetOracle->name(), targetOracle->nextOracle()), _targetOracle(targetOracle)
   {
@@ -56,7 +56,7 @@ namespace ipo {
   {
 
   }
-  
+
   void StatisticsOracle::setFace(const LinearConstraint& newFace)
   {
     _targetOracle->setFace(newFace);
@@ -76,7 +76,7 @@ namespace ipo {
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
-    
+
     // If requested, forward directly to next oracle, and do not count this as a call.
 
     if (heuristicLevel() > maxHeuristic)
@@ -91,7 +91,7 @@ namespace ipo {
 
     // We call the target oracle.
 
-    HeuristicLevel resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
+    HeuristicLevel resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic,
       sort, checkDups);
 
     // The target oracle returned.
@@ -111,7 +111,7 @@ namespace ipo {
 
   void StatisticsOracle::afterForward()
   {
-    // The target oracle did forward to its next associated oracle. 
+    // The target oracle did forward to its next associated oracle.
 
     _timer.start();
   }

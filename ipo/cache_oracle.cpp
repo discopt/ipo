@@ -3,7 +3,7 @@
 using namespace soplex;
 
 namespace ipo {
-  
+
   CacheOracle::Data::Data(Vector& vec)
     : vector(vec)
   {
@@ -42,7 +42,7 @@ namespace ipo {
   }
 
   CacheOracle::CacheOracle(const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase("CacheOracle(" + nextOracle->name() + ")", nextOracle), _uniquePoints(nextOracle->space().dimension()), 
+    : OracleBase("CacheOracle(" + nextOracle->name() + ")", nextOracle), _uniquePoints(nextOracle->space().dimension()),
     _uniqueRays(nextOracle->space().dimension())
   {
     assert(nextOracle);
@@ -82,7 +82,7 @@ namespace ipo {
   HeuristicLevel CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
-    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, 
+    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDups);
 
     if (level < heuristicLevel())
@@ -129,7 +129,7 @@ namespace ipo {
 
     // Search points.
 
-    search(_facePoints, approximateObjective, objectiveBound.value > -infinity ? double(objectiveBound.value) : 0.0, true, 
+    search(_facePoints, approximateObjective, objectiveBound.value > -infinity ? double(objectiveBound.value) : 0.0, true,
       searchResult);
 
     bool foundSatisfying = false;

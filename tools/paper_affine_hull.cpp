@@ -39,17 +39,17 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
-  
+
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   // Initialize oracles.
-  
+
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
-  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");  
+  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");
   std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")", 
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
     mixedIntegerSet, exactScipOracleStats);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
@@ -69,16 +69,16 @@ int main(int argc, char** argv)
   affineHull(oracle, inner, outer, handlers, 2, 1);
 
   std::cout << "\n";
-  std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
+  std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop()
     << "  +  verification time: " << statsHandler.timeVerification() << "\n";
   std::cout << std::endl;
-  std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " << 
+  std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " <<
     statsHandler.timeApproximateDirections() << " seconds.\n";
-  std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " << 
+  std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " <<
     statsHandler.timeExactDirections() << " seconds.\n";
-  std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations() 
+  std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations()
     << " seconds.\n";
-  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
+  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles()
     << " seconds.\n";
 
   for (std::shared_ptr<OracleBase> o = oracle; o != NULL; o = o->nextOracle())

@@ -7,10 +7,10 @@
 
 namespace ipo {
 
-  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+  bool manhattanNormShortestCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source,
     Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm);
 
-  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source, 
+  bool manhattanNormGreedyCombination(std::size_t n, Vector& newTarget, const Vector& target, const Vector& source,
     Rational& targetMultiplier, Rational& sourceMultiplier, Rational& norm);
 
   void manhattanNormImproveEquations(std::size_t n, std::vector<LinearConstraint>& equations);

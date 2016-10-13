@@ -11,16 +11,16 @@ namespace ipo {
 
   /**
    * \brief Interface for information-retrieval during an affine-hull computation.
-   * 
+   *
    * Interface for information-retrieval during an affine-hull computation.
    */
-  
+
   class AffineHullState
   {
   public:
     /**
      * \brief Constructor.
-     * 
+     *
      */
 
     AffineHullState();
@@ -33,7 +33,7 @@ namespace ipo {
 
     /**
      * \brief Returns the space of the oracle.
-     * 
+     *
      * Returns a const-reference to the space of the oracle.
      */
 
@@ -41,7 +41,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of spanning points found so far.
-     * 
+     *
      * Returns the number of spanning points found so far.
      */
 
@@ -49,7 +49,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of spanning rays found so far.
-     * 
+     *
      * Returns the number of spanning rays found so far.
      */
 
@@ -57,7 +57,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of valid independent equations found so far.
-     * 
+     *
      * Returns the number of valid independent equations found so far.
      */
 
@@ -65,7 +65,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of candidate equations.
-     * 
+     *
      * Returns the number of candidate equations. Together with the equations (see numEquations()) they are linearly independent.
      */
 
@@ -73,18 +73,18 @@ namespace ipo {
 
     /**
      * \brief Returns whether an oracle returned infeasible.
-     * 
+     *
      * Returns whether an oracle returned infeasible.
      */
-    
+
     virtual bool infeasible() const = 0;
 
     /**
      * \brief Returns the best lower bound on the dimension known so far.
-     * 
+     *
      * Returns the best lower bound on the dimension known so far.
      */
-    
+
     inline long lowerBound() const
     {
       return long(numPoints() + numRays()) - 1;
@@ -92,7 +92,7 @@ namespace ipo {
 
     /**
      * \brief Returns the best exact upper bound on the dimension known so far.
-     * 
+     *
      * Returns the best exact upper bound on the dimension known so far.
      */
 
@@ -106,7 +106,7 @@ namespace ipo {
 
     /**
      * \brief Returns the best approximate upper bound on the dimension known so far.
-     * 
+     *
      * Returns the best approximate upper bound on the dimension known so far. Is correct if the candidate equations are indeed
      * valid.
      */
@@ -121,7 +121,7 @@ namespace ipo {
 
     /**
      * \brief Returns the index of the candidate equation that is being verified.
-     * 
+     *
      * Returns the index of the candidate equation that is being verified.
      */
 
@@ -129,7 +129,7 @@ namespace ipo {
 
     /**
      * \brief Returns true iff the verification was successful so far.
-     * 
+     *
      * Returns true iff the verification was successful so far.
      */
 
@@ -137,48 +137,48 @@ namespace ipo {
 
     /**
      * \brief Returns the number of approximate LU solves in the last iteratior.
-     * 
+     *
      * Returns the number of approximate LU solves in the last iteratior.
      */
 
     virtual std::size_t directionApproximateSolves() const = 0;
-    
+
     /**
      * \brief Returns the number of exact LU solves in the last iteratior.
-     * 
+     *
      * Returns the number of exact LU solves in the last iteratior.
      */
 
     virtual std::size_t directionExactSolves() const = 0;
-    
+
     /**
      * \brief Returns the number of nonzeros of the direction vector.
-     * 
+     *
      * Returns the number of nonzeros of the direction vector.
      */
 
     virtual std::size_t directionNonzeros() = 0;
-    
+
     /**
      * \brief Returns the number of bits of the direction vector.
-     * 
+     *
      * Returns the number of bits of the direction vector.
      */
 
     virtual std::size_t directionBitsize() = 0;
-    
+
     /**
      * \brief Returns the direction vector.
-     * 
+     *
      * Returns the direction vector.
      */
 
     virtual const soplex::VectorRational& directionVector() = 0;
-    
+
 
     /**
      * \brief Returns the maximum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the maximum allowed heuristic level of the current oracle call.
      */
 
@@ -186,7 +186,7 @@ namespace ipo {
 
     /**
      * \brief Returns the minimum allowed heuristic level of the current oracle call.
-     * 
+     *
      * Returns the minimum allowed heuristic level of the current oracle call.
      */
 
@@ -194,7 +194,7 @@ namespace ipo {
 
     /**
      * \brief Returns the heuristic level of the oracle's last answer.
-     * 
+     *
      * Returns the heuristic level of the oracle's last answer.
      */
 
@@ -202,7 +202,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of points returned by the last oracle call.
-     * 
+     *
      * Returns the number of points returned by the last oracle call.
      */
 
@@ -210,7 +210,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of rays returned by the last oracle call.
-     * 
+     *
      * Returns the number of rays returned by the last oracle call.
      */
 
@@ -218,7 +218,7 @@ namespace ipo {
 
     /**
      * \brief Returns the current set of spanning points and rays.
-     * 
+     *
      * Returns a const-reference to the current set of spanning points and rays.
      */
 
@@ -226,7 +226,7 @@ namespace ipo {
 
     /**
      * \brief Returns the current set of valid independent equations.
-     * 
+     *
      * Returns a const-reference to the current set of valid independent equations.
      */
 
@@ -234,17 +234,17 @@ namespace ipo {
 
     /**
      * \brief Returns the current set of candidate equations.
-     * 
+     *
      * Returns a const-reference to the current set of candidate equations.
      */
 
     virtual const std::vector<LinearConstraint>& candidateEquations() const = 0;
 
   };
-  
+
   /**
    * \brief Base class for an observer for affine-hull computations.
-   * 
+   *
    * Base class for an observer for affine-hull computations.
    */
 
@@ -282,7 +282,7 @@ namespace ipo {
 
     /**
      * \brief Default constructor.
-     * 
+     *
      * Default constructor.
      */
 
@@ -290,7 +290,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -298,7 +298,7 @@ namespace ipo {
 
     /**
      * \brief This method is called by the algorithm.
-     * 
+     *
      * This method is called by the algorithm in certain steps.
      */
 
@@ -307,9 +307,9 @@ namespace ipo {
 
   /**
    * \brief Computes the affine hull of a polyhedron defined by the given \p oracle.
-   * 
+   *
    * Computes the affine hull of a polyhedron defined by the given \p oracle.
-   * 
+   *
    * \param handlers              Set of \ref AffineHullHandler objects whose notify() methods are called appropriately.
    * \param oracle                Oracle to be used.
    * \param givenEquations        Set of equations whose validity assumed without checking.
@@ -322,14 +322,14 @@ namespace ipo {
    *                              direction vectors should be computed exactly.
    */
 
-  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription, 
-    AffineOuterDescription& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic, 
-    HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(), 
+  void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription,
+    AffineOuterDescription& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic,
+    HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(),
     bool approximateDirections = true);
 
   /**
    * \brief Class for debugging an affine-hull computation.
-   * 
+   *
    * Class for debugging an affine-hull computation. It prints at least one line for each notification.
    */
 
@@ -338,9 +338,9 @@ namespace ipo {
   public:
     /**
      * \brief Constructor.
-     * 
+     *
      * Constructor.
-     * 
+     *
      * \param stream Where the output will be written to.
      */
 
@@ -349,7 +349,7 @@ namespace ipo {
 
     /**
      * \brief Destructor.
-     * 
+     *
      * Destructor.
      */
 
@@ -357,7 +357,7 @@ namespace ipo {
 
     /**
      * \brief Notification method, see \ref AffineHullHandler.
-     * 
+     *
      * Notification method, see \ref AffineHullHandler.
      */
 
@@ -372,7 +372,7 @@ namespace ipo {
 
   /**
     * \brief Class for collecting statistics of an affine-hull computation.
-    * 
+    *
     * Class for collecting statistics of an affine-hull computation.
     */
 
@@ -381,7 +381,7 @@ namespace ipo {
   public:
     /**
       * \brief Constructor.
-      * 
+      *
       * Constructor.
       */
 
@@ -389,7 +389,7 @@ namespace ipo {
 
     /**
       * \brief Destructor.
-      * 
+      *
       * Destructor.
       */
 
@@ -397,7 +397,7 @@ namespace ipo {
 
     /**
       * \brief Notification method, see \ref AffineHullHandler.
-      * 
+      *
       * Notification method, see \ref AffineHullHandler.
       */
 
@@ -405,7 +405,7 @@ namespace ipo {
 
     /**
      * \brief Resets all statistics.
-     * 
+     *
      * Resets all statistics.
      */
 
@@ -413,7 +413,7 @@ namespace ipo {
 
     /**
      * \brief Returns the number of oracle queries.
-     * 
+     *
      * Returns the number of oracle queries.
      */
 
@@ -424,7 +424,7 @@ namespace ipo {
 
     /**
      * \brief Returns the vector storing how often an oracle returned with each heuristicLevel.
-     * 
+     *
      * Returns the vector storing how often an oracle returned with each heuristicLevel.
      */
 
@@ -435,7 +435,7 @@ namespace ipo {
 
     /**
      * \brief Returns how many approximate direction vectors were computed.
-     * 
+     *
      * Returns how many approximate direction vectors were computed.
      */
 
@@ -446,7 +446,7 @@ namespace ipo {
 
     /**
      * \brief Returns how many exact direction vectors were computed.
-     * 
+     *
      * Returns how many exact direction vectors were computed.
      */
 
@@ -457,7 +457,7 @@ namespace ipo {
 
     /**
      * \brief Returns the average number of nonzeros of the computed exact directions.
-     * 
+     *
      * Returns the average number of nonzeros of the computed exact directions.
      */
 
@@ -468,7 +468,7 @@ namespace ipo {
 
     /**
      * \brief Returns the maximum bitsize of a computed exact direction.
-     * 
+     *
      * Returns the maximum bitsize of a computed exact direction.
      */
 
@@ -479,7 +479,7 @@ namespace ipo {
 
     /**
      * \brief Returns how many factorization updates were performed.
-     * 
+     *
      * Returns how many factorization updates were performed.
      */
 
@@ -490,7 +490,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time for computing approximate directions.
-     * 
+     *
      * Returns the total running time for computing approximate directions.
      */
 
@@ -501,7 +501,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time for computing exact directions.
-     * 
+     *
      * Returns the total running time for computing exact directions.
      */
 
@@ -509,10 +509,10 @@ namespace ipo {
     {
       return _timeExactDirections;
     }
-    
+
     /**
      * \brief Returns the total running time for updating the LU factorization.
-     * 
+     *
      * Returns the total running time for updating the LU factorization
      */
 
@@ -520,10 +520,10 @@ namespace ipo {
     {
       return _timeFactorizations;
     }
-    
+
     /**
      * \brief Returns the total running time for oracles.
-     * 
+     *
      * Returns the total running time for oracles.
      */
 
@@ -531,10 +531,10 @@ namespace ipo {
     {
       return _timeOracles;
     }
-    
+
     /**
      * \brief Returns the total running time for the main loop.
-     * 
+     *
      * Returns the total running time for the main loop.
      */
 
@@ -542,10 +542,10 @@ namespace ipo {
     {
       return _timeMainLoop;
     }
-  
+
     /**
      * \brief Returns the total running time for the candidate equation verification.
-     * 
+     *
      * Returns the total running time for the candidate equation verification.
      */
 
@@ -556,7 +556,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time for the algorithm.
-     * 
+     *
      * Returns the total running time for the algorithm.
      */
 
@@ -591,9 +591,9 @@ namespace ipo {
   };
 
 
-  
+
   /////////////////////////////////// OLD INTERFACE /////////////////////////////////
-  
+
 
   /**
    * \brief Computation of the affine hull of a polyhedron.

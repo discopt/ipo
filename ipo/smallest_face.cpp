@@ -64,7 +64,7 @@ namespace ipo {
        * \brief Oracle's implementation to maximize the dense rational \p objective.
        *
        * This method is called by maximizeController() and contains the implementation of the oracle.
-       * 
+       *
        *
        * \param result         After the call, contains the oracle's answer.
        * \param objective      Objective vector \f$ c \in \mathbb{Q}^n \f$ to be maximized.
@@ -74,9 +74,9 @@ namespace ipo {
        *
        * This implementation solves the polar LP to optimize over the normal cone at a point.
        */
-      
+
       virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
-        const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, 
+        const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
         bool& checkDups)
       {
         updateObjective(objective);
@@ -271,7 +271,7 @@ namespace ipo {
 
         _output->onEnd();
         _output->_implementation = NULL;
-        
+
         _normalConeCachedOracle = NULL;
         _normalConeMainOracle = NULL;
 
@@ -284,7 +284,7 @@ namespace ipo {
         // Auxiliary vector.
 
         DVectorRational dense;
-        dense.reDim(_originalOracle->space().dimension(), true);        
+        dense.reDim(_originalOracle->space().dimension(), true);
 
         // Compute difference and create equation valid for normal cone.
 
@@ -747,7 +747,7 @@ std::flush;
     void ProgressOutput::AffineHullOutput::onProgress()
     {
       assert(dimensionSafeUpperBound() == dimensionUnsafeUpperBound());
-      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  " 
+      std::cout << _indent << "Points: " << numSpanningPoints() << ", Rays: " << numSpanningRays() << ",  "
         << dimensionLowerBound() << " <= dim <= " << dimensionSafeUpperBound();
       std::cout << ",  Norm. cone opts: " << numHeuristicCalls() << ".\n" << std::flush;
     }

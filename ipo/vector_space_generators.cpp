@@ -48,7 +48,7 @@ namespace ipo {
   {
     DSVectorRational svector(vector.size());
     vectorToSparse(vector, svector);
-    _spx->addColRational(LPColRational(Rational(0), svector, dependent ? Rational(0) : Rational(infinity), 
+    _spx->addColRational(LPColRational(Rational(0), svector, dependent ? Rational(0) : Rational(infinity),
       dependent ? Rational(0) : Rational(-infinity)));
     _lazyVectors.push_back(_spx->numColsRational() - 1);
     return _spx->numColsRational() - 1;

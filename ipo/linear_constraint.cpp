@@ -1,13 +1,13 @@
 #include "linear_constraint.h"
 
 namespace ipo {
-  
+
   LinearConstraint::LinearConstraint()
     : _type('<'), _normal(), _rhs(0)
   {
-    
+
   }
-    
+
   LinearConstraint::LinearConstraint(char type, const Vector& normal, const Rational& rhs)
     : _type(type), _normal(normal), _rhs(rhs)
   {
@@ -62,7 +62,7 @@ namespace ipo {
       if (b.type() == '>')
         return addScaled('<', a, -1, b, -1);
       else
-        return addScaled('<', a, -1, b, 1); 
+        return addScaled('<', a, -1, b, 1);
     }
     else
     {
@@ -73,7 +73,7 @@ namespace ipo {
         return addScaled(b.type(), a, 1, b, 1);
     }
   }
-  
+
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b)
   {
     if (a.type() == '>')
@@ -81,9 +81,9 @@ namespace ipo {
       if (b.type() == '>')
         return addScaled('<', a, -1, b, -1);
       else if (b.type() == '=')
-        return addScaled('<', a, -1, b, -1); 
+        return addScaled('<', a, -1, b, -1);
       else
-        return addScaled('<', a, -1, b, 1); 
+        return addScaled('<', a, -1, b, 1);
     }
     else if (a.type() == '<')
     {
