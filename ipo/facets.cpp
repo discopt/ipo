@@ -52,6 +52,16 @@ namespace ipo {
       return _approximateSolve ? _approximateLP.getTolerance() : _exactLP.getTolerance();
     }
 
+    virtual std::size_t numAddedPoints() const
+    {
+      return _numAddedPoints;
+    }
+
+    virtual std::size_t numAddedRays() const
+    {
+      return _numAddedRays;
+    }
+
     virtual std::size_t polarNumPoints() const
     {
       return _approximateSolve ? _approximateLP.numPointsLP() : _exactLP.numPointsLP();
@@ -60,16 +70,6 @@ namespace ipo {
     virtual std::size_t polarNumRays() const
     {
       return _approximateSolve ? _approximateLP.numRaysLP() : _exactLP.numRaysLP();
-    }
-
-    virtual std::size_t polarNumPointsAdded() const
-    {
-      return _approximateSolve ? _approximateLP.numPointsAdded() : _exactLP.numPointsAdded();
-    }
-
-    virtual std::size_t polarNumRaysAdded() const
-    {
-      return _approximateSolve ? _approximateLP.numRaysAdded() : _exactLP.numRaysAdded();
     }
 
     virtual std::size_t polarNumRowsLP() const
@@ -122,6 +122,11 @@ namespace ipo {
       return _approximateSolve ? _approximateLP.oracleResultHeuristicLevel() : _exactLP.oracleResultHeuristicLevel();
     }
 
+    virtual Vector currentVector() const
+    {
+      return _approximateSolve ? _approximateLP.currentVector() : _exactLP.currentVector();
+    }
+
     virtual std::size_t oracleNumPoints() const
     {
       return _approximateSolve ? _approximateLP.oracleNumPoints() : _exactLP.oracleNumPoints();
@@ -159,8 +164,10 @@ namespace ipo {
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_BEGIN) == FacetSeparationHandler::ORACLE_BEGIN);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::ORACLE_END) == FacetSeparationHandler::ORACLE_END);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINTS_BEGIN) == FacetSeparationHandler::POINTS_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINT) == FacetSeparationHandler::POINT);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::POINTS_END) == FacetSeparationHandler::POINTS_END);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAYS_BEGIN) == FacetSeparationHandler::RAYS_BEGIN);
+      assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAY) == FacetSeparationHandler::RAY);
       assert(static_cast<FacetSeparationHandler::Event>(PolarLPHandler::RAYS_END) == FacetSeparationHandler::RAYS_END);
       switch (event)
       {
@@ -174,6 +181,14 @@ namespace ipo {
         case RAYS_END:
           notify(static_cast<FacetSeparationHandler::Event>(event));
         break;
+        case POINT:
+          if (_approximateSolve || _exactSolve)
+            notify(FacetSeparationHandler::POINT);
+        break;
+        case RAY:
+          if (_approximateSolve || _exactSolve)
+            notify(FacetSeparationHandler::RAY);
+        break;
       }
     }
 
@@ -181,6 +196,22 @@ namespace ipo {
 
     void notify(FacetSeparationHandler::Event event)
     {
+      switch (event)
+      {
+        case POINTS_BEGIN:
+          _numAddedPoints = 0;
+        break;
+        case POINT:
+          _numAddedPoints++;
+        break;
+        case RAYS_BEGIN:
+          _numAddedRays = 0;
+        break;
+        case RAY:
+          _numAddedRays++;
+        break;
+      }
+
       for (std::size_t i = 0; i < _handlers.size(); ++i)
         _handlers[i]->notify(event, *this);
     }
@@ -206,18 +237,26 @@ namespace ipo {
       {
         // Normalization constraint.
 
+        notify(FacetSeparationHandler::POINTS_BEGIN);
         for (std::size_t i = 0; i < spanning.points.size(); ++i)
         {
           dense -= spanning.points[i];
           _approximateLP.addPointRow(spanning.points[i], false);
           _exactLP.addPointRow(spanning.points[i], false);
+          notify(FacetSeparationHandler::POINT);
         }
+        notify(FacetSeparationHandler::POINTS_END);
+
+        notify(FacetSeparationHandler::RAYS_BEGIN);
         for (std::size_t i = 0; i < spanning.rays.size(); ++i)
         {
           dense -= spanning.rays[i];
           _approximateLP.addPointRow(spanning.rays[i], false);
           _exactLP.addPointRow(spanning.rays[i], false);
+          notify(FacetSeparationHandler::RAY);
         }
+        notify(FacetSeparationHandler::RAYS_END);
+
         dense /= int(spanning.points.size() + spanning.rays.size());
 
         for (std::size_t p = 0; p < _targetVector.size(); ++p)
@@ -251,14 +290,20 @@ namespace ipo {
 
       InnerDescription pointsRays;
       _approximateLP.getTightPointsRays(pointsRays, true);
+      _exactSolve = true;
+
+      notify(FacetSeparationHandler::POINTS_BEGIN);
       for (std::size_t i = 0; i < pointsRays.points.size(); ++i)
         _exactLP.addPointRow(pointsRays.points[i], true);
+      notify(FacetSeparationHandler::POINTS_END);
+
+      notify(FacetSeparationHandler::RAYS_BEGIN);
       for (std::size_t i = 0; i < pointsRays.rays.size(); ++i)
         _exactLP.addRayRow(pointsRays.rays[i], true);
+      notify(FacetSeparationHandler::RAYS_END);
 
       // Solve exact polar LP.
 
-      _exactSolve = true;
       notify(FacetSeparationHandler::EXACT_SOLVE_BEGIN);
       _exactLP.solve();
       notify(FacetSeparationHandler::EXACT_SOLVE_END);
@@ -309,6 +354,8 @@ namespace ipo {
     bool _exactSolve;
     bool _separatedByFacet;
     bool _separatedByEquation;
+    std::size_t _numAddedPoints;
+    std::size_t _numAddedRays;
   };
 
   FacetSeparationHandler::FacetSeparationHandler()
@@ -405,22 +452,37 @@ namespace ipo {
         _stream << ", heurLevel = " << state.oracleResultHeuristicLevel() << "\n";
       break;
       case POINTS_BEGIN:
-        _stream << "FS: Adding points.\n";
+        _stream << "FS: Adding points";
+        if (state.approximateSolve())
+          _stream << " to approximate LP.\n";
+        else if (state.exactSolve())
+          _stream << " to exact LP.\n";
+        else
+          _stream << " to both LPs.\n";
       break;
-      case POINTS_END:
-        _stream << "FS: Added " << state.polarNumPointsAdded() << " points.\n";
-      break;
-      case RAYS_BEGIN:
-        _stream << "FS: Adding rays.\n";
+      case POINT:
+      case RAY:
         if (_printPointsAndRays)
         {
-//           _stream << "FS: ";
-//           state.space().printVector(_stream, state.innerDescription().rays.back()); // TODO: ???
-//           _stream << "\n";
+          _stream << "FS:   ";
+          state.oracleSpace().printVector(_stream, state.currentVector());
+          _stream << "\n";
         }
       break;
+      case POINTS_END:
+        _stream << "FS: Added " << state.numAddedPoints() << " points.\n";
+      break;
+      case RAYS_BEGIN:
+        _stream << "FS: Adding rays";
+        if (state.approximateSolve())
+          _stream << " to approximate LP.\n";
+        else if (state.exactSolve())
+          _stream << " to exact LP.\n";
+        else
+          _stream << " to both LPs.\n";
+      break;
       case RAYS_END:
-        _stream << "FS: Added " << state.polarNumRaysAdded() << " rays.\n";
+        _stream << "FS: Added " << state.numAddedRays() << " rays.\n";
       break;
       default:
         _stream << "FS: Unhandled event " << event << ".\n" << std::endl;

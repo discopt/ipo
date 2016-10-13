@@ -33,8 +33,10 @@ namespace ipo {
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
       POINTS_BEGIN,
+      POINT,
       POINTS_END,
       RAYS_BEGIN,
+      RAY,
       RAYS_END,
       OBJECTIVE_SET,
       ROW_ADDED,
@@ -163,28 +165,6 @@ namespace ipo {
     }
 
     /**
-     * \brief Returns the number of points that were added in this iteration.
-     *
-     * Returns the number of points that were added in this iteration.
-     */
-
-    inline std::size_t numPointsAdded() const
-    {
-      return _numPointsAdded;
-    }
-
-    /**
-     * \brief Returns the number of rays that were added in this iteration.
-     *
-     * Returns the number of rays that were added in this iteration.
-     */
-
-    inline std::size_t numRaysAdded() const
-    {
-      return _numRaysAdded;
-    }
-
-    /**
      * \brief Returns the number of rows of the current LP.
      *
      * Returns the number of rows of the current LP.
@@ -251,6 +231,17 @@ namespace ipo {
     }
 
     /**
+     * \brief Returns the point or ray that is currently being added.
+     *
+     * Returns the point or ray that is currently being added.
+     */
+
+    inline Vector currentVector() const
+    {
+      return _currentVector;
+    }
+
+    /**
      * \brief Returns the number of points returned by the last oracle call.
      *
      * Returns the number of points returned by the last oracle call.
@@ -298,10 +289,9 @@ namespace ipo {
     std::vector<RowInfo> _rows;
     std::size_t _firstDynamicRow;
 
+    Vector _currentVector;
     std::size_t _numPointsLP;
     std::size_t _numRaysLP;
-    std::size_t _numPointsAdded;
-    std::size_t _numRaysAdded;
     HeuristicLevel _oracleMaxHeuristicLevel;
     HeuristicLevel _oracleMinHeuristicLevel;
     soplex::Rational _oracleObjectiveValue;

@@ -72,7 +72,7 @@ namespace ipo {
      * Returns the number of points that were added in this iteration.
      */
 
-    virtual std::size_t polarNumPointsAdded() const = 0;
+    virtual std::size_t numAddedPoints() const = 0;
 
     /**
      * \brief Returns the number of rays that were added in this iteration.
@@ -80,7 +80,7 @@ namespace ipo {
      * Returns the number of rays that were added in this iteration.
      */
 
-    virtual std::size_t polarNumRaysAdded() const = 0;
+    virtual std::size_t numAddedRays() const = 0;
 
     /**
      * \brief Returns the number of rows of the current LP.
@@ -164,6 +164,14 @@ namespace ipo {
     virtual HeuristicLevel oracleResultHeuristicLevel() const = 0;
 
     /**
+     * \brief Returns the point or ray that is currently being added.
+     *
+     * Returns the point or ray that is currently being added.
+     */
+
+    virtual Vector currentVector() const = 0;
+
+    /**
      * \brief Returns the number of points returned by the last oracle call.
      *
      * Returns the number of points returned by the last oracle call.
@@ -228,8 +236,10 @@ namespace ipo {
       ORACLE_BEGIN,
       ORACLE_END = ORACLE_BEGIN + 1,
       POINTS_BEGIN,
+      POINT,
       POINTS_END,
       RAYS_BEGIN,
+      RAY,
       RAYS_END,
       BEGIN,
       INITIALIZED,

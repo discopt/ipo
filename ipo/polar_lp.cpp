@@ -38,7 +38,7 @@ namespace ipo {
   XPolarLP::XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate)
     : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0),
     _oracleMaxHeuristicLevel(std::numeric_limits<std::size_t>::max()), _oracleMinHeuristicLevel(0),
-    _oracleObjectiveValue(infinity)
+    _oracleObjectiveValue(infinity), _currentVector(zeroVector())
   {
     SpaceData* data = new SpaceData();
     for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
@@ -124,6 +124,9 @@ namespace ipo {
 
   void XPolarLP::addPointRow(const Vector& point, bool dynamic)
   {
+    _currentVector = point;
+    notify(PolarLPHandler::POINT);
+
     _sparseColumnVector.clear();
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), point.size() + 1));
     vectorToSparse(point, _sparseColumnVector);
@@ -139,6 +142,9 @@ namespace ipo {
 
   void XPolarLP::addRayRow(const Vector& ray, bool dynamic)
   {
+    _currentVector = ray;
+    notify(PolarLPHandler::RAY);
+
     _sparseColumnVector.clear();
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), ray.size()));
     vectorToSparse(ray, _sparseColumnVector);
@@ -185,21 +191,18 @@ namespace ipo {
           throw std::runtime_error("Polar LP: Oracle claims infeasible!");
         else if (_result.isUnbounded())
         {
-          _numRaysAdded = 0;
           notify(PolarLPHandler::RAYS_BEGIN);
           for (std::size_t i = 0; i < _result.rays.size(); ++i)
           {
             addRayRow(_result.rays[i].vector, true);
             progress = true;
           }
-          _numRaysAdded = _result.rays.size();
           notify(PolarLPHandler::RAYS_END);
         }
         else
         {
           assert(_result.isFeasible());
 
-          _numPointsAdded = 0;
           for (std::size_t i = 0; i < _result.points.size(); ++i)
           {
             if (_result.points[i].objectiveValue > inequalityRhs + getTolerance())
@@ -210,7 +213,6 @@ namespace ipo {
                 notify(PolarLPHandler::POINTS_BEGIN);
               }
               addPointRow(_result.points[i].vector, true);
-              _numPointsAdded++;
             }
           }
           if (progress)
