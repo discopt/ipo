@@ -175,10 +175,11 @@ namespace ipo {
         _oracleMaxHeuristicLevel = std::numeric_limits<std::size_t>::max();
         _oracleMinHeuristicLevel = 0;
         notify(PolarLPHandler::ORACLE_BEGIN);
-        _oracle->maximize(_result, _oracleObjective, ObjectiveBound(inequalityRhs, true));
+        _oracle->maximize(_result, _oracleObjective, ObjectiveBound(inequalityRhs + getTolerance(), true));
         _oracleObjectiveValue = _result.objectiveValue();
         notify(PolarLPHandler::ORACLE_END);
 
+        
         progress = false;
         if (_result.isInfeasible())
           throw std::runtime_error("Polar LP: Oracle claims infeasible!");
@@ -201,7 +202,7 @@ namespace ipo {
           _numPointsAdded = 0;
           for (std::size_t i = 0; i < _result.points.size(); ++i)
           {
-            if (_result.points[i].objectiveValue > inequalityRhs + 1.e-6) // TODO: constant! relative error instead?
+            if (_result.points[i].objectiveValue > inequalityRhs + getTolerance())
             {
               if (!progress)
               {

@@ -23,7 +23,7 @@ namespace ipo {
 
     _host.beforeForward();
 
-    HeuristicLevel resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
+    HeuristicLevel resultLevel = _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
       sort, checkDups);
 
     _host.afterForward();
@@ -64,6 +64,13 @@ namespace ipo {
     // We do not call OracleBase::setFace() since the above call will call setFace() for the ForwardWrapperOracle, which does it.
   }
 
+  void StatisticsOracle::reset()
+  {
+    _numCalls = 0;
+    _numForwards = 0;
+    _timer.reset();
+  }
+
   HeuristicLevel StatisticsOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
@@ -74,7 +81,7 @@ namespace ipo {
 
     if (heuristicLevel() > maxHeuristic)
     {
-      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+      return _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
     }
 
     // The target oracle is supposed to be called.
@@ -84,7 +91,7 @@ namespace ipo {
 
     // We call the target oracle.
 
-    HeuristicLevel resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, 
+    HeuristicLevel resultLevel = _targetOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, 
       sort, checkDups);
 
     // The target oracle returned.

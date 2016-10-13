@@ -82,7 +82,7 @@ namespace ipo {
   HeuristicLevel CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
-    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, 
+    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, 
       checkDups);
 
     if (level < heuristicLevel())

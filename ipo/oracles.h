@@ -236,7 +236,7 @@ namespace ipo {
    *
    * A call to any of the maximize() methods to optimize objective \f$ c \in \mathbb{Q}^n \f$
    * over the current face \f$ F \f$ (\c setFace()) with \c improveValue \f$ \gamma \f$ and
-   * requested \c maxHeuristic and \c minHeuristic must obey the following rules, where we denote by
+   * requested \c minHeuristic and \c maxHeuristic must obey the following rules, where we denote by
    * \f$ S \subseteq F \f$ and \f$ R \subseteq \text{recc}(P) \f$ the sets of returned \c points
    * and \c rays, respectively. The returned \ref OracleResult is denoted by \c result.
    *
@@ -528,7 +528,7 @@ namespace ipo {
      */
 
     virtual HeuristicLevel maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-      const ObjectiveBound& objectiveBound, HeuristicLevel maxHeuristic, HeuristicLevel minHeuristic, bool& sort,
+      const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
       bool& checkDups);
 
     /**

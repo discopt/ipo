@@ -124,7 +124,7 @@ namespace ipo {
     HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic)
   {
     vectorToDense(objective, _tempObjective);
-    return maximize(result, _tempObjective, objectiveBound, maxHeuristic, minHeuristic);
+    return maximize(result, _tempObjective, objectiveBound, minHeuristic, maxHeuristic);
   }
 
   void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound, 
@@ -163,12 +163,13 @@ namespace ipo {
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
+    assert(minHeuristic <= maxHeuristic);
 
     // If requested, forward to next oracle.
 
     if (heuristicLevel() > maxHeuristic)
     {
-      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+      return _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
     }
 
     // Call implementation and check whether results are satisfactory.
@@ -202,7 +203,7 @@ namespace ipo {
 
     if (heuristicLevel() > minHeuristic || (result.points.empty() && result.rays.empty()))
     {
-      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+      return _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
     }
     else
     {
@@ -252,7 +253,7 @@ namespace ipo {
   }
 
   HeuristicLevel FaceOracleBase::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
-    const ObjectiveBound& objectiveBound, HeuristicLevel maxHeuristic, HeuristicLevel minHeuristic, bool& sort, bool& checkDups)
+    const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
@@ -261,7 +262,7 @@ namespace ipo {
 
     if (heuristicLevel() > maxHeuristic)
     {
-      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+      return _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
     }
 
     // Get face (note that currentFace() always yields NULL.
@@ -419,7 +420,7 @@ namespace ipo {
 
     if (heuristicLevel() > minHeuristic || (result.points.empty() && result.rays.empty()))
     {
-      return _nextOracle->maximizeController(result, objective, objectiveBound, maxHeuristic, minHeuristic, sort, checkDups);
+      return _nextOracle->maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort, checkDups);
     }
     else
     {

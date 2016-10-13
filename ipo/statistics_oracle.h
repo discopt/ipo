@@ -48,20 +48,52 @@ namespace ipo {
       return _targetOracle;
     }
 
+    /**
+     * \brief Resets all values.
+     * 
+     * Resets all values.
+     */
+
+    void reset();
+
+    /**
+     * \brief Returns how often the oracle was called.
+     * 
+     * Returns how often the oracle was called.
+     */
+
     inline std::size_t numCalls() const
     {
       return _numCalls;
     }
+
+    /**
+     * \brief Returns how often the oracle had to forward the call to the next oracle.
+     * 
+     * Returns how often the oracle had to forward the call to the next oracle.
+     */
 
     inline std::size_t numForwards() const
     {
       return _numForwards;
     }
 
+    /**
+     * \brief Returns how often the oracle's own answer was satisfactory.
+     * 
+     * Returns how often the oracle's own answer was satisfactory.
+     */
+
     inline std::size_t numSuccess() const
     {
       return _numCalls - _numForwards;
     }
+
+    /**
+     * \brief Returns the cumulative time used for this oracle, excluding the time used for forwarded calls.
+     * 
+     * Returns the cumulative time used for this oracle, excluding the time used for forwarded calls.
+     */
 
     inline double time() const
     {

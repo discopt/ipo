@@ -285,7 +285,7 @@ namespace ipo {
     
     
   }
-  
+
   void MIPOracleBase::initialize(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)
   {
     _mixedIntegerSet = mixedIntegerSet;

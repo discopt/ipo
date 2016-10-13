@@ -65,6 +65,10 @@ int main(int argc, char** argv)
   AffineOuterDescription outer;
   affineHull(oracle, inner, outer, affineHullHandlers, 2, 0);
   std::cout << "Dimension: " << (long(inner.points.size() + inner.rays.size()) - 1) << std::endl;
+  
+  exactScipOracleStats->reset();
+  scipOracleStats->reset();
+  cacheOracleStats->reset();
 
   std::vector<FacetSeparationHandler*> facetSeparationHandlers;
   DebugFacetSeparationHandler debugHandler(std::cout, true, true);
@@ -121,7 +125,7 @@ int main(int argc, char** argv)
       assert(false);
   }
   
-//   std::cout << "\n";
+  std::cout << "\n";
 //   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop() 
 //     << "  +  verification time: " << statsHandler.timeVerification() << "\n";
 //   std::cout << std::endl;
@@ -134,6 +138,7 @@ int main(int argc, char** argv)
 //   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
 //     << " seconds.\n";
 
+  std::cout << "Oracle statistics (without affine hull computation):\n\n";
   for (std::shared_ptr<OracleBase> o = oracle; o != NULL; o = o->nextOracle())
   {
     std::size_t h = o->heuristicLevel();
