@@ -493,7 +493,7 @@ namespace ipo {
 
   StatisticsFacetSeparationHandler::StatisticsFacetSeparationHandler()
   {
-
+    reset();
   }
 
   StatisticsFacetSeparationHandler::~StatisticsFacetSeparationHandler()
@@ -503,11 +503,73 @@ namespace ipo {
 
   void StatisticsFacetSeparationHandler::reset()
   {
-
+    _timer.reset();
+    _numOracleQueries = 0;
+    _numHeuristicLevelAnswers.clear();
+    _numApproximateLPs = 0;
+    _numExactLPs = 0;
+    _timeApproximateLPs = 0.0;
+    _timeExactLPs = 0.0;
+    _timeOracles = 0.0;
+    _timeLastEvent = 0.0;
+    _lastEvent = END;
   }
 
   void StatisticsFacetSeparationHandler::notify(FacetSeparationHandler::Event event, FacetSeparationState& state)
   {
+    if (event == BEGIN)
+    {
+      _timer.reset();
+      _timer.start();
+      _numHeuristicLevelAnswers.resize(state.oracleMaxHeuristicLevel() + 1, 0);
+    }
+    double time = _timer.time();
+    switch (event)
+    {
+      case BEGIN:
+      break;
+      case INITIALIZED:
+      break;
+      case APPROXIMATE_SOLVE_BEGIN:
+      break;
+      case APPROXIMATE_SOLVE_END:
+      break;
+      case EXACT_SOLVE_BEGIN:
+      break;
+      case EXACT_SOLVE_END:
+      break;
+      case END:
+      break;
+      case LP_BEGIN:
+      break;
+      case LP_END:
+      break;
+      case ORACLE_BEGIN:
+        _numOracleQueries++;
+        _timeOracles += time - _timeLastEvent;
+        assert(state.oracleResultHeuristicLevel() < _numHeuristicLevelAnswers.size());
+        _numHeuristicLevelAnswers[state.oracleResultHeuristicLevel()]++;
+      break;
+      case ORACLE_END:
+      break;
+      case POINTS_BEGIN:
+      break;
+      case POINT:
+      case RAY:
+      break;
+      case POINTS_END:
+      break;
+      case RAYS_BEGIN:
+      break;
+      case RAYS_END:
+      break;
+      default:
+      break;
+    }
+#ifdef IPO_DEBUG
+    _lastEvent = event;
+#endif
+    _timeLastEvent = time;
 
   }
 
@@ -526,26 +588,6 @@ namespace ipo {
     algorithm.paramMaxAge = 10;
     return algorithm.run(spanning, constraint, certificate);
   }
-
-
-//   LinearConstraint separatePoint(const std::shared_ptr<OracleBase>& oracle, const Vector& point,
-//     const InnerDescription& spanning, std::vector<FacetSeparationHandler*>& handlers, InnerDescription* certificate)
-//   {
-//     FacetSeparation algorithm(handlers, oracle, point, false);
-//     algorithm.paramMaxAge = 10;
-//     return algorithm.run(spanning, certificate);
-//   }
-//
-//   LinearConstraint separateRay(const std::shared_ptr<OracleBase>& oracle, const Vector& ray,
-//     const InnerDescription& spanning, std::vector<FacetSeparationHandler*>& handlers, InnerDescription* certificate)
-//   {
-//     FacetSeparation algorithm(handlers, oracle, ray, true);
-//     algorithm.paramMaxAge = 10;
-//     return algorithm.run(spanning, certificate);
-//   }
-
-
-
 
   namespace Separation {
 

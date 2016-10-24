@@ -439,8 +439,8 @@ namespace ipo {
     Timer _timer;
     std::size_t _numOracleQueries;
     std::vector<std::size_t> _numHeuristicLevelAnswers;
-    std::size_t _numApproximateLPSolves;
-    std::size_t _numExactLPSolves;
+    std::size_t _numApproximateLPs;
+    std::size_t _numExactLPs;
     double _timeApproximateLPs;
     double _timeExactLPs;
     double _timeOracles;
