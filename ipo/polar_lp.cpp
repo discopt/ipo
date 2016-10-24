@@ -37,7 +37,7 @@ namespace ipo {
 
   XPolarLP::XPolarLP(const std::shared_ptr<OracleBase>& oracle, PolarLPHandler& handler, bool approximate)
     : _approximate(approximate), _oracle(oracle), _handler(handler), _firstDynamicRow(0),
-    _oracleMaxHeuristicLevel(std::numeric_limits<std::size_t>::max()), _oracleMinHeuristicLevel(0),
+    _oracleMaxHeuristicLevel(_oracle->heuristicLevel()), _oracleMinHeuristicLevel(0),
     _oracleObjectiveValue(infinity), _currentVector(zeroVector())
   {
     SpaceData* data = new SpaceData();

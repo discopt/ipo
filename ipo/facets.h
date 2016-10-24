@@ -231,23 +231,23 @@ namespace ipo {
   public:
     enum Event
     {
-      LP_BEGIN,
-      LP_END,
-      ORACLE_BEGIN,
-      ORACLE_END = ORACLE_BEGIN + 1,
-      POINTS_BEGIN,
-      POINT,
-      POINTS_END,
-      RAYS_BEGIN,
-      RAY,
-      RAYS_END,
-      BEGIN,
-      INITIALIZED,
-      APPROXIMATE_SOLVE_BEGIN,
-      APPROXIMATE_SOLVE_END,
-      EXACT_SOLVE_BEGIN,
-      EXACT_SOLVE_END,
-      END
+      LP_BEGIN, // Before (re)solving the current polar LP.
+      LP_END, // After (re)solving the current polar LP.
+      ORACLE_BEGIN, // Before an oracle call.
+      ORACLE_END = ORACLE_BEGIN + 1, // After an oracle call.
+      POINTS_BEGIN, // Before adding point-constraints to the LP.
+      POINT, // Every point-constraint added.
+      POINTS_END, // After adding point-constraints to the LP.
+      RAYS_BEGIN, // Before adding ray-constraints to the LP.
+      RAY, // Every ray-constraint added.
+      RAYS_END, // After adding ray-constraints to the LP.
+      BEGIN, // Algorithm started.
+      INITIALIZED, // LP initialized. 
+      APPROXIMATE_SOLVE_BEGIN, // Before solving approximate polar LP to optimality.
+      APPROXIMATE_SOLVE_END, // After solving approximate polar LP to optimality.
+      EXACT_SOLVE_BEGIN, // Before solving exact polar LP to optimality.
+      EXACT_SOLVE_END, // After solving exact polar LP to optimality.
+      END // Algorithm finished.
     };
 
     /**
@@ -386,9 +386,9 @@ namespace ipo {
      * Returns how many approximate LPs were solved.
      */
 
-    inline std::size_t numApproximateLPSolves() const
+    inline std::size_t numApproximateLPs() const
     {
-      return _numApproximateLPSolves;
+      return _numApproximateLPs;
     }
 
     /**
@@ -397,9 +397,9 @@ namespace ipo {
      * Returns how many exact LPs were solved.
      */
 
-    inline std::size_t numExactLPSolves() const
+    inline std::size_t numExactLPs() const
     {
-      return _numExactLPSolves;
+      return _numExactLPs;
     }
 
     /**
@@ -435,6 +435,17 @@ namespace ipo {
       return _timeOracles;
     }
 
+    /**
+     * \brief Returns the total running time of the algorithm.
+     * 
+     * Returns the total running time of the algorithm.
+     */
+
+    inline double timeAll() const
+    {
+      return _timeAll;
+    }
+
   protected:
     Timer _timer;
     std::size_t _numOracleQueries;
@@ -444,11 +455,9 @@ namespace ipo {
     double _timeApproximateLPs;
     double _timeExactLPs;
     double _timeOracles;
+    double _timeAll;
+    double _timeLastBegin;
     double _timeLastEvent;
-
-#ifdef IPO_DEBUG
-    Event _lastEvent;
-#endif
   };
 
 

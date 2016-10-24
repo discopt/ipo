@@ -512,7 +512,6 @@ namespace ipo {
     _timeExactLPs = 0.0;
     _timeOracles = 0.0;
     _timeLastEvent = 0.0;
-    _lastEvent = END;
   }
 
   void StatisticsFacetSeparationHandler::notify(FacetSeparationHandler::Event event, FacetSeparationState& state)
@@ -527,6 +526,7 @@ namespace ipo {
     switch (event)
     {
       case BEGIN:
+        _timeLastBegin = time;
       break;
       case INITIALIZED:
       break;
@@ -539,18 +539,29 @@ namespace ipo {
       case EXACT_SOLVE_END:
       break;
       case END:
+        _timeAll += time - _timeLastBegin;
       break;
       case LP_BEGIN:
       break;
       case LP_END:
+        if (state.approximateSolve())
+        {
+          _numApproximateLPs++;
+          _timeApproximateLPs += time - _timeLastEvent;
+        }
+        else
+        {
+          _numExactLPs++;
+          _timeExactLPs += time - _timeLastEvent;
+        }
       break;
       case ORACLE_BEGIN:
+      break;
+      case ORACLE_END:
         _numOracleQueries++;
         _timeOracles += time - _timeLastEvent;
         assert(state.oracleResultHeuristicLevel() < _numHeuristicLevelAnswers.size());
         _numHeuristicLevelAnswers[state.oracleResultHeuristicLevel()]++;
-      break;
-      case ORACLE_END:
       break;
       case POINTS_BEGIN:
       break;
@@ -566,9 +577,6 @@ namespace ipo {
       default:
       break;
     }
-#ifdef IPO_DEBUG
-    _lastEvent = event;
-#endif
     _timeLastEvent = time;
 
   }
