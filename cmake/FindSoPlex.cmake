@@ -31,7 +31,14 @@
 # Distributed under the Boost Software License, Version 1.0.
 # (See http://www.boost.org/LICENSE_1_0.txt)
 
+find_package(UBSan)
 find_package(ZLIB REQUIRED)
+
+if (HAVE_UNDEFINED_BEHAVIOR_SANITIZER)
+  set(UBSAN_LIBRARIES "-lubsan")
+else()
+  set(UBSAN_LIBRARIES "")
+endif()
 
 # Hints and paths for the search
 set(_SOPLEX_ROOT_HINTS $ENV{SOPLEX_ROOT_DIR} ${SOPLEX_ROOT_DIR})
@@ -116,7 +123,7 @@ if (_SOPLEX_INCLUDE)
     PATHS ${_SOPLEX_ROOT_PATHS} PATH_SUFFIXES lib)
   if (_SOPLEX_LIB)
     string(REGEX REPLACE "^.*libsoplex-(.*)\\.a$" "\\1" SOPLEX_VERSION_STRING "${_SOPLEX_LIB}")
-    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES} -lubsan)
+    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES} ${UBSAN_LIBRARIES})
   endif()
 endif()
 
