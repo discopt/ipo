@@ -11,28 +11,6 @@ if (SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
 endif()
 
-# ipo
-
-add_executable(ipo-main
-  ipo.cpp
-)
-set_target_properties(ipo-main PROPERTIES OUTPUT_NAME ipo)
-
-
-target_link_libraries(ipo-main
-  ${IPO_LIBRARIES}
-)
-
-if (SCIP_FOUND)
-  target_link_libraries(ipo-main ${SCIP_LIBRARIES})
-endif()
-
-install(
-  TARGETS ipo-main
-  RUNTIME DESTINATION ${INSTALL_BIN_DIR}
-  COMPONENT bin
-)
-
 # paper-affine-hull
 
 add_executable(ipo-paper-affine-hull
@@ -60,4 +38,18 @@ target_link_libraries(ipo-paper-facets
 
 if (SCIP_FOUND)
   target_link_libraries(ipo-paper-facets ${SCIP_LIBRARIES})
+endif()
+
+# sage-playground
+
+add_executable(sage-playground
+  sage_playground.cpp
+)
+
+target_link_libraries(sage-playground
+  ${IPO_LIBRARIES}
+)
+
+if (SCIP_FOUND)
+  target_link_libraries(sage-playground ${SCIP_LIBRARIES})
 endif()
