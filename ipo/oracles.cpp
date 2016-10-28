@@ -56,6 +56,11 @@ namespace ipo {
     }
   }
 
+  void OracleResult::sortPoints()
+  {
+    std::sort(points.begin(), points.end());
+  }
+
   void OracleResult::removeDuplicates()
   {
     // Check points.

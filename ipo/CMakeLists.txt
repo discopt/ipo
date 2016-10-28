@@ -12,8 +12,8 @@ find_package(Doxygen)
 set(IPO_SOURCES
   parameters.cpp
   linear_constraint.cpp
-  unique_vectors.cpp 
-  vectors.cpp 
+  unique_vectors.cpp
+  vectors.cpp
   rational.cpp
   spx_gmp.cpp
   space.cpp
