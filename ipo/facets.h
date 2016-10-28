@@ -242,7 +242,7 @@ namespace ipo {
       RAY, // Every ray-constraint added.
       RAYS_END, // After adding ray-constraints to the LP.
       BEGIN, // Algorithm started.
-      INITIALIZED, // LP initialized. 
+      INITIALIZED, // LP initialized.
       APPROXIMATE_SOLVE_BEGIN, // Before solving approximate polar LP to optimality.
       APPROXIMATE_SOLVE_END, // After solving approximate polar LP to optimality.
       EXACT_SOLVE_BEGIN, // Before solving exact polar LP to optimality.
@@ -437,7 +437,7 @@ namespace ipo {
 
     /**
      * \brief Returns the total running time of the algorithm.
-     * 
+     *
      * Returns the total running time of the algorithm.
      */
 
