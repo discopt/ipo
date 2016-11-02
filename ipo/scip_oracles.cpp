@@ -221,6 +221,8 @@ namespace ipo {
   void SCIPOracle::solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
     std::vector<double*>& rays)
   {
+    std::cout << "DEBUG: Query to " << this->name() << std::endl;
+
     std::size_t n = space().dimension();
 
     for (std::size_t v = 0; v < n; ++v)
