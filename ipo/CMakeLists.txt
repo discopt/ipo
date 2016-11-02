@@ -11,6 +11,7 @@ find_package(Doxygen)
 
 set(IPO_SOURCES
   parameters.cpp
+  polyhedron.cpp
   linear_constraint.cpp
   unique_vectors.cpp
   vectors.cpp
@@ -38,6 +39,7 @@ set(IPO_SOURCES
 
 set(IPO_INSTALL_HEADERS
   affine_hull.h
+  polyhedron.h
   cache_oracle.h
   console_app.h
   facets.h
