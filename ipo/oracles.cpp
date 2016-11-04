@@ -101,7 +101,9 @@ namespace ipo {
   OracleBase::OracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
     : _name(name), _nextOracle(nextOracle), _heuristicLevel(nextOracle ? nextOracle->heuristicLevel() + 1 : 0)
   {
-
+#ifdef IPO_DEBUG
+    _initialized = false;
+#endif
   }
 
   void OracleBase::initializeSpace(const Space& space)
@@ -109,6 +111,10 @@ namespace ipo {
     _space = space;
 
     _tempObjective.reDim(_space.dimension(), false);
+
+#ifdef IPO_DEBUG
+    _initialized = true;
+#endif
   }
 
   OracleBase::~OracleBase()
@@ -135,6 +141,11 @@ namespace ipo {
   void OracleBase::maximize(OracleResult& result, const soplex::VectorRational& objective, const ObjectiveBound& objectiveBound,
     HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic)
   {
+#ifdef IPO_DEBUG
+    if (!_initialized)
+      throw std::runtime_error("Query to uninitialized " + name());
+#endif
+
     assert(objective.dim() == space().dimension());
 
     // Initialize result.

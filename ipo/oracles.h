@@ -462,6 +462,9 @@ namespace ipo {
     std::shared_ptr<OracleBase> _nextOracle; // Next associated optimization oracle (or NULL if exact).
     HeuristicLevel _heuristicLevel; // Number of associated oracles.
     soplex::DVectorRational _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
+#ifdef IPO_DEBUG
+    bool _initialized;
+#endif
   };
 
   /**

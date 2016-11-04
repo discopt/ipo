@@ -38,7 +38,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
+  std::shared_ptr<MixedIntegerSet> mixedIntegerSet = std::make_shared<MixedIntegerSet>(scip);
 
   SCIP_CALL_EXC(SCIPfree(&scip));
 

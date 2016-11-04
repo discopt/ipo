@@ -79,11 +79,39 @@ namespace ipo {
       virtual HeuristicLevel maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
         const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort,
         bool& checkDups);
+
+      friend class Polyhedron;
+
+    protected:
+      UniqueVectors _points; // Points found so far.
+      UniqueVectors _rays; // Normalized rays found so far.
+      UniqueVectors _normals; // Normals of normalized inequalities.
+      std::vector<LinearConstraint> _inequalities; // Normalized inequalities found so far.
     };
 
   public:
     Polyhedron(const std::shared_ptr<OracleBase>& oracle);
     virtual ~Polyhedron();
+
+    inline Space space() const
+    {
+      return _collectOracle->space();
+    }
+
+    inline std::size_t numPoints() const
+    {
+      return _collectOracle->_points.size();
+    }
+
+    inline std::size_t numRays() const
+    {
+      return _collectOracle->_rays.size();
+    }
+
+    inline std::size_t numInequalities() const
+    {
+      return _collectOracle->_inequalities.size();
+    }
 
     void affineHull();
 

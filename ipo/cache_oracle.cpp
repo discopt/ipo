@@ -261,7 +261,7 @@ namespace ipo {
 
   bool CacheOracle::addRay(const Vector& ray)
   {
-    Vector r = ray;
+    Vector r = integralScaled(ray);
     if (!_uniqueRays.insert(r))
       return false;
 

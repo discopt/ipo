@@ -7,9 +7,12 @@ using namespace soplex;
 namespace ipo {
 
   Polyhedron::CollectOracle::CollectOracle(const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase("CollectOracle(" + nextOracle->name() + ")", nextOracle)
+    : OracleBase("CollectOracle(" + nextOracle->name() + ")", nextOracle), _points(nextOracle->space().dimension()), 
+    _rays(nextOracle->space().dimension()), _normals(nextOracle->space().dimension())
   {
+    _heuristicLevel--; // Effectively set heuristicLevel to that of nextOracle.
     
+    initializeSpace(nextOracle->space());
   }
 
   Polyhedron::CollectOracle::~CollectOracle()
@@ -37,14 +40,24 @@ namespace ipo {
         sort = false;
       }
 
-      const Rational& optimum = result.points.front().objectiveValue;
-
-      // TODO: new valid inequality.
+      Vector normal = denseToVector(objective);
+      const Rational& rhs = result.points.front().objectiveValue;
+      Rational factor;
+      scaleIntegral(normal, &factor);
+      
+      if (_normals.insert(normal))
+        _inequalities.push_back(LinearConstraint('<', normal, rhs * factor));
     }
 
-    // TODO: new points or rays.
+    assert(level <= heuristicLevel());
 
-    assert(level < heuristicLevel());
+    for (std::size_t i = 0; i < result.points.size(); ++i)
+      _points.insert(result.points[i].vector);
+    for (std::size_t i = 0; i < result.rays.size(); ++i)
+    {
+      Vector ray = integralScaled(result.rays[i].vector);
+      _rays.insert(ray);
+    }
 
     return level;
   }
@@ -73,6 +86,8 @@ namespace ipo {
       return;
 
     std::vector<AffineHullHandler*> handlers;
+    DebugAffineHullHandler debugHandler(std::cout);
+    handlers.push_back(&debugHandler);
     std::vector<LinearConstraint> givenEquations;
     ipo::affineHull(_collectOracle, _affineHullInner, _affineHullOuter, handlers, _affineHullLastModerateHeuristic,
       _affineHullLastCheapHeuristic, givenEquations, _affineHullApproximateDirections);
@@ -80,5 +95,4 @@ namespace ipo {
     _affineHullComputed = true;
   }
 
-  
 }
