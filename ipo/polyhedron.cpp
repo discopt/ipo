@@ -17,13 +17,13 @@ namespace ipo {
 
   }
 
-  Polyhedron::FaceInfo::FaceInfo(const LinearConstraint& inequality)
+  Polyhedron::Face::Face(const LinearConstraint& inequality)
     : _inequality(inequality), _hasDimension(false)
   {
     
   }
 
-  Polyhedron::FaceInfo::~FaceInfo()
+  Polyhedron::Face::~Face()
   {
 
   }
@@ -34,7 +34,7 @@ namespace ipo {
   {
     LinearConstraint constraint = completeFaceConstraint();
     Vector normal = constraint.normal();
-    _inequalities.insert(normal, FaceInfo(constraint));
+    _inequalities.insert(normal, std::make_shared<Face>(constraint));
     
     _heuristicLevel--; // Effectively set heuristicLevel to that of nextOracle.
     
@@ -70,7 +70,7 @@ namespace ipo {
       const Rational& rhs = result.points.front().objectiveValue;
       Rational factor;
       scaleIntegral(normal, &factor);
-      _inequalities.insert(normal, FaceInfo(LinearConstraint('<', normal, rhs * factor)));
+      _inequalities.insert(normal, std::make_shared<Face>(LinearConstraint('<', normal, rhs * factor)));
     }
 
     assert(level <= heuristicLevel());
@@ -93,7 +93,7 @@ namespace ipo {
   }
 
   Polyhedron::Polyhedron(const std::shared_ptr<OracleBase>& oracle)
-    : _collectOracle(std::make_shared<CollectOracle>(oracle)), _completeFaceInfo(_collectOracle->_inequalities[zeroVector()]),
+    : _collectOracle(std::make_shared<CollectOracle>(oracle)), _completeFace(_collectOracle->_inequalities[zeroVector()]),
     _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true)
   {
 
@@ -104,19 +104,45 @@ namespace ipo {
 
   }
 
-  void Polyhedron::affineHull(FaceInfo& faceInfo)
+  void Polyhedron::affineHull(std::shared_ptr<Face>& face)
   {
-    if (faceInfo.hasDimension())
+    if (face->hasDimension())
       return;
+
+    LinearConstraint faceConstraint = LinearConstraint('=', face->inequality().normal(), face->inequality().rhs());
+    _collectOracle->setFace(faceConstraint);
 
     std::vector<AffineHullHandler*> handlers;
     DebugAffineHullHandler debugHandler(std::cout);
     handlers.push_back(&debugHandler);
     std::vector<LinearConstraint> givenEquations;
 
-    ipo::affineHull(_collectOracle, faceInfo._innerDescription, faceInfo._outerDescription, handlers, 
-      _affineHullLastModerateHeuristic, _affineHullLastCheapHeuristic, givenEquations, _affineHullApproximateDirections);
-    faceInfo._hasDimension = true;
+    ipo::affineHull(_collectOracle, face->_innerDescription, face->_outerDescription, handlers, _affineHullLastCheapHeuristic, 
+      _affineHullLastModerateHeuristic, givenEquations, _affineHullApproximateDirections);
+    face->_hasDimension = true;
+  }
+
+  void Polyhedron::addConstraint(const LinearConstraint& constraint)
+  {
+    Rational factor;
+    Vector normal = integralScaled(constraint.normal(), &factor);
+    _collectOracle->_inequalities.insert(normal, std::make_shared<Face>(LinearConstraint(constraint.type(), normal, factor * 
+      constraint.rhs())));
+  }
+
+  void Polyhedron::getFaces(std::vector<std::shared_ptr<Face> >& constraints, bool onlyInequalities, bool onlyWithDimension)
+  {
+    constraints.clear();
+    for (VectorMap<std::shared_ptr<Face> >::Iterator iter = _collectOracle->_inequalities.begin(); 
+      iter != _collectOracle->_inequalities.end(); ++iter)
+    {
+      std::shared_ptr<Face> face = *iter;
+      if (onlyInequalities && face->inequality().type() == '=')
+        continue;
+      if (onlyWithDimension && !face->hasDimension())
+        continue;
+      constraints.push_back(face);
+    }
   }
 
 }

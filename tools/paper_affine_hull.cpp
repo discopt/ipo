@@ -61,33 +61,56 @@ int main(int argc, char** argv)
 
   Polyhedron poly(cacheOracleStats);
   
+  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  {
+    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+    poly.addConstraint(row);
+  }
+
   std::cout << "Dimension:\n" << std::flush;
   int dim = poly.dimension();
   std::cout << dim << "\n\n" << std::flush;
 
-  std::vector<AffineHullHandler*> handlers;
-  DebugAffineHullHandler debugHandler(std::cout);
-  StatisticsAffineHullHandler statsHandler;
-  handlers.push_back(&debugHandler);
-  handlers.push_back(&statsHandler);
+  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  {
+    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+    std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
+    
+    if (!row.isEquation())
+    {
+      std::cout << "Computing dimension of face defined by ";
+      poly.space().printLinearConstraint(std::cout, row);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face);
+      std::cout << face->dimension() << std::endl;
+    }
+    if (r >= 20)
+      break;
+  }
 
-  InnerDescription inner;
-  AffineOuterDescription outer;
-  affineHull(oracle, inner, outer, handlers, 2, 1);
-
-  std::cout << "\n";
-  std::cout << "Algorithm statistics:\n";
-  std::cout << "\n";
-  std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop()
-    << "  +  verification time: " << statsHandler.timeVerification() << "\n";
-  std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " <<
-    statsHandler.timeApproximateDirections() << " seconds.\n";
-  std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " <<
-    statsHandler.timeExactDirections() << " seconds.\n";
-  std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations()
-    << " seconds.\n";
-  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles()
-    << " seconds.\n";
+//   std::vector<AffineHullHandler*> handlers;
+//   DebugAffineHullHandler debugHandler(std::cout);
+//   StatisticsAffineHullHandler statsHandler;
+//   handlers.push_back(&debugHandler);
+//   handlers.push_back(&statsHandler);
+// 
+//   InnerDescription inner;
+//   AffineOuterDescription outer;
+//   affineHull(oracle, inner, outer, handlers, 2, 1);
+// 
+//   std::cout << "\n";
+//   std::cout << "Algorithm statistics:\n";
+//   std::cout << "\n";
+//   std::cout << "Overall time: " << statsHandler.timeAll() << "  =  main loop time: " << statsHandler.timeMainLoop()
+//     << "  +  verification time: " << statsHandler.timeVerification() << "\n";
+//   std::cout << "Approximate directions: " << statsHandler.numDirectionApproximateSolves() << " in " <<
+//     statsHandler.timeApproximateDirections() << " seconds.\n";
+//   std::cout << "Exact directions: " << statsHandler.numDirectionExactSolves() << " in " <<
+//     statsHandler.timeExactDirections() << " seconds.\n";
+//   std::cout << "Factorizations: " << statsHandler.numFactorizations() << " in " << statsHandler.timeFactorizations()
+//     << " seconds.\n";
+//   std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles()
+//     << " seconds.\n";
   std::cout << "\n";
   std::cout << "Oracle statistics:\n";
   std::cout << "\n";
@@ -101,6 +124,15 @@ int main(int argc, char** argv)
     std::cout << "  time:     " << s->time() << "\n";
   }
   std::cout << std::endl;
+
+  std::vector<std::shared_ptr<Polyhedron::Face> > faces;
+  poly.getFaces(faces, true, true);
+  for (std::size_t i = 0; i < faces.size(); ++i)
+  {
+    std::cout << "Constraint #" << i << ": ";
+    poly.space().printLinearConstraint(std::cout, faces[i]->inequality());
+    std::cout << " has dimension " << faces[i]->dimension() << "\n" << std::flush;
+  }
 
   return 0;
 }

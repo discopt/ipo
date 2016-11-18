@@ -50,6 +50,40 @@ namespace ipo {
     };
 
   public:
+    struct Iterator
+    {
+      Iterator(typename std::map<KeyData, Value>::iterator iter)
+        : _iter(iter)
+      {
+
+      }
+
+      inline Iterator operator++()
+      {
+        ++_iter;
+        return Iterator(_iter);
+      }
+
+      inline Value& operator*()
+      {
+        return const_cast<Value&>(_iter->second);
+      }
+
+      inline bool operator==(const Iterator& other) const
+      {
+        return _iter == other._iter;
+      }
+
+      inline bool operator!=(const Iterator& other) const
+      {
+        return ! (*this == other);
+      }
+
+    private:
+      typename std::map<KeyData, Value>::iterator _iter;
+    };
+
+  public:
     VectorMap(std::size_t ambientDimension)
       : _hashVector(ambientDimension)
     {
@@ -133,6 +167,16 @@ namespace ipo {
         keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
 
       return _data.at(keyData);
+    }
+
+    inline Iterator begin()
+    {
+      return Iterator(_data.begin());
+    }
+
+    inline Iterator end()
+    {
+      return Iterator(_data.end());
     }
 
   private:

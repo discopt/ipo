@@ -13,7 +13,8 @@ namespace ipo {
   {
   protected:
     class CollectOracle;
-    
+
+  public:
     class VectorInfo
     {
     public:
@@ -28,11 +29,14 @@ namespace ipo {
       Vector _vector;
       bool _isPoint;
     };
-    
-    class FaceInfo
+
+  public:
+    class Face
     {
     public:
-      virtual ~FaceInfo();
+      Face(const LinearConstraint& inequality);
+
+      virtual ~Face();
 
       inline const LinearConstraint& inequality() const
       {
@@ -67,14 +71,13 @@ namespace ipo {
 
     protected:
 
-      FaceInfo(const LinearConstraint& inequality);
-
       LinearConstraint _inequality;
       bool _hasDimension;
       AffineOuterDescription _outerDescription;
       InnerDescription _innerDescription;
     };
 
+  protected:
     class CollectOracle : public OracleBase
     {
     public:
@@ -148,7 +151,7 @@ namespace ipo {
     protected:
       VectorMap<VectorInfo> _points;
       VectorMap<VectorInfo> _rays;
-      VectorMap<FaceInfo> _inequalities;
+      VectorMap<std::shared_ptr<Face> > _inequalities;
     };
 
   public:
@@ -177,34 +180,44 @@ namespace ipo {
       return _collectOracle->_inequalities.size();
     }
 
-    void affineHull(FaceInfo& faceInfo);
+    inline std::shared_ptr<Face> inequalityToFace(const LinearConstraint& constraint)
+    {
+      return _collectOracle->_inequalities[constraint.normal()];
+    }
+
+    void affineHull(std::shared_ptr<Face>& face);
 
     inline void affineHull()
     {
-      affineHull(_completeFaceInfo);
+      affineHull(_completeFace);
     }
 
     inline int dimension()
     {
       affineHull();
-      return _completeFaceInfo.dimension();
+      return _completeFace->dimension();
     }
 
     inline const AffineOuterDescription& affineHullOuterDescription()
     {
       affineHull();
-      return _completeFaceInfo.outerDescription();
+      return _completeFace->outerDescription();
     }
 
     inline const InnerDescription& affineHullInnerDescription()
     {
       affineHull();
-      return _completeFaceInfo.innerDescription();
+      return _completeFace->innerDescription();
     }
+
+    void addConstraint(const LinearConstraint& constraint);
+
+    void getFaces(std::vector<std::shared_ptr<Face> >& constraints, bool onlyInequalities = true,
+      bool onlyWithDimension = false);
 
   protected:
     std::shared_ptr<CollectOracle> _collectOracle;
-    FaceInfo& _completeFaceInfo;
+    std::shared_ptr<Face> _completeFace;
 
     HeuristicLevel _affineHullLastCheapHeuristic;
     HeuristicLevel _affineHullLastModerateHeuristic;
