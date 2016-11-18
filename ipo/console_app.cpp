@@ -279,7 +279,7 @@ namespace ipo {
 
     if (taskDimension() || taskEquations() || taskFacet() || taskFacets() || taskSmallestFace())
     {
-      if (!computeAffineHull(completeFace(), ""))
+      if (!computeAffineHull(completeFaceConstraint(), ""))
         return false;
     }
 
@@ -984,7 +984,7 @@ upperBounds)
       orac->setFace(face);
       hull.run(faceEquations, orac, hullOutput, 1, true);
       equations = &faceEquations;
-      orac->setFace(completeFace());
+      orac->setFace(completeFaceConstraint());
     }
 
     if (_taskDimension)

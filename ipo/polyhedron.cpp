@@ -68,8 +68,19 @@ namespace ipo {
     return heuristicLevel();
   }
 
+  Polyhedron::Face::Face(LinearConstraint& inequality)
+    : _inequality(inequality)
+  {
+
+  }
+
+  Polyhedron::Face::~Face()
+  {
+
+  }
+
   Polyhedron::Polyhedron(const std::shared_ptr<OracleBase>& oracle)
-    : _collectOracle(std::make_shared<CollectOracle>(oracle)), _affineHullComputed(false), _affineHullLastCheapHeuristic(1),
+    : _collectOracle(std::make_shared<CollectOracle>(oracle)), _affineHullLastCheapHeuristic(1),
     _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true)
   {
 
@@ -82,17 +93,18 @@ namespace ipo {
 
   void Polyhedron::affineHull()
   {
-    if (_affineHullComputed)
-      return;
+    if (_faces.empty())
+    {
+      std::vector<AffineHullHandler*> handlers;
+      DebugAffineHullHandler debugHandler(std::cout);
+      handlers.push_back(&debugHandler);
+      std::vector<LinearConstraint> givenEquations;
 
-    std::vector<AffineHullHandler*> handlers;
-    DebugAffineHullHandler debugHandler(std::cout);
-    handlers.push_back(&debugHandler);
-    std::vector<LinearConstraint> givenEquations;
-    ipo::affineHull(_collectOracle, _affineHullInner, _affineHullOuter, handlers, _affineHullLastModerateHeuristic,
-      _affineHullLastCheapHeuristic, givenEquations, _affineHullApproximateDirections);
-
-    _affineHullComputed = true;
+      LinearConstraint inequality = completeFaceConstraint();
+      _faces.push_back(Face(inequality));
+      ipo::affineHull(_collectOracle, _faces.front()._innerDescription, _faces.front()._outerDescription, handlers, 
+        _affineHullLastModerateHeuristic, _affineHullLastCheapHeuristic, givenEquations, _affineHullApproximateDirections);
+    }
   }
 
 }

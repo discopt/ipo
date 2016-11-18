@@ -1,12 +1,129 @@
 #ifndef IPO_UNIQUE_VECTORS_H_
 #define IPO_UNIQUE_VECTORS_H_
 
+#include <map>
 #include <set>
 
 #include "common.h"
 #include "vectors.h"
 
 namespace ipo {
+
+  template <typename V>
+  class VectorMap
+  {
+  public:
+    typedef Vector Key;
+    typedef V Value;
+
+  protected:
+    struct KeyData
+    {
+      double hash;
+      Vector vector;
+
+      KeyData(double hsh, Vector& vec)
+        : hash(hsh), vector(vec)
+      {
+
+      }
+      
+      KeyData(const KeyData& other)
+        : hash(other.hash), vector(const_cast<Vector&>(other.vector))
+      {
+
+      }
+
+      ~KeyData()
+      {
+
+      }
+
+      bool operator<(const KeyData& other) const
+      {
+        if (hash < other.hash)
+          return true;
+        else if (hash > other.hash)
+          return false;
+        return vector < other.vector;
+      }
+    };
+
+  public:
+    VectorMap(std::size_t ambientDimension)
+      : _hashVector(ambientDimension)
+    {
+      std::default_random_engine generator(0);
+      std::normal_distribution<double> distribution;
+      soplex::DVectorReal randomVector(ambientDimension);
+      double norm = 0.0;
+      while (norm == 0.0)
+      {
+        bool zero = false;
+        for (std::size_t i = 0; i < ambientDimension; ++i)
+        {
+          double x = distribution(generator);
+          if (fabs(x) < 1.0e-6)
+          {
+            zero = true;
+            break;
+          }
+          randomVector[i] = x;
+          norm += x*x;
+        }
+        if (zero)
+          norm = 0.0;
+      }
+
+      norm = std::sqrt(norm);
+      for (std::size_t i = 0; i < ambientDimension; ++i)
+        _hashVector[i] = randomVector[i] / norm;
+    }
+
+    ~VectorMap()
+    {
+
+    }
+
+    inline std::size_t size() const
+    {
+      return _data.size();
+    }
+
+    void clear()
+    {
+      _data.clear();
+    }
+
+    bool insert(Vector& vector, const Value& value)
+    {
+      KeyData keyData(0.0, vector);
+      for (std::size_t p = 0; p < vector.size(); ++p)
+        keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
+
+      std::pair<typename std::map<KeyData, Value>::iterator, bool> inserted = _data.insert(keyData, value);
+      if (inserted.second)
+        return true;
+      else
+      {
+        vector = const_cast<Vector&>(inserted.first->vector);
+        return false;
+      }
+    }
+
+    const Value& operator[](const Vector& vector)
+    {
+      KeyData keyData(0.0, vector);
+      for (std::size_t p = 0; p < vector.size(); ++p)
+        keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
+
+      return _data[keyData];
+    }
+
+  private:
+    std::map<KeyData, Value> _data;
+    soplex::DVectorReal _hashVector;
+  };
 
   class UniqueVectors
   {
@@ -58,6 +175,7 @@ namespace ipo {
     };
 
     UniqueVectors(std::size_t ambientDimension);
+
     ~UniqueVectors();
 
     inline std::size_t size() const

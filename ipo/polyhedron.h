@@ -41,7 +41,7 @@ namespace ipo {
       * setFace() for the next oracle.
       */
 
-      virtual void setFace(const LinearConstraint& newFace = completeFace());
+      virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
       /**
       * \brief Wrapper method that calls the oracle's implementation.
@@ -89,8 +89,46 @@ namespace ipo {
       std::vector<LinearConstraint> _inequalities; // Normalized inequalities found so far.
     };
 
+    class Face
+    {
+    public:
+      virtual ~Face();
+
+      inline const LinearConstraint& inequality() const
+      {
+        return _inequality;
+      }
+
+      inline const AffineOuterDescription& outerDescription() const
+      {
+        return _outerDescription;
+      }
+
+      inline const InnerDescription& innerDescription() const
+      {
+        return _innerDescription;
+      }
+
+      inline const int dimension() const
+      {
+        return int(_innerDescription.points.size() + _innerDescription.rays.size()) - 1;
+      }
+      
+      friend class Polyhedron;
+
+    protected:
+
+      Face(LinearConstraint& inequality);
+
+      LinearConstraint _inequality;
+      AffineOuterDescription _outerDescription;
+      InnerDescription _innerDescription;
+    };
+
   public:
+
     Polyhedron(const std::shared_ptr<OracleBase>& oracle);
+
     virtual ~Polyhedron();
 
     inline Space space() const
@@ -118,27 +156,26 @@ namespace ipo {
     inline int dimension()
     {
       affineHull();
-      return int(_affineHullInner.points.size() + _affineHullInner.rays.size()) - 1;
+      return _faces.front().dimension();
     }
 
     inline const AffineOuterDescription& affineHullOuterDescription()
     {
       affineHull();
-      return _affineHullOuter;
+      return _faces.front().outerDescription();
     }
 
     inline const InnerDescription& affineHullInnerDescription()
     {
       affineHull();
-      return _affineHullInner;
+      return _faces.front().innerDescription();
     }
 
   protected:
     std::shared_ptr<CollectOracle> _collectOracle;
 
-    bool _affineHullComputed;
-    AffineOuterDescription _affineHullOuter;
-    InnerDescription _affineHullInner;
+    VectorMap<Face> _faces;
+
     HeuristicLevel _affineHullLastCheapHeuristic;
     HeuristicLevel _affineHullLastModerateHeuristic;
     bool _affineHullApproximateDirections;

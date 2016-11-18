@@ -183,8 +183,8 @@ namespace ipo {
     Rational _rhs; // Right-hand side of constraint.
   };
 
-  LinearConstraint completeFace();
-  LinearConstraint emptyFace();
+  LinearConstraint completeFaceConstraint();
+  LinearConstraint emptyFaceConstraint();
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b);
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);

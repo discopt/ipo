@@ -45,7 +45,7 @@ namespace ipo {
       return -1;
   }
 
-  LinearConstraint completeFace()
+  LinearConstraint completeFaceConstraint()
   {
     return LinearConstraint('<', Vector(), Rational(0));
   }
