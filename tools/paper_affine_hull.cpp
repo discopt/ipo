@@ -24,6 +24,7 @@
 #include "ipo/scip_oracles.h"
 #include "ipo/cache_oracle.h"
 #include "ipo/statistics_oracle.h"
+#include "ipo/polyhedron.h"
 
 using namespace ipo;
 
@@ -57,6 +58,12 @@ int main(int argc, char** argv)
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
+
+  Polyhedron poly(cacheOracleStats);
+  
+  std::cout << "Dimension:\n" << std::flush;
+  int dim = poly.dimension();
+  std::cout << dim << "\n\n" << std::flush;
 
   std::vector<AffineHullHandler*> handlers;
   DebugAffineHullHandler debugHandler(std::cout);

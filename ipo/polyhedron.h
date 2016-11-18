@@ -12,6 +12,69 @@ namespace ipo {
   class Polyhedron
   {
   protected:
+    class CollectOracle;
+    
+    class VectorInfo
+    {
+    public:
+      ~VectorInfo();
+
+      friend class CollectOracle;
+      friend class Polyhedron;
+
+    protected:
+      VectorInfo(Vector& vector, bool isPoint);
+
+      Vector _vector;
+      bool _isPoint;
+    };
+    
+    class FaceInfo
+    {
+    public:
+      virtual ~FaceInfo();
+
+      inline const LinearConstraint& inequality() const
+      {
+        return _inequality;
+      }
+      
+      inline bool hasDimension() const
+      {
+        return _hasDimension;
+      }
+
+      inline const AffineOuterDescription& outerDescription() const
+      {
+        assert(hasDimension());
+        return _outerDescription;
+      }
+
+      inline const InnerDescription& innerDescription() const
+      {
+        assert(hasDimension());
+        return _innerDescription;
+      }
+
+      inline const int dimension() const
+      {
+        assert(hasDimension());
+        return int(_innerDescription.points.size() + _innerDescription.rays.size()) - 1;
+      }
+
+      friend class CollectOracle;
+      friend class Polyhedron;
+
+    protected:
+
+      FaceInfo(const LinearConstraint& inequality);
+
+      LinearConstraint _inequality;
+      bool _hasDimension;
+      AffineOuterDescription _outerDescription;
+      InnerDescription _innerDescription;
+    };
+
     class CollectOracle : public OracleBase
     {
     public:
@@ -83,46 +146,9 @@ namespace ipo {
       friend class Polyhedron;
 
     protected:
-      UniqueVectors _points; // Points found so far.
-      UniqueVectors _rays; // Normalized rays found so far.
-      UniqueVectors _normals; // Normals of normalized inequalities.
-      std::vector<LinearConstraint> _inequalities; // Normalized inequalities found so far.
-    };
-
-    class Face
-    {
-    public:
-      virtual ~Face();
-
-      inline const LinearConstraint& inequality() const
-      {
-        return _inequality;
-      }
-
-      inline const AffineOuterDescription& outerDescription() const
-      {
-        return _outerDescription;
-      }
-
-      inline const InnerDescription& innerDescription() const
-      {
-        return _innerDescription;
-      }
-
-      inline const int dimension() const
-      {
-        return int(_innerDescription.points.size() + _innerDescription.rays.size()) - 1;
-      }
-      
-      friend class Polyhedron;
-
-    protected:
-
-      Face(LinearConstraint& inequality);
-
-      LinearConstraint _inequality;
-      AffineOuterDescription _outerDescription;
-      InnerDescription _innerDescription;
+      VectorMap<VectorInfo> _points;
+      VectorMap<VectorInfo> _rays;
+      VectorMap<FaceInfo> _inequalities;
     };
 
   public:
@@ -151,30 +177,34 @@ namespace ipo {
       return _collectOracle->_inequalities.size();
     }
 
-    void affineHull();
+    void affineHull(FaceInfo& faceInfo);
+
+    inline void affineHull()
+    {
+      affineHull(_completeFaceInfo);
+    }
 
     inline int dimension()
     {
       affineHull();
-      return _faces.front().dimension();
+      return _completeFaceInfo.dimension();
     }
 
     inline const AffineOuterDescription& affineHullOuterDescription()
     {
       affineHull();
-      return _faces.front().outerDescription();
+      return _completeFaceInfo.outerDescription();
     }
 
     inline const InnerDescription& affineHullInnerDescription()
     {
       affineHull();
-      return _faces.front().innerDescription();
+      return _completeFaceInfo.innerDescription();
     }
 
   protected:
     std::shared_ptr<CollectOracle> _collectOracle;
-
-    VectorMap<Face> _faces;
+    FaceInfo& _completeFaceInfo;
 
     HeuristicLevel _affineHullLastCheapHeuristic;
     HeuristicLevel _affineHullLastModerateHeuristic;

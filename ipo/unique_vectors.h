@@ -90,6 +90,11 @@ namespace ipo {
       return _data.size();
     }
 
+    inline bool empty() const
+    {
+      return _data.empty();
+    }
+
     void clear()
     {
       _data.clear();
@@ -101,23 +106,33 @@ namespace ipo {
       for (std::size_t p = 0; p < vector.size(); ++p)
         keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
 
-      std::pair<typename std::map<KeyData, Value>::iterator, bool> inserted = _data.insert(keyData, value);
+      std::pair<typename std::map<KeyData, Value>::iterator, bool> inserted = _data.insert(std::make_pair(keyData, value));
       if (inserted.second)
         return true;
       else
       {
-        vector = const_cast<Vector&>(inserted.first->vector);
+        vector = const_cast<Vector&>(inserted.first->first.vector);
         return false;
       }
     }
 
-    const Value& operator[](const Vector& vector)
+    Value& operator[](const Vector& vector)
+    {
+      Vector copy = vector;
+      KeyData keyData(0.0, copy);
+      for (std::size_t p = 0; p < vector.size(); ++p)
+        keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
+
+      return _data.at(keyData);
+    }
+
+    const Value& operator[](const Vector& vector) const
     {
       KeyData keyData(0.0, vector);
       for (std::size_t p = 0; p < vector.size(); ++p)
         keyData.hash += _hashVector[vector.index(p)] * vector.approximation(p);
 
-      return _data[keyData];
+      return _data.at(keyData);
     }
 
   private:

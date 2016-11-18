@@ -133,7 +133,10 @@ namespace ipo {
       SPxSolver::Status status = _inequalities.solve();
 
       if (status == SPxSolver::OPTIMAL && _inequalities.objValueRational() == result.points.front().objectiveValue)
+      {
         level = 0;
+        std::cout << "Upgrading heuristicLevel from cached inequalities." << std::endl;
+      }
     }
     else if (level == 0 && _outerBehavior != DISABLED && result.isFeasible())
     {
