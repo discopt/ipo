@@ -113,9 +113,15 @@ namespace ipo {
     _collectOracle->setFace(faceConstraint);
 
     std::vector<AffineHullHandler*> handlers;
-    DebugAffineHullHandler debugHandler(std::cout);
-    handlers.push_back(&debugHandler);
+//     DebugAffineHullHandler debugHandler(std::cout);
+//     handlers.push_back(&debugHandler);
+    
     std::vector<LinearConstraint> givenEquations;
+    if (!faceConstraint.definesCompleteFace())
+    {
+      std::copy(_completeFace->_outerDescription.begin(), _completeFace->_outerDescription.end(), 
+        std::back_inserter(givenEquations));
+    }
 
     ipo::affineHull(_collectOracle, face->_innerDescription, face->_outerDescription, handlers, _affineHullLastCheapHeuristic, 
       _affineHullLastModerateHeuristic, givenEquations, _affineHullApproximateDirections);

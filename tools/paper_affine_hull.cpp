@@ -84,8 +84,6 @@ int main(int argc, char** argv)
       poly.affineHull(face);
       std::cout << face->dimension() << std::endl;
     }
-    if (r >= 20)
-      break;
   }
 
 //   std::vector<AffineHullHandler*> handlers;
