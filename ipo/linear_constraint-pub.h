@@ -55,6 +55,25 @@ namespace ipo {
     }
 
     /**
+     * \brief Fast ordering comparison.
+     *
+     * Fast ordering comparison. First compares the right-hand sides and types and finally the normal vectors.
+     */
+
+    inline bool operator<(const LinearConstraint& other) const
+    {
+      if (_type < other._type)
+        return true;
+      if (_type > other._type)
+        return false;
+      if (_rhs < other._rhs)
+        return true;
+      if (_rhs > other._rhs)
+        return false;
+      return _normal < other._normal;
+    }
+
+    /**
      * \brief Returns true for equations.
      *
      * Returns true for equations.
@@ -183,13 +202,14 @@ namespace ipo {
     Rational _rhs; // Right-hand side of constraint.
   };
 
-  LinearConstraint completeFace();
-  LinearConstraint emptyFace();
+  LinearConstraint completeFaceConstraint();
+  LinearConstraint emptyFaceConstraint();
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b);
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);
 
   typedef std::vector<LinearConstraint> AffineOuterDescription;
+  
 
 } /* namespace ipo */
 

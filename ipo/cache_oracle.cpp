@@ -42,7 +42,7 @@ namespace ipo {
   }
 
   CacheOracle::CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior, Behavior innerBehavior)
-    : OracleBase("CacheOracle(" + nextOracle->name() + ")", nextOracle), _uniquePoints(nextOracle->space().dimension()),
+    : OracleBase("CacheOracle", nextOracle), _uniquePoints(nextOracle->space().dimension()),
     _uniqueRays(nextOracle->space().dimension()), _outerBehavior(outerBehavior), _innerBehavior(innerBehavior)
   {
     assert(nextOracle);
@@ -133,7 +133,9 @@ namespace ipo {
       SPxSolver::Status status = _inequalities.solve();
 
       if (status == SPxSolver::OPTIMAL && _inequalities.objValueRational() == result.points.front().objectiveValue)
+      {
         level = 0;
+      }
     }
     else if (level == 0 && _outerBehavior != DISABLED && result.isFeasible())
     {
@@ -261,7 +263,7 @@ namespace ipo {
 
   bool CacheOracle::addRay(const Vector& ray)
   {
-    Vector r = ray;
+    Vector r = integralScaled(ray);
     if (!_uniqueRays.insert(r))
       return false;
 

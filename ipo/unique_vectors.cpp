@@ -17,7 +17,6 @@ namespace ipo {
 
   }
 
-
   UniqueVectors::Data::~Data()
   {
 

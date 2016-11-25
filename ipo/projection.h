@@ -237,11 +237,10 @@ namespace ipo {
      * Restricts the optimization oracle to the face \f$ F \f$ of \f$ P \f$ defined by \p newFace.
      * For \p newFace equal to \c NULL we define \f$ F := P \f$.
      *
-     * This implementation creates a new face which represents the given face in the preimage
-     * space.
+     * This implementation creates a new face which represents the given face in the preimage space.
      */
 
-    virtual void setFace(const LinearConstraint& newFace = completeFace());
+    virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
     /**
      * \brief Returns the ambient \c space.

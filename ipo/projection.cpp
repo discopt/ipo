@@ -100,7 +100,7 @@ namespace ipo {
   {
     std::cerr << "Projection of linear constraints not implemented - claiming not projectible!" << std::endl;
 
-    return completeFace();
+    return completeFaceConstraint();
   }
 
   LinearConstraint Projection::liftLinearConstraint(const LinearConstraint& constraint) const
@@ -150,7 +150,7 @@ namespace ipo {
     OracleBase::setFace(newFace);
 
     if (newFace.definesCompleteFace())
-      _liftedFace = completeFace();
+      _liftedFace = completeFaceConstraint();
     else
       _liftedFace = _projection.liftLinearConstraint(newFace);
 

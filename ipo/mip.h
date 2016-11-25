@@ -308,7 +308,7 @@ namespace ipo {
      * postprocessing.
      */
 
-    virtual void setFace(const LinearConstraint& newFace = completeFace());
+    virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
   protected:
 

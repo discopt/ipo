@@ -24,11 +24,14 @@
 #include "ipo/scip_oracles.h"
 #include "ipo/cache_oracle.h"
 #include "ipo/statistics_oracle.h"
+#include "ipo/polyhedron.h"
 
 using namespace ipo;
 
 int main(int argc, char** argv)
 {
+  // Parse arguments.
+  
   // Read instance and create MixedIntegerSet.
 
   SCIP* scip = NULL;
@@ -38,19 +41,19 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
+  std::shared_ptr<MixedIntegerSet> mixedIntegerSet = std::make_shared<MixedIntegerSet>(scip);
 
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   // Initialize oracles.
 
-//   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
-//     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
-//   exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");
-//   std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
+  std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
+    "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
+  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");
+  std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
   std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
-    mixedIntegerSet/*, exactScipOracleStats*/);
+    mixedIntegerSet, exactScipOracleStats);
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
   std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
@@ -58,15 +61,41 @@ int main(int argc, char** argv)
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
 
-  std::vector<AffineHullHandler*> handlers;
-  DebugAffineHullHandler debugHandler(std::cout);
+  Polyhedron poly(cacheOracleStats);
+  poly.setAffineHullLastModerateHeuristicLevel(1); // Use oracle 0 only for verification.
+  poly.setAffineHullLastCheapHeuristicLevel(2); // Alternate min/max for oracle 2 before using oracle 1.
+
+  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  {
+    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+    poly.addConstraint(row);
+  }
+
   StatisticsAffineHullHandler statsHandler;
-  handlers.push_back(&debugHandler);
+  std::vector<AffineHullHandler*> handlers;
   handlers.push_back(&statsHandler);
 
-  InnerDescription inner;
-  AffineOuterDescription outer;
-  affineHull(oracle, inner, outer, handlers, 2, 1);
+  std::cout << "Dimension:\n" << std::flush;
+  poly.affineHull(handlers);
+  int dim = poly.dimension();
+  std::cout << dim << "\n\n" << std::flush;
+
+  // Compute constraint dimensions.
+
+  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  {
+    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+    std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
+
+    if (!row.isEquation())
+    {
+      std::cout << "Computing dimension of face defined by ";
+      poly.space().printLinearConstraint(std::cout, row);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
+    }
+  }
 
   std::cout << "\n";
   std::cout << "Algorithm statistics:\n";
@@ -94,6 +123,17 @@ int main(int argc, char** argv)
     std::cout << "  time:     " << s->time() << "\n";
   }
   std::cout << std::endl;
+
+  // Output constraint dimensions.
+  
+  std::vector<std::shared_ptr<Polyhedron::Face> > faces;
+  poly.getFaces(faces, true, true);
+  for (std::size_t i = 0; i < faces.size(); ++i)
+  {
+    std::cout << "Constraint #" << i << ": ";
+    poly.space().printLinearConstraint(std::cout, faces[i]->inequality());
+    std::cout << " has dimension " << faces[i]->dimension() << "\n" << std::flush;
+  }
 
   return 0;
 }

@@ -45,14 +45,14 @@ namespace ipo {
       return -1;
   }
 
-  LinearConstraint completeFace()
+  LinearConstraint completeFaceConstraint()
   {
-    return LinearConstraint('<', Vector(), Rational(0));
+    return LinearConstraint('=', Vector(), Rational(0));
   }
 
   LinearConstraint emptyFace()
   {
-    return LinearConstraint('<', Vector(), Rational(-1));
+    return LinearConstraint('=', Vector(), Rational(-1));
   }
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b)

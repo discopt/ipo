@@ -106,7 +106,7 @@ namespace ipo {
      * This implementation adds an equation to the underlying SCIP instance.
      */
 
-    virtual void setFace(const LinearConstraint& newFace = completeFace());
+    virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
   protected:
 
@@ -177,7 +177,7 @@ namespace ipo {
      * This implementation adds an equation to the underlying SCIP instance.
      */
 
-    virtual void setFace(const LinearConstraint& newFace = completeFace());
+    virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
   protected:
 

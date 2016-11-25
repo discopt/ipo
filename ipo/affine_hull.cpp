@@ -541,7 +541,7 @@ namespace ipo {
 
       for (std::size_t i = 0; i < givenEquations.size(); ++i)
       {
-        if (_equationSpace.isDependent(i))
+        if (!_equationSpace.isDependent(i))
           _equations.push_back(givenEquations[i]);
       }
 
