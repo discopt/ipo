@@ -2,6 +2,9 @@
 
 #include "affine_hull.h"
 
+// Uncomment the following line for debugging.
+// #define DEBUG
+
 using namespace soplex;
 
 namespace ipo {
@@ -104,7 +107,7 @@ namespace ipo {
 
   }
 
-  void Polyhedron::affineHull(std::shared_ptr<Face>& face)
+  void Polyhedron::affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& extraHandlers)
   {
     if (face->hasDimension())
       return;
@@ -113,8 +116,11 @@ namespace ipo {
     _collectOracle->setFace(faceConstraint);
 
     std::vector<AffineHullHandler*> handlers;
-//     DebugAffineHullHandler debugHandler(std::cout);
-//     handlers.push_back(&debugHandler);
+    std::copy(extraHandlers.begin(), extraHandlers.end(), std::back_inserter(handlers));
+#ifdef DEBUG
+    DebugAffineHullHandler debugHandler(std::cout);
+    handlers.push_back(&debugHandler);
+#endif
     
     std::vector<LinearConstraint> givenEquations;
     if (!faceConstraint.definesCompleteFace())

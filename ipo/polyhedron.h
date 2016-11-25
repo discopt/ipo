@@ -6,6 +6,7 @@
 #include "common.h"
 #include "oracles.h"
 #include "unique_vectors.h"
+#include "affine_hull.h"
 
 namespace ipo {
 
@@ -185,7 +186,18 @@ namespace ipo {
       return _collectOracle->_inequalities[constraint.normal()];
     }
 
-    void affineHull(std::shared_ptr<Face>& face);
+    void affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& handlers);
+    
+    inline void affineHull(std::shared_ptr<Face>& face)
+    {
+      std::vector<AffineHullHandler*> handlers;
+      affineHull(face, handlers);
+    }
+    
+    inline void affineHull(std::vector<AffineHullHandler*>& handlers)
+    {
+      affineHull(_completeFace, handlers);
+    }
 
     inline void affineHull()
     {
@@ -208,6 +220,16 @@ namespace ipo {
     {
       affineHull();
       return _completeFace->innerDescription();
+    }
+
+    inline void setAffineHullLastCheapHeuristicLevel(HeuristicLevel lastCheapHeuristicLevel)
+    {
+      _affineHullLastCheapHeuristic = lastCheapHeuristicLevel;
+    }
+
+    inline void setAffineHullLastModerateHeuristicLevel(HeuristicLevel lastModerateHeuristicLevel)
+    {
+      _affineHullLastModerateHeuristic = lastModerateHeuristicLevel;
     }
 
     void addConstraint(const LinearConstraint& constraint);

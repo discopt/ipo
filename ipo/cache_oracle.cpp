@@ -42,7 +42,7 @@ namespace ipo {
   }
 
   CacheOracle::CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior, Behavior innerBehavior)
-    : OracleBase("CacheOracle(" + nextOracle->name() + ")", nextOracle), _uniquePoints(nextOracle->space().dimension()),
+    : OracleBase("CacheOracle", nextOracle), _uniquePoints(nextOracle->space().dimension()),
     _uniqueRays(nextOracle->space().dimension()), _outerBehavior(outerBehavior), _innerBehavior(innerBehavior)
   {
     assert(nextOracle);
