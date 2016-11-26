@@ -77,19 +77,30 @@ if (SCIP_FOUND)
   add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
 endif()
 
-add_library(ipo ${IPO_SOURCES})
-include_directories(ipo ${SOPLEX_INCLUDE_DIRS})
-target_link_libraries(ipo
-  ${SOPLEX_LIBRARIES}
+add_library(ipo-static STATIC ${IPO_SOURCES})
+include_directories(ipo-static ${SoPlex_INCLUDE_DIRS})
+target_link_libraries(ipo-static
+  ${SoPlex_LIBRARIES}
   ${GMP_LIBRARIES}
 )
+set_target_properties(ipo-static PROPERTIES OUTPUT_NAME ipo)
+
+add_library(ipo-shared SHARED ${IPO_SOURCES})
+include_directories(ipo-shared ${SoPlex_INCLUDE_DIRS})
+target_link_libraries(ipo-shared
+  ${SoPlex_LIBRARIES}
+  ${GMP_LIBRARIES}
+)
+set_target_properties(ipo-shared PROPERTIES OUTPUT_NAME ipo)
 
 if (SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
-  target_link_libraries(ipo ${SCIP_LIBRARIES})
+  target_link_libraries(ipo-static ${SCIP_LIBRARIES})
+  target_link_libraries(ipo-shared ${SCIP_LIBRARIES})
 endif()
 
-install(TARGETS ipo   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
+install(TARGETS ipo-static   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
+install(TARGETS ipo-shared   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)
 
 install(FILES ${IPO_INSTALL_HEADERS}                    DESTINATION include/ipo  COMPONENT headers)
 
