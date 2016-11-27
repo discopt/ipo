@@ -1,133 +1,159 @@
-# - Try to find SoPlex LP solver library
-# See http://soplex.zib.de/ for more information on SoPlex
+# Tries to find the SoPlex library.
 #
-# Variables used by this module:
+# Parameter Variables:
 #
-# SOPLEX_ROOT_DIR
+# SoPlex_ROOT_DIR
 #   Set this variable to the SoPlex source or install path.
 #   Otherwise, default paths are searched, e.g. /usr/local/
-# SOPLEX_BUILD
+# SoPlex_BUILD
 #   Set this variable to "opt", "dbg" or "prf" for corresponding builds.
 #   The default is "opt".
-# SOPLEX_OSTYPE
+# SoPlex_OSTYPE
 #   Set this variable to any of SoPlex's OS types, e.g. "linux", "win", etc.
 #   The default is determined from `uname -s`.
-# SOPLEX_ARCH
+# SoPlex_ARCH
 #   Set this variable to any of SoPlex's architecture types, e.g. "x86", "x86_64", etc.
 #   The default is determined from `uname -m`.
-# SOPLEX_COMP
+# SoPlex_COMP
 #   Set this variable to any of SoPlex's compiler types, e.g. "gnu", "intel", etc.
 #   The default is "gnu".
+# SoPlex_USE_STATIC_LIBS
+#   Set to TRUE for linking with static library.
 #
-# Once done, this will define
+# Defines Variables:
 #
-#  SOPLEX_INCLUDE_DIRS   - where to find soplex.h, etc.
-#  SOPLEX_LIBRARIES      - list of libraries when using SoPlex.
-#  SOPLEX_FOUND          - true if SoPlex was found.
+# SoPlex_FOUND
+#   True if SoPlex was found.
+# SoPlex_INCLUDE_DIRS
+#   Include directories.
+# SoPlex_LIBRARIES
+#   Path of libraries.
+# SoPlex_VERSION
+#   Version found.
 #
 # Author:
-# Matthias Walter <matthias.walter@ovgu.de>
+# 
+# Matthias Walter <matthias@matthiaswalter.org>
 #
 # Distributed under the Boost Software License, Version 1.0.
 # (See http://www.boost.org/LICENSE_1_0.txt)
 
+# Dependencies.
 find_package(UBSan)
-find_package(ZLIB REQUIRED)
-
 if (HAVE_UNDEFINED_BEHAVIOR_SANITIZER)
   set(UBSAN_LIBRARIES "-lubsan")
 else()
   set(UBSAN_LIBRARIES "")
 endif()
 
-# Hints and paths for the search
-set(_SOPLEX_ROOT_HINTS $ENV{SOPLEX_ROOT_DIR} ${SOPLEX_ROOT_DIR})
-set(_SOPLEX_ROOT_PATHS $ENV{SOPLEX_ROOT_DIR} ${SOPLEX_ROOT_DIR})
-
-# Read SOPLEX_BUILD from (environment) variable.
-if (${SOPLEX_BUILD} MATCHES "^(opt|dbg|prf)$")
-  set(_SOPLEX_BUILD ${SOPLEX_BUILD})
-elseif ($ENV{SOPLEX_BUILD} MATCHES "^(opt|dbg|prf)$")
-  set(_SOPLEX_BUILD $ENV{SOPLEX_BUILD})
+if(SOPLEX_FIND_REQUIRED)
+  find_package(GMP REQUIRED)
+  find_package(ZLIB REQUIRED)
 else()
-  set(_SOPLEX_BUILD "opt")
+  find_package(GMP)
+  find_package(ZLIB)
+endif()
+
+# Handle SoPlex_ROOT_DIR.
+set(_SoPlex_ROOT_HINTS ${SoPlex_ROOT_DIR} ENV ${SoPlex_ROOT_DIR})
+
+# Handle SoPlex_USE_STATIC_LIBS.
+if(SoPlex_USE_STATIC_LIBS)
+  set(_SoPlex_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  if(WIN32)
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
+  else()
+    set(CMAKE_FIND_LIBRARY_SUFFIXES .a )
+  endif()
+endif()
+
+# Read SoPlex_BUILD from (environment) variable.
+if (${SoPlex_BUILD} MATCHES "^(opt|dbg|prf)$")
+  set(_SoPlex_BUILD ${SoPlex_BUILD})
+elseif ($ENV{SoPlex_BUILD} MATCHES "^(opt|dbg|prf)$")
+  set(_SoPlex_BUILD $ENV{SoPlex_BUILD})
+else()
+  set(_SoPlex_BUILD "opt")
 endif()
 
 # Note: To see how SoPlex determines OSTYPE and ARCH, look at soplex/make/make.detecthost.
 
-# Read SOPLEX_OSTYPE from (environment) variable or from `uname -s`
-if (${SOPLEX_OSTYPE} MATCHES "^(aix|cygwin|darwin|freebsd|hp-ux|irix|linux|mingw|osf1|sunos|win)$")
-  set(_SOPLEX_OSTYPE ${SOPLEX_OSTYPE})
-elseif ($ENV{SOPLEX_OSTYPE} MATCHES "^(aix|cygwin|darwin|freebsd|hp-ux|irix|linux|mingw|osf1|sunos|win)$")
-  set(_SOPLEX_OSTYPE $ENV{SOPLEX_OSTYPE})
+# Read SoPlex_OSTYPE from (environment) variable or from `uname -s`
+if (${SoPlex_OSTYPE} MATCHES "^(aix|cygwin|darwin|freebsd|hp-ux|irix|linux|mingw|osf1|sunos|win)$")
+  set(_SoPlex_OSTYPE ${SoPlex_OSTYPE})
+elseif ($ENV{SoPlex_OSTYPE} MATCHES "^(aix|cygwin|darwin|freebsd|hp-ux|irix|linux|mingw|osf1|sunos|win)$")
+  set(_SoPlex_OSTYPE $ENV{SoPlex_OSTYPE})
 else()
-  execute_process(COMMAND uname -s OUTPUT_VARIABLE _SOPLEX_OSTYPE OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(TOLOWER ${_SOPLEX_OSTYPE} _SOPLEX_OSTYPE)
-  string(REGEX REPLACE "cygwin.*" "cygwin" _SOPLEX_OSTYPE ${_SOPLEX_OSTYPE})
-  string(REGEX REPLACE "irix.." "irix" _SOPLEX_OSTYPE ${_SOPLEX_OSTYPE})
-  string(REGEX REPLACE "windows.*" "windows" _SOPLEX_OSTYPE ${_SOPLEX_OSTYPE})
-  string(REGEX REPLACE "mingw.*" "mingw" _SOPLEX_OSTYPE ${_SOPLEX_OSTYPE})
+  execute_process(COMMAND uname -s OUTPUT_VARIABLE _SoPlex_OSTYPE OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(TOLOWER ${_SoPlex_OSTYPE} _SoPlex_OSTYPE)
+  string(REGEX REPLACE "cygwin.*" "cygwin" _SoPlex_OSTYPE ${_SoPlex_OSTYPE})
+  string(REGEX REPLACE "irix.." "irix" _SoPlex_OSTYPE ${_SoPlex_OSTYPE})
+  string(REGEX REPLACE "windows.*" "windows" _SoPlex_OSTYPE ${_SoPlex_OSTYPE})
+  string(REGEX REPLACE "mingw.*" "mingw" _SoPlex_OSTYPE ${_SoPlex_OSTYPE})
 endif()
 
-# Read SOPLEX_ARCH from (environment) variable or from `uname -m`
-if (${SOPLEX_ARCH} MATCHES "^(alpha|arm|clang|gnu|hppa|intel|mips|ppc|pwr4|sparc|x86|x86_64)$")
-  set(_SOPLEX_ARCH ${SOPLEX_ARCH})
-elseif ($ENV{SOPLEX_ARCH} MATCHES "^(alpha|arm|clang|gnu|hppa|intel|mips|ppc|pwr4|sparc|x86|x86_64)$")
-  set(_SOPLEX_ARCH $ENV{SOPLEX_ARCH})
+# Read SoPlex_ARCH from (environment) variable or from `uname -m`
+if (${SoPlex_ARCH} MATCHES "^(alpha|arm|clang|gnu|hppa|intel|mips|ppc|pwr4|sparc|x86|x86_64)$")
+  set(_SoPlex_ARCH ${SoPlex_ARCH})
+elseif ($ENV{SoPlex_ARCH} MATCHES "^(alpha|arm|clang|gnu|hppa|intel|mips|ppc|pwr4|sparc|x86|x86_64)$")
+  set(_SoPlex_ARCH $ENV{SoPlex_ARCH})
 else()
-  execute_process(COMMAND uname -m OUTPUT_VARIABLE _SOPLEX_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE "sun.." "sparc" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "i.86" "x86" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "i86pc" "x86" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "[0-9]86" "x86" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "amd64" "x86_64" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "IP.." "mips" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "9000...." "hppa" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "Power\ Macintosh" "ppc" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "00.........." "pwr4" _SOPLEX_ARCH ${_SOPLEX_ARCH})
-  string(REGEX REPLACE "arm.*" "arm" _SOPLEX_ARCH ${_SOPLEX_ARCH})
+  execute_process(COMMAND uname -m OUTPUT_VARIABLE _SoPlex_ARCH OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE "sun.." "sparc" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "i.86" "x86" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "i86pc" "x86" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "[0-9]86" "x86" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "amd64" "x86_64" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "IP.." "mips" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "9000...." "hppa" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "Power\ Macintosh" "ppc" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "00.........." "pwr4" _SoPlex_ARCH ${_SoPlex_ARCH})
+  string(REGEX REPLACE "arm.*" "arm" _SoPlex_ARCH ${_SoPlex_ARCH})
 endif()
 
-# Read SOPLEX_COMP from (environment) variable.
-if (${SOPLEX_COMP} MATCHES "^(clang|compaq|gnu|hp|ibm|insure|intel|msv|purify|sgi|sun)$")
-  set(_SOPLEX_COMP ${SOPLEX_COMP})
-elseif ($ENV{SOPLEX_COMP} MATCHES "^(clang|compaq|gnu|hp|ibm|insure|intel|msv|purify|sgi|sun)$")
-  set(_SOPLEX_COMP $ENV{SOPLEX_COMP})
+# Read SoPlex_COMP from (environment) variable.
+if (${SoPlex_COMP} MATCHES "^(clang|compaq|gnu|hp|ibm|insure|intel|msv|purify|sgi|sun)$")
+  set(_SoPlex_COMP ${SoPlex_COMP})
+elseif ($ENV{SoPlex_COMP} MATCHES "^(clang|compaq|gnu|hp|ibm|insure|intel|msv|purify|sgi|sun)$")
+  set(_SoPlex_COMP $ENV{SoPlex_COMP})
 else()
-  set(_SOPLEX_COMP "gnu")
+  set(_SoPlex_COMP "gnu")
 endif()
 
-# Root
-
-find_path(SOPLEX_ROOT_DIR NAMES include/soplex.h soplex.h HINTS ${_SOPLEX_ROOT_HINTS} PATHS ${_SOPLEX_ROOT_PATHS})
+# Root path.
+find_path(SoPlex_ROOT_DIR NAMES include/soplex.h soplex.h HINTS ${_SoPlex_ROOT_HINTS})
 
 # Includes
-
-find_path(_SOPLEX_INCLUDE NAMES soplex.h PATHS ${SOPLEX_ROOT_DIR} PATH_SUFFIXES include src)
-if (_SOPLEX_INCLUDE)
-  set(SOPLEX_INCLUDE_DIRS ${_SOPLEX_INCLUDE})
+find_path(_SoPlex_INCLUDE_DIR NAMES soplex.h PATHS ${SoPlex_ROOT_DIR} PATH_SUFFIXES include src)
+if (_SoPlex_INCLUDE_DIR)
+  set(SoPlex_INCLUDE_DIRS ${_SoPlex_INCLUDE_DIR})
   
   # Extract version from spxdefines.h
-  file(STRINGS "${_SOPLEX_INCLUDE}/spxdefines.h" _SOPLEX_VERSION_STR REGEX "^#define[\t ]+SOPLEX_VERSION[\t ]+[0-9][0-9][0-9].*")
-  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+([0-9]).*$" "\\1" SOPLEX_VERSION_MAJOR "${_SOPLEX_VERSION_STR}")
-  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+[0-9]([0-9]).*$" "\\1" SOPLEX_VERSION_MINOR "${_SOPLEX_VERSION_STR}")
-  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+[0-9][0-9]([0-9]).*$" "\\1" SOPLEX_VERSION_PATCH "${_SOPLEX_VERSION_STR}")
-  file(STRINGS "${_SOPLEX_INCLUDE}/spxdefines.h" _SOPLEX_SUBVERSION_STR REGEX "^#define[\t ]+SOPLEX_SUBVERSION[\t ]+[0-9].*")
-  string(REGEX REPLACE "^.*SOPLEX_SUBVERSION[\t ]+([0-9]).*$" "\\1" SOPLEX_VERSION_SUBVERSION "${_SOPLEX_SUBVERSION_STR}")
+  file(STRINGS "${_SoPlex_INCLUDE_DIR}/spxdefines.h" _SoPlex_VERSION_STR REGEX "^#define[\t ]+SOPLEX_VERSION[\t ]+[0-9][0-9][0-9].*")
+  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+([0-9]).*$" "\\1" SoPlex_VERSION_MAJOR "${_SoPlex_VERSION_STR}")
+  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+[0-9]([0-9]).*$" "\\1" SoPlex_VERSION_MINOR "${_SoPlex_VERSION_STR}")
+  string(REGEX REPLACE "^.*SOPLEX_VERSION[\t ]+[0-9][0-9]([0-9]).*$" "\\1" SoPlex_VERSION_PATCH "${_SoPlex_VERSION_STR}")
+  file(STRINGS "${_SoPlex_INCLUDE_DIR}/spxdefines.h" _SoPlex_SUBVERSION_STR REGEX "^#define[\t ]+SOPLEX_SUBVERSION[\t ]+[0-9].*")
+  string(REGEX REPLACE "^.*SOPLEX_SUBVERSION[\t ]+([0-9]).*$" "\\1" SoPlex_VERSION_SUBVERSION "${_SoPlex_SUBVERSION_STR}")
 
   # Search for library with version (release) or version.subversion (development).
 
-  set(_SOPLEX_VERSION_PREFIX "${SOPLEX_VERSION_MAJOR}.${SOPLEX_VERSION_MINOR}.${SOPLEX_VERSION_PATCH}")
-  set(_SOPLEX_VERSION_SUFFIX "${_SOPLEX_OSTYPE}.${_SOPLEX_ARCH}.${_SOPLEX_COMP}.${_SOPLEX_BUILD}")
-  find_library(_SOPLEX_LIB NAMES "soplex-${_SOPLEX_VERSION_PREFIX}.${_SOPLEX_VERSION_SUFFIX}" "soplex-${_SOPLEX_VERSION_PREFIX}.${SOPLEX_VERSION_SUBVERSION}.${_SOPLEX_VERSION_SUFFIX}"
-    PATHS ${_SOPLEX_ROOT_PATHS} PATH_SUFFIXES lib)
-  if (_SOPLEX_LIB)
-    string(REGEX REPLACE "^.*libsoplex-(.*)\\.a$" "\\1" SOPLEX_VERSION_STRING "${_SOPLEX_LIB}")
-    set(SOPLEX_LIBRARIES ${_SOPLEX_LIB} ${ZLIB_LIBRARIES} ${UBSAN_LIBRARIES})
+  set(SoPlex_VERSION "${SoPlex_VERSION_MAJOR}.${SoPlex_VERSION_MINOR}.${SoPlex_VERSION_PATCH}")
+  set(_SoPlex_VERSION_SUFFIX "${_SoPlex_OSTYPE}.${_SoPlex_ARCH}.${_SoPlex_COMP}.${_SoPlex_BUILD}")
+  find_library(SoPlex_LIBRARY NAMES "soplex-${SoPlex_VERSION}.${_SoPlex_VERSION_SUFFIX}" "soplex-${SoPlex_VERSION}.${SoPlex_VERSION_SUBVERSION}.${_SoPlex_VERSION_SUFFIX}"
+    PATHS ${_SoPlex_ROOT_PATHS} PATH_SUFFIXES lib)
+  if (SoPlex_LIBRARY)
+    string(REGEX REPLACE "^.*libsoplex-(.*)\\..*$" "\\1" SoPlex_VERSION_STRING "${SoPlex_LIBRARY}")
+    set(SoPlex_LIBRARIES ${SoPlex_LIBRARY} ${GMP_LIBRARIES} ${ZLIB_LIBRARIES} ${UBSAN_LIBRARIES})
   endif()
 endif()
 
 # Let cmake process everything.
 include(FindPackageHandleStandardArgs)
-find_package_handle_standard_args(SoPlex REQUIRED_VARS SOPLEX_ROOT_DIR SOPLEX_INCLUDE_DIRS SOPLEX_LIBRARIES VERSION_VAR SOPLEX_VERSION_STRING)
+find_package_handle_standard_args(SoPlex REQUIRED_VARS SoPlex_LIBRARY SoPlex_ROOT_DIR SoPlex_INCLUDE_DIRS SoPlex_LIBRARIES VERSION_VAR SoPlex_VERSION)
+
+# Restore the original find_library ordering.
+if(SoPlex_USE_STATIC_LIBS)
+  set(CMAKE_FIND_LIBRARY_SUFFIXES ${_SoPlex_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
+endif()
 
