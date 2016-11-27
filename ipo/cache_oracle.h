@@ -12,14 +12,26 @@ namespace ipo {
   class CacheOracle : public OracleBase
   {
   public:
+    enum Behavior
+    {
+      DISABLED,
+      CACHE_ONLY,
+      CACHE_AND_SEARCH
+    };
+
     /**
      * \brief Constructs an oracle that stores points and rays explicitly.
      *
      * Constructs an oracle with given \p name that stores points and rays returned by the associated oracle \p nextOracle
      * explicitly.
+     *
+     * \param nextOracle    Next oracle to be called if cache search was not satisfactory.
+     * \param outerBehavior Whether to cache/search points and rays.
+     * \param innerBehavior Whether to cache/search valid inequalities.
      */
 
-    CacheOracle(const std::shared_ptr<OracleBase>& nextOracle);
+    CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior = CACHE_AND_SEARCH,
+      Behavior innerBehavior = CACHE_AND_SEARCH);
 
     /**
      * \brief Destructor.
@@ -29,6 +41,44 @@ namespace ipo {
 
     virtual ~CacheOracle();
 
+    /**
+     * \brief Enables or disables caching/searching of valid inequalities.
+     *
+     * Enables or disables caching/searching of valid inequalities. Disabling also frees the current cache. Note that searching
+     * for valid inequalities requires solving an LP and only effects the returned heuristicLevel (\sa OracleBase).
+     */
+
+    void setOuterBehavior(Behavior outerBehavior);
+
+    /**
+     * \brief Returns the current caching/searching behavior for points and rays.
+     *
+     * Returns the current caching/searching behavior for points and rays.
+     */
+
+    inline Behavior outerBehavior() const
+    {
+      return _outerBehavior;
+    }
+
+    /**
+     * \brief Enables or disables caching/searching of points and rays.
+     *
+     * Enables or disables caching/searching of points and rays. Disabling also frees the current cache.
+     */
+
+    void setInnerBehavior(Behavior outerBehavior);
+
+    /**
+     * \brief Returns the current caching/searching behavior for points and rays.
+     *
+     * Returns the current caching/searching behavior for points and rays.
+     */
+
+    inline Behavior innerBehavior() const
+    {
+      return _innerBehavior;
+    }
 
     /**
      * \brief Restricts the oracle to the face defined by \p newFace.
@@ -40,7 +90,7 @@ namespace ipo {
      * setFace() for the next oracle.
      */
 
-    virtual void setFace(const LinearConstraint& newFace = completeFace());
+    virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
     /**
      * \brief Wrapper method that calls the oracle's implementation.
@@ -112,10 +162,19 @@ namespace ipo {
       double approximateObjectiveBound, bool handlingPoints, std::vector<Vector>& result);
 
   protected:
+    Behavior _outerBehavior;
+    Behavior _innerBehavior;
+
+    // Structures for inner caching.
+
     UniqueVectors _uniquePoints;
     UniqueVectors _uniqueRays;
     std::vector<Data> _facePoints;
     std::vector<Data> _faceRays;
+
+    // Structures for outer caching.
+
+    soplex::SoPlex _inequalities;
   };
 
 } /* namespace ipo */

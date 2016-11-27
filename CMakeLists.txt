@@ -4,11 +4,10 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 project(IPO)
 # The version number.
-set (IPO_VERSION_MAJOR 1)
-set (IPO_VERSION_MINOR 0)
+set(IPO_VERSION_MAJOR 1)
+set(IPO_VERSION_MINOR 0)
 
 add_definitions("-std=gnu++11")
-
 
 # Set default BUILD_TYPE:
 if(NOT CMAKE_BUILD_TYPE)
@@ -44,31 +43,32 @@ ENDIF(UNIX)
 
 ## ZIMPL, SoPlex and SCIP
 
+find_package(GMPXX REQUIRED)
 find_package(SoPlex REQUIRED)
 find_package(SCIP)
 
 ## IPO
 
-FIND_PATH(IPO_SOURCE_ROOT_DIR CMakeLists.txt
+find_path(IPO_SOURCE_ROOT_DIR CMakeLists.txt
   PATHS ${CMAKE_SOURCE_DIR}/ipo ${CMAKE_SOURCE_DIR}/deps/ipo
   NO_DEFAULT_PATH
   DOC "Location of IPO source as a CMAKE subproject")
 
-IF(EXISTS ${IPO_SOURCE_ROOT_DIR})
-  ADD_SUBDIRECTORY(${IPO_SOURCE_ROOT_DIR} deps/ipo)
-  SET(IPO_INCLUDE_DIRS
+if(EXISTS ${IPO_SOURCE_ROOT_DIR})
+  add_subdirectory(${IPO_SOURCE_ROOT_DIR} deps/ipo)
+  set(IPO_INCLUDE_DIRS
     ${IPO_SOURCE_ROOT_DIR}
     ${CMAKE_BINARY_DIR}/deps/ipo
   )
-  SET(IPO_LIBRARIES ipo)
-  UNSET(IPO_ROOT_DIR CACHE)
-  UNSET(IPO_DIR CACHE)
-  UNSET(IPO_INCLUDE_DIR CACHE)
-  UNSET(IPO_LIBRARY CACHE)
-ELSE()
-  FIND_PACKAGE(IPO QUIET NO_MODULE)
-  FIND_PACKAGE(IPO REQUIRED)
-ENDIF()
+  set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES})
+  unset(IPO_ROOT_DIR CACHE)
+  unset(IPO_DIR CACHE)
+  unset(IPO_INCLUDE_DIR CACHE)
+  unset(IPO_LIBRARY CACHE)
+else()
+  find_package(IPO QUIET NO_MODULE)
+  find_package(IPO REQUIRED)
+endif()
 
 
 

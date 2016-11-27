@@ -404,26 +404,28 @@ namespace ipo {
     return MutableVector(data);
   }
 
-  Vector integralScaled(const Vector& vector)
+  Vector integralScaled(const Vector& vector, Rational* factor)
   {
     // Compute scaling factor.
 
     IntegralScaler scaler;
     for (std::size_t p = 0; p < vector.size(); ++p)
       scaler(vector.value(p));
-    Rational factor = scaler.factor();
+    const Rational theFactor = scaler.factor();
+    if (factor != NULL)
+      *factor = theFactor;
 
     // Scale it.
 
     VectorData* data = new VectorData(vector.size());
     for (std::size_t p = 0; p < vector.size(); ++p)
-      data->add(vector.index(p), factor * vector.value(p));
+      data->add(vector.index(p), theFactor * vector.value(p));
     return Vector(data);
   }
 
-  void scaleIntegral(Vector& vector)
+  void scaleIntegral(Vector& vector, Rational* factor)
   {
-    vector = integralScaled(vector);
+    vector = integralScaled(vector, factor);
   }
 
   void scaleIntegral(std::vector<Vector>& vectors)

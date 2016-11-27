@@ -137,6 +137,14 @@ namespace ipo {
     void computeMissingObjectiveValues();
 
     /**
+     * \brief Sorts points according to objective value.
+     *
+     * Sorts points according to objective value.
+     */
+
+    void sortPoints();
+
+    /**
      * \brief Returns the objective value.
      *
      * Returns the objective value, i.e., the maximum objective value of all points, or infinity if unbounded, or -infinity
@@ -236,23 +244,23 @@ namespace ipo {
    *
    * A call to any of the maximize() methods to optimize objective \f$ c \in \mathbb{Q}^n \f$
    * over the current face \f$ F \f$ (\c setFace()) with \c improveValue \f$ \gamma \f$ and
-   * requested \c minHeuristic and \c maxHeuristic must obey the following rules, where we denote by
+   * requested \c minHeuristicLevel and \c Level must obey the following rules, where we denote by
    * \f$ S \subseteq F \f$ and \f$ R \subseteq \text{recc}(P) \f$ the sets of returned \c points
    * and \c rays, respectively. The returned \ref OracleResult is denoted by \c result.
    *
-   * \li \c result.heuristic must be at least \c minHeuristic and at most \c maxHeuristic, or equal to 0.
+   * \li \c result.heuristicLevel must be at least \c minHeuristic and at most \c maxHeuristic, or equal to 0.
    * \li One of \f$ S \f$ and \f$ R \f$ (or both) must be empty.
-   * \li If \f$ S = R = \emptyset \f$, then \c result.heuristic must be equal to 0 and \f$F = \emptyset\f$ must hold.
+   * \li If \f$ S = R = \emptyset \f$, then \c result.heuristicLevel must be equal to 0 and \f$F = \emptyset\f$ must hold.
    * \li Every \f$ r \in R\f$ satisfies \f$\left<c,r\right> > 0\f$.
-   * \li If \c result.heuristic is equal to 0, then \f$ R \neq \emptyset \f$ holds if and only
+   * \li If \c result.heuristicLevel is equal to 0, then \f$ R \neq \emptyset \f$ holds if and only
    *     if there exists a ray \f$r \in \text{recc}(F)\f$ with \f$\left<c,r\right> > 0\f$
    *     (given \f$F \neq \emptyset\f$).
-   * \li If \c result.heuristic is equal to 0 and \f$F \neq \emptyset\f$ holds,
+   * \li If \c result.heuristicLevel is equal to 0 and \f$F \neq \emptyset\f$ holds,
    *     then \f$S \neq \emptyset\f$ or \f$ R \neq \emptyset \f$ must hold.
-   * \li If \f$ S \neq \emptyset \f$ and \c result.heuristic is equal to zero, then
+   * \li If \f$ S \neq \emptyset \f$ and \c result.heuristicLevel is equal to zero, then
    *     \f$ \max\{ \left<c,x\right> \mid x \in F\} = \{ \left<c,s\right> \mid s \in S\} \f$
    *     must hold.
-   * \li If \f$ S \neq \emptyset \f$ and \c result.heuristic is positive, then
+   * \li If \f$ S \neq \emptyset \f$ and \c result.heuristicLevel is positive, then
    *     \f$ \max\{ \left<c,s\right> \mid s \in S\} > \gamma \f$ must hold or \f$S\f$ must contain at most one element
    *     (to certify feasibility).
    **/
@@ -454,6 +462,9 @@ namespace ipo {
     std::shared_ptr<OracleBase> _nextOracle; // Next associated optimization oracle (or NULL if exact).
     HeuristicLevel _heuristicLevel; // Number of associated oracles.
     soplex::DVectorRational _tempObjective; // Dense rational versi::DVectorRational on of the current objective.
+#ifdef IPO_DEBUG
+    bool _initialized;
+#endif
   };
 
   /**

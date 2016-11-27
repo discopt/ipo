@@ -541,7 +541,7 @@ namespace ipo {
 
       for (std::size_t i = 0; i < givenEquations.size(); ++i)
       {
-        if (_equationSpace.isDependent(i))
+        if (!_equationSpace.isDependent(i))
           _equations.push_back(givenEquations[i]);
       }
 
@@ -583,7 +583,9 @@ namespace ipo {
           _allowedDirectionColumns.push_back(c);
         }
         else if (!_columns[_allowedDirectionColumns.front()].requiredBefore(_columns[c]))
+        {
           _allowedDirectionColumns.push_back(c);
+        }
       }
 
       for (std::size_t i = 0; i < _allowedDirectionColumns.size(); ++i)
@@ -770,8 +772,7 @@ namespace ipo {
         _allowedDirectionColumns.clear();
         do
         {
-          if (_allowedDirectionColumns.empty())
-            computeAllowedDirectionColumn();
+          computeAllowedDirectionColumn();
           assert(!_allowedDirectionColumns.empty());
 
           if (paramApproximateDirections)
@@ -1069,10 +1070,10 @@ namespace ipo {
         _stream << "AH: Computed " << state.directionApproximateSolves() << " approximate directions.\n";
       break;
       case DIRECTIONS_EXACT_BEGIN:
-        _stream << "AH: Computed an exact direction.\n";
+        _stream << "AH: Computing exact directions.\n";
       break;
       case DIRECTIONS_EXACT_COMPUTED:
-        _stream << "AH: Computing exact directions.\n";
+        _stream << "AH: Computed an exact direction.\n";
       break;
       case DIRECTIONS_EXACT_END:
         _stream << "AH: Computed " << state.directionExactSolves() << " exact directions.\n";

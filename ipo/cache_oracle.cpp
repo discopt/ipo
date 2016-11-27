@@ -41,17 +41,52 @@ namespace ipo {
     return valueMantissa > other.valueMantissa;
   }
 
-  CacheOracle::CacheOracle(const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase("CacheOracle(" + nextOracle->name() + ")", nextOracle), _uniquePoints(nextOracle->space().dimension()),
-    _uniqueRays(nextOracle->space().dimension())
+  CacheOracle::CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior, Behavior innerBehavior)
+    : OracleBase("CacheOracle", nextOracle), _uniquePoints(nextOracle->space().dimension()),
+    _uniqueRays(nextOracle->space().dimension()), _outerBehavior(outerBehavior), _innerBehavior(innerBehavior)
   {
     assert(nextOracle);
 
     OracleBase::initializeSpace(nextOracle->space());
+
+    _inequalities.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
+    _inequalities.setIntParam(SoPlex::SOLVEMODE, SoPlex::SOLVEMODE_RATIONAL);
+    _inequalities.setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
+    _inequalities.setRealParam(SoPlex::FEASTOL, 0.0);
+    _inequalities.setBoolParam(SoPlex::RATREC, true);
+    _inequalities.setBoolParam(SoPlex::RATFAC, true);
+    _inequalities.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
+
+    LPColSetRational cols;
+    DSVectorRational zeroVector;
+    for (std::size_t v = 0; v < space().dimension(); ++v)
+    {
+      cols.add(Rational(0), -infinity, zeroVector, infinity);
+    }
+    _inequalities.addColsRational(cols);
+
   }
 
   CacheOracle::~CacheOracle()
   {
+
+  }
+
+  void CacheOracle::setOuterBehavior(CacheOracle::Behavior outerBehavior)
+  {
+    _outerBehavior = outerBehavior;
+    if (outerBehavior == DISABLED)
+    {
+      _uniquePoints.clear();
+      _uniqueRays.clear();
+      _facePoints.clear();
+      _faceRays.clear();
+    }
+  }
+
+  void CacheOracle::setInnerBehavior(CacheOracle::Behavior innerBehavior)
+  {
+    _innerBehavior = innerBehavior;
 
   }
 
@@ -85,9 +120,73 @@ namespace ipo {
     HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDups);
 
-    if (level < heuristicLevel())
+    if (level > 0 && _outerBehavior == CACHE_AND_SEARCH && result.isFeasible())
     {
-      // Result was not produced by the cache.
+      if (sort)
+      {
+        result.computeMissingObjectiveValues();
+        result.sortPoints();
+        sort = false;
+      }
+
+      _inequalities.changeObjRational(objective);
+      SPxSolver::Status status = _inequalities.solve();
+
+      if (status == SPxSolver::OPTIMAL && _inequalities.objValueRational() == result.points.front().objectiveValue)
+      {
+        level = 0;
+      }
+    }
+    else if (level == 0 && _outerBehavior != DISABLED && result.isFeasible())
+    {
+      if (sort)
+      {
+        result.computeMissingObjectiveValues();
+        result.sortPoints();
+        sort = false;
+      }
+
+      const Rational& optimum = result.points.front().objectiveValue;
+      std::size_t numNonzeros = 0;
+      std::size_t nonzero = 0;
+      for (std::size_t v = 0; v < space().dimension(); ++v)
+      {
+        if (objective[v] != 0)
+        {
+          numNonzeros++;
+          nonzero = v;
+          if (numNonzeros >= 2)
+            break;
+        }
+      }
+      if (numNonzeros == 1)
+      {
+        // Update bound constraint.
+
+        if (objective[nonzero] > 0)
+        {
+          Rational newBound = optimum / objective[nonzero];
+          if (newBound < _inequalities.upperRational(nonzero))
+            _inequalities.changeBoundsRational(nonzero, _inequalities.lowerRational(nonzero), newBound);
+        }
+        else
+        {
+          assert(objective[nonzero] < 0);
+          Rational newBound = optimum / objective[nonzero];
+          if (newBound > _inequalities.lowerRational(nonzero))
+            _inequalities.changeBoundsRational(nonzero, newBound, _inequalities.upperRational(nonzero));
+        }
+      }
+      else if (numNonzeros > 1)
+      {
+        DSVectorRational normal(objective);
+        _inequalities.addRowRational(LPRowRational(-infinity, normal, optimum));
+      }
+    }
+
+    if (_innerBehavior != DISABLED && level < heuristicLevel())
+    {
+      // Result was not produced by the cache. so we have to add it.
 
       std::size_t numAddedPoints = 0;
       for (std::size_t i = 0; i < result.points.size(); ++i)
@@ -109,6 +208,9 @@ namespace ipo {
   HeuristicLevel CacheOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
+    if (_innerBehavior != CACHE_AND_SEARCH)
+      return heuristicLevel();
+
     soplex::DVectorReal approximateObjective(objective.dim());
     for (std::size_t i = 0; i < approximateObjective.dim(); ++i)
       approximateObjective[i] = double(objective[i]);
@@ -125,14 +227,13 @@ namespace ipo {
       result.rays.push_back(OracleResult::Ray(searchResult[i]));
     }
     if (!result.rays.empty())
-      return heuristicLevel();
+      return 0;
 
     // Search points.
 
     search(_facePoints, approximateObjective, objectiveBound.value > -infinity ? double(objectiveBound.value) : 0.0, true,
       searchResult);
 
-    bool foundSatisfying = false;
     for (std::size_t i = 0; i < searchResult.size(); ++i)
     {
       Rational activity = objective * searchResult[i];
@@ -162,7 +263,7 @@ namespace ipo {
 
   bool CacheOracle::addRay(const Vector& ray)
   {
-    Vector r = ray;
+    Vector r = integralScaled(ray);
     if (!_uniqueRays.insert(r))
       return false;
 
