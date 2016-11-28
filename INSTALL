@@ -96,7 +96,7 @@ issue the following commands:
 
 3. Perform system checks and create the makefiles.
 
-  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSOPLEX_ROOT_DIR=${SOPLEX} ..
+  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSoPlex_ROOT_DIR=${SOPLEX} ..
 
 4. Build IPO.
 
@@ -163,12 +163,12 @@ You find a list of the most useful options below.
 
   Uses the given path when searching for the ZIMPL library.
 
--DSOPLEX_ROOT_DIR=path-to-soplex
+-DSoPlex_ROOT_DIR=path-to-soplex
 
   Uses the given path when searching for the SoPlex library.
   This could be the source or installation directory.
 
--DSOPLEX_BUILD_TYPE=opt|dbg|prf
+-DSoPlex_BUILD_TYPE=opt|dbg|prf
 
   Configures IPO to link to optimized, debug or profiling versions of SoPlex.
 
