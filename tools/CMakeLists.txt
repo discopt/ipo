@@ -2,7 +2,7 @@ include_directories(
   ${CMAKE_SOURCE_DIR}
   ${CMAKE_SOURCE_DIR}/src
   ${CMAKE_BINARY_DIR}/src
-  ${SOPLEX_INCLUDE_DIRS}
+  ${SoPlex_INCLUDE_DIRS}
 )
 
 if (SCIP_FOUND)

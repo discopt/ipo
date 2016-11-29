@@ -12,7 +12,7 @@ find_path(IPO_ROOT_DIR NAMES include/ipo/oracles.h ipo/oracles.h HINTS ${_IPO_RO
 
 find_path(_IPO_INCLUDE NAMES ipo/oracles.h PATHS ${IPO_ROOT_DIR} PATH_SUFFIXES include)
 if (_IPO_INCLUDE)
-  set(IPO_INCLUDE_DIRS ${IPO_INCLUDE_DIRS} ${SOPLEX_INCLUDE_DIRS})
+  set(IPO_INCLUDE_DIRS ${IPO_INCLUDE_DIRS} ${SoPlex_INCLUDE_DIRS})
 endif()
 
 # Libraries
@@ -20,7 +20,7 @@ endif()
 find_library(_IPO_LIB NAMES ipo PATHS ${IPO_ROOT_DIR} PATH_SUFFIXES lib)
 
 if (_IPO_LIB)
-  set(IPO_LIBRARIES ${_IPO_LIB} ${SOPLEX_LIBRARIES})
+  set(IPO_LIBRARIES ${_IPO_LIB} ${SoPlex_LIBRARIES})
 endif()
 
 include(FindPackageHandleStandardArgs)
