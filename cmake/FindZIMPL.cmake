@@ -119,6 +119,9 @@ endif()
 find_path(ZIMPL_ROOT_DIR NAMES bin/zimpl HINTS ${_ZIMPL_ROOT_HINTS})
 set(ZIMPL_EXECUTABLE "${ZIMPL_ROOT_DIR}/bin/zimpl")
 
+# Execution of `zimpl -V` below may need a path for finding the shared library.
+set(ENV{LD_LIBRARY_PATH} ${LD_LIBRARY_PATH}:${ZIMPL_ROOT_DIR}/lib)
+
 # Run `zimpl -V` to get the version.
 execute_process(COMMAND ${ZIMPL_ROOT_DIR}/bin/zimpl -V OUTPUT_VARIABLE _ZIMPL_VERSION_STR OUTPUT_STRIP_TRAILING_WHITESPACE)
 string(REGEX REPLACE "^([0-9]).*$" "\\1" ZIMPL_VERSION_MAJOR "${_ZIMPL_VERSION_STR}")
