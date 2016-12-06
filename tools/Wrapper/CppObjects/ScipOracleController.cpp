@@ -1,5 +1,23 @@
 #include "ScipOracleController.h"
 
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include <ipo/scip_exception.hpp>
+  #include <ipo/scip_oracles.h>
+  #include <scip/debug.h>
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #include <ipo/scip_exception.hpp>
+  #include <ipo/scip_oracles.h>
+  #include <scip/debug.h>
+#endif
+
 ScipOracleController::ScipOracleController(std::string filename){
   //Create oracle triple from ScipOracle, StatisticsOracle, CacheOracle
   SCIP* scip = NULL;
@@ -10,7 +28,7 @@ ScipOracleController::ScipOracleController(std::string filename){
   const char *c_filename = filename.c_str();
   SCIP_CALL_EXC(SCIPreadProb(scip, c_filename, NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
-  scipOracleImpl = std::make_shared<SCIPOracle>("SCIPOracle("+filename")", scip);
+  scipOracleImpl = std::make_shared<SCIPOracle>("SCIPOracle("+filename+")", scip);
   SCIP_CALL_EXC(SCIPfree(&scip));
   scipOracle = std::make_shared<StatisticsOracle>(scipOracleImpl);
 
@@ -28,7 +46,7 @@ ScipOracleController::ScipOracleController(std::string filename, ScipOracleContr
   const char *c_filename = filename.c_str();
   SCIP_CALL_EXC(SCIPreadProb(scip, c_filename, NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
-  scipOracleImpl = std::make_shared<SCIPOracle>("SCIPOracle("+filename")", scip, prev.getConnectionOracle());
+  scipOracleImpl = std::make_shared<SCIPOracle>("SCIPOracle("+filename+")", scip, prev.getConnectionOracle());
   SCIP_CALL_EXC(SCIPfree(&scip));
   scipOracle = std::make_shared<StatisticsOracle>(scipOracleImpl);
 
@@ -36,8 +54,8 @@ ScipOracleController::ScipOracleController(std::string filename, ScipOracleContr
   cacheOracle = std::make_shared<StatisticsOracle>(cacheOracleImpl);
 }
 
-std::shared_ptr<StatisticsOracle> getConnectionOracle(){
-  return scipOracle;
+std::shared_ptr<StatisticsOracle> ScipOracleController::getConnectionOracle(){
+  return this->scipOracle;
 }
 
 int ScipOracleController::heuristicLevel_ScipOracle(){
@@ -60,13 +78,8 @@ InnerDescription ScipOracleController::affineHullInner(int outputMode){
   InnerDescription inner;
 
   std::vector<AffineHullHandler*> handlers; // Soll pro Aufruf lokal erzeugt werden.
+  DebugAffineHullHandler debugHandler(std::cout);
 
-  if(outputMode == 1){
-    DebugAffineHullHandler debugHandler(std::cout); // Später soll Ausgabedetail konfigurierbar sein.
-  }
-  else{
-    DebugAffineHullHandler debugHandler(std::cout);
-  }
   StatisticsAffineHullHandler statsHandler;
   handlers.push_back(&debugHandler);
   handlers.push_back(&statsHandler);
@@ -82,13 +95,8 @@ AffineOuterDescription ScipOracleController::affineHullOuter(int outputMode){
   InnerDescription inner;
 
   std::vector<AffineHullHandler*> handlers; // Soll pro Aufruf lokal erzeugt werden.
-
-  if(outputMode == 1){
-    DebugAffineHullHandler debugHandler(std::cout); // Später soll Ausgabedetail konfigurierbar sein.
-  }
-  else{
-    DebugAffineHullHandler debugHandler(std::cout);
-  }
+    
+  DebugAffineHullHandler debugHandler(std::cout);
   StatisticsAffineHullHandler statsHandler;
   handlers.push_back(&debugHandler);
   handlers.push_back(&statsHandler);

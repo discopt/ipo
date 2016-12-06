@@ -7,8 +7,9 @@
 from libcpp.string cimport string
 from libcpp cimport bool as bool_cpp
 from libcpp.vector cimport vector
+from cppSoplexRational cimport Rational
 
-cdef extern from "ipo/vectors-pub.h" namespace "ipo":
+cdef extern from "ipo/vectors.h" namespace "ipo":
     cdef cppclass MutableVector:
         MutableVector() except +
     cdef cppclass Vector:
@@ -26,6 +27,7 @@ cdef extern from "ipo/vectors-pub.h" namespace "ipo":
         size_t index(size_t position)
         bool_cpp isSorted()
         double approximation(size_t position)
+        const Rational& value(size_t position)
         bool_cpp operator==(const ReferenceCountedVector& other)
         bool_cpp operator!=(const ReferenceCountedVector& other)
         bool_cpp operator<(const ReferenceCountedVector& other)
@@ -36,6 +38,12 @@ cdef extern from "ipo/vectors-pub.h" namespace "ipo":
 
 ## Wrapper ##
 cdef object CreateIPOVector(Vector *vector)
+cdef object CreateConstIPOVector(const Vector *vector)
 
 cdef class IPOVector:
     cdef Vector *vec
+    cdef const Vector *const_vec
+
+cdef class IPOReferenceCountedVector:
+    cdef ReferenceCountedVector *vec
+    cdef const ReferenceCountedVector *const_vec

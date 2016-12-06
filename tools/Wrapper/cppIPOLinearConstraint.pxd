@@ -1,5 +1,5 @@
 ###################################
-# cppLinearConstraint.pxd, 1.0
+# cppIPOLinearConstraint.pxd, 1.0
 # 14.10.2016, Sandra Hicks
 #	Definition des Interface zu LinearConstraint IPO C++ Klasse
 #
@@ -8,19 +8,20 @@ from libcpp.string cimport string
 from libcpp cimport bool as bool_cpp
 from libcpp.vector cimport vector
 from cppIPOVector cimport Vector
+from cppSoplexRational cimport Rational
 
-
-cdef extern from "ipo/linear_constraint-pub.h" namespace "ipo":
+cdef extern from "ipo/linear_constraint.h" namespace "ipo":
     cdef cppclass LinearConstraint:
         LinearConstraint() except +
-        #LinearConstraint(char type, const Vector& normal, const Rational& rhs) except +
+        LinearConstraint(char type, const Vector& normal, const Rational& rhs) except +
 
         bool_cpp operator==(const LinearConstraint& other)
+        bool_cpp operator<(const LinearConstraint& other)
         bool_cpp isEquation()
         char type()
-        Vector& normal()
-        #Rational& rhs()
-        #Rational getMaximumNorm()
+        const Vector& normal()
+        const Rational& rhs()
+        Rational getMaximumNorm()
 
         bool_cpp definesCompleteFace()
         bool_cpp definesEmptyFace()
@@ -36,3 +37,4 @@ cdef object CreateLinearConstraint(LinearConstraint *linconst)
 
 cdef class IPOLinearConstraint:
     cdef LinearConstraint *lin
+    cdef const LinearConstraint *const_lin

@@ -6,9 +6,11 @@
 ###################################
 cimport cppIPOLinearConstraint
 cimport cppIPOVector
+cimport cppSoplexRational
 import IPOVector
-from cpython.object cimport Py_EQ
-from cython.operator cimport dereference as deref
+import IPOErrors
+from cpython.object cimport Py_EQ, Py_LT
+from cython.operator cimport dereference as deref, address as ref
 
 cdef object CreateLinearConstraint(cppIPOLinearConstraint.LinearConstraint *linconst):
     py_linconst = IPOLinearConstraint()
@@ -17,43 +19,104 @@ cdef object CreateLinearConstraint(cppIPOLinearConstraint.LinearConstraint *linc
 
 cdef class IPOLinearConstraint:
     cdef cppIPOLinearConstraint.LinearConstraint *lin
+    cdef const cppIPOLinearConstraint.LinearConstraint *const_lin
 
-    def __cinit__(self):
-        self.lin = new cppIPOLinearConstraint.LinearConstraint()
-        if self.lin is NULL:
-            raise MemoryError()
+    def __cinit__(self, isConst):
+        if (not isConst):
+            self.lin = new cppIPOLinearConstraint.LinearConstraint()
+            if self.lin is NULL:
+                raise MemoryError()
     def __dealloc__(self):
         del self.lin
+        del self.const_lin
+
+    def isConstant(self):
+        return (self.const_lin is not NULL)
 
     def __richcmp__(IPOLinearConstraint self, IPOLinearConstraint y not None, int op):
         if op == Py_EQ:
             return self.lin==y.lin
+        elif op == Py_LT:
+            return self.lin<y.lin
 
     def isEquation(self):
-        return self.lin.isEquation()
+        if(self.lin is not NULL):
+            return self.lin.isEquation()
+        else:
+            return self.const_lin.isEquation()
 
     def type(self):
-        return self.lin.type()
+        if(self.lin is not NULL):
+            return self.lin.type()
+        else:
+            return self.const_lin.type()
 
     def normal(self):
-        cdef cppIPOVector.Vector *c_vector
-        c_vector = <cppIPOVector.Vector *>self.lin.normal()
-        py_vector = cppIPOVector.CreateIPOVector(c_vector)
-        
-        return py_vector
-        
+        cdef const cppIPOVector.Vector *c_vector
+        if(self.lin is not NULL):
+            c_vector = ref(self.lin.normal())
+            py_vector = cppIPOVector.CreateConstIPOVector(c_vector)
+            return py_vector
+        else:
+            c_vector = ref(self.const_lin.normal())
+            py_vector = cppIPOVector.CreateConstIPOVector(c_vector)
+            return py_vector
+
+    def rhs(self):
+        cdef const cppSoplexRational.Rational *rational
+        if(self.lin is not NULL):
+            rational = ref(self.lin.rhs())
+            py_rational = cppSoplexRational.CreateConstSoplexRational(rational)
+            return py_rational
+        else:
+            rational = ref(self.const_lin.rhs())
+            py_rational = cppSoplexRational.CreateConstSoplexRational(rational)
+            return py_rational
+
+    def getMaximumNorm(self):
+        cdef cppSoplexRational.Rational *rational
+        #if(self.lin is not NULL):
+            #rational = &self.lin.getMaximumNorm()
+            #py_rational = cppSoplexRational.CreateSoplexRational(rational)
+            #return py_rational
+        #else:
+            #rational = &self.const_lin.getMaximumNorm()
+            #py_rational = cppSoplexRational.CreateSoplexRational(rational)
+            #return py_rational
+
     def definesCompleteFace(self):
-        return self.lin.definesCompleteFace()
+        if(self.lin is not NULL):
+            return self.lin.definesCompleteFace()
+        else:
+            return self.const_lin.definesCompleteFace()
 
     def definesEmptyFace(self):
-        return self.lin.definesEmptyFace()
+        if(self.lin is not NULL):
+            return self.lin.definesEmptyFace()
+        else:
+            return self.const_lin.definesEmptyFace()
 
     def definesTrivialFace(self):
-        return self.lin.definesTrivialFace()
+        if(self.lin is not NULL):
+            return self.lin.definesTrivialFace()
+        else:
+            return self.const_lin.definesTrivialFace()
 
     def evaluatePoint(self, cppIPOVector.IPOVector point):
-        return self.lin.evaluatePoint((<cppIPOVector.Vector &>point.vec))
+        if (point.isConstant()):
+            if(self.lin is not NULL):
+                return self.lin.evaluatePoint(deref(point.const_vec))
+            else:
+                return self.const_lin.evaluatePoint(deref(point.const_vec))
+        else:
+            raise IPOErrors.NonConstError('IPOVector')
 
     def evaluateRay(self, cppIPOVector.IPOVector ray):
-        return self.lin.evaluateRay((<cppIPOVector.Vector &>ray.vec))
-
+        if (ray.isConstant()):
+            
+            if(self.lin is not NULL):
+                return self.lin.evaluateRay(deref(ray.const_vec))
+            else:
+                return self.const_lin.evaluateRay(deref(ray.const_vec))
+        else:
+            raise IPOErrors.NonConstError('IPOVector')

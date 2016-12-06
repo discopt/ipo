@@ -8,9 +8,14 @@
 cimport cppScipOracle
 cimport cppIPOVector
 cimport cppIPOLinearConstraint
+
+import IPOLinearConstraint
 import IPOVector
+import IPOErrors
+
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
+from cython.operator cimport dereference as deref, address as ref
 
 cdef object CreateScipOracle(str name, cppScipOracle.ScipOracleController oracle):
     py_oracle = IPOScipOracle(name, 0)
@@ -49,13 +54,13 @@ cdef class IPOScipOracle:
         cdef cppIPOVector.Vector *c_vector
         #convert points to python wrapperclass IPOVector
         for i in range(0,c_points.size()):
-            c_vector = <cppIPOVector.Vector *>c_points[i]
+            c_vector = ref(c_points[i])
             py_vector = cppIPOVector.CreateIPOVector(c_vector)
             points.append(py_vector)
 
         #convert rays to python wrapperclass IPOVector
         for i in range(0,c_rays.size()):
-            c_vector = <cppIPOVector.Vector *>c_rays[i]
+            c_vector = ref(c_rays[i])
             py_vector = cppIPOVector.CreateIPOVector(c_vector)
             rays.append(py_vector)
 
@@ -66,7 +71,7 @@ cdef class IPOScipOracle:
         outer = ()
 
         for i in range(0, c_outer.size()):
-            c_linconst = <cppIPOLinearConstraint.LinearConstraint *>c_outer[i]
+            c_linconst = ref(c_outer[i])
             py_linconst = cppIPOLinearConstraint.CreateLinearConstraint(c_linconst)
             outer.append(py_linconst)
 

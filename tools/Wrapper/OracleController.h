@@ -23,7 +23,7 @@
 #include "ipo/scip_oracles.h"
 #include "ipo/cache_oracle.h"
 #include "ipo/statistics_oracle.h"
-#include "ipo/vectors-pub.h"
+#include <ipo/vectors.h>
 using namespace ipo;
 
 class OracleController
