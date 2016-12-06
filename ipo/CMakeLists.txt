@@ -35,6 +35,7 @@ set(IPO_SOURCES
   external_oracle.cpp
   console_app.cpp
   parser.cpp
+  python_wrapper.cpp
 )
 
 set(IPO_INSTALL_HEADERS
@@ -60,6 +61,7 @@ set(IPO_INSTALL_HEADERS
   reconstruct.h
   vector_2d.h
   vector_space_generators.h
+  python_wrapper.h
 )
 
 set(IPO_OTHER_HEADERS

@@ -8,7 +8,7 @@ from libcpp.string cimport string
 from cppIPOVector cimport InnerDescription
 from cppIPOLinearConstraint cimport AffineOuterDescription
 
-cdef extern from "CppObjects/ScipOracleController.h":
+cdef extern from "ipo/python_wrapper.h" namespace "ipo":
     cdef cppclass ScipOracleController:
         ScipOracleController(string name) except +
         ScipOracleController(string name, ScipOracleController prev) except +

@@ -13,6 +13,7 @@ import IPOLinearConstraint
 import IPOVector
 import IPOErrors
 
+
 from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from cython.operator cimport dereference as deref, address as ref
