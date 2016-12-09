@@ -38,8 +38,9 @@
 
 find_program(ExactSCIP_EXECUTABLE NAMES scip PATHS ${ExactSCIP_ROOT_DIR}/bin NO_DEFAULT_PATH)
 if(ExactSCIP_EXECUTABLE)
-  execute_process(COMMAND ${ExactSCIP_EXECUTABLE} -c quit OUTPUT_VARIABLE _ExactSCIP_VERSION_STR OUTPUT_STRIP_TRAILING_WHITESPACE)
-  string(REGEX REPLACE ".*SCIP version ([0-9.][0-9.]+) \\[.*$" "\\1" ExactSCIP_VERSION "${_ExactSCIP_VERSION_STR}")
+  execute_process(COMMAND ${ExactSCIP_EXECUTABLE} -c quit OUTPUT_VARIABLE _ExactSCIP_VERSION_OUTPUT 
+ERROR_VARIABLE _ExactSCIP_VERSION_ERROR OUTPUT_STRIP_TRAILING_WHITESPACE)
+  string(REGEX REPLACE ".*SCIP version ([0-9.][0-9.]+) \\[.*$" "\\1" ExactSCIP_VERSION "${_ExactSCIP_VERSION_OUTPUT}")
 endif()
 
 include(FindPackageHandleStandardArgs)

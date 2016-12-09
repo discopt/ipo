@@ -5,6 +5,8 @@
 #include <sys/stat.h>
 #include "timer.h"
 
+#include "exactscip_config.h"
+
 using namespace soplex;
 
 namespace ipo {
@@ -13,8 +15,9 @@ namespace ipo {
     const std::shared_ptr<OracleBase>& nextOracle)
     : OracleBase(name, nextOracle), _mixedIntegerSet(mixedIntegerSet)
   {
-    // TODO: If ExactSCIP specified, then default-initialize here.
-    // setBinary(DEFAULT_);
+#ifdef WITH_ExactSCIP
+    setBinaryPath(ExactSCIPPath);
+#endif
 
     initializeSpace(_mixedIntegerSet->space());
   }

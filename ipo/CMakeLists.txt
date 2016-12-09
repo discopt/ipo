@@ -72,11 +72,17 @@ set(IPO_OTHER_HEADERS
   common-minsizerel.h
 )
 
-if (SCIP_FOUND)
+if(SCIP_FOUND)
   set(IPO_SOURCES ${IPO_SOURCES} scip_oracle.cpp)
   set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracle.h scip_exception.hpp)
   string(TOUPPER ${SCIP_LPS} SCIP_LPI)
   add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
+endif()
+
+if(ExactSCIP_FOUND)
+  add_definitions(-DWITH_ExactSCIP)
+  configure_file(exactscip_config.h.in ${CMAKE_BINARY_DIR}/exactscip_config.h)
+  include_directories(${CMAKE_BINARY_DIR})
 endif()
 
 add_library(ipo-static STATIC ${IPO_SOURCES})
@@ -95,7 +101,7 @@ target_link_libraries(ipo-shared
 )
 set_target_properties(ipo-shared PROPERTIES OUTPUT_NAME ipo)
 
-if (SCIP_FOUND)
+if(SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
   target_link_libraries(ipo-static ${SCIP_LIBRARIES})
   target_link_libraries(ipo-shared ${SCIP_LIBRARIES})
