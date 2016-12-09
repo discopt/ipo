@@ -33,6 +33,7 @@ set(IPO_SOURCES
   smallest_face.cpp
   statistics_oracle.cpp
   external_oracle.cpp
+  exactscip_oracle.cpp
   console_app.cpp
   parser.cpp
 )
@@ -56,6 +57,7 @@ set(IPO_INSTALL_HEADERS
   statistics_oracle.h
   timer.h
   unique_vectors.h
+  exactscip_oracle.h
   rational.h
   reconstruct.h
   vector_2d.h
@@ -71,8 +73,8 @@ set(IPO_OTHER_HEADERS
 )
 
 if (SCIP_FOUND)
-  set(IPO_SOURCES ${IPO_SOURCES} scip_oracles.cpp)
-  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracles.h scip_exception.hpp)
+  set(IPO_SOURCES ${IPO_SOURCES} scip_oracle.cpp)
+  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracle.h scip_exception.hpp)
   string(TOUPPER ${SCIP_LPS} SCIP_LPI)
   add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
 endif()

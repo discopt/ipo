@@ -5,7 +5,7 @@
 
 #ifdef WITH_SCIP
 #include <scip/cons_linear.h>
-#include "scip_oracles.h"
+#include "scip_oracle.h"
 #endif
 
 namespace ipo {
