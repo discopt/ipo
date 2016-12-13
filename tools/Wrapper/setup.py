@@ -9,10 +9,6 @@ from Cython.Build import cythonize
 import os
 from distutils.util import get_platform
 
-#platform = get_platform()
-#if platform in ["linux-x86_64"]:
-#    os.environ["CFLAGS"] = "-fpic"
-
 ext = Extension(
     "IPO",                 # name of extension
 
@@ -27,7 +23,7 @@ ext = Extension(
     runtime_library_dirs = ["/usr/local/lib/", "/opt/scipoptsuite-3.2.1/lib/", "/opt/scipoptsuite-3.2.1/soplex-2.2.1/lib/", "/opt/scipoptsuite-3.2.1/scip-3.2.1/lib", "/opt/scipoptsuite-3.2.1/zimpl-3.3.3/lib"],
 
     #needs C++11 standard to compile
-    extra_compile_args=['-std=c++11'],
+    extra_compile_args=['-std=c++11', '-lz'],
     language="c++"
     )
 

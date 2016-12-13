@@ -3,9 +3,12 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
+        "depends": [
+            "/opt/scipoptsuite-3.2.1/soplex-2.2.1/src/rational.h", 
+            "/usr/local/include/ipo/vectors.h"
+        ], 
         "extra_compile_args": [
-            "-std=c++11", 
-            "-ggdb"
+            "-std=c++11"
         ], 
         "include_dirs": [
             "/usr/local/include/", 
@@ -904,11 +907,7 @@ static const char __pyx_k_range[] = "range";
 static const char __pyx_k_append[] = "append";
 static const char __pyx_k_import[] = "__import__";
 static const char __pyx_k_IPOErrors[] = "IPOErrors";
-static const char __pyx_k_IPOVector[] = "IPOVector";
-static const char __pyx_k_IPOLinearConstraint[] = "IPOLinearConstraint";
 static PyObject *__pyx_n_s_IPOErrors;
-static PyObject *__pyx_n_s_IPOLinearConstraint;
-static PyObject *__pyx_n_s_IPOVector;
 static PyObject *__pyx_n_s_append;
 static PyObject *__pyx_n_s_import;
 static PyObject *__pyx_n_s_isNew;
@@ -2162,8 +2161,6 @@ static struct PyModuleDef __pyx_moduledef = {
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_IPOErrors, __pyx_k_IPOErrors, sizeof(__pyx_k_IPOErrors), 0, 0, 1, 1},
-  {&__pyx_n_s_IPOLinearConstraint, __pyx_k_IPOLinearConstraint, sizeof(__pyx_k_IPOLinearConstraint), 0, 0, 1, 1},
-  {&__pyx_n_s_IPOVector, __pyx_k_IPOVector, sizeof(__pyx_k_IPOVector), 0, 0, 1, 1},
   {&__pyx_n_s_append, __pyx_k_append, sizeof(__pyx_k_append), 0, 0, 1, 1},
   {&__pyx_n_s_import, __pyx_k_import, sizeof(__pyx_k_import), 0, 0, 1, 1},
   {&__pyx_n_s_isNew, __pyx_k_isNew, sizeof(__pyx_k_isNew), 0, 0, 1, 1},
@@ -2304,33 +2301,9 @@ PyMODINIT_FUNC PyInit_IPOScipOracle(void)
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "IPOScipOracle.pyx":12
- * cimport cppIPOLinearConstraint
- * 
- * import IPOLinearConstraint             # <<<<<<<<<<<<<<
- * import IPOVector
- * import IPOErrors
- */
-  __pyx_t_3 = __Pyx_Import(__pyx_n_s_IPOLinearConstraint, 0, -1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 12, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOLinearConstraint, __pyx_t_3) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-
-  /* "IPOScipOracle.pyx":13
- * 
- * import IPOLinearConstraint
- * import IPOVector             # <<<<<<<<<<<<<<
- * import IPOErrors
- * 
- */
-  __pyx_t_3 = __Pyx_Import(__pyx_n_s_IPOVector, 0, -1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 13, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOVector, __pyx_t_3) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-
   /* "IPOScipOracle.pyx":14
- * import IPOLinearConstraint
- * import IPOVector
+ * #import IPOLinearConstraint
+ * #import IPOVector
  * import IPOErrors             # <<<<<<<<<<<<<<
  * 
  * 

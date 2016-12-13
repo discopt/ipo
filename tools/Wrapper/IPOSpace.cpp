@@ -3,9 +3,12 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
+        "depends": [
+            "/opt/scipoptsuite-3.2.1/soplex-2.2.1/src/rational.h", 
+            "/usr/local/include/ipo/vectors.h"
+        ], 
         "extra_compile_args": [
-            "-std=c++11", 
-            "-ggdb"
+            "-std=c++11"
         ], 
         "include_dirs": [
             "/usr/local/include/", 
@@ -22,7 +25,7 @@
             "nlpi.cppad.linux.x86_64.gnu.opt", 
             "objscip-3.2.1.linux.x86_64.gnu.opt", 
             "lpispx-3.2.1.linux.x86_64.gnu.opt", 
-            "lpispx-3.2.1.linux.x86_64.gnu.opt"
+            "gmp"
         ], 
         "library_dirs": [
             "/usr/local/lib/", 
@@ -631,7 +634,7 @@ struct __pyx_obj_11cppIPOSpace_IPOSpace {
 };
 
 
-/* "IPOSpace.pyx":25
+/* "IPOSpace.pyx":26
  *     return py_space
  * 
  * cdef class IPOSpace:             # <<<<<<<<<<<<<<
@@ -1020,7 +1023,7 @@ static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__2;
 static PyObject *__pyx_tuple__3;
 
-/* "IPOSpace.pyx":20
+/* "IPOSpace.pyx":21
  * from cpython.object cimport Py_LT, Py_LE, Py_EQ, Py_GE, Py_GT, Py_NE
  * 
  * cdef object CreateIPOSpace(cppIPOSpace.Space *space):             # <<<<<<<<<<<<<<
@@ -1035,19 +1038,19 @@ static PyObject *__pyx_f_8IPOSpace_CreateIPOSpace(ipo::Space *__pyx_v_space) {
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("CreateIPOSpace", 0);
 
-  /* "IPOSpace.pyx":21
+  /* "IPOSpace.pyx":22
  * 
  * cdef object CreateIPOSpace(cppIPOSpace.Space *space):
  *     py_space = IPOSpace()             # <<<<<<<<<<<<<<
  *     py_space.cpp_space = space
  *     return py_space
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_8IPOSpace_IPOSpace), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 21, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_8IPOSpace_IPOSpace), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 22, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_py_space = ((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "IPOSpace.pyx":22
+  /* "IPOSpace.pyx":23
  * cdef object CreateIPOSpace(cppIPOSpace.Space *space):
  *     py_space = IPOSpace()
  *     py_space.cpp_space = space             # <<<<<<<<<<<<<<
@@ -1056,7 +1059,7 @@ static PyObject *__pyx_f_8IPOSpace_CreateIPOSpace(ipo::Space *__pyx_v_space) {
  */
   __pyx_v_py_space->cpp_space = __pyx_v_space;
 
-  /* "IPOSpace.pyx":23
+  /* "IPOSpace.pyx":24
  *     py_space = IPOSpace()
  *     py_space.cpp_space = space
  *     return py_space             # <<<<<<<<<<<<<<
@@ -1068,7 +1071,7 @@ static PyObject *__pyx_f_8IPOSpace_CreateIPOSpace(ipo::Space *__pyx_v_space) {
   __pyx_r = ((PyObject *)__pyx_v_py_space);
   goto __pyx_L0;
 
-  /* "IPOSpace.pyx":20
+  /* "IPOSpace.pyx":21
  * from cpython.object cimport Py_LT, Py_LE, Py_EQ, Py_GE, Py_GT, Py_NE
  * 
  * cdef object CreateIPOSpace(cppIPOSpace.Space *space):             # <<<<<<<<<<<<<<
@@ -1088,7 +1091,7 @@ static PyObject *__pyx_f_8IPOSpace_CreateIPOSpace(ipo::Space *__pyx_v_space) {
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":28
+/* "IPOSpace.pyx":29
  *     cdef cppIPOSpace.Space *cpp_space
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1119,7 +1122,7 @@ static int __pyx_pf_8IPOSpace_8IPOSpace___cinit__(struct __pyx_obj_8IPOSpace_IPO
   int __pyx_t_2;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "IPOSpace.pyx":29
+  /* "IPOSpace.pyx":30
  * 
  *     def __cinit__(self):
  *         self.cpp_space = new cppIPOSpace.Space()             # <<<<<<<<<<<<<<
@@ -1130,11 +1133,11 @@ static int __pyx_pf_8IPOSpace_8IPOSpace___cinit__(struct __pyx_obj_8IPOSpace_IPO
     __pyx_t_1 = new ipo::Space();
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 29, __pyx_L1_error)
+    __PYX_ERR(0, 30, __pyx_L1_error)
   }
   __pyx_v_self->cpp_space = __pyx_t_1;
 
-  /* "IPOSpace.pyx":30
+  /* "IPOSpace.pyx":31
  *     def __cinit__(self):
  *         self.cpp_space = new cppIPOSpace.Space()
  *         if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
@@ -1144,16 +1147,16 @@ static int __pyx_pf_8IPOSpace_8IPOSpace___cinit__(struct __pyx_obj_8IPOSpace_IPO
   __pyx_t_2 = ((__pyx_v_self->cpp_space == NULL) != 0);
   if (__pyx_t_2) {
 
-    /* "IPOSpace.pyx":31
+    /* "IPOSpace.pyx":32
  *         self.cpp_space = new cppIPOSpace.Space()
  *         if self.cpp_space is NULL:
  *             raise MemoryError()             # <<<<<<<<<<<<<<
  * 
  *     def __dealloc__(self):
  */
-    PyErr_NoMemory(); __PYX_ERR(0, 31, __pyx_L1_error)
+    PyErr_NoMemory(); __PYX_ERR(0, 32, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":30
+    /* "IPOSpace.pyx":31
  *     def __cinit__(self):
  *         self.cpp_space = new cppIPOSpace.Space()
  *         if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
@@ -1162,7 +1165,7 @@ static int __pyx_pf_8IPOSpace_8IPOSpace___cinit__(struct __pyx_obj_8IPOSpace_IPO
  */
   }
 
-  /* "IPOSpace.pyx":28
+  /* "IPOSpace.pyx":29
  *     cdef cppIPOSpace.Space *cpp_space
  * 
  *     def __cinit__(self):             # <<<<<<<<<<<<<<
@@ -1181,7 +1184,7 @@ static int __pyx_pf_8IPOSpace_8IPOSpace___cinit__(struct __pyx_obj_8IPOSpace_IPO
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":33
+/* "IPOSpace.pyx":34
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -1204,7 +1207,7 @@ static void __pyx_pf_8IPOSpace_8IPOSpace_2__dealloc__(struct __pyx_obj_8IPOSpace
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "IPOSpace.pyx":34
+  /* "IPOSpace.pyx":35
  * 
  *     def __dealloc__(self):
  *         del self.cpp_space             # <<<<<<<<<<<<<<
@@ -1213,7 +1216,7 @@ static void __pyx_pf_8IPOSpace_8IPOSpace_2__dealloc__(struct __pyx_obj_8IPOSpace
  */
   delete __pyx_v_self->cpp_space;
 
-  /* "IPOSpace.pyx":33
+  /* "IPOSpace.pyx":34
  *             raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -1225,7 +1228,7 @@ static void __pyx_pf_8IPOSpace_8IPOSpace_2__dealloc__(struct __pyx_obj_8IPOSpace
   __Pyx_RefNannyFinishContext();
 }
 
-/* "IPOSpace.pyx":36
+/* "IPOSpace.pyx":37
  *         del self.cpp_space
  * 
  *     def dimension(self):             # <<<<<<<<<<<<<<
@@ -1254,7 +1257,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_4dimension(struct __pyx_obj_8IPOSp
   PyObject *__pyx_t_3 = NULL;
   __Pyx_RefNannySetupContext("dimension", 0);
 
-  /* "IPOSpace.pyx":37
+  /* "IPOSpace.pyx":38
  * 
  *     def dimension(self):
  *         return self.space.dimension()             # <<<<<<<<<<<<<<
@@ -1262,9 +1265,9 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_4dimension(struct __pyx_obj_8IPOSp
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 37, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 38, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
-  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_dimension); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 37, __pyx_L1_error)
+  __pyx_t_3 = __Pyx_PyObject_GetAttrStr(__pyx_t_2, __pyx_n_s_dimension); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 38, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_3);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __pyx_t_2 = NULL;
@@ -1278,10 +1281,10 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_4dimension(struct __pyx_obj_8IPOSp
     }
   }
   if (__pyx_t_2) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 37, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 38, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 37, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 38, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
@@ -1289,7 +1292,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_4dimension(struct __pyx_obj_8IPOSp
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "IPOSpace.pyx":36
+  /* "IPOSpace.pyx":37
  *         del self.cpp_space
  * 
  *     def dimension(self):             # <<<<<<<<<<<<<<
@@ -1310,7 +1313,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_4dimension(struct __pyx_obj_8IPOSp
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":39
+/* "IPOSpace.pyx":40
  *         return self.space.dimension()
  * 
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):             # <<<<<<<<<<<<<<
@@ -1346,11 +1349,11 @@ static PyObject *__pyx_pw_8IPOSpace_8IPOSpace_7printVector(PyObject *__pyx_v_sel
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vector)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, 1); __PYX_ERR(0, 39, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, 1); __PYX_ERR(0, 40, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "printVector") < 0)) __PYX_ERR(0, 39, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "printVector") < 0)) __PYX_ERR(0, 40, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -1363,13 +1366,13 @@ static PyObject *__pyx_pw_8IPOSpace_8IPOSpace_7printVector(PyObject *__pyx_v_sel
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 39, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 40, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("IPOSpace.IPOSpace.printVector", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_12cppIPOVector_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 39, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_12cppIPOVector_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 40, __pyx_L1_error)
   __pyx_r = __pyx_pf_8IPOSpace_8IPOSpace_6printVector(((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_v_self), __pyx_v_stream, __pyx_v_vector);
 
   /* function exit code */
@@ -1391,14 +1394,14 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printVector", 0);
 
-  /* "IPOSpace.pyx":40
+  /* "IPOSpace.pyx":41
  * 
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
  *             raise IPOErrors.NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 40, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 41, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -1411,38 +1414,38 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 41, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 40, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 41, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 40, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 41, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":41
+    /* "IPOSpace.pyx":42
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise IPOErrors.NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 41, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 42, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 41, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 42, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 41, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple_, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 42, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_Raise(__pyx_t_1, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __PYX_ERR(0, 41, __pyx_L1_error)
+    __PYX_ERR(0, 42, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":40
+    /* "IPOSpace.pyx":41
  * 
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
@@ -1451,26 +1454,26 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
  */
   }
 
-  /* "IPOSpace.pyx":43
+  /* "IPOSpace.pyx":44
  *             raise IPOErrors.NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":             # <<<<<<<<<<<<<<
  *             #call function with cout
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cout, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 43, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cout, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 44, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":45
+    /* "IPOSpace.pyx":46
  *         if stream == "cout":
  *             #call function with cout
  *             print("debug")             # <<<<<<<<<<<<<<
  *         elif stream == "cerr":
  *             #call function with cerr
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 45, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 46, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":43
+    /* "IPOSpace.pyx":44
  *             raise IPOErrors.NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":             # <<<<<<<<<<<<<<
@@ -1480,26 +1483,26 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
     goto __pyx_L4;
   }
 
-  /* "IPOSpace.pyx":46
+  /* "IPOSpace.pyx":47
  *             #call function with cout
  *             print("debug")
  *         elif stream == "cerr":             # <<<<<<<<<<<<<<
  *             #call function with cerr
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cerr, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 46, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cerr, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 47, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":48
+    /* "IPOSpace.pyx":49
  *         elif stream == "cerr":
  *             #call function with cerr
  *             print("debug")             # <<<<<<<<<<<<<<
  *         elif stream == "clog":
  *             #call function with clog
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 48, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 49, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":46
+    /* "IPOSpace.pyx":47
  *             #call function with cout
  *             print("debug")
  *         elif stream == "cerr":             # <<<<<<<<<<<<<<
@@ -1509,26 +1512,26 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
     goto __pyx_L4;
   }
 
-  /* "IPOSpace.pyx":49
+  /* "IPOSpace.pyx":50
  *             #call function with cerr
  *             print("debug")
  *         elif stream == "clog":             # <<<<<<<<<<<<<<
  *             #call function with clog
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_clog, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 49, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_clog, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 50, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":51
+    /* "IPOSpace.pyx":52
  *         elif stream == "clog":
  *             #call function with clog
  *             print("debug")             # <<<<<<<<<<<<<<
  * 
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 51, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 52, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":49
+    /* "IPOSpace.pyx":50
  *             #call function with cerr
  *             print("debug")
  *         elif stream == "clog":             # <<<<<<<<<<<<<<
@@ -1538,7 +1541,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
   }
   __pyx_L4:;
 
-  /* "IPOSpace.pyx":39
+  /* "IPOSpace.pyx":40
  *         return self.space.dimension()
  * 
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):             # <<<<<<<<<<<<<<
@@ -1561,7 +1564,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_6printVector(CYTHON_UNUSED struct 
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":53
+/* "IPOSpace.pyx":54
  *             print("debug")
  * 
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):             # <<<<<<<<<<<<<<
@@ -1575,7 +1578,7 @@ static PyObject *__pyx_pw_8IPOSpace_8IPOSpace_9printLinearForm(PyObject *__pyx_v
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("printLinearForm (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_12cppIPOVector_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 53, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_12cppIPOVector_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 54, __pyx_L1_error)
   __pyx_r = __pyx_pf_8IPOSpace_8IPOSpace_8printLinearForm(((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_12cppIPOVector_IPOVector *)__pyx_v_vector));
 
   /* function exit code */
@@ -1597,14 +1600,14 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_8printLinearForm(CYTHON_UNUSED str
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printLinearForm", 0);
 
-  /* "IPOSpace.pyx":54
+  /* "IPOSpace.pyx":55
  * 
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
  *             raise IPOErrors.NonConstError('IPOVector')
  *         print("lin")
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -1617,38 +1620,38 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_8printLinearForm(CYTHON_UNUSED str
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 54, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 54, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 55, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":55
+    /* "IPOSpace.pyx":56
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise IPOErrors.NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *         print("lin")
  * 
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 55, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 56, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 55, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__2, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 56, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_Raise(__pyx_t_1, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __PYX_ERR(0, 55, __pyx_L1_error)
+    __PYX_ERR(0, 56, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":54
+    /* "IPOSpace.pyx":55
  * 
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
@@ -1657,16 +1660,16 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_8printLinearForm(CYTHON_UNUSED str
  */
   }
 
-  /* "IPOSpace.pyx":56
+  /* "IPOSpace.pyx":57
  *         if (not vector.isConstant()):
  *             raise IPOErrors.NonConstError('IPOVector')
  *         print("lin")             # <<<<<<<<<<<<<<
  * 
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):
  */
-  if (__Pyx_PrintOne(0, __pyx_n_s_lin) < 0) __PYX_ERR(0, 56, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_n_s_lin) < 0) __PYX_ERR(0, 57, __pyx_L1_error)
 
-  /* "IPOSpace.pyx":53
+  /* "IPOSpace.pyx":54
  *             print("debug")
  * 
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):             # <<<<<<<<<<<<<<
@@ -1689,7 +1692,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_8printLinearForm(CYTHON_UNUSED str
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":58
+/* "IPOSpace.pyx":59
  *         print("lin")
  * 
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):             # <<<<<<<<<<<<<<
@@ -1703,7 +1706,7 @@ static PyObject *__pyx_pw_8IPOSpace_8IPOSpace_11printLinearConstraint(PyObject *
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("printLinearConstraint (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_lincons), __pyx_ptype_22cppIPOLinearConstraint_IPOLinearConstraint, 1, "lincons", 0))) __PYX_ERR(0, 58, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_lincons), __pyx_ptype_22cppIPOLinearConstraint_IPOLinearConstraint, 1, "lincons", 0))) __PYX_ERR(0, 59, __pyx_L1_error)
   __pyx_r = __pyx_pf_8IPOSpace_8IPOSpace_10printLinearConstraint(((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_22cppIPOLinearConstraint_IPOLinearConstraint *)__pyx_v_lincons));
 
   /* function exit code */
@@ -1725,14 +1728,14 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_10printLinearConstraint(CYTHON_UNU
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printLinearConstraint", 0);
 
-  /* "IPOSpace.pyx":59
+  /* "IPOSpace.pyx":60
  * 
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):             # <<<<<<<<<<<<<<
  *             raise IPOErrors.NonConstError('IPOLinearConstraint')
  *         print("cons")
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_lincons), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_lincons), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_COMPILING_IN_CPYTHON && likely(PyMethod_Check(__pyx_t_2))) {
@@ -1745,38 +1748,38 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_10printLinearConstraint(CYTHON_UNU
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 59, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 59, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 60, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPOSpace.pyx":60
+    /* "IPOSpace.pyx":61
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):
  *             raise IPOErrors.NonConstError('IPOLinearConstraint')             # <<<<<<<<<<<<<<
  *         print("cons")
  * 
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_IPOErrors); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 60, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(__pyx_t_1, __pyx_n_s_NonConstError); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 61, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 60, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_Call(__pyx_t_2, __pyx_tuple__3, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 61, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_Raise(__pyx_t_1, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-    __PYX_ERR(0, 60, __pyx_L1_error)
+    __PYX_ERR(0, 61, __pyx_L1_error)
 
-    /* "IPOSpace.pyx":59
+    /* "IPOSpace.pyx":60
  * 
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):             # <<<<<<<<<<<<<<
@@ -1785,16 +1788,16 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_10printLinearConstraint(CYTHON_UNU
  */
   }
 
-  /* "IPOSpace.pyx":61
+  /* "IPOSpace.pyx":62
  *         if (not lincons.isConstant()):
  *             raise IPOErrors.NonConstError('IPOLinearConstraint')
  *         print("cons")             # <<<<<<<<<<<<<<
  * 
  *     def __getitem__(self, key):
  */
-  if (__Pyx_PrintOne(0, __pyx_n_s_cons) < 0) __PYX_ERR(0, 61, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_n_s_cons) < 0) __PYX_ERR(0, 62, __pyx_L1_error)
 
-  /* "IPOSpace.pyx":58
+  /* "IPOSpace.pyx":59
  *         print("lin")
  * 
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):             # <<<<<<<<<<<<<<
@@ -1817,7 +1820,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_10printLinearConstraint(CYTHON_UNU
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":63
+/* "IPOSpace.pyx":64
  *         print("cons")
  * 
  *     def __getitem__(self, key):             # <<<<<<<<<<<<<<
@@ -1847,7 +1850,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
   PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("__getitem__", 0);
 
-  /* "IPOSpace.pyx":64
+  /* "IPOSpace.pyx":65
  * 
  *     def __getitem__(self, key):
  *         if type(key) is int:             # <<<<<<<<<<<<<<
@@ -1858,7 +1861,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
   __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "IPOSpace.pyx":66
+    /* "IPOSpace.pyx":67
  *         if type(key) is int:
  *             #cdef size_t var = key
  *             return self.space[key]             # <<<<<<<<<<<<<<
@@ -1866,16 +1869,16 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
  *             raise TypeError()
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 66, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 67, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = PyObject_GetItem(__pyx_t_3, __pyx_v_key); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 66, __pyx_L1_error)
+    __pyx_t_4 = PyObject_GetItem(__pyx_t_3, __pyx_v_key); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 67, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_r = __pyx_t_4;
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "IPOSpace.pyx":64
+    /* "IPOSpace.pyx":65
  * 
  *     def __getitem__(self, key):
  *         if type(key) is int:             # <<<<<<<<<<<<<<
@@ -1884,7 +1887,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
  */
   }
 
-  /* "IPOSpace.pyx":68
+  /* "IPOSpace.pyx":69
  *             return self.space[key]
  *         else:
  *             raise TypeError()             # <<<<<<<<<<<<<<
@@ -1892,14 +1895,14 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
  * 
  */
   /*else*/ {
-    __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_builtin_TypeError); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 68, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_CallNoArg(__pyx_builtin_TypeError); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 69, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
     __Pyx_Raise(__pyx_t_4, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
-    __PYX_ERR(0, 68, __pyx_L1_error)
+    __PYX_ERR(0, 69, __pyx_L1_error)
   }
 
-  /* "IPOSpace.pyx":63
+  /* "IPOSpace.pyx":64
  *         print("cons")
  * 
  *     def __getitem__(self, key):             # <<<<<<<<<<<<<<
@@ -1919,7 +1922,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_12__getitem__(struct __pyx_obj_8IP
   return __pyx_r;
 }
 
-/* "IPOSpace.pyx":71
+/* "IPOSpace.pyx":72
  * 
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):             # <<<<<<<<<<<<<<
@@ -1933,8 +1936,8 @@ static PyObject *__pyx_pw_8IPOSpace_8IPOSpace_15__richcmp__(PyObject *__pyx_v_se
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__richcmp__ (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_self), __pyx_ptype_8IPOSpace_IPOSpace, 1, "self", 0))) __PYX_ERR(0, 71, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_8IPOSpace_IPOSpace, 0, "y", 0))) __PYX_ERR(0, 71, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_self), __pyx_ptype_8IPOSpace_IPOSpace, 1, "self", 0))) __PYX_ERR(0, 72, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_8IPOSpace_IPOSpace, 0, "y", 0))) __PYX_ERR(0, 72, __pyx_L1_error)
   __pyx_r = __pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_8IPOSpace_IPOSpace *)__pyx_v_y), ((int)__pyx_v_op));
 
   /* function exit code */
@@ -1955,7 +1958,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
   PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("__richcmp__", 0);
 
-  /* "IPOSpace.pyx":72
+  /* "IPOSpace.pyx":73
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
  *         if op == Py_EQ:             # <<<<<<<<<<<<<<
@@ -1965,7 +1968,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
   __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
   if (__pyx_t_1) {
 
-    /* "IPOSpace.pyx":73
+    /* "IPOSpace.pyx":74
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
  *         if op == Py_EQ:
  *             return self.space==y.space             # <<<<<<<<<<<<<<
@@ -1973,18 +1976,18 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
  *             return self.space!=y.space
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 73, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 74, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 73, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 74, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_4 = PyObject_RichCompare(__pyx_t_2, __pyx_t_3, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 73, __pyx_L1_error)
+    __pyx_t_4 = PyObject_RichCompare(__pyx_t_2, __pyx_t_3, Py_EQ); __Pyx_XGOTREF(__pyx_t_4); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 74, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_r = __pyx_t_4;
     __pyx_t_4 = 0;
     goto __pyx_L0;
 
-    /* "IPOSpace.pyx":72
+    /* "IPOSpace.pyx":73
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
  *         if op == Py_EQ:             # <<<<<<<<<<<<<<
@@ -1993,7 +1996,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
  */
   }
 
-  /* "IPOSpace.pyx":74
+  /* "IPOSpace.pyx":75
  *         if op == Py_EQ:
  *             return self.space==y.space
  *         elif op == Py_NE:             # <<<<<<<<<<<<<<
@@ -2003,7 +2006,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
   __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
   if (__pyx_t_1) {
 
-    /* "IPOSpace.pyx":75
+    /* "IPOSpace.pyx":76
  *             return self.space==y.space
  *         elif op == Py_NE:
  *             return self.space!=y.space             # <<<<<<<<<<<<<<
@@ -2011,18 +2014,18 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
  *             assert False
  */
     __Pyx_XDECREF(__pyx_r);
-    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 75, __pyx_L1_error)
+    __pyx_t_4 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_space); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 76, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_4);
-    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 75, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_space); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 76, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_3);
-    __pyx_t_2 = PyObject_RichCompare(__pyx_t_4, __pyx_t_3, Py_NE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 75, __pyx_L1_error)
+    __pyx_t_2 = PyObject_RichCompare(__pyx_t_4, __pyx_t_3, Py_NE); __Pyx_XGOTREF(__pyx_t_2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 76, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
     __pyx_r = __pyx_t_2;
     __pyx_t_2 = 0;
     goto __pyx_L0;
 
-    /* "IPOSpace.pyx":74
+    /* "IPOSpace.pyx":75
  *         if op == Py_EQ:
  *             return self.space==y.space
  *         elif op == Py_NE:             # <<<<<<<<<<<<<<
@@ -2031,7 +2034,7 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
  */
   }
 
-  /* "IPOSpace.pyx":77
+  /* "IPOSpace.pyx":78
  *             return self.space!=y.space
  *         else:
  *             assert False             # <<<<<<<<<<<<<<
@@ -2042,13 +2045,13 @@ static PyObject *__pyx_pf_8IPOSpace_8IPOSpace_14__richcmp__(struct __pyx_obj_8IP
     if (unlikely(!Py_OptimizeFlag)) {
       if (unlikely(!0)) {
         PyErr_SetNone(PyExc_AssertionError);
-        __PYX_ERR(0, 77, __pyx_L1_error)
+        __PYX_ERR(0, 78, __pyx_L1_error)
       }
     }
     #endif
   }
 
-  /* "IPOSpace.pyx":71
+  /* "IPOSpace.pyx":72
  * 
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):             # <<<<<<<<<<<<<<
@@ -2244,8 +2247,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {0, 0, 0, 0, 0, 0, 0}
 };
 static int __Pyx_InitCachedBuiltins(void) {
-  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 31, __pyx_L1_error)
-  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 68, __pyx_L1_error)
+  __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 32, __pyx_L1_error)
+  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 69, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -2255,36 +2258,36 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__Pyx_InitCachedConstants", 0);
 
-  /* "IPOSpace.pyx":41
+  /* "IPOSpace.pyx":42
  *     def printVector(self, stream, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise IPOErrors.NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":
  */
-  __pyx_tuple_ = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 41, __pyx_L1_error)
+  __pyx_tuple_ = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple_)) __PYX_ERR(0, 42, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple_);
   __Pyx_GIVEREF(__pyx_tuple_);
 
-  /* "IPOSpace.pyx":55
+  /* "IPOSpace.pyx":56
  *     def printLinearForm(self, cppIPOVector.IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise IPOErrors.NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *         print("lin")
  * 
  */
-  __pyx_tuple__2 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 55, __pyx_L1_error)
+  __pyx_tuple__2 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__2)) __PYX_ERR(0, 56, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__2);
   __Pyx_GIVEREF(__pyx_tuple__2);
 
-  /* "IPOSpace.pyx":60
+  /* "IPOSpace.pyx":61
  *     def printLinearConstraint(self, cppIPOLinearConstraint.IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):
  *             raise IPOErrors.NonConstError('IPOLinearConstraint')             # <<<<<<<<<<<<<<
  *         print("cons")
  * 
  */
-  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_n_s_IPOLinearConstraint); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 60, __pyx_L1_error)
+  __pyx_tuple__3 = PyTuple_Pack(1, __pyx_n_s_IPOLinearConstraint); if (unlikely(!__pyx_tuple__3)) __PYX_ERR(0, 61, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__3);
   __Pyx_GIVEREF(__pyx_tuple__3);
   __Pyx_RefNannyFinishContext();
@@ -2385,9 +2388,9 @@ PyMODINIT_FUNC PyInit_IPOSpace(void)
   /*--- Variable export code ---*/
   /*--- Function export code ---*/
   /*--- Type init code ---*/
-  if (PyType_Ready(&__pyx_type_8IPOSpace_IPOSpace) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_8IPOSpace_IPOSpace) < 0) __PYX_ERR(0, 26, __pyx_L1_error)
   __pyx_type_8IPOSpace_IPOSpace.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "IPOSpace", (PyObject *)&__pyx_type_8IPOSpace_IPOSpace) < 0) __PYX_ERR(0, 25, __pyx_L1_error)
+  if (PyObject_SetAttrString(__pyx_m, "IPOSpace", (PyObject *)&__pyx_type_8IPOSpace_IPOSpace) < 0) __PYX_ERR(0, 26, __pyx_L1_error)
   __pyx_ptype_8IPOSpace_IPOSpace = &__pyx_type_8IPOSpace_IPOSpace;
   /*--- Type import code ---*/
   __pyx_ptype_17cppSoplexRational_SoplexRational = __Pyx_ImportType("cppSoplexRational", "SoplexRational", sizeof(struct __pyx_obj_17cppSoplexRational_SoplexRational), 1); if (unlikely(!__pyx_ptype_17cppSoplexRational_SoplexRational)) __PYX_ERR(1, 19, __pyx_L1_error)
@@ -2409,52 +2412,28 @@ PyMODINIT_FUNC PyInit_IPOSpace(void)
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "IPOSpace.pyx":11
- * cimport cppIPOLinearConstraint
+  /* "IPOSpace.pyx":14
+ * #import IPOLinearConstraint
  * 
- * import IPOVector             # <<<<<<<<<<<<<<
- * import IPOLinearConstraint
- * import stdio
- */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_IPOVector, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 11, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOVector, __pyx_t_1) < 0) __PYX_ERR(0, 11, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-  /* "IPOSpace.pyx":12
- * 
- * import IPOVector
- * import IPOLinearConstraint             # <<<<<<<<<<<<<<
- * import stdio
- * import IPOErrors
- */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_IPOLinearConstraint, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 12, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOLinearConstraint, __pyx_t_1) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
-
-  /* "IPOSpace.pyx":13
- * import IPOVector
- * import IPOLinearConstraint
  * import stdio             # <<<<<<<<<<<<<<
  * import IPOErrors
  * 
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_stdio, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 13, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_stdio, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_stdio, __pyx_t_1) < 0) __PYX_ERR(0, 13, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_stdio, __pyx_t_1) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "IPOSpace.pyx":14
- * import IPOLinearConstraint
+  /* "IPOSpace.pyx":15
+ * 
  * import stdio
  * import IPOErrors             # <<<<<<<<<<<<<<
  * 
  * from libc cimport stdio
  */
-  __pyx_t_1 = __Pyx_Import(__pyx_n_s_IPOErrors, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 14, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_Import(__pyx_n_s_IPOErrors, 0, -1); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOErrors, __pyx_t_1) < 0) __PYX_ERR(0, 14, __pyx_L1_error)
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOErrors, __pyx_t_1) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "IPOSpace.pyx":1

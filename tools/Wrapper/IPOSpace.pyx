@@ -8,8 +8,9 @@ cimport cppIPOSpace
 cimport cppIPOVector
 cimport cppIPOLinearConstraint
 
-import IPOVector
-import IPOLinearConstraint
+#import IPOVector
+#import IPOLinearConstraint
+
 import stdio
 import IPOErrors
 

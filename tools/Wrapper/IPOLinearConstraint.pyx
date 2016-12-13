@@ -7,7 +7,7 @@
 cimport cppIPOLinearConstraint
 cimport cppIPOVector
 cimport cppSoplexRational
-import IPOVector
+#import IPOVector
 import IPOErrors
 from cpython.object cimport Py_EQ, Py_LT
 from cython.operator cimport dereference as deref, address as ref

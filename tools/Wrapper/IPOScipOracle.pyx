@@ -9,8 +9,8 @@ cimport cppScipOracle
 cimport cppIPOVector
 cimport cppIPOLinearConstraint
 
-import IPOLinearConstraint
-import IPOVector
+#import IPOLinearConstraint
+#import IPOVector
 import IPOErrors
 
 

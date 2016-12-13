@@ -7,7 +7,6 @@
 from libcpp.string cimport string
 from libcpp cimport bool as bool_cpp
 from libcpp.vector cimport vector
-from cppIPOVector cimport Vector
 
 cdef extern from "rational.h" namespace "soplex":
     cdef cppclass Rational:

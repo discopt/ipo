@@ -3,9 +3,12 @@
 /* BEGIN: Cython Metadata
 {
     "distutils": {
+        "depends": [
+            "/opt/scipoptsuite-3.2.1/soplex-2.2.1/src/rational.h", 
+            "/usr/local/include/ipo/vectors.h"
+        ], 
         "extra_compile_args": [
-            "-std=c++11", 
-            "-ggdb"
+            "-std=c++11"
         ], 
         "include_dirs": [
             "/usr/local/include/", 
@@ -22,7 +25,7 @@
             "nlpi.cppad.linux.x86_64.gnu.opt", 
             "objscip-3.2.1.linux.x86_64.gnu.opt", 
             "lpispx-3.2.1.linux.x86_64.gnu.opt", 
-            "lpispx-3.2.1.linux.x86_64.gnu.opt"
+            "gmp"
         ], 
         "library_dirs": [
             "/usr/local/lib/", 
@@ -2818,21 +2821,9 @@ PyMODINIT_FUNC PyInit_IPOLinearConstraint(void)
   if (__Pyx_patch_abc() < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   #endif
 
-  /* "IPOLinearConstraint.pyx":10
- * cimport cppIPOVector
- * cimport cppSoplexRational
- * import IPOVector             # <<<<<<<<<<<<<<
- * import IPOErrors
- * from cpython.object cimport Py_EQ, Py_LT
- */
-  __pyx_t_3 = __Pyx_Import(__pyx_n_s_IPOVector, 0, -1); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 10, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_3);
-  if (PyDict_SetItem(__pyx_d, __pyx_n_s_IPOVector, __pyx_t_3) < 0) __PYX_ERR(0, 10, __pyx_L1_error)
-  __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-
   /* "IPOLinearConstraint.pyx":11
  * cimport cppSoplexRational
- * import IPOVector
+ * #import IPOVector
  * import IPOErrors             # <<<<<<<<<<<<<<
  * from cpython.object cimport Py_EQ, Py_LT
  * from cython.operator cimport dereference as deref, address as ref
