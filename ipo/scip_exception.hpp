@@ -4,6 +4,8 @@
 #include <exception>
 #include <string>
 
+#ifdef IPO_WITH_SCIP
+
 #include <scip/scip.h>
 #include <scip/pub_misc.h>
 
@@ -144,5 +146,7 @@ public:
 	      throw SCIPException(_retcode);		\
       }						                        \
    }
+
+#endif
 
 #endif

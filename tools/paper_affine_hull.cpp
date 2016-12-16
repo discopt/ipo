@@ -1,37 +1,34 @@
 
 #include <ipo/common.h>
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include <ipo/scip_exception.hpp>
-  #include <ipo/scip_oracles.h>
   #define NDEBUG
 #else
   #include <scip/scip.h>
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include <ipo/scip_exception.hpp>
-  #include <ipo/scip_oracles.h>
 #endif
 #endif
 
-#include "ipo/scip_exception.hpp"
-#include "ipo/affine_hull.h"
-#include "ipo/scip_oracles.h"
-#include "ipo/cache_oracle.h"
-#include "ipo/statistics_oracle.h"
-#include "ipo/polyhedron.h"
+#include <ipo/scip_exception.hpp>
+#include <ipo/affine_hull.h>
+#include <ipo/scip_oracle.h>
+#include <ipo/exactscip_oracle.h>
+#include <ipo/cache_oracle.h>
+#include <ipo/statistics_oracle.h>
+#include <ipo/polyhedron.h>
 
 using namespace ipo;
 
 int main(int argc, char** argv)
 {
   // Parse arguments.
-  
+
   // Read instance and create MixedIntegerSet.
 
   SCIP* scip = NULL;
@@ -47,15 +44,18 @@ int main(int argc, char** argv)
 
   // Initialize oracles.
 
+#ifdef IPO_WITH_EXACT_SCIP
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
-//****************************************************??
-  exactSCIPOracle->setBinaryPath("/home/matthias/software/exactscip/scip-3.0.0-ex/bin/scip");
-//****************************************************
   std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
   std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
     mixedIntegerSet, exactScipOracleStats);
+#else
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
+    mixedIntegerSet);
+#endif
+
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
   std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
@@ -127,7 +127,7 @@ int main(int argc, char** argv)
   std::cout << std::endl;
 
   // Output constraint dimensions.
-  
+
   std::vector<std::shared_ptr<Polyhedron::Face> > faces;
   poly.getFaces(faces, true, true);
   for (std::size_t i = 0; i < faces.size(); ++i)

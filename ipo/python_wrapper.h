@@ -3,14 +3,22 @@
 
 #include <ipo/common.h>
 
-#include <scip/scip.h>
-#include <scip/scipdefplugins.h>
-#include <scip/cons_linear.h>
-#include "scip_oracles.h"
-#include <scip/debug.h>
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
+  #include <scip/cons_linear.h>
+#endif
+
+#include "scip_oracle.h"
+#include "exactscip_oracle.h"
 #include "scip_exception.hpp"
 #include "affine_hull.h"
-#include "scip_oracles.h"
 #include "cache_oracle.h"
 #include "statistics_oracle.h"
 #include "vectors.h"

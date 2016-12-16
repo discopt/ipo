@@ -41,7 +41,7 @@ namespace ipo {
     };
 
   public:
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
     /**
      * \brief Constructs a \c MixedIntegerSet from a \c SCIP instance.
      *
@@ -50,7 +50,7 @@ namespace ipo {
      */
 
     MixedIntegerSet(SCIP* scip);
-#endif
+#endif /* IPO_WITH_SCIP */
 
     /**
      * \brief Destructor.
