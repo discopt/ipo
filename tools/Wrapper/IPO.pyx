@@ -1,3 +1,8 @@
+## @package IPO
+#  Documentation for this module.
+#
+#  More details.
+
 ####################################
 #Imports
 cimport cppIPO
@@ -8,6 +13,10 @@ from cpython.object cimport Py_LT, Py_LE, Py_EQ, Py_GE, Py_GT, Py_NE
 from libcpp.memory cimport shared_ptr
 ####################################
 #Errors
+
+## NonConstError
+# Error Class to throw errors if a pointer is used instead of a constant pointer to a C++ class.
+#  
 class NonConstError:
     def init(self, value):
         self.value = 'This is no const value: '+value
@@ -17,10 +26,16 @@ class NonConstError:
 
 ####################################
 #Soplex Rational
+
+## Wrapper class for the Rational class from Soplex
+#
+#
 cdef class SoplexRational:
     cdef cppIPO.Rational *cpp_rational
     cdef const cppIPO.Rational *const_rational
-
+    ## Constructor
+    #  @param isConst indicates if the C++ pointer for the object is a const pointer
+    #
     def __cinit__(self, isConst):
         if(not isConst):
             self.cpp_rational = new cppIPO.Rational()
@@ -31,11 +46,15 @@ cdef class SoplexRational:
         del self.cpp_rational
         del self.const_rational
 
+## Creates a Python SoplexRational from a pointer to a C++ Rational.
+#
 cdef object CreateSoplexRational(cppIPO.Rational *rational):
     py_rational = SoplexRational(False)
     py_rational.cpp_rational = rational
     return py_rational
 
+## Creates a Python SoplexRational from a const pointer to a C++ Rational.
+#
 cdef object CreateConstSoplexRational(const cppIPO.Rational *rational):
     py_rational = SoplexRational(True)
     py_rational.const_rational = rational
@@ -44,15 +63,21 @@ cdef object CreateConstSoplexRational(const cppIPO.Rational *rational):
 ####################################
 #IPO Vector
 
+## Base class for IPO Vector class
+#
 cdef class IPOReferenceCountedVector:
     cdef cppIPO.ReferenceCountedVector *vec
     cdef const cppIPO.ReferenceCountedVector *const_vec
 
-
+## Vector class
+#
 cdef class IPOVector:
     cdef cppIPO.Vector *vec
     cdef const cppIPO.Vector *const_vec
 
+    ## Constructor
+    #  @param isConst indicates if the C++ pointer for the object is a const pointer
+    #
     def __cinit__(self, isConst):
         if(not isConst):
             self.vec = new cppIPO.Vector()
@@ -96,6 +121,9 @@ cdef class IPOVector:
         else:
             return (<cppIPO.ReferenceCountedVector*>self.const_vec).approximation(position)
 
+    ## Special Method for operator overloading
+    # this method overloads the operators ==, != and <
+    # @return boolean
     def __richcmp__(IPOVector self, IPOReferenceCountedVector y not None, int op):
         if not y.isConstant():
             if not (self.vec is NULL):
@@ -137,12 +165,14 @@ cdef class IPOVector:
                 else:
                     assert False
 
-
+## Creates a Python IPOVector from a pointer to a C++ ipo::Vector.
+#
 cdef object CreateIPOVector(cppIPO.Vector *vector):
     py_vector = IPOVector(False)
     py_vector.vec = vector
     return py_vector
-
+## Creates a Python IPOVector from a const pointer to a C++ ipo::Vector.
+#
 cdef object CreateConstIPOVector(const cppIPO.Vector *vector):
     py_vector = IPOVector(True)
     py_vector.const_vec = vector
@@ -155,6 +185,9 @@ cdef class IPOLinearConstraint:
     cdef cppIPO.LinearConstraint *lin
     cdef const cppIPO.LinearConstraint *const_lin
 
+    ## Constructor
+    #  @param isConst indicates if the C++ pointer for the object is a const pointer
+    #
     def __cinit__(self, isConst):
         if (not isConst):
             self.lin = new cppIPO.LinearConstraint()
@@ -167,6 +200,9 @@ cdef class IPOLinearConstraint:
     def isConstant(self):
         return (self.const_lin is not NULL)
 
+    ## Special Method for operator overloading
+    # this method overloads the operators == and <
+    # @return boolean
     def __richcmp__(IPOLinearConstraint self, IPOLinearConstraint y not None, int op):
         if op == Py_EQ:
             return self.lin==y.lin
@@ -211,11 +247,11 @@ cdef class IPOLinearConstraint:
         cdef cppIPO.Rational *rational
         #if(self.lin is not NULL):
             #rational = &self.lin.getMaximumNorm()
-            #py_rational = cppSoplexRational.CreateSoplexRational(rational)
+            #py_rational = CreateSoplexRational(rational)
             #return py_rational
         #else:
             #rational = &self.const_lin.getMaximumNorm()
-            #py_rational = cppSoplexRational.CreateSoplexRational(rational)
+            #py_rational = CreateSoplexRational(rational)
             #return py_rational
 
     def definesCompleteFace(self):
@@ -255,33 +291,64 @@ cdef class IPOLinearConstraint:
         else:
             raise NonConstError('IPOVector')
 
+## Creates a Python IPOLinearConstraint from a pointer to a C++ ipo::LinearConstraint.
+#
 cdef object CreateLinearConstraint(cppIPO.LinearConstraint *linconst):
     py_linconst = IPOLinearConstraint(False)
     py_linconst.lin = linconst
     return py_linconst
-
-cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):
+## Creates a Python IPOLinearConstraint from a const pointer to a C++ ipo::LinearConstraint.
+#
+cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):
     py_linconst = IPOLinearConstraint(True)
     py_linconst.const_lin = linconst
     return py_linconst
 
+####################################
+#InnerDesciption/OuterDescription
+
+cdef class IPOInnerDescription:
+    def __init__(self):
+        self.points = []
+        self.rays = []
+
+cdef class IPOAffineOuterDescription:
+    def __init__(self, cons):
+        self.constraints = []
+
 
 ####################################
-#IPO Space (not yet with const support)
+#IPO Space
 
 cdef class IPOSpace:
     cdef cppIPO.Space *cpp_space
+    cdef const cppIPO.Space *const_space
 
-    def __cinit__(self):
-        self.cpp_space = new cppIPO.Space()
-        if self.cpp_space is NULL:
-            raise MemoryError()
+    ## Constructor
+    #  @param isConst indicates if the C++ pointer for the object is a const pointer
+    #
+    def __cinit__(self, isConst):
+        if(isConst is False):
+            self.cpp_space = new cppIPO.Space()
+            if self.cpp_space is NULL:
+                raise MemoryError()
 
     def __dealloc__(self):
-        del self.cpp_space
+        if(self.cpp_space is not NULL):
+            del self.cpp_space
+        else:
+            del self.const_space
 
+    def isConstant(self):
+        return (self.const_space is not NULL)
+
+    ## Dimension of the Space
+    # @return int dimension
     def dimension(self):
-        return self.cpp_space.dimension()
+        if(self.cpp_space is not NULL):
+            return self.cpp_space.dimension()
+        else:
+            return self.const_space.dimension()
 
     def printVector(self, stream, IPOVector vector):
         if (not vector.isConstant()):
@@ -307,90 +374,199 @@ cdef class IPOSpace:
             raise NonConstError('IPOLinearConstraint')
         print("cons")
 
-    def __getitem__(self, key):
+    ## Special Method for operator overloading
+    #  this method overloads the operator [] for indexing
+    #  @return const string
+    def __getitem__(self, int key):
         if type(key) is int:
-            #cdef size_t var = key
-            #return self.cpp_space[var]
-            True
+            if(self.cpp_space is not NULL):
+                return deref(self.cpp_space)[key]
+            else:
+                return deref(self.const_space)[key]
         else:
             raise TypeError()
         
-
+    ## Special Method for operator overloading
+    # this method overloads the operators == and !=
+    # @return boolean
     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
-        if op == Py_EQ:
-            return self.cpp_space==y.cpp_space
-        elif op == Py_NE:
-            return self.cpp_space!=y.cpp_space
+        if(self.cpp_space is not NULL):
+            if(y.isConstant()):
+                if op == Py_EQ:
+                    return self.cpp_space==y.const_space
+                elif op == Py_NE:
+                    return self.cpp_space!=y.const_space
+                else:
+                    assert False
+            else:
+                if op == Py_EQ:
+                    return self.cpp_space==y.cpp_space
+                elif op == Py_NE:
+                    return self.cpp_space!=y.cpp_space
+                else:
+                    assert False
         else:
-            assert False
+            if(y.isConstant()):
+                if op == Py_EQ:
+                    return self.const_space==y.const_space
+                elif op == Py_NE:
+                    return self.const_space!=y.const_space
+                else:
+                    assert False
+            else:
+                if op == Py_EQ:
+                    return self.const_space==y.cpp_space
+                elif op == Py_NE:
+                    return self.const_space!=y.cpp_space
+                else:
+                    assert False
 
+## Creates a Python IPOSpace from a pointer to a C++ ipo::Space.
+#
 cdef object CreateIPOSpace(cppIPO.Space *space):
-    py_space = IPOSpace()
+    py_space = IPOSpace(False)
     py_space.cpp_space = space
+    return py_space
+
+## Creates a Python IPOSpace from aconst  pointer to a C++ ipo::Space.
+#
+cdef object CreateConstIPOSpace(const cppIPO.Space *space):
+    py_space = IPOSpace(True)
+    py_space.const_space = space
     return py_space
 
 
 ####################################
 #IPO ScipOracle
-
-
 cdef class IPOScipOracle:
     cdef cppIPO.ScipOracleController *oracle
 
-    def __cinit__(self, str name, int isNew):
-        if(isNew == 1):
+    ## Constructor
+    #  @param isNew indicates if the Oracle is a new one (True) or if it needs to set a next pointer (False)
+    #
+    def __cinit__(self, str name, isNew):
+        if(isNew == True):
             self.oracle = new cppIPO.ScipOracleController(name)
 
     def __dealloc__(self):
         del self.oracle
 
+    ## Name Property of the ScipOracle
+    #
     def name(self):
         return self.oracle.name()
 
+    ## Heuristic Level of the ScipOracle
+    #
     def heuristicLevel(self):
         return self.oracle.heuristicLevel_ScipOracle()
 
+    ## Heuristic Level of the CacheOracle
+    #
     def heuristicLevel_CacheOracle(self):
         return self.oracle.heuristicLevel_CacheOracle()
 
-    def affineHull(self, outputMode):
+    ## Affine Hull
+    # @return (IPOInnerDescription, IPOAffineOuterDescription) Tupel of those classes
+    def affineHull(self):
         #########-1-#########
         #convert inner description to 2-tupel IPOVector lists
         cdef cppIPO.InnerDescription c_inner = self.oracle.affineHullInner(1)
+        print "C++ call inner\n"
 
         #automagically convert to python list
         c_points = c_inner.points
+        print "A\n"
         c_rays = c_inner.rays
-        points = ()
-        rays = ()
+        print "B\n"
+        points = []
+        rays = []
         cdef cppIPO.Vector *c_vector
+        print "C\n"
         #convert points to python wrapperclass IPOVector
         for i in range(0,c_points.size()):
+            print "D"+str(i)+"\n"
             c_vector = ref(c_points[i])
+            print "E"+str(i)+"\n"
             py_vector = CreateIPOVector(c_vector)
+            print "F"+str(i)+"\n"
             points.append(py_vector)
+            print "G"+str(i)+"\n"
 
         #convert rays to python wrapperclass IPOVector
         for i in range(0,c_rays.size()):
+            print "H"+str(i)+"\n"
             c_vector = ref(c_rays[i])
+            print "I"+str(i)+"\n"
             py_vector = CreateIPOVector(c_vector)
+            print "J"+str(i)+"\n"
             rays.append(py_vector)
+            print "K"+str(i)+"\n"
 
-        inner = (points, rays)
+        innerDescription = IPOInnerDescription()
+        print "L\n"
+        innerDescription.points = points
+        print "M\n"
+        innerDescription.rays = rays
+        print "inner verarbeitung\n"
         #########-2-#########
         #convert outer description to IPOLinearConstraint list
         cdef cppIPO.AffineOuterDescription c_outer = self.oracle.affineHullOuter(1)
-        outer = ()
+        print "C++ call outer\n"
+        outerDescription = IPOAffineOuterDescription()
+        outer = []
 
         for i in range(0, c_outer.size()):
             c_linconst = ref(c_outer[i])
             py_linconst = CreateLinearConstraint(c_linconst)
             outer.append(py_linconst)
 
-        return (inner, outer)
+        outerDescription.constraints = outer
+        print "FERTIG\n"
 
+        return (innerDescription, outerDescription)
 
+## Creates an IPOScipOracle from a filename and the pointer to another ScipOracleController
+#  the ScipOracle of the ScipOracleController is set as the next pointer in the Oracle chain.
 cdef object CreateScipOracle(str name, cppIPO.ScipOracleController oracle):
     py_oracle = IPOScipOracle(name, 0)
     py_oracle.oracle = new cppIPO.ScipOracleController(name, oracle)
     return py_oracle
+
+
+####################################
+#IPO Polyhedron
+
+cdef class IPOPolyhedron:
+    cdef cppIPO.Polyhedron* poly
+
+    ##Erstellung benoetigt ein Oracle
+    ##affineHull benoetigt Handlers
+
+from cppIPO cimport Polyhedron
+
+cdef class IPOFace:
+    cdef Polyhedron.Face* face
+
+####################################
+#Affine Hull
+
+def affineHull():
+    return 0
+
+####################################
+#IPO Test
+
+cdef class Test:
+    cdef cppIPO.Foo* foo
+
+    def __cinit__(self):
+        self.foo = new cppIPO.Foo()
+        if self.foo is NULL:
+            raise MemoryError()
+
+    def __dealloc__(self):
+        del self.foo
+
+    def print_Example(self):
+        return self.foo.printFoo()

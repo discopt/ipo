@@ -6,8 +6,11 @@
         "depends": [
             "/opt/scipoptsuite-3.2.1/soplex-2.2.1/src/rational.h", 
             "/usr/local/include/ipo/linear_constraint.h", 
+            "/usr/local/include/ipo/oracles.h", 
+            "/usr/local/include/ipo/polyhedron.h", 
             "/usr/local/include/ipo/python_wrapper.h", 
             "/usr/local/include/ipo/space.h", 
+            "/usr/local/include/ipo/test.h", 
             "/usr/local/include/ipo/vectors.h"
         ], 
         "extra_compile_args": [
@@ -501,14 +504,17 @@ static CYTHON_INLINE float __PYX_NAN() {
 #include "stdexcept"
 #include "typeinfo"
 #include <vector>
+#include <memory>
 #include "rational.h"
 #include "ipo/vectors.h"
 #include "ipo/linear_constraint.h"
 #include <iostream>
 #include "ipo/space.h"
+#include "ipo/oracles.h"
+#include "ipo/polyhedron.h"
 #include "ipo/python_wrapper.h"
+#include "ipo/test.h"
 #include <stdio.h>
-#include <memory>
 #ifdef _OPENMP
 #include <omp.h>
 #endif /* _OPENMP */
@@ -714,8 +720,13 @@ struct __pyx_obj_3IPO_SoplexRational;
 struct __pyx_obj_3IPO_IPOReferenceCountedVector;
 struct __pyx_obj_3IPO_IPOVector;
 struct __pyx_obj_3IPO_IPOLinearConstraint;
+struct __pyx_obj_3IPO_IPOInnerDescription;
+struct __pyx_obj_3IPO_IPOAffineOuterDescription;
 struct __pyx_obj_3IPO_IPOSpace;
 struct __pyx_obj_3IPO_IPOScipOracle;
+struct __pyx_obj_3IPO_IPOPolyhedron;
+struct __pyx_obj_3IPO_IPOFace;
+struct __pyx_obj_3IPO_Test;
 
 /* "IPO.pyx":20
  * ####################################
@@ -773,22 +784,47 @@ struct __pyx_obj_3IPO_IPOLinearConstraint {
 };
 
 
-/* "IPO.pyx":272
- * #IPO Space (not yet with const support)
+/* "IPO.pyx":271
+ * #InnerDesciption/OuterDescription
+ * 
+ * cdef class IPOInnerDescription:             # <<<<<<<<<<<<<<
+ *     def __init__(self):
+ *         self.points = []
+ */
+struct __pyx_obj_3IPO_IPOInnerDescription {
+  PyObject_HEAD
+};
+
+
+/* "IPO.pyx":276
+ *         self.rays = []
+ * 
+ * cdef class IPOAffineOuterDescription:             # <<<<<<<<<<<<<<
+ *     def __init__(self, cons):
+ *         self.constraints = []
+ */
+struct __pyx_obj_3IPO_IPOAffineOuterDescription {
+  PyObject_HEAD
+};
+
+
+/* "IPO.pyx":284
+ * #IPO Space
  * 
  * cdef class IPOSpace:             # <<<<<<<<<<<<<<
  *     cdef cppIPO.Space *cpp_space
- * 
+ *     cdef const cppIPO.Space *const_space
  */
 struct __pyx_obj_3IPO_IPOSpace {
   PyObject_HEAD
   ipo::Space *cpp_space;
+  ipo::Space const *const_space;
 };
 
 
-/* "IPO.pyx":337
- * 
- * 
+/* "IPO.pyx":388
+ * ####################################
+ * #IPO ScipOracle
  * cdef class IPOScipOracle:             # <<<<<<<<<<<<<<
  *     cdef cppIPO.ScipOracleController *oracle
  * 
@@ -796,6 +832,45 @@ struct __pyx_obj_3IPO_IPOSpace {
 struct __pyx_obj_3IPO_IPOScipOracle {
   PyObject_HEAD
   ipo::ScipOracleController *oracle;
+};
+
+
+/* "IPO.pyx":474
+ * ####################################
+ * #IPO Polyhedron
+ * cdef class IPOPolyhedron:             # <<<<<<<<<<<<<<
+ *     cdef cppIPO.Polyhedron* poly
+ * 
+ */
+struct __pyx_obj_3IPO_IPOPolyhedron {
+  PyObject_HEAD
+  ipo::Polyhedron *poly;
+};
+
+
+/* "IPO.pyx":482
+ * from cppIPO cimport Polyhedron
+ * 
+ * cdef class IPOFace:             # <<<<<<<<<<<<<<
+ *     cdef Polyhedron.Face* face
+ * 
+ */
+struct __pyx_obj_3IPO_IPOFace {
+  PyObject_HEAD
+  ipo::Polyhedron::Face *face;
+};
+
+
+/* "IPO.pyx":494
+ * #IPO Test
+ * 
+ * cdef class Test:             # <<<<<<<<<<<<<<
+ *     cdef cppIPO.Foo* foo
+ * 
+ */
+struct __pyx_obj_3IPO_Test {
+  PyObject_HEAD
+  ipo::Foo *foo;
 };
 
 
@@ -1005,6 +1080,23 @@ static CYTHON_INLINE int __Pyx_PyUnicode_Equals(PyObject* s1, PyObject* s2, int 
 #define __Pyx_PyString_Equals __Pyx_PyBytes_Equals
 #endif
 
+/* ListAppend.proto */
+#if CYTHON_USE_PYLIST_INTERNALS && CYTHON_ASSUME_SAFE_MACROS
+static CYTHON_INLINE int __Pyx_PyList_Append(PyObject* list, PyObject* x) {
+    PyListObject* L = (PyListObject*) list;
+    Py_ssize_t len = Py_SIZE(list);
+    if (likely(L->allocated > len) & likely(len > (L->allocated >> 1))) {
+        Py_INCREF(x);
+        PyList_SET_ITEM(list, len, x);
+        Py_SIZE(list) = len+1;
+        return 0;
+    }
+    return PyList_Append(list, x);
+}
+#else
+#define __Pyx_PyList_Append(L,x) PyList_Append(L,x)
+#endif
+
 /* FetchCommonType.proto */
 static PyTypeObject* __Pyx_FetchCommonType(PyTypeObject* type);
 
@@ -1190,6 +1282,8 @@ static int __Pyx_InitStrings(__Pyx_StringTabEntry *t);
 
 /* Module declarations from 'libcpp.vector' */
 
+/* Module declarations from 'libcpp.memory' */
+
 /* Module declarations from 'cppIPO' */
 
 /* Module declarations from 'libc' */
@@ -1205,25 +1299,28 @@ static PyTypeObject *__pyx_ptype_7cpython_4type_type = 0;
 
 /* Module declarations from 'cpython.object' */
 
-/* Module declarations from 'libcpp.memory' */
-
 /* Module declarations from 'IPO' */
 static PyTypeObject *__pyx_ptype_3IPO_SoplexRational = 0;
 static PyTypeObject *__pyx_ptype_3IPO_IPOReferenceCountedVector = 0;
 static PyTypeObject *__pyx_ptype_3IPO_IPOVector = 0;
 static PyTypeObject *__pyx_ptype_3IPO_IPOLinearConstraint = 0;
+static PyTypeObject *__pyx_ptype_3IPO_IPOInnerDescription = 0;
+static PyTypeObject *__pyx_ptype_3IPO_IPOAffineOuterDescription = 0;
 static PyTypeObject *__pyx_ptype_3IPO_IPOSpace = 0;
 static PyTypeObject *__pyx_ptype_3IPO_IPOScipOracle = 0;
+static PyTypeObject *__pyx_ptype_3IPO_IPOPolyhedron = 0;
+static PyTypeObject *__pyx_ptype_3IPO_IPOFace = 0;
+static PyTypeObject *__pyx_ptype_3IPO_Test = 0;
 static PyObject *__pyx_f_3IPO_CreateConstSoplexRational(soplex::Rational const *); /*proto*/
 static PyObject *__pyx_f_3IPO_CreateIPOVector(ipo::Vector *); /*proto*/
 static PyObject *__pyx_f_3IPO_CreateConstIPOVector(ipo::Vector const *); /*proto*/
 static PyObject *__pyx_f_3IPO_CreateLinearConstraint(ipo::LinearConstraint *); /*proto*/
-static std::string __pyx_convert_string_from_py_std__in_string(PyObject *); /*proto*/
 static CYTHON_INLINE PyObject *__pyx_convert_PyObject_string_to_py_std__in_string(std::string const &); /*proto*/
 static CYTHON_INLINE PyObject *__pyx_convert_PyUnicode_string_to_py_std__in_string(std::string const &); /*proto*/
 static CYTHON_INLINE PyObject *__pyx_convert_PyStr_string_to_py_std__in_string(std::string const &); /*proto*/
 static CYTHON_INLINE PyObject *__pyx_convert_PyBytes_string_to_py_std__in_string(std::string const &); /*proto*/
 static CYTHON_INLINE PyObject *__pyx_convert_PyByteArray_string_to_py_std__in_string(std::string const &); /*proto*/
+static std::string __pyx_convert_string_from_py_std__in_string(PyObject *); /*proto*/
 #define __Pyx_MODULE_NAME "IPO"
 int __pyx_module_is_main_IPO = 0;
 
@@ -1231,7 +1328,21 @@ int __pyx_module_is_main_IPO = 0;
 static PyObject *__pyx_builtin_MemoryError;
 static PyObject *__pyx_builtin_TypeError;
 static PyObject *__pyx_builtin_range;
+static const char __pyx_k_A[] = "A\n";
+static const char __pyx_k_B[] = "B\n";
+static const char __pyx_k_C[] = "C\n";
+static const char __pyx_k_D[] = "D";
+static const char __pyx_k_E[] = "E";
+static const char __pyx_k_F[] = "F";
+static const char __pyx_k_G[] = "G";
+static const char __pyx_k_H[] = "H";
+static const char __pyx_k_I[] = "I";
+static const char __pyx_k_J[] = "J";
+static const char __pyx_k_K[] = "K";
+static const char __pyx_k_L[] = "L\n";
+static const char __pyx_k_M[] = "M\n";
 static const char __pyx_k_IPO[] = "IPO";
+static const char __pyx_k__14[] = "\n";
 static const char __pyx_k_doc[] = "__doc__";
 static const char __pyx_k_end[] = "end";
 static const char __pyx_k_lin[] = "lin";
@@ -1244,6 +1355,7 @@ static const char __pyx_k_file[] = "file";
 static const char __pyx_k_init[] = "init";
 static const char __pyx_k_main[] = "__main__";
 static const char __pyx_k_name[] = "name";
+static const char __pyx_k_rays[] = "rays";
 static const char __pyx_k_self[] = "self";
 static const char __pyx_k_test[] = "__test__";
 static const char __pyx_k_debug[] = "debug";
@@ -1251,8 +1363,9 @@ static const char __pyx_k_isNew[] = "isNew";
 static const char __pyx_k_print[] = "print";
 static const char __pyx_k_range[] = "range";
 static const char __pyx_k_value[] = "value";
-static const char __pyx_k_append[] = "append";
+static const char __pyx_k_FERTIG[] = "FERTIG\n";
 static const char __pyx_k_module[] = "__module__";
+static const char __pyx_k_points[] = "points";
 static const char __pyx_k_stream[] = "stream";
 static const char __pyx_k_vector[] = "vector";
 static const char __pyx_k_isConst[] = "isConst";
@@ -1261,27 +1374,50 @@ static const char __pyx_k_qualname[] = "__qualname__";
 static const char __pyx_k_IPOVector[] = "IPOVector";
 static const char __pyx_k_TypeError[] = "TypeError";
 static const char __pyx_k_metaclass[] = "__metaclass__";
+static const char __pyx_k_affineHull[] = "affineHull";
 static const char __pyx_k_isConstant[] = "isConstant";
 static const char __pyx_k_MemoryError[] = "MemoryError";
+static const char __pyx_k_constraints[] = "constraints";
+static const char __pyx_k_C_call_inner[] = "C++ call inner\n";
+static const char __pyx_k_C_call_outer[] = "C++ call outer\n";
 static const char __pyx_k_NonConstError[] = "NonConstError";
 static const char __pyx_k_NonConstError_init[] = "NonConstError.init";
+static const char __pyx_k_inner_verarbeitung[] = "inner verarbeitung\n";
 static const char __pyx_k_IPOLinearConstraint[] = "IPOLinearConstraint";
 static const char __pyx_k_NonConstError___str[] = "NonConstError.__str__";
 static const char __pyx_k_This_is_no_const_value[] = "This is no const value: ";
 static const char __pyx_k_home_sandra_Documents_HiWi_IPO[] = "/home/sandra/Documents/HiWi/IPO/ipo/tools/Wrapper/IPO.pyx";
+static PyObject *__pyx_n_s_A;
+static PyObject *__pyx_n_s_B;
+static PyObject *__pyx_n_s_C;
+static PyObject *__pyx_kp_s_C_call_inner;
+static PyObject *__pyx_kp_s_C_call_outer;
+static PyObject *__pyx_n_s_D;
+static PyObject *__pyx_n_s_E;
+static PyObject *__pyx_n_s_F;
+static PyObject *__pyx_n_s_FERTIG;
+static PyObject *__pyx_n_s_G;
+static PyObject *__pyx_n_s_H;
+static PyObject *__pyx_n_s_I;
 static PyObject *__pyx_n_s_IPO;
 static PyObject *__pyx_n_s_IPOLinearConstraint;
 static PyObject *__pyx_n_s_IPOVector;
+static PyObject *__pyx_n_s_J;
+static PyObject *__pyx_n_s_K;
+static PyObject *__pyx_n_s_L;
+static PyObject *__pyx_n_s_M;
 static PyObject *__pyx_n_s_MemoryError;
 static PyObject *__pyx_n_s_NonConstError;
 static PyObject *__pyx_n_s_NonConstError___str;
 static PyObject *__pyx_n_s_NonConstError_init;
 static PyObject *__pyx_kp_s_This_is_no_const_value;
 static PyObject *__pyx_n_s_TypeError;
-static PyObject *__pyx_n_s_append;
+static PyObject *__pyx_kp_s__14;
+static PyObject *__pyx_n_s_affineHull;
 static PyObject *__pyx_n_s_cerr;
 static PyObject *__pyx_n_s_clog;
 static PyObject *__pyx_n_s_cons;
+static PyObject *__pyx_n_s_constraints;
 static PyObject *__pyx_n_s_cout;
 static PyObject *__pyx_n_s_debug;
 static PyObject *__pyx_n_s_doc;
@@ -1289,6 +1425,7 @@ static PyObject *__pyx_n_s_end;
 static PyObject *__pyx_n_s_file;
 static PyObject *__pyx_kp_s_home_sandra_Documents_HiWi_IPO;
 static PyObject *__pyx_n_s_init;
+static PyObject *__pyx_kp_s_inner_verarbeitung;
 static PyObject *__pyx_n_s_isConst;
 static PyObject *__pyx_n_s_isConstant;
 static PyObject *__pyx_n_s_isNew;
@@ -1297,10 +1434,12 @@ static PyObject *__pyx_n_s_main;
 static PyObject *__pyx_n_s_metaclass;
 static PyObject *__pyx_n_s_module;
 static PyObject *__pyx_n_s_name;
+static PyObject *__pyx_n_s_points;
 static PyObject *__pyx_n_s_prepare;
 static PyObject *__pyx_n_s_print;
 static PyObject *__pyx_n_s_qualname;
 static PyObject *__pyx_n_s_range;
+static PyObject *__pyx_n_s_rays;
 static PyObject *__pyx_n_s_self;
 static PyObject *__pyx_n_s_str;
 static PyObject *__pyx_n_s_stream;
@@ -1334,26 +1473,38 @@ static PyObject *__pyx_pf_3IPO_19IPOLinearConstraint_20definesEmptyFace(struct _
 static PyObject *__pyx_pf_3IPO_19IPOLinearConstraint_22definesTrivialFace(struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3IPO_19IPOLinearConstraint_24evaluatePoint(struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_point); /* proto */
 static PyObject *__pyx_pf_3IPO_19IPOLinearConstraint_26evaluateRay(struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_ray); /* proto */
-static int __pyx_pf_3IPO_8IPOSpace___cinit__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self); /* proto */
+static int __pyx_pf_3IPO_19IPOInnerDescription___init__(struct __pyx_obj_3IPO_IPOInnerDescription *__pyx_v_self); /* proto */
+static int __pyx_pf_3IPO_25IPOAffineOuterDescription___init__(struct __pyx_obj_3IPO_IPOAffineOuterDescription *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v_cons); /* proto */
+static int __pyx_pf_3IPO_8IPOSpace___cinit__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_isConst); /* proto */
 static void __pyx_pf_3IPO_8IPOSpace_2__dealloc__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_4dimension(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_stream, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_lincons); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_12__getitem__(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_key); /* proto */
-static PyObject *__pyx_pf_3IPO_8IPOSpace_14__richcmp__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOSpace *__pyx_v_y, int __pyx_v_op); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_4isConstant(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_6dimension(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_8printVector(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_stream, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearForm(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_12printLinearConstraint(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_lincons); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_14__getitem__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, int __pyx_v_key); /* proto */
+static PyObject *__pyx_pf_3IPO_8IPOSpace_16__richcmp__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOSpace *__pyx_v_y, int __pyx_v_op); /* proto */
 static int __pyx_pf_3IPO_13IPOScipOracle___cinit__(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self, PyObject *__pyx_v_name, int __pyx_v_isNew); /* proto */
 static void __pyx_pf_3IPO_13IPOScipOracle_2__dealloc__(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3IPO_13IPOScipOracle_4name(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3IPO_13IPOScipOracle_6heuristicLevel(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3IPO_13IPOScipOracle_8heuristicLevel_CacheOracle(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self); /* proto */
 static PyObject *__pyx_pf_3IPO_13IPOScipOracle_10affineHull(struct __pyx_obj_3IPO_IPOScipOracle *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v_outputMode); /* proto */
+static PyObject *__pyx_pf_3IPO_affineHull(CYTHON_UNUSED PyObject *__pyx_self); /* proto */
+static int __pyx_pf_3IPO_4Test___cinit__(struct __pyx_obj_3IPO_Test *__pyx_v_self); /* proto */
+static void __pyx_pf_3IPO_4Test_2__dealloc__(struct __pyx_obj_3IPO_Test *__pyx_v_self); /* proto */
+static PyObject *__pyx_pf_3IPO_4Test_4print_Example(struct __pyx_obj_3IPO_Test *__pyx_v_self); /* proto */
 static PyObject *__pyx_tp_new_3IPO_SoplexRational(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3IPO_IPOReferenceCountedVector(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3IPO_IPOVector(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3IPO_IPOLinearConstraint(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_tp_new_3IPO_IPOInnerDescription(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_tp_new_3IPO_IPOAffineOuterDescription(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3IPO_IPOSpace(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_tp_new_3IPO_IPOScipOracle(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_tp_new_3IPO_IPOPolyhedron(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_tp_new_3IPO_IPOFace(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
+static PyObject *__pyx_tp_new_3IPO_Test(PyTypeObject *t, PyObject *a, PyObject *k); /*proto*/
 static PyObject *__pyx_int_0;
 static PyObject *__pyx_tuple_;
 static PyObject *__pyx_tuple__2;
@@ -1367,9 +1518,12 @@ static PyObject *__pyx_tuple__9;
 static PyObject *__pyx_tuple__10;
 static PyObject *__pyx_tuple__11;
 static PyObject *__pyx_tuple__12;
-static PyObject *__pyx_tuple__14;
-static PyObject *__pyx_codeobj__13;
-static PyObject *__pyx_codeobj__15;
+static PyObject *__pyx_tuple__13;
+static PyObject *__pyx_tuple__15;
+static PyObject *__pyx_tuple__17;
+static PyObject *__pyx_codeobj__16;
+static PyObject *__pyx_codeobj__18;
+static PyObject *__pyx_codeobj__19;
 
 /* "IPO.pyx":12
  * #Errors
@@ -4933,7 +5087,7 @@ static PyObject *__pyx_f_3IPO_CreateLinearConstraint(ipo::LinearConstraint *__py
  *     py_linconst.lin = linconst
  *     return py_linconst             # <<<<<<<<<<<<<<
  * 
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_py_linconst));
@@ -4963,12 +5117,12 @@ static PyObject *__pyx_f_3IPO_CreateLinearConstraint(ipo::LinearConstraint *__py
 /* "IPO.pyx":263
  *     return py_linconst
  * 
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):             # <<<<<<<<<<<<<<
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):             # <<<<<<<<<<<<<<
  *     py_linconst = IPOLinearConstraint(True)
  *     py_linconst.const_lin = linconst
  */
 
-static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint *__pyx_v_linconst) {
+static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint const *__pyx_v_linconst) {
   struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_py_linconst = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
@@ -4977,7 +5131,7 @@ static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint 
 
   /* "IPO.pyx":264
  * 
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):
  *     py_linconst = IPOLinearConstraint(True)             # <<<<<<<<<<<<<<
  *     py_linconst.const_lin = linconst
  *     return py_linconst
@@ -4988,7 +5142,7 @@ static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint 
   __pyx_t_1 = 0;
 
   /* "IPO.pyx":265
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):
  *     py_linconst = IPOLinearConstraint(True)
  *     py_linconst.const_lin = linconst             # <<<<<<<<<<<<<<
  *     return py_linconst
@@ -5001,7 +5155,7 @@ static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint 
  *     py_linconst.const_lin = linconst
  *     return py_linconst             # <<<<<<<<<<<<<<
  * 
- * 
+ * ####################################
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_py_linconst));
@@ -5011,7 +5165,7 @@ static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint 
   /* "IPO.pyx":263
  *     return py_linconst
  * 
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):             # <<<<<<<<<<<<<<
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):             # <<<<<<<<<<<<<<
  *     py_linconst = IPOLinearConstraint(True)
  *     py_linconst.const_lin = linconst
  */
@@ -5028,86 +5182,309 @@ static PyObject *__pyx_f_3IPO_CreateConstLinearConstraint(ipo::LinearConstraint 
   return __pyx_r;
 }
 
-/* "IPO.pyx":275
- *     cdef cppIPO.Space *cpp_space
+/* "IPO.pyx":272
  * 
- *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.cpp_space = new cppIPO.Space()
- *         if self.cpp_space is NULL:
+ * cdef class IPOInnerDescription:
+ *     def __init__(self):             # <<<<<<<<<<<<<<
+ *         self.points = []
+ *         self.rays = []
  */
 
 /* Python wrapper */
-static int __pyx_pw_3IPO_8IPOSpace_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static int __pyx_pw_3IPO_8IPOSpace_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static int __pyx_pw_3IPO_19IPOInnerDescription_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static int __pyx_pw_3IPO_19IPOInnerDescription_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   int __pyx_r;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("__cinit__ (wrapper)", 0);
+  __Pyx_RefNannySetupContext("__init__ (wrapper)", 0);
   if (unlikely(PyTuple_GET_SIZE(__pyx_args) > 0)) {
-    __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 0, 0, PyTuple_GET_SIZE(__pyx_args)); return -1;}
-  if (unlikely(__pyx_kwds) && unlikely(PyDict_Size(__pyx_kwds) > 0) && unlikely(!__Pyx_CheckKeywordStrings(__pyx_kwds, "__cinit__", 0))) return -1;
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace___cinit__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self));
+    __Pyx_RaiseArgtupleInvalid("__init__", 1, 0, 0, PyTuple_GET_SIZE(__pyx_args)); return -1;}
+  if (unlikely(__pyx_kwds) && unlikely(PyDict_Size(__pyx_kwds) > 0) && unlikely(!__Pyx_CheckKeywordStrings(__pyx_kwds, "__init__", 0))) return -1;
+  __pyx_r = __pyx_pf_3IPO_19IPOInnerDescription___init__(((struct __pyx_obj_3IPO_IPOInnerDescription *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static int __pyx_pf_3IPO_8IPOSpace___cinit__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self) {
+static int __pyx_pf_3IPO_19IPOInnerDescription___init__(struct __pyx_obj_3IPO_IPOInnerDescription *__pyx_v_self) {
   int __pyx_r;
   __Pyx_RefNannyDeclarations
-  ipo::Space *__pyx_t_1;
-  int __pyx_t_2;
-  __Pyx_RefNannySetupContext("__cinit__", 0);
+  PyObject *__pyx_t_1 = NULL;
+  __Pyx_RefNannySetupContext("__init__", 0);
 
-  /* "IPO.pyx":276
+  /* "IPO.pyx":273
+ * cdef class IPOInnerDescription:
+ *     def __init__(self):
+ *         self.points = []             # <<<<<<<<<<<<<<
+ *         self.rays = []
  * 
- *     def __cinit__(self):
- *         self.cpp_space = new cppIPO.Space()             # <<<<<<<<<<<<<<
- *         if self.cpp_space is NULL:
- *             raise MemoryError()
  */
-  try {
-    __pyx_t_1 = new ipo::Space();
-  } catch(...) {
-    __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 276, __pyx_L1_error)
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 273, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_points, __pyx_t_1) < 0) __PYX_ERR(0, 273, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "IPO.pyx":274
+ *     def __init__(self):
+ *         self.points = []
+ *         self.rays = []             # <<<<<<<<<<<<<<
+ * 
+ * cdef class IPOAffineOuterDescription:
+ */
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 274, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_rays, __pyx_t_1) < 0) __PYX_ERR(0, 274, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
+  /* "IPO.pyx":272
+ * 
+ * cdef class IPOInnerDescription:
+ *     def __init__(self):             # <<<<<<<<<<<<<<
+ *         self.points = []
+ *         self.rays = []
+ */
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("IPO.IPOInnerDescription.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":277
+ * 
+ * cdef class IPOAffineOuterDescription:
+ *     def __init__(self, cons):             # <<<<<<<<<<<<<<
+ *         self.constraints = []
+ * 
+ */
+
+/* Python wrapper */
+static int __pyx_pw_3IPO_25IPOAffineOuterDescription_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static int __pyx_pw_3IPO_25IPOAffineOuterDescription_1__init__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  CYTHON_UNUSED PyObject *__pyx_v_cons = 0;
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__init__ (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_cons,0};
+    PyObject* values[1] = {0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_cons)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__init__") < 0)) __PYX_ERR(0, 277, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 1) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+    }
+    __pyx_v_cons = values[0];
   }
-  __pyx_v_self->cpp_space = __pyx_t_1;
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("__init__", 1, 1, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 277, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("IPO.IPOAffineOuterDescription.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return -1;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_3IPO_25IPOAffineOuterDescription___init__(((struct __pyx_obj_3IPO_IPOAffineOuterDescription *)__pyx_v_self), __pyx_v_cons);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_3IPO_25IPOAffineOuterDescription___init__(struct __pyx_obj_3IPO_IPOAffineOuterDescription *__pyx_v_self, CYTHON_UNUSED PyObject *__pyx_v_cons) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  __Pyx_RefNannySetupContext("__init__", 0);
+
+  /* "IPO.pyx":278
+ * cdef class IPOAffineOuterDescription:
+ *     def __init__(self, cons):
+ *         self.constraints = []             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_t_1 = PyList_New(0); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 278, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_self), __pyx_n_s_constraints, __pyx_t_1) < 0) __PYX_ERR(0, 278, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
   /* "IPO.pyx":277
- *     def __cinit__(self):
- *         self.cpp_space = new cppIPO.Space()
- *         if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
- *             raise MemoryError()
+ * 
+ * cdef class IPOAffineOuterDescription:
+ *     def __init__(self, cons):             # <<<<<<<<<<<<<<
+ *         self.constraints = []
  * 
  */
-  __pyx_t_2 = ((__pyx_v_self->cpp_space == NULL) != 0);
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("IPO.IPOAffineOuterDescription.__init__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":288
+ *     cdef const cppIPO.Space *const_space
+ * 
+ *     def __cinit__(self, isConst):             # <<<<<<<<<<<<<<
+ *         if(isConst is False):
+ *             self.cpp_space = new cppIPO.Space()
+ */
+
+/* Python wrapper */
+static int __pyx_pw_3IPO_8IPOSpace_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static int __pyx_pw_3IPO_8IPOSpace_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  PyObject *__pyx_v_isConst = 0;
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__cinit__ (wrapper)", 0);
+  {
+    static PyObject **__pyx_pyargnames[] = {&__pyx_n_s_isConst,0};
+    PyObject* values[1] = {0};
+    if (unlikely(__pyx_kwds)) {
+      Py_ssize_t kw_args;
+      const Py_ssize_t pos_args = PyTuple_GET_SIZE(__pyx_args);
+      switch (pos_args) {
+        case  1: values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+        case  0: break;
+        default: goto __pyx_L5_argtuple_error;
+      }
+      kw_args = PyDict_Size(__pyx_kwds);
+      switch (pos_args) {
+        case  0:
+        if (likely((values[0] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_isConst)) != 0)) kw_args--;
+        else goto __pyx_L5_argtuple_error;
+      }
+      if (unlikely(kw_args > 0)) {
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(0, 288, __pyx_L3_error)
+      }
+    } else if (PyTuple_GET_SIZE(__pyx_args) != 1) {
+      goto __pyx_L5_argtuple_error;
+    } else {
+      values[0] = PyTuple_GET_ITEM(__pyx_args, 0);
+    }
+    __pyx_v_isConst = values[0];
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L5_argtuple_error:;
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 1, 1, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 288, __pyx_L3_error)
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("IPO.IPOSpace.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return -1;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace___cinit__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), __pyx_v_isConst);
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_3IPO_8IPOSpace___cinit__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_isConst) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  int __pyx_t_2;
+  ipo::Space *__pyx_t_3;
+  __Pyx_RefNannySetupContext("__cinit__", 0);
+
+  /* "IPO.pyx":289
+ * 
+ *     def __cinit__(self, isConst):
+ *         if(isConst is False):             # <<<<<<<<<<<<<<
+ *             self.cpp_space = new cppIPO.Space()
+ *             if self.cpp_space is NULL:
+ */
+  __pyx_t_1 = (__pyx_v_isConst == Py_False);
+  __pyx_t_2 = (__pyx_t_1 != 0);
   if (__pyx_t_2) {
 
-    /* "IPO.pyx":278
- *         self.cpp_space = new cppIPO.Space()
- *         if self.cpp_space is NULL:
- *             raise MemoryError()             # <<<<<<<<<<<<<<
+    /* "IPO.pyx":290
+ *     def __cinit__(self, isConst):
+ *         if(isConst is False):
+ *             self.cpp_space = new cppIPO.Space()             # <<<<<<<<<<<<<<
+ *             if self.cpp_space is NULL:
+ *                 raise MemoryError()
+ */
+    try {
+      __pyx_t_3 = new ipo::Space();
+    } catch(...) {
+      __Pyx_CppExn2PyErr();
+      __PYX_ERR(0, 290, __pyx_L1_error)
+    }
+    __pyx_v_self->cpp_space = __pyx_t_3;
+
+    /* "IPO.pyx":291
+ *         if(isConst is False):
+ *             self.cpp_space = new cppIPO.Space()
+ *             if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
+ *                 raise MemoryError()
+ * 
+ */
+    __pyx_t_2 = ((__pyx_v_self->cpp_space == NULL) != 0);
+    if (__pyx_t_2) {
+
+      /* "IPO.pyx":292
+ *             self.cpp_space = new cppIPO.Space()
+ *             if self.cpp_space is NULL:
+ *                 raise MemoryError()             # <<<<<<<<<<<<<<
  * 
  *     def __dealloc__(self):
  */
-    PyErr_NoMemory(); __PYX_ERR(0, 278, __pyx_L1_error)
+      PyErr_NoMemory(); __PYX_ERR(0, 292, __pyx_L1_error)
 
-    /* "IPO.pyx":277
- *     def __cinit__(self):
- *         self.cpp_space = new cppIPO.Space()
- *         if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
- *             raise MemoryError()
+      /* "IPO.pyx":291
+ *         if(isConst is False):
+ *             self.cpp_space = new cppIPO.Space()
+ *             if self.cpp_space is NULL:             # <<<<<<<<<<<<<<
+ *                 raise MemoryError()
  * 
+ */
+    }
+
+    /* "IPO.pyx":289
+ * 
+ *     def __cinit__(self, isConst):
+ *         if(isConst is False):             # <<<<<<<<<<<<<<
+ *             self.cpp_space = new cppIPO.Space()
+ *             if self.cpp_space is NULL:
  */
   }
 
-  /* "IPO.pyx":275
- *     cdef cppIPO.Space *cpp_space
+  /* "IPO.pyx":288
+ *     cdef const cppIPO.Space *const_space
  * 
- *     def __cinit__(self):             # <<<<<<<<<<<<<<
- *         self.cpp_space = new cppIPO.Space()
- *         if self.cpp_space is NULL:
+ *     def __cinit__(self, isConst):             # <<<<<<<<<<<<<<
+ *         if(isConst is False):
+ *             self.cpp_space = new cppIPO.Space()
  */
 
   /* function exit code */
@@ -5121,12 +5498,12 @@ static int __pyx_pf_3IPO_8IPOSpace___cinit__(struct __pyx_obj_3IPO_IPOSpace *__p
   return __pyx_r;
 }
 
-/* "IPO.pyx":280
- *             raise MemoryError()
+/* "IPO.pyx":294
+ *                 raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         del self.cpp_space
- * 
+ *         if(self.cpp_space is not NULL):
+ *             del self.cpp_space
  */
 
 /* Python wrapper */
@@ -5142,81 +5519,210 @@ static void __pyx_pw_3IPO_8IPOSpace_3__dealloc__(PyObject *__pyx_v_self) {
 
 static void __pyx_pf_3IPO_8IPOSpace_2__dealloc__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self) {
   __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "IPO.pyx":281
+  /* "IPO.pyx":295
  * 
  *     def __dealloc__(self):
- *         del self.cpp_space             # <<<<<<<<<<<<<<
- * 
- *     def dimension(self):
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             del self.cpp_space
+ *         else:
  */
-  delete __pyx_v_self->cpp_space;
+  __pyx_t_1 = ((__pyx_v_self->cpp_space != NULL) != 0);
+  if (__pyx_t_1) {
 
-  /* "IPO.pyx":280
- *             raise MemoryError()
+    /* "IPO.pyx":296
+ *     def __dealloc__(self):
+ *         if(self.cpp_space is not NULL):
+ *             del self.cpp_space             # <<<<<<<<<<<<<<
+ *         else:
+ *             del self.const_space
+ */
+    delete __pyx_v_self->cpp_space;
+
+    /* "IPO.pyx":295
+ * 
+ *     def __dealloc__(self):
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             del self.cpp_space
+ *         else:
+ */
+    goto __pyx_L3;
+  }
+
+  /* "IPO.pyx":298
+ *             del self.cpp_space
+ *         else:
+ *             del self.const_space             # <<<<<<<<<<<<<<
+ * 
+ *     def isConstant(self):
+ */
+  /*else*/ {
+    delete __pyx_v_self->const_space;
+  }
+  __pyx_L3:;
+
+  /* "IPO.pyx":294
+ *                 raise MemoryError()
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
- *         del self.cpp_space
- * 
+ *         if(self.cpp_space is not NULL):
+ *             del self.cpp_space
  */
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
 }
 
-/* "IPO.pyx":283
- *         del self.cpp_space
+/* "IPO.pyx":300
+ *             del self.const_space
  * 
- *     def dimension(self):             # <<<<<<<<<<<<<<
- *         return self.cpp_space.dimension()
+ *     def isConstant(self):             # <<<<<<<<<<<<<<
+ *         return (self.const_space is not NULL)
  * 
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_5dimension(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_5dimension(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_5isConstant(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_5isConstant(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  __Pyx_RefNannySetupContext("dimension (wrapper)", 0);
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_4dimension(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self));
+  __Pyx_RefNannySetupContext("isConstant (wrapper)", 0);
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_4isConstant(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_4dimension(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_4isConstant(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
-  __Pyx_RefNannySetupContext("dimension", 0);
+  __Pyx_RefNannySetupContext("isConstant", 0);
 
-  /* "IPO.pyx":284
+  /* "IPO.pyx":301
+ * 
+ *     def isConstant(self):
+ *         return (self.const_space is not NULL)             # <<<<<<<<<<<<<<
  * 
  *     def dimension(self):
- *         return self.cpp_space.dimension()             # <<<<<<<<<<<<<<
- * 
- *     def printVector(self, stream, IPOVector vector):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_FromSize_t(__pyx_v_self->cpp_space->dimension()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 284, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyBool_FromLong((__pyx_v_self->const_space != NULL)); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "IPO.pyx":283
- *         del self.cpp_space
+  /* "IPO.pyx":300
+ *             del self.const_space
  * 
- *     def dimension(self):             # <<<<<<<<<<<<<<
- *         return self.cpp_space.dimension()
+ *     def isConstant(self):             # <<<<<<<<<<<<<<
+ *         return (self.const_space is not NULL)
  * 
  */
 
   /* function exit code */
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("IPO.IPOSpace.isConstant", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":303
+ *         return (self.const_space is not NULL)
+ * 
+ *     def dimension(self):             # <<<<<<<<<<<<<<
+ *         if(self.cpp_space is not NULL):
+ *             return self.cpp_space.dimension()
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_3IPO_8IPOSpace_7dimension(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_7dimension(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("dimension (wrapper)", 0);
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_6dimension(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_3IPO_8IPOSpace_6dimension(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  int __pyx_t_1;
+  PyObject *__pyx_t_2 = NULL;
+  __Pyx_RefNannySetupContext("dimension", 0);
+
+  /* "IPO.pyx":304
+ * 
+ *     def dimension(self):
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             return self.cpp_space.dimension()
+ *         else:
+ */
+  __pyx_t_1 = ((__pyx_v_self->cpp_space != NULL) != 0);
+  if (__pyx_t_1) {
+
+    /* "IPO.pyx":305
+ *     def dimension(self):
+ *         if(self.cpp_space is not NULL):
+ *             return self.cpp_space.dimension()             # <<<<<<<<<<<<<<
+ *         else:
+ *             return self.const_space.dimension()
+ */
+    __Pyx_XDECREF(__pyx_r);
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_self->cpp_space->dimension()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 305, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_r = __pyx_t_2;
+    __pyx_t_2 = 0;
+    goto __pyx_L0;
+
+    /* "IPO.pyx":304
+ * 
+ *     def dimension(self):
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             return self.cpp_space.dimension()
+ *         else:
+ */
+  }
+
+  /* "IPO.pyx":307
+ *             return self.cpp_space.dimension()
+ *         else:
+ *             return self.const_space.dimension()             # <<<<<<<<<<<<<<
+ * 
+ *     def printVector(self, stream, IPOVector vector):
+ */
+  /*else*/ {
+    __Pyx_XDECREF(__pyx_r);
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_self->const_space->dimension()); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_r = __pyx_t_2;
+    __pyx_t_2 = 0;
+    goto __pyx_L0;
+  }
+
+  /* "IPO.pyx":303
+ *         return (self.const_space is not NULL)
+ * 
+ *     def dimension(self):             # <<<<<<<<<<<<<<
+ *         if(self.cpp_space is not NULL):
+ *             return self.cpp_space.dimension()
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_2);
   __Pyx_AddTraceback("IPO.IPOSpace.dimension", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -5225,8 +5731,8 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_4dimension(struct __pyx_obj_3IPO_IPOSpa
   return __pyx_r;
 }
 
-/* "IPO.pyx":286
- *         return self.cpp_space.dimension()
+/* "IPO.pyx":309
+ *             return self.const_space.dimension()
  * 
  *     def printVector(self, stream, IPOVector vector):             # <<<<<<<<<<<<<<
  *         if (not vector.isConstant()):
@@ -5234,8 +5740,8 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_4dimension(struct __pyx_obj_3IPO_IPOSpa
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_7printVector(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_7printVector(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_9printVector(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_9printVector(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
   PyObject *__pyx_v_stream = 0;
   struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector = 0;
   PyObject *__pyx_r = 0;
@@ -5261,11 +5767,11 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_7printVector(PyObject *__pyx_v_self, Py
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_vector)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, 1); __PYX_ERR(0, 286, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, 1); __PYX_ERR(0, 309, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "printVector") < 0)) __PYX_ERR(0, 286, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "printVector") < 0)) __PYX_ERR(0, 309, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -5278,14 +5784,14 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_7printVector(PyObject *__pyx_v_self, Py
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 286, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("printVector", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 309, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("IPO.IPOSpace.printVector", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return NULL;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_3IPO_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 286, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_6printVector(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), __pyx_v_stream, __pyx_v_vector);
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_3IPO_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 309, __pyx_L1_error)
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_8printVector(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), __pyx_v_stream, __pyx_v_vector);
 
   /* function exit code */
   goto __pyx_L0;
@@ -5296,7 +5802,7 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_7printVector(PyObject *__pyx_v_self, Py
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_stream, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_8printVector(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_stream, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -5306,14 +5812,14 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printVector", 0);
 
-  /* "IPO.pyx":287
+  /* "IPO.pyx":310
  * 
  *     def printVector(self, stream, IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
  *             raise NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 287, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -5326,35 +5832,35 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 287, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 287, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 310, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 287, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 310, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":288
+    /* "IPO.pyx":311
  *     def printVector(self, stream, IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 288, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 311, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 288, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__9, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 311, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 288, __pyx_L1_error)
+    __PYX_ERR(0, 311, __pyx_L1_error)
 
-    /* "IPO.pyx":287
+    /* "IPO.pyx":310
  * 
  *     def printVector(self, stream, IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
@@ -5363,26 +5869,26 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
  */
   }
 
-  /* "IPO.pyx":290
+  /* "IPO.pyx":313
  *             raise NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":             # <<<<<<<<<<<<<<
  *             #call function with cout
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cout, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 290, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cout, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 313, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":292
+    /* "IPO.pyx":315
  *         if stream == "cout":
  *             #call function with cout
  *             print("debug")             # <<<<<<<<<<<<<<
  *         elif stream == "cerr":
  *             #call function with cerr
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 292, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 315, __pyx_L1_error)
 
-    /* "IPO.pyx":290
+    /* "IPO.pyx":313
  *             raise NonConstError('IPOVector')
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":             # <<<<<<<<<<<<<<
@@ -5392,26 +5898,26 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
     goto __pyx_L4;
   }
 
-  /* "IPO.pyx":293
+  /* "IPO.pyx":316
  *             #call function with cout
  *             print("debug")
  *         elif stream == "cerr":             # <<<<<<<<<<<<<<
  *             #call function with cerr
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cerr, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 293, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_cerr, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 316, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":295
+    /* "IPO.pyx":318
  *         elif stream == "cerr":
  *             #call function with cerr
  *             print("debug")             # <<<<<<<<<<<<<<
  *         elif stream == "clog":
  *             #call function with clog
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 295, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 318, __pyx_L1_error)
 
-    /* "IPO.pyx":293
+    /* "IPO.pyx":316
  *             #call function with cout
  *             print("debug")
  *         elif stream == "cerr":             # <<<<<<<<<<<<<<
@@ -5421,26 +5927,26 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
     goto __pyx_L4;
   }
 
-  /* "IPO.pyx":296
+  /* "IPO.pyx":319
  *             #call function with cerr
  *             print("debug")
  *         elif stream == "clog":             # <<<<<<<<<<<<<<
  *             #call function with clog
  *             print("debug")
  */
-  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_clog, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 296, __pyx_L1_error)
+  __pyx_t_5 = (__Pyx_PyString_Equals(__pyx_v_stream, __pyx_n_s_clog, Py_EQ)); if (unlikely(__pyx_t_5 < 0)) __PYX_ERR(0, 319, __pyx_L1_error)
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":298
+    /* "IPO.pyx":321
  *         elif stream == "clog":
  *             #call function with clog
  *             print("debug")             # <<<<<<<<<<<<<<
  * 
  *     def printLinearForm(self, IPOVector vector):
  */
-    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 298, __pyx_L1_error)
+    if (__Pyx_PrintOne(0, __pyx_n_s_debug) < 0) __PYX_ERR(0, 321, __pyx_L1_error)
 
-    /* "IPO.pyx":296
+    /* "IPO.pyx":319
  *             #call function with cerr
  *             print("debug")
  *         elif stream == "clog":             # <<<<<<<<<<<<<<
@@ -5450,8 +5956,8 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
   }
   __pyx_L4:;
 
-  /* "IPO.pyx":286
- *         return self.cpp_space.dimension()
+  /* "IPO.pyx":309
+ *             return self.const_space.dimension()
  * 
  *     def printVector(self, stream, IPOVector vector):             # <<<<<<<<<<<<<<
  *         if (not vector.isConstant()):
@@ -5473,7 +5979,7 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
   return __pyx_r;
 }
 
-/* "IPO.pyx":300
+/* "IPO.pyx":323
  *             print("debug")
  * 
  *     def printLinearForm(self, IPOVector vector):             # <<<<<<<<<<<<<<
@@ -5482,13 +5988,13 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_6printVector(CYTHON_UNUSED struct __pyx
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_9printLinearForm(PyObject *__pyx_v_self, PyObject *__pyx_v_vector); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_9printLinearForm(PyObject *__pyx_v_self, PyObject *__pyx_v_vector) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_11printLinearForm(PyObject *__pyx_v_self, PyObject *__pyx_v_vector); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_11printLinearForm(PyObject *__pyx_v_self, PyObject *__pyx_v_vector) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("printLinearForm (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_3IPO_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 300, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_8printLinearForm(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOVector *)__pyx_v_vector));
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_vector), __pyx_ptype_3IPO_IPOVector, 1, "vector", 0))) __PYX_ERR(0, 323, __pyx_L1_error)
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_10printLinearForm(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOVector *)__pyx_v_vector));
 
   /* function exit code */
   goto __pyx_L0;
@@ -5499,7 +6005,7 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_9printLinearForm(PyObject *__pyx_v_self
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearForm(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOVector *__pyx_v_vector) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -5509,14 +6015,14 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct _
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printLinearForm", 0);
 
-  /* "IPO.pyx":301
+  /* "IPO.pyx":324
  * 
  *     def printLinearForm(self, IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
  *             raise NonConstError('IPOVector')
  *         print("lin")
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_vector), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -5529,35 +6035,35 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct _
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 324, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 301, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 324, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 301, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 324, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":302
+    /* "IPO.pyx":325
  *     def printLinearForm(self, IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *         print("lin")
  * 
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 302, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 325, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 302, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__10, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 325, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 302, __pyx_L1_error)
+    __PYX_ERR(0, 325, __pyx_L1_error)
 
-    /* "IPO.pyx":301
+    /* "IPO.pyx":324
  * 
  *     def printLinearForm(self, IPOVector vector):
  *         if (not vector.isConstant()):             # <<<<<<<<<<<<<<
@@ -5566,16 +6072,16 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct _
  */
   }
 
-  /* "IPO.pyx":303
+  /* "IPO.pyx":326
  *         if (not vector.isConstant()):
  *             raise NonConstError('IPOVector')
  *         print("lin")             # <<<<<<<<<<<<<<
  * 
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):
  */
-  if (__Pyx_PrintOne(0, __pyx_n_s_lin) < 0) __PYX_ERR(0, 303, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_n_s_lin) < 0) __PYX_ERR(0, 326, __pyx_L1_error)
 
-  /* "IPO.pyx":300
+  /* "IPO.pyx":323
  *             print("debug")
  * 
  *     def printLinearForm(self, IPOVector vector):             # <<<<<<<<<<<<<<
@@ -5598,7 +6104,7 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct _
   return __pyx_r;
 }
 
-/* "IPO.pyx":305
+/* "IPO.pyx":328
  *         print("lin")
  * 
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):             # <<<<<<<<<<<<<<
@@ -5607,13 +6113,13 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_8printLinearForm(CYTHON_UNUSED struct _
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_11printLinearConstraint(PyObject *__pyx_v_self, PyObject *__pyx_v_lincons); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_11printLinearConstraint(PyObject *__pyx_v_self, PyObject *__pyx_v_lincons) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_13printLinearConstraint(PyObject *__pyx_v_self, PyObject *__pyx_v_lincons); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_13printLinearConstraint(PyObject *__pyx_v_self, PyObject *__pyx_v_lincons) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("printLinearConstraint (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_lincons), __pyx_ptype_3IPO_IPOLinearConstraint, 1, "lincons", 0))) __PYX_ERR(0, 305, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOLinearConstraint *)__pyx_v_lincons));
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_lincons), __pyx_ptype_3IPO_IPOLinearConstraint, 1, "lincons", 0))) __PYX_ERR(0, 328, __pyx_L1_error)
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_12printLinearConstraint(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOLinearConstraint *)__pyx_v_lincons));
 
   /* function exit code */
   goto __pyx_L0;
@@ -5624,7 +6130,7 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_11printLinearConstraint(PyObject *__pyx
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_lincons) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_12printLinearConstraint(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOLinearConstraint *__pyx_v_lincons) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   PyObject *__pyx_t_1 = NULL;
@@ -5634,14 +6140,14 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED s
   int __pyx_t_5;
   __Pyx_RefNannySetupContext("printLinearConstraint", 0);
 
-  /* "IPO.pyx":306
+  /* "IPO.pyx":329
  * 
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):             # <<<<<<<<<<<<<<
  *             raise NonConstError('IPOLinearConstraint')
  *         print("cons")
  */
-  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_lincons), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 306, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_lincons), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 329, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __pyx_t_3 = NULL;
   if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_2))) {
@@ -5654,35 +6160,35 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED s
     }
   }
   if (__pyx_t_3) {
-    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 306, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallOneArg(__pyx_t_2, __pyx_t_3); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 329, __pyx_L1_error)
     __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
   } else {
-    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 306, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_t_2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 329, __pyx_L1_error)
   }
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 306, __pyx_L1_error)
+  __pyx_t_4 = __Pyx_PyObject_IsTrue(__pyx_t_1); if (unlikely(__pyx_t_4 < 0)) __PYX_ERR(0, 329, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_t_5 = ((!__pyx_t_4) != 0);
   if (__pyx_t_5) {
 
-    /* "IPO.pyx":307
+    /* "IPO.pyx":330
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):
  *             raise NonConstError('IPOLinearConstraint')             # <<<<<<<<<<<<<<
  *         print("cons")
  * 
  */
-    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_GetModuleGlobalName(__pyx_n_s_NonConstError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 330, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_1);
-    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 307, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyObject_Call(__pyx_t_1, __pyx_tuple__11, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 330, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
     __Pyx_Raise(__pyx_t_2, 0, 0, 0);
     __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
-    __PYX_ERR(0, 307, __pyx_L1_error)
+    __PYX_ERR(0, 330, __pyx_L1_error)
 
-    /* "IPO.pyx":306
+    /* "IPO.pyx":329
  * 
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):             # <<<<<<<<<<<<<<
@@ -5691,16 +6197,16 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED s
  */
   }
 
-  /* "IPO.pyx":308
+  /* "IPO.pyx":331
  *         if (not lincons.isConstant()):
  *             raise NonConstError('IPOLinearConstraint')
  *         print("cons")             # <<<<<<<<<<<<<<
  * 
- *     def __getitem__(self, key):
+ *     def __getitem__(self, int key):
  */
-  if (__Pyx_PrintOne(0, __pyx_n_s_cons) < 0) __PYX_ERR(0, 308, __pyx_L1_error)
+  if (__Pyx_PrintOne(0, __pyx_n_s_cons) < 0) __PYX_ERR(0, 331, __pyx_L1_error)
 
-  /* "IPO.pyx":305
+  /* "IPO.pyx":328
  *         print("lin")
  * 
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):             # <<<<<<<<<<<<<<
@@ -5723,77 +6229,143 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_10printLinearConstraint(CYTHON_UNUSED s
   return __pyx_r;
 }
 
-/* "IPO.pyx":310
+/* "IPO.pyx":333
  *         print("cons")
  * 
- *     def __getitem__(self, key):             # <<<<<<<<<<<<<<
+ *     def __getitem__(self, int key):             # <<<<<<<<<<<<<<
  *         if type(key) is int:
- *             #cdef size_t var = key
+ *             if(self.cpp_space is not NULL):
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_13__getitem__(PyObject *__pyx_v_self, PyObject *__pyx_v_key); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_13__getitem__(PyObject *__pyx_v_self, PyObject *__pyx_v_key) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_15__getitem__(PyObject *__pyx_v_self, PyObject *__pyx_arg_key); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_15__getitem__(PyObject *__pyx_v_self, PyObject *__pyx_arg_key) {
+  int __pyx_v_key;
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__getitem__ (wrapper)", 0);
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_12__getitem__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((PyObject *)__pyx_v_key));
+  assert(__pyx_arg_key); {
+    __pyx_v_key = __Pyx_PyInt_As_int(__pyx_arg_key); if (unlikely((__pyx_v_key == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 333, __pyx_L3_error)
+  }
+  goto __pyx_L4_argument_unpacking_done;
+  __pyx_L3_error:;
+  __Pyx_AddTraceback("IPO.IPOSpace.__getitem__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_RefNannyFinishContext();
+  return NULL;
+  __pyx_L4_argument_unpacking_done:;
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_14__getitem__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((int)__pyx_v_key));
 
   /* function exit code */
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_12__getitem__(CYTHON_UNUSED struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, PyObject *__pyx_v_key) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_14__getitem__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, int __pyx_v_key) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
-  int __pyx_t_1;
+  PyObject *__pyx_t_1 = NULL;
   int __pyx_t_2;
-  PyObject *__pyx_t_3 = NULL;
+  int __pyx_t_3;
   __Pyx_RefNannySetupContext("__getitem__", 0);
 
-  /* "IPO.pyx":311
+  /* "IPO.pyx":334
  * 
- *     def __getitem__(self, key):
+ *     def __getitem__(self, int key):
  *         if type(key) is int:             # <<<<<<<<<<<<<<
- *             #cdef size_t var = key
- *             #return self.cpp_space[var]
+ *             if(self.cpp_space is not NULL):
+ *                 return deref(self.cpp_space)[key]
  */
-  __pyx_t_1 = (((PyObject *)Py_TYPE(__pyx_v_key)) == ((PyObject *)(&PyInt_Type)));
-  __pyx_t_2 = (__pyx_t_1 != 0);
-  if (__pyx_t_2) {
-    goto __pyx_L3;
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_key); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 334, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_t_2 = (((PyObject *)Py_TYPE(__pyx_t_1)) == ((PyObject *)(&PyInt_Type)));
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+  __pyx_t_3 = (__pyx_t_2 != 0);
+  if (__pyx_t_3) {
+
+    /* "IPO.pyx":335
+ *     def __getitem__(self, int key):
+ *         if type(key) is int:
+ *             if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *                 return deref(self.cpp_space)[key]
+ *             else:
+ */
+    __pyx_t_3 = ((__pyx_v_self->cpp_space != NULL) != 0);
+    if (__pyx_t_3) {
+
+      /* "IPO.pyx":336
+ *         if type(key) is int:
+ *             if(self.cpp_space is not NULL):
+ *                 return deref(self.cpp_space)[key]             # <<<<<<<<<<<<<<
+ *             else:
+ *                 return deref(self.const_space)[key]
+ */
+      __Pyx_XDECREF(__pyx_r);
+      __pyx_t_1 = __pyx_convert_PyBytes_string_to_py_std__in_string(((*__pyx_v_self->cpp_space)[__pyx_v_key])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 336, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_r = __pyx_t_1;
+      __pyx_t_1 = 0;
+      goto __pyx_L0;
+
+      /* "IPO.pyx":335
+ *     def __getitem__(self, int key):
+ *         if type(key) is int:
+ *             if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *                 return deref(self.cpp_space)[key]
+ *             else:
+ */
+    }
+
+    /* "IPO.pyx":338
+ *                 return deref(self.cpp_space)[key]
+ *             else:
+ *                 return deref(self.const_space)[key]             # <<<<<<<<<<<<<<
+ *         else:
+ *             raise TypeError()
+ */
+    /*else*/ {
+      __Pyx_XDECREF(__pyx_r);
+      __pyx_t_1 = __pyx_convert_PyBytes_string_to_py_std__in_string(((*__pyx_v_self->const_space)[__pyx_v_key])); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 338, __pyx_L1_error)
+      __Pyx_GOTREF(__pyx_t_1);
+      __pyx_r = __pyx_t_1;
+      __pyx_t_1 = 0;
+      goto __pyx_L0;
+    }
+
+    /* "IPO.pyx":334
+ * 
+ *     def __getitem__(self, int key):
+ *         if type(key) is int:             # <<<<<<<<<<<<<<
+ *             if(self.cpp_space is not NULL):
+ *                 return deref(self.cpp_space)[key]
+ */
   }
 
-  /* "IPO.pyx":316
- *             True
+  /* "IPO.pyx":340
+ *                 return deref(self.const_space)[key]
  *         else:
  *             raise TypeError()             # <<<<<<<<<<<<<<
  * 
  * 
  */
   /*else*/ {
-    __pyx_t_3 = __Pyx_PyObject_CallNoArg(__pyx_builtin_TypeError); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 316, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_3);
-    __Pyx_Raise(__pyx_t_3, 0, 0, 0);
-    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
-    __PYX_ERR(0, 316, __pyx_L1_error)
+    __pyx_t_1 = __Pyx_PyObject_CallNoArg(__pyx_builtin_TypeError); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 340, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_1);
+    __Pyx_Raise(__pyx_t_1, 0, 0, 0);
+    __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+    __PYX_ERR(0, 340, __pyx_L1_error)
   }
-  __pyx_L3:;
 
-  /* "IPO.pyx":310
+  /* "IPO.pyx":333
  *         print("cons")
  * 
- *     def __getitem__(self, key):             # <<<<<<<<<<<<<<
+ *     def __getitem__(self, int key):             # <<<<<<<<<<<<<<
  *         if type(key) is int:
- *             #cdef size_t var = key
+ *             if(self.cpp_space is not NULL):
  */
 
   /* function exit code */
-  __pyx_r = Py_None; __Pyx_INCREF(Py_None);
-  goto __pyx_L0;
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_1);
   __Pyx_AddTraceback("IPO.IPOSpace.__getitem__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -5802,23 +6374,23 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_12__getitem__(CYTHON_UNUSED struct __py
   return __pyx_r;
 }
 
-/* "IPO.pyx":319
+/* "IPO.pyx":343
  * 
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):             # <<<<<<<<<<<<<<
- *         if op == Py_EQ:
- *             return self.cpp_space==y.cpp_space
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):
  */
 
 /* Python wrapper */
-static PyObject *__pyx_pw_3IPO_8IPOSpace_15__richcmp__(PyObject *__pyx_v_self, PyObject *__pyx_v_y, int __pyx_v_op); /*proto*/
-static PyObject *__pyx_pw_3IPO_8IPOSpace_15__richcmp__(PyObject *__pyx_v_self, PyObject *__pyx_v_y, int __pyx_v_op) {
+static PyObject *__pyx_pw_3IPO_8IPOSpace_17__richcmp__(PyObject *__pyx_v_self, PyObject *__pyx_v_y, int __pyx_v_op); /*proto*/
+static PyObject *__pyx_pw_3IPO_8IPOSpace_17__richcmp__(PyObject *__pyx_v_self, PyObject *__pyx_v_y, int __pyx_v_op) {
   PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__richcmp__ (wrapper)", 0);
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_self), __pyx_ptype_3IPO_IPOSpace, 1, "self", 0))) __PYX_ERR(0, 319, __pyx_L1_error)
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_3IPO_IPOSpace, 0, "y", 0))) __PYX_ERR(0, 319, __pyx_L1_error)
-  __pyx_r = __pyx_pf_3IPO_8IPOSpace_14__richcmp__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_y), ((int)__pyx_v_op));
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_self), __pyx_ptype_3IPO_IPOSpace, 1, "self", 0))) __PYX_ERR(0, 343, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_y), __pyx_ptype_3IPO_IPOSpace, 0, "y", 0))) __PYX_ERR(0, 343, __pyx_L1_error)
+  __pyx_r = __pyx_pf_3IPO_8IPOSpace_16__richcmp__(((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_self), ((struct __pyx_obj_3IPO_IPOSpace *)__pyx_v_y), ((int)__pyx_v_op));
 
   /* function exit code */
   goto __pyx_L0;
@@ -5829,103 +6401,468 @@ static PyObject *__pyx_pw_3IPO_8IPOSpace_15__richcmp__(PyObject *__pyx_v_self, P
   return __pyx_r;
 }
 
-static PyObject *__pyx_pf_3IPO_8IPOSpace_14__richcmp__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOSpace *__pyx_v_y, int __pyx_v_op) {
+static PyObject *__pyx_pf_3IPO_8IPOSpace_16__richcmp__(struct __pyx_obj_3IPO_IPOSpace *__pyx_v_self, struct __pyx_obj_3IPO_IPOSpace *__pyx_v_y, int __pyx_v_op) {
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   int __pyx_t_1;
   PyObject *__pyx_t_2 = NULL;
+  PyObject *__pyx_t_3 = NULL;
+  PyObject *__pyx_t_4 = NULL;
   __Pyx_RefNannySetupContext("__richcmp__", 0);
 
-  /* "IPO.pyx":320
+  /* "IPO.pyx":344
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
- *         if op == Py_EQ:             # <<<<<<<<<<<<<<
- *             return self.cpp_space==y.cpp_space
- *         elif op == Py_NE:
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:
  */
-  __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
+  __pyx_t_1 = ((__pyx_v_self->cpp_space != NULL) != 0);
   if (__pyx_t_1) {
 
-    /* "IPO.pyx":321
+    /* "IPO.pyx":345
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
- *         if op == Py_EQ:
- *             return self.cpp_space==y.cpp_space             # <<<<<<<<<<<<<<
- *         elif op == Py_NE:
- *             return self.cpp_space!=y.cpp_space
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):             # <<<<<<<<<<<<<<
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.const_space
  */
-    __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space == __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 321, __pyx_L1_error)
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 345, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_4 = NULL;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
+      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_4)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+        __Pyx_INCREF(__pyx_t_4);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_3, function);
+      }
+    }
+    if (__pyx_t_4) {
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 345, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    } else {
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 345, __pyx_L1_error)
+    }
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_r = __pyx_t_2;
-    __pyx_t_2 = 0;
-    goto __pyx_L0;
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 345, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    if (__pyx_t_1) {
 
-    /* "IPO.pyx":320
+      /* "IPO.pyx":346
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space==y.const_space
+ *                 elif op == Py_NE:
+ */
+      __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":347
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.const_space             # <<<<<<<<<<<<<<
+ *                 elif op == Py_NE:
+ *                     return self.cpp_space!=y.const_space
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space == __pyx_v_y->const_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 347, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":346
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space==y.const_space
+ *                 elif op == Py_NE:
+ */
+      }
+
+      /* "IPO.pyx":348
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.const_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space!=y.const_space
+ *                 else:
+ */
+      __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":349
+ *                     return self.cpp_space==y.const_space
+ *                 elif op == Py_NE:
+ *                     return self.cpp_space!=y.const_space             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     assert False
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space != __pyx_v_y->const_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 349, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":348
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.const_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space!=y.const_space
+ *                 else:
+ */
+      }
+
+      /* "IPO.pyx":351
+ *                     return self.cpp_space!=y.const_space
+ *                 else:
+ *                     assert False             # <<<<<<<<<<<<<<
+ *             else:
+ *                 if op == Py_EQ:
+ */
+      /*else*/ {
+        #ifndef CYTHON_WITHOUT_ASSERTIONS
+        if (unlikely(!Py_OptimizeFlag)) {
+          if (unlikely(!0)) {
+            PyErr_SetNone(PyExc_AssertionError);
+            __PYX_ERR(0, 351, __pyx_L1_error)
+          }
+        }
+        #endif
+      }
+
+      /* "IPO.pyx":345
+ *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):             # <<<<<<<<<<<<<<
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.const_space
+ */
+      goto __pyx_L4;
+    }
+
+    /* "IPO.pyx":353
+ *                     assert False
+ *             else:
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space==y.cpp_space
+ *                 elif op == Py_NE:
+ */
+    /*else*/ {
+      __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":354
+ *             else:
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.cpp_space             # <<<<<<<<<<<<<<
+ *                 elif op == Py_NE:
+ *                     return self.cpp_space!=y.cpp_space
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space == __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 354, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":353
+ *                     assert False
+ *             else:
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space==y.cpp_space
+ *                 elif op == Py_NE:
+ */
+      }
+
+      /* "IPO.pyx":355
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.cpp_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space!=y.cpp_space
+ *                 else:
+ */
+      __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":356
+ *                     return self.cpp_space==y.cpp_space
+ *                 elif op == Py_NE:
+ *                     return self.cpp_space!=y.cpp_space             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     assert False
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space != __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 356, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":355
+ *                 if op == Py_EQ:
+ *                     return self.cpp_space==y.cpp_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.cpp_space!=y.cpp_space
+ *                 else:
+ */
+      }
+
+      /* "IPO.pyx":358
+ *                     return self.cpp_space!=y.cpp_space
+ *                 else:
+ *                     assert False             # <<<<<<<<<<<<<<
+ *         else:
+ *             if(y.isConstant()):
+ */
+      /*else*/ {
+        #ifndef CYTHON_WITHOUT_ASSERTIONS
+        if (unlikely(!Py_OptimizeFlag)) {
+          if (unlikely(!0)) {
+            PyErr_SetNone(PyExc_AssertionError);
+            __PYX_ERR(0, 358, __pyx_L1_error)
+          }
+        }
+        #endif
+      }
+    }
+    __pyx_L4:;
+
+    /* "IPO.pyx":344
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):
- *         if op == Py_EQ:             # <<<<<<<<<<<<<<
- *             return self.cpp_space==y.cpp_space
- *         elif op == Py_NE:
+ *         if(self.cpp_space is not NULL):             # <<<<<<<<<<<<<<
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:
  */
+    goto __pyx_L3;
   }
 
-  /* "IPO.pyx":322
- *         if op == Py_EQ:
- *             return self.cpp_space==y.cpp_space
- *         elif op == Py_NE:             # <<<<<<<<<<<<<<
- *             return self.cpp_space!=y.cpp_space
+  /* "IPO.pyx":360
+ *                     assert False
  *         else:
+ *             if(y.isConstant()):             # <<<<<<<<<<<<<<
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.const_space
  */
-  __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
-  if (__pyx_t_1) {
-
-    /* "IPO.pyx":323
- *             return self.cpp_space==y.cpp_space
- *         elif op == Py_NE:
- *             return self.cpp_space!=y.cpp_space             # <<<<<<<<<<<<<<
- *         else:
- *             assert False
- */
-    __Pyx_XDECREF(__pyx_r);
-    __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->cpp_space != __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 323, __pyx_L1_error)
+  /*else*/ {
+    __pyx_t_3 = __Pyx_PyObject_GetAttrStr(((PyObject *)__pyx_v_y), __pyx_n_s_isConstant); if (unlikely(!__pyx_t_3)) __PYX_ERR(0, 360, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_3);
+    __pyx_t_4 = NULL;
+    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_3))) {
+      __pyx_t_4 = PyMethod_GET_SELF(__pyx_t_3);
+      if (likely(__pyx_t_4)) {
+        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_3);
+        __Pyx_INCREF(__pyx_t_4);
+        __Pyx_INCREF(function);
+        __Pyx_DECREF_SET(__pyx_t_3, function);
+      }
+    }
+    if (__pyx_t_4) {
+      __pyx_t_2 = __Pyx_PyObject_CallOneArg(__pyx_t_3, __pyx_t_4); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 360, __pyx_L1_error)
+      __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    } else {
+      __pyx_t_2 = __Pyx_PyObject_CallNoArg(__pyx_t_3); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 360, __pyx_L1_error)
+    }
     __Pyx_GOTREF(__pyx_t_2);
-    __pyx_r = __pyx_t_2;
-    __pyx_t_2 = 0;
-    goto __pyx_L0;
+    __Pyx_DECREF(__pyx_t_3); __pyx_t_3 = 0;
+    __pyx_t_1 = __Pyx_PyObject_IsTrue(__pyx_t_2); if (unlikely(__pyx_t_1 < 0)) __PYX_ERR(0, 360, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    if (__pyx_t_1) {
 
-    /* "IPO.pyx":322
- *         if op == Py_EQ:
- *             return self.cpp_space==y.cpp_space
- *         elif op == Py_NE:             # <<<<<<<<<<<<<<
- *             return self.cpp_space!=y.cpp_space
+      /* "IPO.pyx":361
  *         else:
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.const_space==y.const_space
+ *                 elif op == Py_NE:
  */
-  }
+      __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
+      if (__pyx_t_1) {
 
-  /* "IPO.pyx":325
- *             return self.cpp_space!=y.cpp_space
+        /* "IPO.pyx":362
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.const_space             # <<<<<<<<<<<<<<
+ *                 elif op == Py_NE:
+ *                     return self.const_space!=y.const_space
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->const_space == __pyx_v_y->const_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 362, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":361
  *         else:
- *             assert False             # <<<<<<<<<<<<<<
+ *             if(y.isConstant()):
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.const_space==y.const_space
+ *                 elif op == Py_NE:
+ */
+      }
+
+      /* "IPO.pyx":363
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.const_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.const_space!=y.const_space
+ *                 else:
+ */
+      __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":364
+ *                     return self.const_space==y.const_space
+ *                 elif op == Py_NE:
+ *                     return self.const_space!=y.const_space             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     assert False
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->const_space != __pyx_v_y->const_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 364, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":363
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.const_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.const_space!=y.const_space
+ *                 else:
+ */
+      }
+
+      /* "IPO.pyx":366
+ *                     return self.const_space!=y.const_space
+ *                 else:
+ *                     assert False             # <<<<<<<<<<<<<<
+ *             else:
+ *                 if op == Py_EQ:
+ */
+      /*else*/ {
+        #ifndef CYTHON_WITHOUT_ASSERTIONS
+        if (unlikely(!Py_OptimizeFlag)) {
+          if (unlikely(!0)) {
+            PyErr_SetNone(PyExc_AssertionError);
+            __PYX_ERR(0, 366, __pyx_L1_error)
+          }
+        }
+        #endif
+      }
+
+      /* "IPO.pyx":360
+ *                     assert False
+ *         else:
+ *             if(y.isConstant()):             # <<<<<<<<<<<<<<
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.const_space
+ */
+      goto __pyx_L7;
+    }
+
+    /* "IPO.pyx":368
+ *                     assert False
+ *             else:
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.const_space==y.cpp_space
+ *                 elif op == Py_NE:
+ */
+    /*else*/ {
+      __pyx_t_1 = ((__pyx_v_op == Py_EQ) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":369
+ *             else:
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.cpp_space             # <<<<<<<<<<<<<<
+ *                 elif op == Py_NE:
+ *                     return self.const_space!=y.cpp_space
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->const_space == __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 369, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":368
+ *                     assert False
+ *             else:
+ *                 if op == Py_EQ:             # <<<<<<<<<<<<<<
+ *                     return self.const_space==y.cpp_space
+ *                 elif op == Py_NE:
+ */
+      }
+
+      /* "IPO.pyx":370
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.cpp_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.const_space!=y.cpp_space
+ *                 else:
+ */
+      __pyx_t_1 = ((__pyx_v_op == Py_NE) != 0);
+      if (__pyx_t_1) {
+
+        /* "IPO.pyx":371
+ *                     return self.const_space==y.cpp_space
+ *                 elif op == Py_NE:
+ *                     return self.const_space!=y.cpp_space             # <<<<<<<<<<<<<<
+ *                 else:
+ *                     assert False
+ */
+        __Pyx_XDECREF(__pyx_r);
+        __pyx_t_2 = __Pyx_PyBool_FromLong((__pyx_v_self->const_space != __pyx_v_y->cpp_space)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 371, __pyx_L1_error)
+        __Pyx_GOTREF(__pyx_t_2);
+        __pyx_r = __pyx_t_2;
+        __pyx_t_2 = 0;
+        goto __pyx_L0;
+
+        /* "IPO.pyx":370
+ *                 if op == Py_EQ:
+ *                     return self.const_space==y.cpp_space
+ *                 elif op == Py_NE:             # <<<<<<<<<<<<<<
+ *                     return self.const_space!=y.cpp_space
+ *                 else:
+ */
+      }
+
+      /* "IPO.pyx":373
+ *                     return self.const_space!=y.cpp_space
+ *                 else:
+ *                     assert False             # <<<<<<<<<<<<<<
  * 
  * cdef object CreateIPOSpace(cppIPO.Space *space):
  */
-  /*else*/ {
-    #ifndef CYTHON_WITHOUT_ASSERTIONS
-    if (unlikely(!Py_OptimizeFlag)) {
-      if (unlikely(!0)) {
-        PyErr_SetNone(PyExc_AssertionError);
-        __PYX_ERR(0, 325, __pyx_L1_error)
+      /*else*/ {
+        #ifndef CYTHON_WITHOUT_ASSERTIONS
+        if (unlikely(!Py_OptimizeFlag)) {
+          if (unlikely(!0)) {
+            PyErr_SetNone(PyExc_AssertionError);
+            __PYX_ERR(0, 373, __pyx_L1_error)
+          }
+        }
+        #endif
       }
     }
-    #endif
+    __pyx_L7:;
   }
+  __pyx_L3:;
 
-  /* "IPO.pyx":319
+  /* "IPO.pyx":343
  * 
  * 
  *     def __richcmp__(IPOSpace self, IPOSpace y not None, int op):             # <<<<<<<<<<<<<<
- *         if op == Py_EQ:
- *             return self.cpp_space==y.cpp_space
+ *         if(self.cpp_space is not NULL):
+ *             if(y.isConstant()):
  */
 
   /* function exit code */
@@ -5933,6 +6870,8 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_14__richcmp__(struct __pyx_obj_3IPO_IPO
   goto __pyx_L0;
   __pyx_L1_error:;
   __Pyx_XDECREF(__pyx_t_2);
+  __Pyx_XDECREF(__pyx_t_3);
+  __Pyx_XDECREF(__pyx_t_4);
   __Pyx_AddTraceback("IPO.IPOSpace.__richcmp__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
@@ -5941,11 +6880,11 @@ static PyObject *__pyx_pf_3IPO_8IPOSpace_14__richcmp__(struct __pyx_obj_3IPO_IPO
   return __pyx_r;
 }
 
-/* "IPO.pyx":327
- *             assert False
+/* "IPO.pyx":375
+ *                     assert False
  * 
  * cdef object CreateIPOSpace(cppIPO.Space *space):             # <<<<<<<<<<<<<<
- *     py_space = IPOSpace()
+ *     py_space = IPOSpace(False)
  *     py_space.cpp_space = space
  */
 
@@ -5956,44 +6895,44 @@ static PyObject *__pyx_f_3IPO_CreateIPOSpace(ipo::Space *__pyx_v_space) {
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("CreateIPOSpace", 0);
 
-  /* "IPO.pyx":328
+  /* "IPO.pyx":376
  * 
  * cdef object CreateIPOSpace(cppIPO.Space *space):
- *     py_space = IPOSpace()             # <<<<<<<<<<<<<<
+ *     py_space = IPOSpace(False)             # <<<<<<<<<<<<<<
  *     py_space.cpp_space = space
  *     return py_space
  */
-  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOSpace), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 328, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOSpace), __pyx_tuple__12, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 376, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_v_py_space = ((struct __pyx_obj_3IPO_IPOSpace *)__pyx_t_1);
   __pyx_t_1 = 0;
 
-  /* "IPO.pyx":329
+  /* "IPO.pyx":377
  * cdef object CreateIPOSpace(cppIPO.Space *space):
- *     py_space = IPOSpace()
+ *     py_space = IPOSpace(False)
  *     py_space.cpp_space = space             # <<<<<<<<<<<<<<
  *     return py_space
  * 
  */
   __pyx_v_py_space->cpp_space = __pyx_v_space;
 
-  /* "IPO.pyx":330
- *     py_space = IPOSpace()
+  /* "IPO.pyx":378
+ *     py_space = IPOSpace(False)
  *     py_space.cpp_space = space
  *     return py_space             # <<<<<<<<<<<<<<
  * 
- * 
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_py_space));
   __pyx_r = ((PyObject *)__pyx_v_py_space);
   goto __pyx_L0;
 
-  /* "IPO.pyx":327
- *             assert False
+  /* "IPO.pyx":375
+ *                     assert False
  * 
  * cdef object CreateIPOSpace(cppIPO.Space *space):             # <<<<<<<<<<<<<<
- *     py_space = IPOSpace()
+ *     py_space = IPOSpace(False)
  *     py_space.cpp_space = space
  */
 
@@ -6009,7 +6948,75 @@ static PyObject *__pyx_f_3IPO_CreateIPOSpace(ipo::Space *__pyx_v_space) {
   return __pyx_r;
 }
 
-/* "IPO.pyx":340
+/* "IPO.pyx":380
+ *     return py_space
+ * 
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):             # <<<<<<<<<<<<<<
+ *     py_space = IPOSpace(True)
+ *     py_space.const_space = space
+ */
+
+static PyObject *__pyx_f_3IPO_CreateConstIPOSpace(ipo::Space const *__pyx_v_space) {
+  struct __pyx_obj_3IPO_IPOSpace *__pyx_v_py_space = NULL;
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  __Pyx_RefNannySetupContext("CreateConstIPOSpace", 0);
+
+  /* "IPO.pyx":381
+ * 
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):
+ *     py_space = IPOSpace(True)             # <<<<<<<<<<<<<<
+ *     py_space.const_space = space
+ *     return py_space
+ */
+  __pyx_t_1 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOSpace), __pyx_tuple__13, NULL); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 381, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_v_py_space = ((struct __pyx_obj_3IPO_IPOSpace *)__pyx_t_1);
+  __pyx_t_1 = 0;
+
+  /* "IPO.pyx":382
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):
+ *     py_space = IPOSpace(True)
+ *     py_space.const_space = space             # <<<<<<<<<<<<<<
+ *     return py_space
+ * 
+ */
+  __pyx_v_py_space->const_space = __pyx_v_space;
+
+  /* "IPO.pyx":383
+ *     py_space = IPOSpace(True)
+ *     py_space.const_space = space
+ *     return py_space             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(((PyObject *)__pyx_v_py_space));
+  __pyx_r = ((PyObject *)__pyx_v_py_space);
+  goto __pyx_L0;
+
+  /* "IPO.pyx":380
+ *     return py_space
+ * 
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):             # <<<<<<<<<<<<<<
+ *     py_space = IPOSpace(True)
+ *     py_space.const_space = space
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("IPO.CreateConstIPOSpace", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = 0;
+  __pyx_L0:;
+  __Pyx_XDECREF((PyObject *)__pyx_v_py_space);
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":391
  *     cdef cppIPO.ScipOracleController *oracle
  * 
  *     def __cinit__(self, str name, int isNew):             # <<<<<<<<<<<<<<
@@ -6045,11 +7052,11 @@ static int __pyx_pw_3IPO_13IPOScipOracle_1__cinit__(PyObject *__pyx_v_self, PyOb
         case  1:
         if (likely((values[1] = PyDict_GetItem(__pyx_kwds, __pyx_n_s_isNew)) != 0)) kw_args--;
         else {
-          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 2, 2, 1); __PYX_ERR(0, 340, __pyx_L3_error)
+          __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 2, 2, 1); __PYX_ERR(0, 391, __pyx_L3_error)
         }
       }
       if (unlikely(kw_args > 0)) {
-        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(0, 340, __pyx_L3_error)
+        if (unlikely(__Pyx_ParseOptionalKeywords(__pyx_kwds, __pyx_pyargnames, 0, values, pos_args, "__cinit__") < 0)) __PYX_ERR(0, 391, __pyx_L3_error)
       }
     } else if (PyTuple_GET_SIZE(__pyx_args) != 2) {
       goto __pyx_L5_argtuple_error;
@@ -6058,17 +7065,17 @@ static int __pyx_pw_3IPO_13IPOScipOracle_1__cinit__(PyObject *__pyx_v_self, PyOb
       values[1] = PyTuple_GET_ITEM(__pyx_args, 1);
     }
     __pyx_v_name = ((PyObject*)values[0]);
-    __pyx_v_isNew = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_isNew == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 340, __pyx_L3_error)
+    __pyx_v_isNew = __Pyx_PyInt_As_int(values[1]); if (unlikely((__pyx_v_isNew == (int)-1) && PyErr_Occurred())) __PYX_ERR(0, 391, __pyx_L3_error)
   }
   goto __pyx_L4_argument_unpacking_done;
   __pyx_L5_argtuple_error:;
-  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 340, __pyx_L3_error)
+  __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 2, 2, PyTuple_GET_SIZE(__pyx_args)); __PYX_ERR(0, 391, __pyx_L3_error)
   __pyx_L3_error:;
   __Pyx_AddTraceback("IPO.IPOScipOracle.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __Pyx_RefNannyFinishContext();
   return -1;
   __pyx_L4_argument_unpacking_done:;
-  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_name), (&PyString_Type), 1, "name", 1))) __PYX_ERR(0, 340, __pyx_L1_error)
+  if (unlikely(!__Pyx_ArgTypeTest(((PyObject *)__pyx_v_name), (&PyString_Type), 1, "name", 1))) __PYX_ERR(0, 391, __pyx_L1_error)
   __pyx_r = __pyx_pf_3IPO_13IPOScipOracle___cinit__(((struct __pyx_obj_3IPO_IPOScipOracle *)__pyx_v_self), __pyx_v_name, __pyx_v_isNew);
 
   /* function exit code */
@@ -6088,7 +7095,7 @@ static int __pyx_pf_3IPO_13IPOScipOracle___cinit__(struct __pyx_obj_3IPO_IPOScip
   ipo::ScipOracleController *__pyx_t_3;
   __Pyx_RefNannySetupContext("__cinit__", 0);
 
-  /* "IPO.pyx":341
+  /* "IPO.pyx":392
  * 
  *     def __cinit__(self, str name, int isNew):
  *         if(isNew == 1):             # <<<<<<<<<<<<<<
@@ -6098,23 +7105,23 @@ static int __pyx_pf_3IPO_13IPOScipOracle___cinit__(struct __pyx_obj_3IPO_IPOScip
   __pyx_t_1 = ((__pyx_v_isNew == 1) != 0);
   if (__pyx_t_1) {
 
-    /* "IPO.pyx":342
+    /* "IPO.pyx":393
  *     def __cinit__(self, str name, int isNew):
  *         if(isNew == 1):
  *             self.oracle = new cppIPO.ScipOracleController(name)             # <<<<<<<<<<<<<<
  * 
  *     def __dealloc__(self):
  */
-    __pyx_t_2 = __pyx_convert_string_from_py_std__in_string(__pyx_v_name); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 342, __pyx_L1_error)
+    __pyx_t_2 = __pyx_convert_string_from_py_std__in_string(__pyx_v_name); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 393, __pyx_L1_error)
     try {
       __pyx_t_3 = new ipo::ScipOracleController(__pyx_t_2);
     } catch(...) {
       __Pyx_CppExn2PyErr();
-      __PYX_ERR(0, 342, __pyx_L1_error)
+      __PYX_ERR(0, 393, __pyx_L1_error)
     }
     __pyx_v_self->oracle = __pyx_t_3;
 
-    /* "IPO.pyx":341
+    /* "IPO.pyx":392
  * 
  *     def __cinit__(self, str name, int isNew):
  *         if(isNew == 1):             # <<<<<<<<<<<<<<
@@ -6123,7 +7130,7 @@ static int __pyx_pf_3IPO_13IPOScipOracle___cinit__(struct __pyx_obj_3IPO_IPOScip
  */
   }
 
-  /* "IPO.pyx":340
+  /* "IPO.pyx":391
  *     cdef cppIPO.ScipOracleController *oracle
  * 
  *     def __cinit__(self, str name, int isNew):             # <<<<<<<<<<<<<<
@@ -6142,7 +7149,7 @@ static int __pyx_pf_3IPO_13IPOScipOracle___cinit__(struct __pyx_obj_3IPO_IPOScip
   return __pyx_r;
 }
 
-/* "IPO.pyx":344
+/* "IPO.pyx":395
  *             self.oracle = new cppIPO.ScipOracleController(name)
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -6165,7 +7172,7 @@ static void __pyx_pf_3IPO_13IPOScipOracle_2__dealloc__(struct __pyx_obj_3IPO_IPO
   __Pyx_RefNannyDeclarations
   __Pyx_RefNannySetupContext("__dealloc__", 0);
 
-  /* "IPO.pyx":345
+  /* "IPO.pyx":396
  * 
  *     def __dealloc__(self):
  *         del self.oracle             # <<<<<<<<<<<<<<
@@ -6174,7 +7181,7 @@ static void __pyx_pf_3IPO_13IPOScipOracle_2__dealloc__(struct __pyx_obj_3IPO_IPO
  */
   delete __pyx_v_self->oracle;
 
-  /* "IPO.pyx":344
+  /* "IPO.pyx":395
  *             self.oracle = new cppIPO.ScipOracleController(name)
  * 
  *     def __dealloc__(self):             # <<<<<<<<<<<<<<
@@ -6186,7 +7193,7 @@ static void __pyx_pf_3IPO_13IPOScipOracle_2__dealloc__(struct __pyx_obj_3IPO_IPO
   __Pyx_RefNannyFinishContext();
 }
 
-/* "IPO.pyx":347
+/* "IPO.pyx":398
  *         del self.oracle
  * 
  *     def name(self):             # <<<<<<<<<<<<<<
@@ -6213,7 +7220,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_4name(struct __pyx_obj_3IPO_IPOSc
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("name", 0);
 
-  /* "IPO.pyx":348
+  /* "IPO.pyx":399
  * 
  *     def name(self):
  *         return self.oracle.name()             # <<<<<<<<<<<<<<
@@ -6221,13 +7228,13 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_4name(struct __pyx_obj_3IPO_IPOSc
  *     def heuristicLevel(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_self->oracle->name()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 348, __pyx_L1_error)
+  __pyx_t_1 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_self->oracle->name()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 399, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "IPO.pyx":347
+  /* "IPO.pyx":398
  *         del self.oracle
  * 
  *     def name(self):             # <<<<<<<<<<<<<<
@@ -6246,7 +7253,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_4name(struct __pyx_obj_3IPO_IPOSc
   return __pyx_r;
 }
 
-/* "IPO.pyx":350
+/* "IPO.pyx":401
  *         return self.oracle.name()
  * 
  *     def heuristicLevel(self):             # <<<<<<<<<<<<<<
@@ -6273,7 +7280,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_6heuristicLevel(struct __pyx_obj_
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("heuristicLevel", 0);
 
-  /* "IPO.pyx":351
+  /* "IPO.pyx":402
  * 
  *     def heuristicLevel(self):
  *         return self.oracle.heuristicLevel_ScipOracle()             # <<<<<<<<<<<<<<
@@ -6281,13 +7288,13 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_6heuristicLevel(struct __pyx_obj_
  *     def heuristicLevel_CacheOracle(self):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->oracle->heuristicLevel_ScipOracle()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 351, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->oracle->heuristicLevel_ScipOracle()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 402, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "IPO.pyx":350
+  /* "IPO.pyx":401
  *         return self.oracle.name()
  * 
  *     def heuristicLevel(self):             # <<<<<<<<<<<<<<
@@ -6306,7 +7313,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_6heuristicLevel(struct __pyx_obj_
   return __pyx_r;
 }
 
-/* "IPO.pyx":353
+/* "IPO.pyx":404
  *         return self.oracle.heuristicLevel_ScipOracle()
  * 
  *     def heuristicLevel_CacheOracle(self):             # <<<<<<<<<<<<<<
@@ -6333,7 +7340,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_8heuristicLevel_CacheOracle(struc
   PyObject *__pyx_t_1 = NULL;
   __Pyx_RefNannySetupContext("heuristicLevel_CacheOracle", 0);
 
-  /* "IPO.pyx":354
+  /* "IPO.pyx":405
  * 
  *     def heuristicLevel_CacheOracle(self):
  *         return self.oracle.heuristicLevel_CacheOracle()             # <<<<<<<<<<<<<<
@@ -6341,13 +7348,13 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_8heuristicLevel_CacheOracle(struc
  *     def affineHull(self, outputMode):
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->oracle->heuristicLevel_CacheOracle()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 354, __pyx_L1_error)
+  __pyx_t_1 = __Pyx_PyInt_From_int(__pyx_v_self->oracle->heuristicLevel_CacheOracle()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 405, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __pyx_r = __pyx_t_1;
   __pyx_t_1 = 0;
   goto __pyx_L0;
 
-  /* "IPO.pyx":353
+  /* "IPO.pyx":404
  *         return self.oracle.heuristicLevel_ScipOracle()
  * 
  *     def heuristicLevel_CacheOracle(self):             # <<<<<<<<<<<<<<
@@ -6366,7 +7373,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_8heuristicLevel_CacheOracle(struc
   return __pyx_r;
 }
 
-/* "IPO.pyx":356
+/* "IPO.pyx":407
  *         return self.oracle.heuristicLevel_CacheOracle()
  * 
  *     def affineHull(self, outputMode):             # <<<<<<<<<<<<<<
@@ -6396,294 +7403,514 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_10affineHull(struct __pyx_obj_3IP
   ipo::Vector *__pyx_v_c_vector;
   size_t __pyx_v_i;
   PyObject *__pyx_v_py_vector = NULL;
-  PyObject *__pyx_v_inner = NULL;
+  struct __pyx_obj_3IPO_IPOInnerDescription *__pyx_v_innerDescription = NULL;
   ipo::AffineOuterDescription __pyx_v_c_outer;
+  struct __pyx_obj_3IPO_IPOAffineOuterDescription *__pyx_v_outerDescription = NULL;
   PyObject *__pyx_v_outer = NULL;
   ipo::LinearConstraint *__pyx_v_c_linconst;
   PyObject *__pyx_v_py_linconst = NULL;
   PyObject *__pyx_r = NULL;
   __Pyx_RefNannyDeclarations
   std::vector<ipo::Vector>  __pyx_t_1;
-  size_t __pyx_t_2;
+  PyObject *__pyx_t_2 = NULL;
   size_t __pyx_t_3;
-  PyObject *__pyx_t_4 = NULL;
+  size_t __pyx_t_4;
   PyObject *__pyx_t_5 = NULL;
-  PyObject *__pyx_t_6 = NULL;
-  PyObject *__pyx_t_7 = NULL;
+  int __pyx_t_6;
   __Pyx_RefNannySetupContext("affineHull", 0);
 
-  /* "IPO.pyx":359
+  /* "IPO.pyx":410
  *         #########-1-#########
  *         #convert inner description to 2-tupel IPOVector lists
  *         cdef cppIPO.InnerDescription c_inner = self.oracle.affineHullInner(1)             # <<<<<<<<<<<<<<
+ *         print "C++ call inner\n"
  * 
- *         #automagically convert to python list
  */
   __pyx_v_c_inner = __pyx_v_self->oracle->affineHullInner(1);
 
-  /* "IPO.pyx":362
+  /* "IPO.pyx":411
+ *         #convert inner description to 2-tupel IPOVector lists
+ *         cdef cppIPO.InnerDescription c_inner = self.oracle.affineHullInner(1)
+ *         print "C++ call inner\n"             # <<<<<<<<<<<<<<
+ * 
+ *         #automagically convert to python list
+ */
+  if (__Pyx_PrintOne(0, __pyx_kp_s_C_call_inner) < 0) __PYX_ERR(0, 411, __pyx_L1_error)
+
+  /* "IPO.pyx":414
  * 
  *         #automagically convert to python list
  *         c_points = c_inner.points             # <<<<<<<<<<<<<<
+ *         print "A\n"
  *         c_rays = c_inner.rays
- *         points = ()
  */
   __pyx_t_1 = __pyx_v_c_inner.points;
   __pyx_v_c_points = __pyx_t_1;
 
-  /* "IPO.pyx":363
+  /* "IPO.pyx":415
  *         #automagically convert to python list
  *         c_points = c_inner.points
+ *         print "A\n"             # <<<<<<<<<<<<<<
+ *         c_rays = c_inner.rays
+ *         print "B\n"
+ */
+  if (__Pyx_PrintOne(0, __pyx_n_s_A) < 0) __PYX_ERR(0, 415, __pyx_L1_error)
+
+  /* "IPO.pyx":416
+ *         c_points = c_inner.points
+ *         print "A\n"
  *         c_rays = c_inner.rays             # <<<<<<<<<<<<<<
- *         points = ()
- *         rays = ()
+ *         print "B\n"
+ *         points = []
  */
   __pyx_t_1 = __pyx_v_c_inner.rays;
   __pyx_v_c_rays = __pyx_t_1;
 
-  /* "IPO.pyx":364
- *         c_points = c_inner.points
+  /* "IPO.pyx":417
+ *         print "A\n"
  *         c_rays = c_inner.rays
- *         points = ()             # <<<<<<<<<<<<<<
- *         rays = ()
- *         cdef cppIPO.Vector *c_vector
+ *         print "B\n"             # <<<<<<<<<<<<<<
+ *         points = []
+ *         rays = []
  */
-  __Pyx_INCREF(__pyx_empty_tuple);
-  __pyx_v_points = __pyx_empty_tuple;
+  if (__Pyx_PrintOne(0, __pyx_n_s_B) < 0) __PYX_ERR(0, 417, __pyx_L1_error)
 
-  /* "IPO.pyx":365
+  /* "IPO.pyx":418
  *         c_rays = c_inner.rays
- *         points = ()
- *         rays = ()             # <<<<<<<<<<<<<<
+ *         print "B\n"
+ *         points = []             # <<<<<<<<<<<<<<
+ *         rays = []
  *         cdef cppIPO.Vector *c_vector
- *         #convert points to python wrapperclass IPOVector
  */
-  __Pyx_INCREF(__pyx_empty_tuple);
-  __pyx_v_rays = __pyx_empty_tuple;
+  __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 418, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_v_points = ((PyObject*)__pyx_t_2);
+  __pyx_t_2 = 0;
 
-  /* "IPO.pyx":368
+  /* "IPO.pyx":419
+ *         print "B\n"
+ *         points = []
+ *         rays = []             # <<<<<<<<<<<<<<
  *         cdef cppIPO.Vector *c_vector
- *         #convert points to python wrapperclass IPOVector
- *         for i in range(0,c_points.size()):             # <<<<<<<<<<<<<<
- *             c_vector = ref(c_points[i])
- *             py_vector = CreateIPOVector(c_vector)
+ *         print "C\n"
  */
-  __pyx_t_2 = __pyx_v_c_points.size();
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v_i = __pyx_t_3;
+  __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 419, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_v_rays = ((PyObject*)__pyx_t_2);
+  __pyx_t_2 = 0;
 
-    /* "IPO.pyx":369
+  /* "IPO.pyx":421
+ *         rays = []
+ *         cdef cppIPO.Vector *c_vector
+ *         print "C\n"             # <<<<<<<<<<<<<<
  *         #convert points to python wrapperclass IPOVector
  *         for i in range(0,c_points.size()):
+ */
+  if (__Pyx_PrintOne(0, __pyx_n_s_C) < 0) __PYX_ERR(0, 421, __pyx_L1_error)
+
+  /* "IPO.pyx":423
+ *         print "C\n"
+ *         #convert points to python wrapperclass IPOVector
+ *         for i in range(0,c_points.size()):             # <<<<<<<<<<<<<<
+ *             print "D"+str(i)+"\n"
+ *             c_vector = ref(c_points[i])
+ */
+  __pyx_t_3 = __pyx_v_c_points.size();
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
+
+    /* "IPO.pyx":424
+ *         #convert points to python wrapperclass IPOVector
+ *         for i in range(0,c_points.size()):
+ *             print "D"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ *             c_vector = ref(c_points[i])
+ *             print "E"+str(i)+"\n"
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_D, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 424, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":425
+ *         for i in range(0,c_points.size()):
+ *             print "D"+str(i)+"\n"
  *             c_vector = ref(c_points[i])             # <<<<<<<<<<<<<<
+ *             print "E"+str(i)+"\n"
  *             py_vector = CreateIPOVector(c_vector)
- *             points.append(py_vector)
  */
     __pyx_v_c_vector = (&(__pyx_v_c_points[__pyx_v_i]));
 
-    /* "IPO.pyx":370
- *         for i in range(0,c_points.size()):
+    /* "IPO.pyx":426
+ *             print "D"+str(i)+"\n"
  *             c_vector = ref(c_points[i])
+ *             print "E"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ *             py_vector = CreateIPOVector(c_vector)
+ *             print "F"+str(i)+"\n"
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_E, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 426, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":427
+ *             c_vector = ref(c_points[i])
+ *             print "E"+str(i)+"\n"
  *             py_vector = CreateIPOVector(c_vector)             # <<<<<<<<<<<<<<
+ *             print "F"+str(i)+"\n"
  *             points.append(py_vector)
+ */
+    __pyx_t_2 = __pyx_f_3IPO_CreateIPOVector(__pyx_v_c_vector); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 427, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_XDECREF_SET(__pyx_v_py_vector, __pyx_t_2);
+    __pyx_t_2 = 0;
+
+    /* "IPO.pyx":428
+ *             print "E"+str(i)+"\n"
+ *             py_vector = CreateIPOVector(c_vector)
+ *             print "F"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ *             points.append(py_vector)
+ *             print "G"+str(i)+"\n"
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_F, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 428, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":429
+ *             py_vector = CreateIPOVector(c_vector)
+ *             print "F"+str(i)+"\n"
+ *             points.append(py_vector)             # <<<<<<<<<<<<<<
+ *             print "G"+str(i)+"\n"
  * 
  */
-    __pyx_t_4 = __pyx_f_3IPO_CreateIPOVector(__pyx_v_c_vector); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 370, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_XDECREF_SET(__pyx_v_py_vector, __pyx_t_4);
-    __pyx_t_4 = 0;
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_points, __pyx_v_py_vector); if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 429, __pyx_L1_error)
 
-    /* "IPO.pyx":371
- *             c_vector = ref(c_points[i])
- *             py_vector = CreateIPOVector(c_vector)
- *             points.append(py_vector)             # <<<<<<<<<<<<<<
+    /* "IPO.pyx":430
+ *             print "F"+str(i)+"\n"
+ *             points.append(py_vector)
+ *             print "G"+str(i)+"\n"             # <<<<<<<<<<<<<<
  * 
  *         #convert rays to python wrapperclass IPOVector
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_points, __pyx_n_s_append); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 371, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 430, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 430, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_6)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_6);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
-      }
-    }
-    if (!__pyx_t_6) {
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_v_py_vector); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-    } else {
-      #if CYTHON_FAST_PYCALL
-      if (PyFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_v_py_vector};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      #if CYTHON_FAST_PYCCALL
-      if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_v_py_vector};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      {
-        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 371, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6); __pyx_t_6 = NULL;
-        __Pyx_INCREF(__pyx_v_py_vector);
-        __Pyx_GIVEREF(__pyx_v_py_vector);
-        PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_v_py_vector);
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 371, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      }
-    }
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 430, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_G, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 430, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 430, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 430, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
 
-  /* "IPO.pyx":374
+  /* "IPO.pyx":433
  * 
  *         #convert rays to python wrapperclass IPOVector
  *         for i in range(0,c_rays.size()):             # <<<<<<<<<<<<<<
+ *             print "H"+str(i)+"\n"
  *             c_vector = ref(c_rays[i])
- *             py_vector = CreateIPOVector(c_vector)
  */
-  __pyx_t_2 = __pyx_v_c_rays.size();
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v_i = __pyx_t_3;
+  __pyx_t_3 = __pyx_v_c_rays.size();
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
 
-    /* "IPO.pyx":375
+    /* "IPO.pyx":434
  *         #convert rays to python wrapperclass IPOVector
  *         for i in range(0,c_rays.size()):
+ *             print "H"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ *             c_vector = ref(c_rays[i])
+ *             print "I"+str(i)+"\n"
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_H, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 434, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":435
+ *         for i in range(0,c_rays.size()):
+ *             print "H"+str(i)+"\n"
  *             c_vector = ref(c_rays[i])             # <<<<<<<<<<<<<<
+ *             print "I"+str(i)+"\n"
  *             py_vector = CreateIPOVector(c_vector)
- *             rays.append(py_vector)
  */
     __pyx_v_c_vector = (&(__pyx_v_c_rays[__pyx_v_i]));
 
-    /* "IPO.pyx":376
- *         for i in range(0,c_rays.size()):
+    /* "IPO.pyx":436
+ *             print "H"+str(i)+"\n"
  *             c_vector = ref(c_rays[i])
- *             py_vector = CreateIPOVector(c_vector)             # <<<<<<<<<<<<<<
- *             rays.append(py_vector)
- * 
- */
-    __pyx_t_4 = __pyx_f_3IPO_CreateIPOVector(__pyx_v_c_vector); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 376, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_XDECREF_SET(__pyx_v_py_vector, __pyx_t_4);
-    __pyx_t_4 = 0;
-
-    /* "IPO.pyx":377
- *             c_vector = ref(c_rays[i])
+ *             print "I"+str(i)+"\n"             # <<<<<<<<<<<<<<
  *             py_vector = CreateIPOVector(c_vector)
- *             rays.append(py_vector)             # <<<<<<<<<<<<<<
- * 
- *         inner = (points, rays)
+ *             print "J"+str(i)+"\n"
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_rays, __pyx_n_s_append); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 377, __pyx_L1_error)
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 436, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 436, __pyx_L1_error)
     __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_7 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_7 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_7)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_7);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
-      }
-    }
-    if (!__pyx_t_7) {
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_v_py_vector); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 377, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-    } else {
-      #if CYTHON_FAST_PYCALL
-      if (PyFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_7, __pyx_v_py_vector};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 377, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      #if CYTHON_FAST_PYCCALL
-      if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_7, __pyx_v_py_vector};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 377, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_7); __pyx_t_7 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      {
-        __pyx_t_6 = PyTuple_New(1+1); if (unlikely(!__pyx_t_6)) __PYX_ERR(0, 377, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_6);
-        __Pyx_GIVEREF(__pyx_t_7); PyTuple_SET_ITEM(__pyx_t_6, 0, __pyx_t_7); __pyx_t_7 = NULL;
-        __Pyx_INCREF(__pyx_v_py_vector);
-        __Pyx_GIVEREF(__pyx_v_py_vector);
-        PyTuple_SET_ITEM(__pyx_t_6, 0+1, __pyx_v_py_vector);
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_6, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 377, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_6); __pyx_t_6 = 0;
-      }
-    }
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 436, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
     __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_I, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 436, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 436, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 436, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":437
+ *             c_vector = ref(c_rays[i])
+ *             print "I"+str(i)+"\n"
+ *             py_vector = CreateIPOVector(c_vector)             # <<<<<<<<<<<<<<
+ *             print "J"+str(i)+"\n"
+ *             rays.append(py_vector)
+ */
+    __pyx_t_2 = __pyx_f_3IPO_CreateIPOVector(__pyx_v_c_vector); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 437, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_XDECREF_SET(__pyx_v_py_vector, __pyx_t_2);
+    __pyx_t_2 = 0;
+
+    /* "IPO.pyx":438
+ *             print "I"+str(i)+"\n"
+ *             py_vector = CreateIPOVector(c_vector)
+ *             print "J"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ *             rays.append(py_vector)
+ *             print "K"+str(i)+"\n"
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_J, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 438, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+
+    /* "IPO.pyx":439
+ *             py_vector = CreateIPOVector(c_vector)
+ *             print "J"+str(i)+"\n"
+ *             rays.append(py_vector)             # <<<<<<<<<<<<<<
+ *             print "K"+str(i)+"\n"
+ * 
+ */
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_rays, __pyx_v_py_vector); if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 439, __pyx_L1_error)
+
+    /* "IPO.pyx":440
+ *             print "J"+str(i)+"\n"
+ *             rays.append(py_vector)
+ *             print "K"+str(i)+"\n"             # <<<<<<<<<<<<<<
+ * 
+ *         innerDescription = IPOInnerDescription()
+ */
+    __pyx_t_2 = __Pyx_PyInt_FromSize_t(__pyx_v_i); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __pyx_t_5 = PyTuple_New(1); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_GIVEREF(__pyx_t_2);
+    PyTuple_SET_ITEM(__pyx_t_5, 0, __pyx_t_2);
+    __pyx_t_2 = 0;
+    __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)(&PyString_Type)), __pyx_t_5, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    __pyx_t_5 = PyNumber_Add(__pyx_n_s_K, __pyx_t_2); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_5);
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
+    __pyx_t_2 = PyNumber_Add(__pyx_t_5, __pyx_kp_s__14); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
+    if (__Pyx_PrintOne(0, __pyx_t_2) < 0) __PYX_ERR(0, 440, __pyx_L1_error)
+    __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   }
 
-  /* "IPO.pyx":379
- *             rays.append(py_vector)
+  /* "IPO.pyx":442
+ *             print "K"+str(i)+"\n"
  * 
- *         inner = (points, rays)             # <<<<<<<<<<<<<<
+ *         innerDescription = IPOInnerDescription()             # <<<<<<<<<<<<<<
+ *         print "L\n"
+ *         innerDescription.points = points
+ */
+  __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOInnerDescription), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 442, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_v_innerDescription = ((struct __pyx_obj_3IPO_IPOInnerDescription *)__pyx_t_2);
+  __pyx_t_2 = 0;
+
+  /* "IPO.pyx":443
+ * 
+ *         innerDescription = IPOInnerDescription()
+ *         print "L\n"             # <<<<<<<<<<<<<<
+ *         innerDescription.points = points
+ *         print "M\n"
+ */
+  if (__Pyx_PrintOne(0, __pyx_n_s_L) < 0) __PYX_ERR(0, 443, __pyx_L1_error)
+
+  /* "IPO.pyx":444
+ *         innerDescription = IPOInnerDescription()
+ *         print "L\n"
+ *         innerDescription.points = points             # <<<<<<<<<<<<<<
+ *         print "M\n"
+ *         innerDescription.rays = rays
+ */
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_innerDescription), __pyx_n_s_points, __pyx_v_points) < 0) __PYX_ERR(0, 444, __pyx_L1_error)
+
+  /* "IPO.pyx":445
+ *         print "L\n"
+ *         innerDescription.points = points
+ *         print "M\n"             # <<<<<<<<<<<<<<
+ *         innerDescription.rays = rays
+ *         print "inner verarbeitung\n"
+ */
+  if (__Pyx_PrintOne(0, __pyx_n_s_M) < 0) __PYX_ERR(0, 445, __pyx_L1_error)
+
+  /* "IPO.pyx":446
+ *         innerDescription.points = points
+ *         print "M\n"
+ *         innerDescription.rays = rays             # <<<<<<<<<<<<<<
+ *         print "inner verarbeitung\n"
+ *         #########-2-#########
+ */
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_innerDescription), __pyx_n_s_rays, __pyx_v_rays) < 0) __PYX_ERR(0, 446, __pyx_L1_error)
+
+  /* "IPO.pyx":447
+ *         print "M\n"
+ *         innerDescription.rays = rays
+ *         print "inner verarbeitung\n"             # <<<<<<<<<<<<<<
  *         #########-2-#########
  *         #convert outer description to IPOLinearConstraint list
  */
-  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 379, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_INCREF(__pyx_v_points);
-  __Pyx_GIVEREF(__pyx_v_points);
-  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_points);
-  __Pyx_INCREF(__pyx_v_rays);
-  __Pyx_GIVEREF(__pyx_v_rays);
-  PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_v_rays);
-  __pyx_v_inner = ((PyObject*)__pyx_t_4);
-  __pyx_t_4 = 0;
+  if (__Pyx_PrintOne(0, __pyx_kp_s_inner_verarbeitung) < 0) __PYX_ERR(0, 447, __pyx_L1_error)
 
-  /* "IPO.pyx":382
+  /* "IPO.pyx":450
  *         #########-2-#########
  *         #convert outer description to IPOLinearConstraint list
  *         cdef cppIPO.AffineOuterDescription c_outer = self.oracle.affineHullOuter(1)             # <<<<<<<<<<<<<<
- *         outer = ()
- * 
+ *         print "C++ call outer\n"
+ *         outerDescription = IPOAffineOuterDescription()
  */
   __pyx_v_c_outer = __pyx_v_self->oracle->affineHullOuter(1);
 
-  /* "IPO.pyx":383
+  /* "IPO.pyx":451
  *         #convert outer description to IPOLinearConstraint list
  *         cdef cppIPO.AffineOuterDescription c_outer = self.oracle.affineHullOuter(1)
- *         outer = ()             # <<<<<<<<<<<<<<
+ *         print "C++ call outer\n"             # <<<<<<<<<<<<<<
+ *         outerDescription = IPOAffineOuterDescription()
+ *         outer = []
+ */
+  if (__Pyx_PrintOne(0, __pyx_kp_s_C_call_outer) < 0) __PYX_ERR(0, 451, __pyx_L1_error)
+
+  /* "IPO.pyx":452
+ *         cdef cppIPO.AffineOuterDescription c_outer = self.oracle.affineHullOuter(1)
+ *         print "C++ call outer\n"
+ *         outerDescription = IPOAffineOuterDescription()             # <<<<<<<<<<<<<<
+ *         outer = []
+ * 
+ */
+  __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOAffineOuterDescription), __pyx_empty_tuple, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 452, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_v_outerDescription = ((struct __pyx_obj_3IPO_IPOAffineOuterDescription *)__pyx_t_2);
+  __pyx_t_2 = 0;
+
+  /* "IPO.pyx":453
+ *         print "C++ call outer\n"
+ *         outerDescription = IPOAffineOuterDescription()
+ *         outer = []             # <<<<<<<<<<<<<<
  * 
  *         for i in range(0, c_outer.size()):
  */
-  __Pyx_INCREF(__pyx_empty_tuple);
-  __pyx_v_outer = __pyx_empty_tuple;
+  __pyx_t_2 = PyList_New(0); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 453, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __pyx_v_outer = ((PyObject*)__pyx_t_2);
+  __pyx_t_2 = 0;
 
-  /* "IPO.pyx":385
- *         outer = ()
+  /* "IPO.pyx":455
+ *         outer = []
  * 
  *         for i in range(0, c_outer.size()):             # <<<<<<<<<<<<<<
  *             c_linconst = ref(c_outer[i])
  *             py_linconst = CreateLinearConstraint(c_linconst)
  */
-  __pyx_t_2 = __pyx_v_c_outer.size();
-  for (__pyx_t_3 = 0; __pyx_t_3 < __pyx_t_2; __pyx_t_3+=1) {
-    __pyx_v_i = __pyx_t_3;
+  __pyx_t_3 = __pyx_v_c_outer.size();
+  for (__pyx_t_4 = 0; __pyx_t_4 < __pyx_t_3; __pyx_t_4+=1) {
+    __pyx_v_i = __pyx_t_4;
 
-    /* "IPO.pyx":386
+    /* "IPO.pyx":456
  * 
  *         for i in range(0, c_outer.size()):
  *             c_linconst = ref(c_outer[i])             # <<<<<<<<<<<<<<
@@ -6692,94 +7919,67 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_10affineHull(struct __pyx_obj_3IP
  */
     __pyx_v_c_linconst = (&(__pyx_v_c_outer[__pyx_v_i]));
 
-    /* "IPO.pyx":387
+    /* "IPO.pyx":457
  *         for i in range(0, c_outer.size()):
  *             c_linconst = ref(c_outer[i])
  *             py_linconst = CreateLinearConstraint(c_linconst)             # <<<<<<<<<<<<<<
  *             outer.append(py_linconst)
  * 
  */
-    __pyx_t_4 = __pyx_f_3IPO_CreateLinearConstraint(__pyx_v_c_linconst); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 387, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_4);
-    __Pyx_XDECREF_SET(__pyx_v_py_linconst, __pyx_t_4);
-    __pyx_t_4 = 0;
+    __pyx_t_2 = __pyx_f_3IPO_CreateLinearConstraint(__pyx_v_c_linconst); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 457, __pyx_L1_error)
+    __Pyx_GOTREF(__pyx_t_2);
+    __Pyx_XDECREF_SET(__pyx_v_py_linconst, __pyx_t_2);
+    __pyx_t_2 = 0;
 
-    /* "IPO.pyx":388
+    /* "IPO.pyx":458
  *             c_linconst = ref(c_outer[i])
  *             py_linconst = CreateLinearConstraint(c_linconst)
  *             outer.append(py_linconst)             # <<<<<<<<<<<<<<
  * 
- *         return (inner, outer)
+ *         outerDescription.constraints = outer
  */
-    __pyx_t_5 = __Pyx_PyObject_GetAttrStr(__pyx_v_outer, __pyx_n_s_append); if (unlikely(!__pyx_t_5)) __PYX_ERR(0, 388, __pyx_L1_error)
-    __Pyx_GOTREF(__pyx_t_5);
-    __pyx_t_6 = NULL;
-    if (CYTHON_UNPACK_METHODS && likely(PyMethod_Check(__pyx_t_5))) {
-      __pyx_t_6 = PyMethod_GET_SELF(__pyx_t_5);
-      if (likely(__pyx_t_6)) {
-        PyObject* function = PyMethod_GET_FUNCTION(__pyx_t_5);
-        __Pyx_INCREF(__pyx_t_6);
-        __Pyx_INCREF(function);
-        __Pyx_DECREF_SET(__pyx_t_5, function);
-      }
-    }
-    if (!__pyx_t_6) {
-      __pyx_t_4 = __Pyx_PyObject_CallOneArg(__pyx_t_5, __pyx_v_py_linconst); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 388, __pyx_L1_error)
-      __Pyx_GOTREF(__pyx_t_4);
-    } else {
-      #if CYTHON_FAST_PYCALL
-      if (PyFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_v_py_linconst};
-        __pyx_t_4 = __Pyx_PyFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 388, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      #if CYTHON_FAST_PYCCALL
-      if (__Pyx_PyFastCFunction_Check(__pyx_t_5)) {
-        PyObject *__pyx_temp[2] = {__pyx_t_6, __pyx_v_py_linconst};
-        __pyx_t_4 = __Pyx_PyCFunction_FastCall(__pyx_t_5, __pyx_temp+1-1, 1+1); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 388, __pyx_L1_error)
-        __Pyx_XDECREF(__pyx_t_6); __pyx_t_6 = 0;
-        __Pyx_GOTREF(__pyx_t_4);
-      } else
-      #endif
-      {
-        __pyx_t_7 = PyTuple_New(1+1); if (unlikely(!__pyx_t_7)) __PYX_ERR(0, 388, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_7);
-        __Pyx_GIVEREF(__pyx_t_6); PyTuple_SET_ITEM(__pyx_t_7, 0, __pyx_t_6); __pyx_t_6 = NULL;
-        __Pyx_INCREF(__pyx_v_py_linconst);
-        __Pyx_GIVEREF(__pyx_v_py_linconst);
-        PyTuple_SET_ITEM(__pyx_t_7, 0+1, __pyx_v_py_linconst);
-        __pyx_t_4 = __Pyx_PyObject_Call(__pyx_t_5, __pyx_t_7, NULL); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 388, __pyx_L1_error)
-        __Pyx_GOTREF(__pyx_t_4);
-        __Pyx_DECREF(__pyx_t_7); __pyx_t_7 = 0;
-      }
-    }
-    __Pyx_DECREF(__pyx_t_5); __pyx_t_5 = 0;
-    __Pyx_DECREF(__pyx_t_4); __pyx_t_4 = 0;
+    __pyx_t_6 = __Pyx_PyList_Append(__pyx_v_outer, __pyx_v_py_linconst); if (unlikely(__pyx_t_6 == -1)) __PYX_ERR(0, 458, __pyx_L1_error)
   }
 
-  /* "IPO.pyx":390
+  /* "IPO.pyx":460
  *             outer.append(py_linconst)
  * 
- *         return (inner, outer)             # <<<<<<<<<<<<<<
+ *         outerDescription.constraints = outer             # <<<<<<<<<<<<<<
+ *         print "FERTIG\n"
+ * 
+ */
+  if (__Pyx_PyObject_SetAttrStr(((PyObject *)__pyx_v_outerDescription), __pyx_n_s_constraints, __pyx_v_outer) < 0) __PYX_ERR(0, 460, __pyx_L1_error)
+
+  /* "IPO.pyx":461
+ * 
+ *         outerDescription.constraints = outer
+ *         print "FERTIG\n"             # <<<<<<<<<<<<<<
+ * 
+ *         return (innerDescription, outerDescription)
+ */
+  if (__Pyx_PrintOne(0, __pyx_n_s_FERTIG) < 0) __PYX_ERR(0, 461, __pyx_L1_error)
+
+  /* "IPO.pyx":463
+ *         print "FERTIG\n"
+ * 
+ *         return (innerDescription, outerDescription)             # <<<<<<<<<<<<<<
  * 
  * 
  */
   __Pyx_XDECREF(__pyx_r);
-  __pyx_t_4 = PyTuple_New(2); if (unlikely(!__pyx_t_4)) __PYX_ERR(0, 390, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_t_4);
-  __Pyx_INCREF(__pyx_v_inner);
-  __Pyx_GIVEREF(__pyx_v_inner);
-  PyTuple_SET_ITEM(__pyx_t_4, 0, __pyx_v_inner);
-  __Pyx_INCREF(__pyx_v_outer);
-  __Pyx_GIVEREF(__pyx_v_outer);
-  PyTuple_SET_ITEM(__pyx_t_4, 1, __pyx_v_outer);
-  __pyx_r = __pyx_t_4;
-  __pyx_t_4 = 0;
+  __pyx_t_2 = PyTuple_New(2); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 463, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_2);
+  __Pyx_INCREF(((PyObject *)__pyx_v_innerDescription));
+  __Pyx_GIVEREF(((PyObject *)__pyx_v_innerDescription));
+  PyTuple_SET_ITEM(__pyx_t_2, 0, ((PyObject *)__pyx_v_innerDescription));
+  __Pyx_INCREF(((PyObject *)__pyx_v_outerDescription));
+  __Pyx_GIVEREF(((PyObject *)__pyx_v_outerDescription));
+  PyTuple_SET_ITEM(__pyx_t_2, 1, ((PyObject *)__pyx_v_outerDescription));
+  __pyx_r = __pyx_t_2;
+  __pyx_t_2 = 0;
   goto __pyx_L0;
 
-  /* "IPO.pyx":356
+  /* "IPO.pyx":407
  *         return self.oracle.heuristicLevel_CacheOracle()
  * 
  *     def affineHull(self, outputMode):             # <<<<<<<<<<<<<<
@@ -6789,17 +7989,16 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_10affineHull(struct __pyx_obj_3IP
 
   /* function exit code */
   __pyx_L1_error:;
-  __Pyx_XDECREF(__pyx_t_4);
+  __Pyx_XDECREF(__pyx_t_2);
   __Pyx_XDECREF(__pyx_t_5);
-  __Pyx_XDECREF(__pyx_t_6);
-  __Pyx_XDECREF(__pyx_t_7);
   __Pyx_AddTraceback("IPO.IPOScipOracle.affineHull", __pyx_clineno, __pyx_lineno, __pyx_filename);
   __pyx_r = NULL;
   __pyx_L0:;
   __Pyx_XDECREF(__pyx_v_points);
   __Pyx_XDECREF(__pyx_v_rays);
   __Pyx_XDECREF(__pyx_v_py_vector);
-  __Pyx_XDECREF(__pyx_v_inner);
+  __Pyx_XDECREF((PyObject *)__pyx_v_innerDescription);
+  __Pyx_XDECREF((PyObject *)__pyx_v_outerDescription);
   __Pyx_XDECREF(__pyx_v_outer);
   __Pyx_XDECREF(__pyx_v_py_linconst);
   __Pyx_XGIVEREF(__pyx_r);
@@ -6807,7 +8006,7 @@ static PyObject *__pyx_pf_3IPO_13IPOScipOracle_10affineHull(struct __pyx_obj_3IP
   return __pyx_r;
 }
 
-/* "IPO.pyx":393
+/* "IPO.pyx":466
  * 
  * 
  * cdef object CreateScipOracle(str name, cppIPO.ScipOracleController oracle):             # <<<<<<<<<<<<<<
@@ -6825,14 +8024,14 @@ static PyObject *__pyx_f_3IPO_CreateScipOracle(PyObject *__pyx_v_name, ipo::Scip
   ipo::ScipOracleController *__pyx_t_4;
   __Pyx_RefNannySetupContext("CreateScipOracle", 0);
 
-  /* "IPO.pyx":394
+  /* "IPO.pyx":467
  * 
  * cdef object CreateScipOracle(str name, cppIPO.ScipOracleController oracle):
  *     py_oracle = IPOScipOracle(name, 0)             # <<<<<<<<<<<<<<
  *     py_oracle.oracle = new cppIPO.ScipOracleController(name, oracle)
  *     return py_oracle
  */
-  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 394, __pyx_L1_error)
+  __pyx_t_1 = PyTuple_New(2); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 467, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_1);
   __Pyx_INCREF(__pyx_v_name);
   __Pyx_GIVEREF(__pyx_v_name);
@@ -6840,38 +8039,41 @@ static PyObject *__pyx_f_3IPO_CreateScipOracle(PyObject *__pyx_v_name, ipo::Scip
   __Pyx_INCREF(__pyx_int_0);
   __Pyx_GIVEREF(__pyx_int_0);
   PyTuple_SET_ITEM(__pyx_t_1, 1, __pyx_int_0);
-  __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOScipOracle), __pyx_t_1, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 394, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_PyObject_Call(((PyObject *)__pyx_ptype_3IPO_IPOScipOracle), __pyx_t_1, NULL); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 467, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
   __pyx_v_py_oracle = ((struct __pyx_obj_3IPO_IPOScipOracle *)__pyx_t_2);
   __pyx_t_2 = 0;
 
-  /* "IPO.pyx":395
+  /* "IPO.pyx":468
  * cdef object CreateScipOracle(str name, cppIPO.ScipOracleController oracle):
  *     py_oracle = IPOScipOracle(name, 0)
  *     py_oracle.oracle = new cppIPO.ScipOracleController(name, oracle)             # <<<<<<<<<<<<<<
  *     return py_oracle
+ * 
  */
-  __pyx_t_3 = __pyx_convert_string_from_py_std__in_string(__pyx_v_name); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 395, __pyx_L1_error)
+  __pyx_t_3 = __pyx_convert_string_from_py_std__in_string(__pyx_v_name); if (unlikely(PyErr_Occurred())) __PYX_ERR(0, 468, __pyx_L1_error)
   try {
     __pyx_t_4 = new ipo::ScipOracleController(__pyx_t_3, __pyx_v_oracle);
   } catch(...) {
     __Pyx_CppExn2PyErr();
-    __PYX_ERR(0, 395, __pyx_L1_error)
+    __PYX_ERR(0, 468, __pyx_L1_error)
   }
   __pyx_v_py_oracle->oracle = __pyx_t_4;
 
-  /* "IPO.pyx":396
+  /* "IPO.pyx":469
  *     py_oracle = IPOScipOracle(name, 0)
  *     py_oracle.oracle = new cppIPO.ScipOracleController(name, oracle)
  *     return py_oracle             # <<<<<<<<<<<<<<
+ * 
+ * 
  */
   __Pyx_XDECREF(__pyx_r);
   __Pyx_INCREF(((PyObject *)__pyx_v_py_oracle));
   __pyx_r = ((PyObject *)__pyx_v_py_oracle);
   goto __pyx_L0;
 
-  /* "IPO.pyx":393
+  /* "IPO.pyx":466
  * 
  * 
  * cdef object CreateScipOracle(str name, cppIPO.ScipOracleController oracle):             # <<<<<<<<<<<<<<
@@ -6892,54 +8094,249 @@ static PyObject *__pyx_f_3IPO_CreateScipOracle(PyObject *__pyx_v_name, ipo::Scip
   return __pyx_r;
 }
 
-/* "string.from_py":13
+/* "IPO.pyx":488
+ * #Affine Hull
  * 
- * @cname("__pyx_convert_string_from_py_std__in_string")
- * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:             # <<<<<<<<<<<<<<
- *     cdef Py_ssize_t length
- *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
+ * def affineHull():             # <<<<<<<<<<<<<<
+ *     return 0
+ * 
  */
 
-static std::string __pyx_convert_string_from_py_std__in_string(PyObject *__pyx_v_o) {
-  Py_ssize_t __pyx_v_length;
-  char *__pyx_v_data;
-  std::string __pyx_r;
+/* Python wrapper */
+static PyObject *__pyx_pw_3IPO_1affineHull(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyMethodDef __pyx_mdef_3IPO_1affineHull = {"affineHull", (PyCFunction)__pyx_pw_3IPO_1affineHull, METH_NOARGS, 0};
+static PyObject *__pyx_pw_3IPO_1affineHull(PyObject *__pyx_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
   __Pyx_RefNannyDeclarations
-  char *__pyx_t_1;
-  __Pyx_RefNannySetupContext("__pyx_convert_string_from_py_std__in_string", 0);
+  __Pyx_RefNannySetupContext("affineHull (wrapper)", 0);
+  __pyx_r = __pyx_pf_3IPO_affineHull(__pyx_self);
 
-  /* "string.from_py":15
- * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:
- *     cdef Py_ssize_t length
- *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)             # <<<<<<<<<<<<<<
- *     return string(data, length)
- * 
- */
-  __pyx_t_1 = __Pyx_PyObject_AsStringAndSize(__pyx_v_o, (&__pyx_v_length)); if (unlikely(__pyx_t_1 == NULL)) __PYX_ERR(1, 15, __pyx_L1_error)
-  __pyx_v_data = __pyx_t_1;
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
 
-  /* "string.from_py":16
- *     cdef Py_ssize_t length
- *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
- *     return string(data, length)             # <<<<<<<<<<<<<<
+static PyObject *__pyx_pf_3IPO_affineHull(CYTHON_UNUSED PyObject *__pyx_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("affineHull", 0);
+
+  /* "IPO.pyx":489
  * 
+ * def affineHull():
+ *     return 0             # <<<<<<<<<<<<<<
  * 
+ * ####################################
  */
-  __pyx_r = std::string(__pyx_v_data, __pyx_v_length);
+  __Pyx_XDECREF(__pyx_r);
+  __Pyx_INCREF(__pyx_int_0);
+  __pyx_r = __pyx_int_0;
   goto __pyx_L0;
 
-  /* "string.from_py":13
+  /* "IPO.pyx":488
+ * #Affine Hull
  * 
- * @cname("__pyx_convert_string_from_py_std__in_string")
- * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:             # <<<<<<<<<<<<<<
- *     cdef Py_ssize_t length
- *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
+ * def affineHull():             # <<<<<<<<<<<<<<
+ *     return 0
+ * 
+ */
+
+  /* function exit code */
+  __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":497
+ *     cdef cppIPO.Foo* foo
+ * 
+ *     def __cinit__(self):             # <<<<<<<<<<<<<<
+ *         self.foo = new cppIPO.Foo()
+ *         if self.foo is NULL:
+ */
+
+/* Python wrapper */
+static int __pyx_pw_3IPO_4Test_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds); /*proto*/
+static int __pyx_pw_3IPO_4Test_1__cinit__(PyObject *__pyx_v_self, PyObject *__pyx_args, PyObject *__pyx_kwds) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__cinit__ (wrapper)", 0);
+  if (unlikely(PyTuple_GET_SIZE(__pyx_args) > 0)) {
+    __Pyx_RaiseArgtupleInvalid("__cinit__", 1, 0, 0, PyTuple_GET_SIZE(__pyx_args)); return -1;}
+  if (unlikely(__pyx_kwds) && unlikely(PyDict_Size(__pyx_kwds) > 0) && unlikely(!__Pyx_CheckKeywordStrings(__pyx_kwds, "__cinit__", 0))) return -1;
+  __pyx_r = __pyx_pf_3IPO_4Test___cinit__(((struct __pyx_obj_3IPO_Test *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static int __pyx_pf_3IPO_4Test___cinit__(struct __pyx_obj_3IPO_Test *__pyx_v_self) {
+  int __pyx_r;
+  __Pyx_RefNannyDeclarations
+  ipo::Foo *__pyx_t_1;
+  int __pyx_t_2;
+  __Pyx_RefNannySetupContext("__cinit__", 0);
+
+  /* "IPO.pyx":498
+ * 
+ *     def __cinit__(self):
+ *         self.foo = new cppIPO.Foo()             # <<<<<<<<<<<<<<
+ *         if self.foo is NULL:
+ *             raise MemoryError()
+ */
+  try {
+    __pyx_t_1 = new ipo::Foo();
+  } catch(...) {
+    __Pyx_CppExn2PyErr();
+    __PYX_ERR(0, 498, __pyx_L1_error)
+  }
+  __pyx_v_self->foo = __pyx_t_1;
+
+  /* "IPO.pyx":499
+ *     def __cinit__(self):
+ *         self.foo = new cppIPO.Foo()
+ *         if self.foo is NULL:             # <<<<<<<<<<<<<<
+ *             raise MemoryError()
+ * 
+ */
+  __pyx_t_2 = ((__pyx_v_self->foo == NULL) != 0);
+  if (__pyx_t_2) {
+
+    /* "IPO.pyx":500
+ *         self.foo = new cppIPO.Foo()
+ *         if self.foo is NULL:
+ *             raise MemoryError()             # <<<<<<<<<<<<<<
+ * 
+ *     def __dealloc__(self):
+ */
+    PyErr_NoMemory(); __PYX_ERR(0, 500, __pyx_L1_error)
+
+    /* "IPO.pyx":499
+ *     def __cinit__(self):
+ *         self.foo = new cppIPO.Foo()
+ *         if self.foo is NULL:             # <<<<<<<<<<<<<<
+ *             raise MemoryError()
+ * 
+ */
+  }
+
+  /* "IPO.pyx":497
+ *     cdef cppIPO.Foo* foo
+ * 
+ *     def __cinit__(self):             # <<<<<<<<<<<<<<
+ *         self.foo = new cppIPO.Foo()
+ *         if self.foo is NULL:
+ */
+
+  /* function exit code */
+  __pyx_r = 0;
+  goto __pyx_L0;
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("IPO.Test.__cinit__", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = -1;
+  __pyx_L0:;
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "IPO.pyx":502
+ *             raise MemoryError()
+ * 
+ *     def __dealloc__(self):             # <<<<<<<<<<<<<<
+ *         del self.foo
+ * 
+ */
+
+/* Python wrapper */
+static void __pyx_pw_3IPO_4Test_3__dealloc__(PyObject *__pyx_v_self); /*proto*/
+static void __pyx_pw_3IPO_4Test_3__dealloc__(PyObject *__pyx_v_self) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__dealloc__ (wrapper)", 0);
+  __pyx_pf_3IPO_4Test_2__dealloc__(((struct __pyx_obj_3IPO_Test *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+}
+
+static void __pyx_pf_3IPO_4Test_2__dealloc__(struct __pyx_obj_3IPO_Test *__pyx_v_self) {
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("__dealloc__", 0);
+
+  /* "IPO.pyx":503
+ * 
+ *     def __dealloc__(self):
+ *         del self.foo             # <<<<<<<<<<<<<<
+ * 
+ *     def print_Example(self):
+ */
+  delete __pyx_v_self->foo;
+
+  /* "IPO.pyx":502
+ *             raise MemoryError()
+ * 
+ *     def __dealloc__(self):             # <<<<<<<<<<<<<<
+ *         del self.foo
+ * 
+ */
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+}
+
+/* "IPO.pyx":505
+ *         del self.foo
+ * 
+ *     def print_Example(self):             # <<<<<<<<<<<<<<
+ *         return self.foo.printFoo()
+ */
+
+/* Python wrapper */
+static PyObject *__pyx_pw_3IPO_4Test_5print_Example(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused); /*proto*/
+static PyObject *__pyx_pw_3IPO_4Test_5print_Example(PyObject *__pyx_v_self, CYTHON_UNUSED PyObject *unused) {
+  PyObject *__pyx_r = 0;
+  __Pyx_RefNannyDeclarations
+  __Pyx_RefNannySetupContext("print_Example (wrapper)", 0);
+  __pyx_r = __pyx_pf_3IPO_4Test_4print_Example(((struct __pyx_obj_3IPO_Test *)__pyx_v_self));
+
+  /* function exit code */
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+static PyObject *__pyx_pf_3IPO_4Test_4print_Example(struct __pyx_obj_3IPO_Test *__pyx_v_self) {
+  PyObject *__pyx_r = NULL;
+  __Pyx_RefNannyDeclarations
+  PyObject *__pyx_t_1 = NULL;
+  __Pyx_RefNannySetupContext("print_Example", 0);
+
+  /* "IPO.pyx":506
+ * 
+ *     def print_Example(self):
+ *         return self.foo.printFoo()             # <<<<<<<<<<<<<<
+ */
+  __Pyx_XDECREF(__pyx_r);
+  __pyx_t_1 = __pyx_convert_PyBytes_string_to_py_std__in_string(__pyx_v_self->foo->printFoo()); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 506, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  __pyx_r = __pyx_t_1;
+  __pyx_t_1 = 0;
+  goto __pyx_L0;
+
+  /* "IPO.pyx":505
+ *         del self.foo
+ * 
+ *     def print_Example(self):             # <<<<<<<<<<<<<<
+ *         return self.foo.printFoo()
  */
 
   /* function exit code */
   __pyx_L1_error:;
-  __Pyx_AddTraceback("string.from_py.__pyx_convert_string_from_py_std__in_string", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __Pyx_XDECREF(__pyx_t_1);
+  __Pyx_AddTraceback("IPO.Test.print_Example", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_r = NULL;
   __pyx_L0:;
+  __Pyx_XGIVEREF(__pyx_r);
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
@@ -7174,6 +8571,58 @@ static CYTHON_INLINE PyObject *__pyx_convert_PyByteArray_string_to_py_std__in_st
   __pyx_r = 0;
   __pyx_L0:;
   __Pyx_XGIVEREF(__pyx_r);
+  __Pyx_RefNannyFinishContext();
+  return __pyx_r;
+}
+
+/* "string.from_py":13
+ * 
+ * @cname("__pyx_convert_string_from_py_std__in_string")
+ * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:             # <<<<<<<<<<<<<<
+ *     cdef Py_ssize_t length
+ *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
+ */
+
+static std::string __pyx_convert_string_from_py_std__in_string(PyObject *__pyx_v_o) {
+  Py_ssize_t __pyx_v_length;
+  char *__pyx_v_data;
+  std::string __pyx_r;
+  __Pyx_RefNannyDeclarations
+  char *__pyx_t_1;
+  __Pyx_RefNannySetupContext("__pyx_convert_string_from_py_std__in_string", 0);
+
+  /* "string.from_py":15
+ * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:
+ *     cdef Py_ssize_t length
+ *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)             # <<<<<<<<<<<<<<
+ *     return string(data, length)
+ * 
+ */
+  __pyx_t_1 = __Pyx_PyObject_AsStringAndSize(__pyx_v_o, (&__pyx_v_length)); if (unlikely(__pyx_t_1 == NULL)) __PYX_ERR(1, 15, __pyx_L1_error)
+  __pyx_v_data = __pyx_t_1;
+
+  /* "string.from_py":16
+ *     cdef Py_ssize_t length
+ *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
+ *     return string(data, length)             # <<<<<<<<<<<<<<
+ * 
+ * 
+ */
+  __pyx_r = std::string(__pyx_v_data, __pyx_v_length);
+  goto __pyx_L0;
+
+  /* "string.from_py":13
+ * 
+ * @cname("__pyx_convert_string_from_py_std__in_string")
+ * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:             # <<<<<<<<<<<<<<
+ *     cdef Py_ssize_t length
+ *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
+ */
+
+  /* function exit code */
+  __pyx_L1_error:;
+  __Pyx_AddTraceback("string.from_py.__pyx_convert_string_from_py_std__in_string", __pyx_clineno, __pyx_lineno, __pyx_filename);
+  __pyx_L0:;
   __Pyx_RefNannyFinishContext();
   return __pyx_r;
 }
@@ -7555,7 +9004,7 @@ static PyTypeObject __pyx_type_3IPO_IPOLinearConstraint = {
   #endif
 };
 
-static PyObject *__pyx_tp_new_3IPO_IPOSpace(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
+static PyObject *__pyx_tp_new_3IPO_IPOInnerDescription(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
   PyObject *o;
   if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
     o = (*t->tp_alloc)(t, 0);
@@ -7563,7 +9012,171 @@ static PyObject *__pyx_tp_new_3IPO_IPOSpace(PyTypeObject *t, CYTHON_UNUSED PyObj
     o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
   }
   if (unlikely(!o)) return 0;
-  if (unlikely(__pyx_pw_3IPO_8IPOSpace_1__cinit__(o, __pyx_empty_tuple, NULL) < 0)) goto bad;
+  return o;
+}
+
+static void __pyx_tp_dealloc_3IPO_IPOInnerDescription(PyObject *o) {
+  #if PY_VERSION_HEX >= 0x030400a1
+  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+    if (PyObject_CallFinalizerFromDealloc(o)) return;
+  }
+  #endif
+  (*Py_TYPE(o)->tp_free)(o);
+}
+
+static PyMethodDef __pyx_methods_3IPO_IPOInnerDescription[] = {
+  {0, 0, 0, 0}
+};
+
+static PyTypeObject __pyx_type_3IPO_IPOInnerDescription = {
+  PyVarObject_HEAD_INIT(0, 0)
+  "IPO.IPOInnerDescription", /*tp_name*/
+  sizeof(struct __pyx_obj_3IPO_IPOInnerDescription), /*tp_basicsize*/
+  0, /*tp_itemsize*/
+  __pyx_tp_dealloc_3IPO_IPOInnerDescription, /*tp_dealloc*/
+  0, /*tp_print*/
+  0, /*tp_getattr*/
+  0, /*tp_setattr*/
+  #if PY_MAJOR_VERSION < 3
+  0, /*tp_compare*/
+  #endif
+  #if PY_MAJOR_VERSION >= 3
+  0, /*tp_as_async*/
+  #endif
+  0, /*tp_repr*/
+  0, /*tp_as_number*/
+  0, /*tp_as_sequence*/
+  0, /*tp_as_mapping*/
+  0, /*tp_hash*/
+  0, /*tp_call*/
+  0, /*tp_str*/
+  0, /*tp_getattro*/
+  0, /*tp_setattro*/
+  0, /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  0, /*tp_doc*/
+  0, /*tp_traverse*/
+  0, /*tp_clear*/
+  0, /*tp_richcompare*/
+  0, /*tp_weaklistoffset*/
+  0, /*tp_iter*/
+  0, /*tp_iternext*/
+  __pyx_methods_3IPO_IPOInnerDescription, /*tp_methods*/
+  0, /*tp_members*/
+  0, /*tp_getset*/
+  0, /*tp_base*/
+  0, /*tp_dict*/
+  0, /*tp_descr_get*/
+  0, /*tp_descr_set*/
+  0, /*tp_dictoffset*/
+  __pyx_pw_3IPO_19IPOInnerDescription_1__init__, /*tp_init*/
+  0, /*tp_alloc*/
+  __pyx_tp_new_3IPO_IPOInnerDescription, /*tp_new*/
+  0, /*tp_free*/
+  0, /*tp_is_gc*/
+  0, /*tp_bases*/
+  0, /*tp_mro*/
+  0, /*tp_cache*/
+  0, /*tp_subclasses*/
+  0, /*tp_weaklist*/
+  0, /*tp_del*/
+  0, /*tp_version_tag*/
+  #if PY_VERSION_HEX >= 0x030400a1
+  0, /*tp_finalize*/
+  #endif
+};
+
+static PyObject *__pyx_tp_new_3IPO_IPOAffineOuterDescription(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
+  PyObject *o;
+  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
+    o = (*t->tp_alloc)(t, 0);
+  } else {
+    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
+  }
+  if (unlikely(!o)) return 0;
+  return o;
+}
+
+static void __pyx_tp_dealloc_3IPO_IPOAffineOuterDescription(PyObject *o) {
+  #if PY_VERSION_HEX >= 0x030400a1
+  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+    if (PyObject_CallFinalizerFromDealloc(o)) return;
+  }
+  #endif
+  (*Py_TYPE(o)->tp_free)(o);
+}
+
+static PyMethodDef __pyx_methods_3IPO_IPOAffineOuterDescription[] = {
+  {0, 0, 0, 0}
+};
+
+static PyTypeObject __pyx_type_3IPO_IPOAffineOuterDescription = {
+  PyVarObject_HEAD_INIT(0, 0)
+  "IPO.IPOAffineOuterDescription", /*tp_name*/
+  sizeof(struct __pyx_obj_3IPO_IPOAffineOuterDescription), /*tp_basicsize*/
+  0, /*tp_itemsize*/
+  __pyx_tp_dealloc_3IPO_IPOAffineOuterDescription, /*tp_dealloc*/
+  0, /*tp_print*/
+  0, /*tp_getattr*/
+  0, /*tp_setattr*/
+  #if PY_MAJOR_VERSION < 3
+  0, /*tp_compare*/
+  #endif
+  #if PY_MAJOR_VERSION >= 3
+  0, /*tp_as_async*/
+  #endif
+  0, /*tp_repr*/
+  0, /*tp_as_number*/
+  0, /*tp_as_sequence*/
+  0, /*tp_as_mapping*/
+  0, /*tp_hash*/
+  0, /*tp_call*/
+  0, /*tp_str*/
+  0, /*tp_getattro*/
+  0, /*tp_setattro*/
+  0, /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  0, /*tp_doc*/
+  0, /*tp_traverse*/
+  0, /*tp_clear*/
+  0, /*tp_richcompare*/
+  0, /*tp_weaklistoffset*/
+  0, /*tp_iter*/
+  0, /*tp_iternext*/
+  __pyx_methods_3IPO_IPOAffineOuterDescription, /*tp_methods*/
+  0, /*tp_members*/
+  0, /*tp_getset*/
+  0, /*tp_base*/
+  0, /*tp_dict*/
+  0, /*tp_descr_get*/
+  0, /*tp_descr_set*/
+  0, /*tp_dictoffset*/
+  __pyx_pw_3IPO_25IPOAffineOuterDescription_1__init__, /*tp_init*/
+  0, /*tp_alloc*/
+  __pyx_tp_new_3IPO_IPOAffineOuterDescription, /*tp_new*/
+  0, /*tp_free*/
+  0, /*tp_is_gc*/
+  0, /*tp_bases*/
+  0, /*tp_mro*/
+  0, /*tp_cache*/
+  0, /*tp_subclasses*/
+  0, /*tp_weaklist*/
+  0, /*tp_del*/
+  0, /*tp_version_tag*/
+  #if PY_VERSION_HEX >= 0x030400a1
+  0, /*tp_finalize*/
+  #endif
+};
+
+static PyObject *__pyx_tp_new_3IPO_IPOSpace(PyTypeObject *t, PyObject *a, PyObject *k) {
+  PyObject *o;
+  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
+    o = (*t->tp_alloc)(t, 0);
+  } else {
+    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
+  }
+  if (unlikely(!o)) return 0;
+  if (unlikely(__pyx_pw_3IPO_8IPOSpace_1__cinit__(o, a, k) < 0)) goto bad;
   return o;
   bad:
   Py_DECREF(o); o = 0;
@@ -7595,10 +9208,11 @@ static PyObject *__pyx_sq_item_3IPO_IPOSpace(PyObject *o, Py_ssize_t i) {
 }
 
 static PyMethodDef __pyx_methods_3IPO_IPOSpace[] = {
-  {"dimension", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_5dimension, METH_NOARGS, 0},
-  {"printVector", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_7printVector, METH_VARARGS|METH_KEYWORDS, 0},
-  {"printLinearForm", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_9printLinearForm, METH_O, 0},
-  {"printLinearConstraint", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_11printLinearConstraint, METH_O, 0},
+  {"isConstant", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_5isConstant, METH_NOARGS, 0},
+  {"dimension", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_7dimension, METH_NOARGS, 0},
+  {"printVector", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_9printVector, METH_VARARGS|METH_KEYWORDS, 0},
+  {"printLinearForm", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_11printLinearForm, METH_O, 0},
+  {"printLinearConstraint", (PyCFunction)__pyx_pw_3IPO_8IPOSpace_13printLinearConstraint, METH_O, 0},
   {0, 0, 0, 0}
 };
 
@@ -7617,7 +9231,7 @@ static PySequenceMethods __pyx_tp_as_sequence_IPOSpace = {
 
 static PyMappingMethods __pyx_tp_as_mapping_IPOSpace = {
   0, /*mp_length*/
-  __pyx_pw_3IPO_8IPOSpace_13__getitem__, /*mp_subscript*/
+  __pyx_pw_3IPO_8IPOSpace_15__getitem__, /*mp_subscript*/
   0, /*mp_ass_subscript*/
 };
 
@@ -7650,7 +9264,7 @@ static PyTypeObject __pyx_type_3IPO_IPOSpace = {
   0, /*tp_doc*/
   0, /*tp_traverse*/
   0, /*tp_clear*/
-  __pyx_pw_3IPO_8IPOSpace_15__richcmp__, /*tp_richcompare*/
+  __pyx_pw_3IPO_8IPOSpace_17__richcmp__, /*tp_richcompare*/
   0, /*tp_weaklistoffset*/
   0, /*tp_iter*/
   0, /*tp_iternext*/
@@ -7777,6 +9391,257 @@ static PyTypeObject __pyx_type_3IPO_IPOScipOracle = {
   #endif
 };
 
+static PyObject *__pyx_tp_new_3IPO_IPOPolyhedron(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
+  PyObject *o;
+  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
+    o = (*t->tp_alloc)(t, 0);
+  } else {
+    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
+  }
+  if (unlikely(!o)) return 0;
+  return o;
+}
+
+static void __pyx_tp_dealloc_3IPO_IPOPolyhedron(PyObject *o) {
+  #if PY_VERSION_HEX >= 0x030400a1
+  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+    if (PyObject_CallFinalizerFromDealloc(o)) return;
+  }
+  #endif
+  (*Py_TYPE(o)->tp_free)(o);
+}
+
+static PyTypeObject __pyx_type_3IPO_IPOPolyhedron = {
+  PyVarObject_HEAD_INIT(0, 0)
+  "IPO.IPOPolyhedron", /*tp_name*/
+  sizeof(struct __pyx_obj_3IPO_IPOPolyhedron), /*tp_basicsize*/
+  0, /*tp_itemsize*/
+  __pyx_tp_dealloc_3IPO_IPOPolyhedron, /*tp_dealloc*/
+  0, /*tp_print*/
+  0, /*tp_getattr*/
+  0, /*tp_setattr*/
+  #if PY_MAJOR_VERSION < 3
+  0, /*tp_compare*/
+  #endif
+  #if PY_MAJOR_VERSION >= 3
+  0, /*tp_as_async*/
+  #endif
+  0, /*tp_repr*/
+  0, /*tp_as_number*/
+  0, /*tp_as_sequence*/
+  0, /*tp_as_mapping*/
+  0, /*tp_hash*/
+  0, /*tp_call*/
+  0, /*tp_str*/
+  0, /*tp_getattro*/
+  0, /*tp_setattro*/
+  0, /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  0, /*tp_doc*/
+  0, /*tp_traverse*/
+  0, /*tp_clear*/
+  0, /*tp_richcompare*/
+  0, /*tp_weaklistoffset*/
+  0, /*tp_iter*/
+  0, /*tp_iternext*/
+  0, /*tp_methods*/
+  0, /*tp_members*/
+  0, /*tp_getset*/
+  0, /*tp_base*/
+  0, /*tp_dict*/
+  0, /*tp_descr_get*/
+  0, /*tp_descr_set*/
+  0, /*tp_dictoffset*/
+  0, /*tp_init*/
+  0, /*tp_alloc*/
+  __pyx_tp_new_3IPO_IPOPolyhedron, /*tp_new*/
+  0, /*tp_free*/
+  0, /*tp_is_gc*/
+  0, /*tp_bases*/
+  0, /*tp_mro*/
+  0, /*tp_cache*/
+  0, /*tp_subclasses*/
+  0, /*tp_weaklist*/
+  0, /*tp_del*/
+  0, /*tp_version_tag*/
+  #if PY_VERSION_HEX >= 0x030400a1
+  0, /*tp_finalize*/
+  #endif
+};
+
+static PyObject *__pyx_tp_new_3IPO_IPOFace(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
+  PyObject *o;
+  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
+    o = (*t->tp_alloc)(t, 0);
+  } else {
+    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
+  }
+  if (unlikely(!o)) return 0;
+  return o;
+}
+
+static void __pyx_tp_dealloc_3IPO_IPOFace(PyObject *o) {
+  #if PY_VERSION_HEX >= 0x030400a1
+  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+    if (PyObject_CallFinalizerFromDealloc(o)) return;
+  }
+  #endif
+  (*Py_TYPE(o)->tp_free)(o);
+}
+
+static PyTypeObject __pyx_type_3IPO_IPOFace = {
+  PyVarObject_HEAD_INIT(0, 0)
+  "IPO.IPOFace", /*tp_name*/
+  sizeof(struct __pyx_obj_3IPO_IPOFace), /*tp_basicsize*/
+  0, /*tp_itemsize*/
+  __pyx_tp_dealloc_3IPO_IPOFace, /*tp_dealloc*/
+  0, /*tp_print*/
+  0, /*tp_getattr*/
+  0, /*tp_setattr*/
+  #if PY_MAJOR_VERSION < 3
+  0, /*tp_compare*/
+  #endif
+  #if PY_MAJOR_VERSION >= 3
+  0, /*tp_as_async*/
+  #endif
+  0, /*tp_repr*/
+  0, /*tp_as_number*/
+  0, /*tp_as_sequence*/
+  0, /*tp_as_mapping*/
+  0, /*tp_hash*/
+  0, /*tp_call*/
+  0, /*tp_str*/
+  0, /*tp_getattro*/
+  0, /*tp_setattro*/
+  0, /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  0, /*tp_doc*/
+  0, /*tp_traverse*/
+  0, /*tp_clear*/
+  0, /*tp_richcompare*/
+  0, /*tp_weaklistoffset*/
+  0, /*tp_iter*/
+  0, /*tp_iternext*/
+  0, /*tp_methods*/
+  0, /*tp_members*/
+  0, /*tp_getset*/
+  0, /*tp_base*/
+  0, /*tp_dict*/
+  0, /*tp_descr_get*/
+  0, /*tp_descr_set*/
+  0, /*tp_dictoffset*/
+  0, /*tp_init*/
+  0, /*tp_alloc*/
+  __pyx_tp_new_3IPO_IPOFace, /*tp_new*/
+  0, /*tp_free*/
+  0, /*tp_is_gc*/
+  0, /*tp_bases*/
+  0, /*tp_mro*/
+  0, /*tp_cache*/
+  0, /*tp_subclasses*/
+  0, /*tp_weaklist*/
+  0, /*tp_del*/
+  0, /*tp_version_tag*/
+  #if PY_VERSION_HEX >= 0x030400a1
+  0, /*tp_finalize*/
+  #endif
+};
+
+static PyObject *__pyx_tp_new_3IPO_Test(PyTypeObject *t, CYTHON_UNUSED PyObject *a, CYTHON_UNUSED PyObject *k) {
+  PyObject *o;
+  if (likely((t->tp_flags & Py_TPFLAGS_IS_ABSTRACT) == 0)) {
+    o = (*t->tp_alloc)(t, 0);
+  } else {
+    o = (PyObject *) PyBaseObject_Type.tp_new(t, __pyx_empty_tuple, 0);
+  }
+  if (unlikely(!o)) return 0;
+  if (unlikely(__pyx_pw_3IPO_4Test_1__cinit__(o, __pyx_empty_tuple, NULL) < 0)) goto bad;
+  return o;
+  bad:
+  Py_DECREF(o); o = 0;
+  return NULL;
+}
+
+static void __pyx_tp_dealloc_3IPO_Test(PyObject *o) {
+  #if PY_VERSION_HEX >= 0x030400a1
+  if (unlikely(Py_TYPE(o)->tp_finalize) && (!PyType_IS_GC(Py_TYPE(o)) || !_PyGC_FINALIZED(o))) {
+    if (PyObject_CallFinalizerFromDealloc(o)) return;
+  }
+  #endif
+  {
+    PyObject *etype, *eval, *etb;
+    PyErr_Fetch(&etype, &eval, &etb);
+    ++Py_REFCNT(o);
+    __pyx_pw_3IPO_4Test_3__dealloc__(o);
+    --Py_REFCNT(o);
+    PyErr_Restore(etype, eval, etb);
+  }
+  (*Py_TYPE(o)->tp_free)(o);
+}
+
+static PyMethodDef __pyx_methods_3IPO_Test[] = {
+  {"print_Example", (PyCFunction)__pyx_pw_3IPO_4Test_5print_Example, METH_NOARGS, 0},
+  {0, 0, 0, 0}
+};
+
+static PyTypeObject __pyx_type_3IPO_Test = {
+  PyVarObject_HEAD_INIT(0, 0)
+  "IPO.Test", /*tp_name*/
+  sizeof(struct __pyx_obj_3IPO_Test), /*tp_basicsize*/
+  0, /*tp_itemsize*/
+  __pyx_tp_dealloc_3IPO_Test, /*tp_dealloc*/
+  0, /*tp_print*/
+  0, /*tp_getattr*/
+  0, /*tp_setattr*/
+  #if PY_MAJOR_VERSION < 3
+  0, /*tp_compare*/
+  #endif
+  #if PY_MAJOR_VERSION >= 3
+  0, /*tp_as_async*/
+  #endif
+  0, /*tp_repr*/
+  0, /*tp_as_number*/
+  0, /*tp_as_sequence*/
+  0, /*tp_as_mapping*/
+  0, /*tp_hash*/
+  0, /*tp_call*/
+  0, /*tp_str*/
+  0, /*tp_getattro*/
+  0, /*tp_setattro*/
+  0, /*tp_as_buffer*/
+  Py_TPFLAGS_DEFAULT|Py_TPFLAGS_HAVE_VERSION_TAG|Py_TPFLAGS_CHECKTYPES|Py_TPFLAGS_HAVE_NEWBUFFER|Py_TPFLAGS_BASETYPE, /*tp_flags*/
+  0, /*tp_doc*/
+  0, /*tp_traverse*/
+  0, /*tp_clear*/
+  0, /*tp_richcompare*/
+  0, /*tp_weaklistoffset*/
+  0, /*tp_iter*/
+  0, /*tp_iternext*/
+  __pyx_methods_3IPO_Test, /*tp_methods*/
+  0, /*tp_members*/
+  0, /*tp_getset*/
+  0, /*tp_base*/
+  0, /*tp_dict*/
+  0, /*tp_descr_get*/
+  0, /*tp_descr_set*/
+  0, /*tp_dictoffset*/
+  0, /*tp_init*/
+  0, /*tp_alloc*/
+  __pyx_tp_new_3IPO_Test, /*tp_new*/
+  0, /*tp_free*/
+  0, /*tp_is_gc*/
+  0, /*tp_bases*/
+  0, /*tp_mro*/
+  0, /*tp_cache*/
+  0, /*tp_subclasses*/
+  0, /*tp_weaklist*/
+  0, /*tp_del*/
+  0, /*tp_version_tag*/
+  #if PY_VERSION_HEX >= 0x030400a1
+  0, /*tp_finalize*/
+  #endif
+};
+
 static PyMethodDef __pyx_methods[] = {
   {0, 0, 0, 0}
 };
@@ -7800,19 +9665,37 @@ static struct PyModuleDef __pyx_moduledef = {
 #endif
 
 static __Pyx_StringTabEntry __pyx_string_tab[] = {
+  {&__pyx_n_s_A, __pyx_k_A, sizeof(__pyx_k_A), 0, 0, 1, 1},
+  {&__pyx_n_s_B, __pyx_k_B, sizeof(__pyx_k_B), 0, 0, 1, 1},
+  {&__pyx_n_s_C, __pyx_k_C, sizeof(__pyx_k_C), 0, 0, 1, 1},
+  {&__pyx_kp_s_C_call_inner, __pyx_k_C_call_inner, sizeof(__pyx_k_C_call_inner), 0, 0, 1, 0},
+  {&__pyx_kp_s_C_call_outer, __pyx_k_C_call_outer, sizeof(__pyx_k_C_call_outer), 0, 0, 1, 0},
+  {&__pyx_n_s_D, __pyx_k_D, sizeof(__pyx_k_D), 0, 0, 1, 1},
+  {&__pyx_n_s_E, __pyx_k_E, sizeof(__pyx_k_E), 0, 0, 1, 1},
+  {&__pyx_n_s_F, __pyx_k_F, sizeof(__pyx_k_F), 0, 0, 1, 1},
+  {&__pyx_n_s_FERTIG, __pyx_k_FERTIG, sizeof(__pyx_k_FERTIG), 0, 0, 1, 1},
+  {&__pyx_n_s_G, __pyx_k_G, sizeof(__pyx_k_G), 0, 0, 1, 1},
+  {&__pyx_n_s_H, __pyx_k_H, sizeof(__pyx_k_H), 0, 0, 1, 1},
+  {&__pyx_n_s_I, __pyx_k_I, sizeof(__pyx_k_I), 0, 0, 1, 1},
   {&__pyx_n_s_IPO, __pyx_k_IPO, sizeof(__pyx_k_IPO), 0, 0, 1, 1},
   {&__pyx_n_s_IPOLinearConstraint, __pyx_k_IPOLinearConstraint, sizeof(__pyx_k_IPOLinearConstraint), 0, 0, 1, 1},
   {&__pyx_n_s_IPOVector, __pyx_k_IPOVector, sizeof(__pyx_k_IPOVector), 0, 0, 1, 1},
+  {&__pyx_n_s_J, __pyx_k_J, sizeof(__pyx_k_J), 0, 0, 1, 1},
+  {&__pyx_n_s_K, __pyx_k_K, sizeof(__pyx_k_K), 0, 0, 1, 1},
+  {&__pyx_n_s_L, __pyx_k_L, sizeof(__pyx_k_L), 0, 0, 1, 1},
+  {&__pyx_n_s_M, __pyx_k_M, sizeof(__pyx_k_M), 0, 0, 1, 1},
   {&__pyx_n_s_MemoryError, __pyx_k_MemoryError, sizeof(__pyx_k_MemoryError), 0, 0, 1, 1},
   {&__pyx_n_s_NonConstError, __pyx_k_NonConstError, sizeof(__pyx_k_NonConstError), 0, 0, 1, 1},
   {&__pyx_n_s_NonConstError___str, __pyx_k_NonConstError___str, sizeof(__pyx_k_NonConstError___str), 0, 0, 1, 1},
   {&__pyx_n_s_NonConstError_init, __pyx_k_NonConstError_init, sizeof(__pyx_k_NonConstError_init), 0, 0, 1, 1},
   {&__pyx_kp_s_This_is_no_const_value, __pyx_k_This_is_no_const_value, sizeof(__pyx_k_This_is_no_const_value), 0, 0, 1, 0},
   {&__pyx_n_s_TypeError, __pyx_k_TypeError, sizeof(__pyx_k_TypeError), 0, 0, 1, 1},
-  {&__pyx_n_s_append, __pyx_k_append, sizeof(__pyx_k_append), 0, 0, 1, 1},
+  {&__pyx_kp_s__14, __pyx_k__14, sizeof(__pyx_k__14), 0, 0, 1, 0},
+  {&__pyx_n_s_affineHull, __pyx_k_affineHull, sizeof(__pyx_k_affineHull), 0, 0, 1, 1},
   {&__pyx_n_s_cerr, __pyx_k_cerr, sizeof(__pyx_k_cerr), 0, 0, 1, 1},
   {&__pyx_n_s_clog, __pyx_k_clog, sizeof(__pyx_k_clog), 0, 0, 1, 1},
   {&__pyx_n_s_cons, __pyx_k_cons, sizeof(__pyx_k_cons), 0, 0, 1, 1},
+  {&__pyx_n_s_constraints, __pyx_k_constraints, sizeof(__pyx_k_constraints), 0, 0, 1, 1},
   {&__pyx_n_s_cout, __pyx_k_cout, sizeof(__pyx_k_cout), 0, 0, 1, 1},
   {&__pyx_n_s_debug, __pyx_k_debug, sizeof(__pyx_k_debug), 0, 0, 1, 1},
   {&__pyx_n_s_doc, __pyx_k_doc, sizeof(__pyx_k_doc), 0, 0, 1, 1},
@@ -7820,6 +9703,7 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_file, __pyx_k_file, sizeof(__pyx_k_file), 0, 0, 1, 1},
   {&__pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_k_home_sandra_Documents_HiWi_IPO, sizeof(__pyx_k_home_sandra_Documents_HiWi_IPO), 0, 0, 1, 0},
   {&__pyx_n_s_init, __pyx_k_init, sizeof(__pyx_k_init), 0, 0, 1, 1},
+  {&__pyx_kp_s_inner_verarbeitung, __pyx_k_inner_verarbeitung, sizeof(__pyx_k_inner_verarbeitung), 0, 0, 1, 0},
   {&__pyx_n_s_isConst, __pyx_k_isConst, sizeof(__pyx_k_isConst), 0, 0, 1, 1},
   {&__pyx_n_s_isConstant, __pyx_k_isConstant, sizeof(__pyx_k_isConstant), 0, 0, 1, 1},
   {&__pyx_n_s_isNew, __pyx_k_isNew, sizeof(__pyx_k_isNew), 0, 0, 1, 1},
@@ -7828,10 +9712,12 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
   {&__pyx_n_s_metaclass, __pyx_k_metaclass, sizeof(__pyx_k_metaclass), 0, 0, 1, 1},
   {&__pyx_n_s_module, __pyx_k_module, sizeof(__pyx_k_module), 0, 0, 1, 1},
   {&__pyx_n_s_name, __pyx_k_name, sizeof(__pyx_k_name), 0, 0, 1, 1},
+  {&__pyx_n_s_points, __pyx_k_points, sizeof(__pyx_k_points), 0, 0, 1, 1},
   {&__pyx_n_s_prepare, __pyx_k_prepare, sizeof(__pyx_k_prepare), 0, 0, 1, 1},
   {&__pyx_n_s_print, __pyx_k_print, sizeof(__pyx_k_print), 0, 0, 1, 1},
   {&__pyx_n_s_qualname, __pyx_k_qualname, sizeof(__pyx_k_qualname), 0, 0, 1, 1},
   {&__pyx_n_s_range, __pyx_k_range, sizeof(__pyx_k_range), 0, 0, 1, 1},
+  {&__pyx_n_s_rays, __pyx_k_rays, sizeof(__pyx_k_rays), 0, 0, 1, 1},
   {&__pyx_n_s_self, __pyx_k_self, sizeof(__pyx_k_self), 0, 0, 1, 1},
   {&__pyx_n_s_str, __pyx_k_str, sizeof(__pyx_k_str), 0, 0, 1, 1},
   {&__pyx_n_s_stream, __pyx_k_stream, sizeof(__pyx_k_stream), 0, 0, 1, 1},
@@ -7842,8 +9728,8 @@ static __Pyx_StringTabEntry __pyx_string_tab[] = {
 };
 static int __Pyx_InitCachedBuiltins(void) {
   __pyx_builtin_MemoryError = __Pyx_GetBuiltinName(__pyx_n_s_MemoryError); if (!__pyx_builtin_MemoryError) __PYX_ERR(0, 28, __pyx_L1_error)
-  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 316, __pyx_L1_error)
-  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 368, __pyx_L1_error)
+  __pyx_builtin_TypeError = __Pyx_GetBuiltinName(__pyx_n_s_TypeError); if (!__pyx_builtin_TypeError) __PYX_ERR(0, 340, __pyx_L1_error)
+  __pyx_builtin_range = __Pyx_GetBuiltinName(__pyx_n_s_range); if (!__pyx_builtin_range) __PYX_ERR(0, 423, __pyx_L1_error)
   return 0;
   __pyx_L1_error:;
   return -1;
@@ -7932,7 +9818,7 @@ static int __Pyx_InitCachedConstants(void) {
 
   /* "IPO.pyx":264
  * 
- * cdef object CreateConstLinearConstraint(cppIPO.LinearConstraint *linconst):
+ * cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst):
  *     py_linconst = IPOLinearConstraint(True)             # <<<<<<<<<<<<<<
  *     py_linconst.const_lin = linconst
  *     return py_linconst
@@ -7941,38 +9827,60 @@ static int __Pyx_InitCachedConstants(void) {
   __Pyx_GOTREF(__pyx_tuple__8);
   __Pyx_GIVEREF(__pyx_tuple__8);
 
-  /* "IPO.pyx":288
+  /* "IPO.pyx":311
  *     def printVector(self, stream, IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *     #cout, cerr, clog are ostreams
  *         if stream == "cout":
  */
-  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 288, __pyx_L1_error)
+  __pyx_tuple__9 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__9)) __PYX_ERR(0, 311, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__9);
   __Pyx_GIVEREF(__pyx_tuple__9);
 
-  /* "IPO.pyx":302
+  /* "IPO.pyx":325
  *     def printLinearForm(self, IPOVector vector):
  *         if (not vector.isConstant()):
  *             raise NonConstError('IPOVector')             # <<<<<<<<<<<<<<
  *         print("lin")
  * 
  */
-  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 302, __pyx_L1_error)
+  __pyx_tuple__10 = PyTuple_Pack(1, __pyx_n_s_IPOVector); if (unlikely(!__pyx_tuple__10)) __PYX_ERR(0, 325, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__10);
   __Pyx_GIVEREF(__pyx_tuple__10);
 
-  /* "IPO.pyx":307
+  /* "IPO.pyx":330
  *     def printLinearConstraint(self, IPOLinearConstraint lincons):
  *         if (not lincons.isConstant()):
  *             raise NonConstError('IPOLinearConstraint')             # <<<<<<<<<<<<<<
  *         print("cons")
  * 
  */
-  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_s_IPOLinearConstraint); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 307, __pyx_L1_error)
+  __pyx_tuple__11 = PyTuple_Pack(1, __pyx_n_s_IPOLinearConstraint); if (unlikely(!__pyx_tuple__11)) __PYX_ERR(0, 330, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_tuple__11);
   __Pyx_GIVEREF(__pyx_tuple__11);
+
+  /* "IPO.pyx":376
+ * 
+ * cdef object CreateIPOSpace(cppIPO.Space *space):
+ *     py_space = IPOSpace(False)             # <<<<<<<<<<<<<<
+ *     py_space.cpp_space = space
+ *     return py_space
+ */
+  __pyx_tuple__12 = PyTuple_Pack(1, Py_False); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 376, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__12);
+  __Pyx_GIVEREF(__pyx_tuple__12);
+
+  /* "IPO.pyx":381
+ * 
+ * cdef object CreateConstIPOSpace(const cppIPO.Space *space):
+ *     py_space = IPOSpace(True)             # <<<<<<<<<<<<<<
+ *     py_space.const_space = space
+ *     return py_space
+ */
+  __pyx_tuple__13 = PyTuple_Pack(1, Py_True); if (unlikely(!__pyx_tuple__13)) __PYX_ERR(0, 381, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__13);
+  __Pyx_GIVEREF(__pyx_tuple__13);
 
   /* "IPO.pyx":12
  * #Errors
@@ -7981,10 +9889,10 @@ static int __Pyx_InitCachedConstants(void) {
  *         self.value = 'This is no const value: '+value
  * 
  */
-  __pyx_tuple__12 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_value); if (unlikely(!__pyx_tuple__12)) __PYX_ERR(0, 12, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__12);
-  __Pyx_GIVEREF(__pyx_tuple__12);
-  __pyx_codeobj__13 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__12, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_n_s_init, 12, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__13)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_tuple__15 = PyTuple_Pack(2, __pyx_n_s_self, __pyx_n_s_value); if (unlikely(!__pyx_tuple__15)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__15);
+  __Pyx_GIVEREF(__pyx_tuple__15);
+  __pyx_codeobj__16 = (PyObject*)__Pyx_PyCode_New(2, 0, 2, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__15, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_n_s_init, 12, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__16)) __PYX_ERR(0, 12, __pyx_L1_error)
 
   /* "IPO.pyx":15
  *         self.value = 'This is no const value: '+value
@@ -7993,10 +9901,19 @@ static int __Pyx_InitCachedConstants(void) {
  *         return repr(self.value)
  * 
  */
-  __pyx_tuple__14 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__14)) __PYX_ERR(0, 15, __pyx_L1_error)
-  __Pyx_GOTREF(__pyx_tuple__14);
-  __Pyx_GIVEREF(__pyx_tuple__14);
-  __pyx_codeobj__15 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__14, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_n_s_str, 15, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__15)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __pyx_tuple__17 = PyTuple_Pack(1, __pyx_n_s_self); if (unlikely(!__pyx_tuple__17)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_tuple__17);
+  __Pyx_GIVEREF(__pyx_tuple__17);
+  __pyx_codeobj__18 = (PyObject*)__Pyx_PyCode_New(1, 0, 1, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_tuple__17, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_n_s_str, 15, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__18)) __PYX_ERR(0, 15, __pyx_L1_error)
+
+  /* "IPO.pyx":488
+ * #Affine Hull
+ * 
+ * def affineHull():             # <<<<<<<<<<<<<<
+ *     return 0
+ * 
+ */
+  __pyx_codeobj__19 = (PyObject*)__Pyx_PyCode_New(0, 0, 0, 0, 0, __pyx_empty_bytes, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_empty_tuple, __pyx_kp_s_home_sandra_Documents_HiWi_IPO, __pyx_n_s_affineHull, 488, __pyx_empty_bytes); if (unlikely(!__pyx_codeobj__19)) __PYX_ERR(0, 488, __pyx_L1_error)
   __Pyx_RefNannyFinishContext();
   return 0;
   __pyx_L1_error:;
@@ -8113,14 +10030,34 @@ PyMODINIT_FUNC PyInit_IPO(void)
   __pyx_type_3IPO_IPOLinearConstraint.tp_print = 0;
   if (PyObject_SetAttrString(__pyx_m, "IPOLinearConstraint", (PyObject *)&__pyx_type_3IPO_IPOLinearConstraint) < 0) __PYX_ERR(0, 154, __pyx_L1_error)
   __pyx_ptype_3IPO_IPOLinearConstraint = &__pyx_type_3IPO_IPOLinearConstraint;
-  if (PyType_Ready(&__pyx_type_3IPO_IPOSpace) < 0) __PYX_ERR(0, 272, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_3IPO_IPOInnerDescription) < 0) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_type_3IPO_IPOInnerDescription.tp_print = 0;
+  if (PyObject_SetAttrString(__pyx_m, "IPOInnerDescription", (PyObject *)&__pyx_type_3IPO_IPOInnerDescription) < 0) __PYX_ERR(0, 271, __pyx_L1_error)
+  __pyx_ptype_3IPO_IPOInnerDescription = &__pyx_type_3IPO_IPOInnerDescription;
+  if (PyType_Ready(&__pyx_type_3IPO_IPOAffineOuterDescription) < 0) __PYX_ERR(0, 276, __pyx_L1_error)
+  __pyx_type_3IPO_IPOAffineOuterDescription.tp_print = 0;
+  if (PyObject_SetAttrString(__pyx_m, "IPOAffineOuterDescription", (PyObject *)&__pyx_type_3IPO_IPOAffineOuterDescription) < 0) __PYX_ERR(0, 276, __pyx_L1_error)
+  __pyx_ptype_3IPO_IPOAffineOuterDescription = &__pyx_type_3IPO_IPOAffineOuterDescription;
+  if (PyType_Ready(&__pyx_type_3IPO_IPOSpace) < 0) __PYX_ERR(0, 284, __pyx_L1_error)
   __pyx_type_3IPO_IPOSpace.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "IPOSpace", (PyObject *)&__pyx_type_3IPO_IPOSpace) < 0) __PYX_ERR(0, 272, __pyx_L1_error)
+  if (PyObject_SetAttrString(__pyx_m, "IPOSpace", (PyObject *)&__pyx_type_3IPO_IPOSpace) < 0) __PYX_ERR(0, 284, __pyx_L1_error)
   __pyx_ptype_3IPO_IPOSpace = &__pyx_type_3IPO_IPOSpace;
-  if (PyType_Ready(&__pyx_type_3IPO_IPOScipOracle) < 0) __PYX_ERR(0, 337, __pyx_L1_error)
+  if (PyType_Ready(&__pyx_type_3IPO_IPOScipOracle) < 0) __PYX_ERR(0, 388, __pyx_L1_error)
   __pyx_type_3IPO_IPOScipOracle.tp_print = 0;
-  if (PyObject_SetAttrString(__pyx_m, "IPOScipOracle", (PyObject *)&__pyx_type_3IPO_IPOScipOracle) < 0) __PYX_ERR(0, 337, __pyx_L1_error)
+  if (PyObject_SetAttrString(__pyx_m, "IPOScipOracle", (PyObject *)&__pyx_type_3IPO_IPOScipOracle) < 0) __PYX_ERR(0, 388, __pyx_L1_error)
   __pyx_ptype_3IPO_IPOScipOracle = &__pyx_type_3IPO_IPOScipOracle;
+  if (PyType_Ready(&__pyx_type_3IPO_IPOPolyhedron) < 0) __PYX_ERR(0, 474, __pyx_L1_error)
+  __pyx_type_3IPO_IPOPolyhedron.tp_print = 0;
+  if (PyObject_SetAttrString(__pyx_m, "IPOPolyhedron", (PyObject *)&__pyx_type_3IPO_IPOPolyhedron) < 0) __PYX_ERR(0, 474, __pyx_L1_error)
+  __pyx_ptype_3IPO_IPOPolyhedron = &__pyx_type_3IPO_IPOPolyhedron;
+  if (PyType_Ready(&__pyx_type_3IPO_IPOFace) < 0) __PYX_ERR(0, 482, __pyx_L1_error)
+  __pyx_type_3IPO_IPOFace.tp_print = 0;
+  if (PyObject_SetAttrString(__pyx_m, "IPOFace", (PyObject *)&__pyx_type_3IPO_IPOFace) < 0) __PYX_ERR(0, 482, __pyx_L1_error)
+  __pyx_ptype_3IPO_IPOFace = &__pyx_type_3IPO_IPOFace;
+  if (PyType_Ready(&__pyx_type_3IPO_Test) < 0) __PYX_ERR(0, 494, __pyx_L1_error)
+  __pyx_type_3IPO_Test.tp_print = 0;
+  if (PyObject_SetAttrString(__pyx_m, "Test", (PyObject *)&__pyx_type_3IPO_Test) < 0) __PYX_ERR(0, 494, __pyx_L1_error)
+  __pyx_ptype_3IPO_Test = &__pyx_type_3IPO_Test;
   /*--- Type import code ---*/
   __pyx_ptype_7cpython_4type_type = __Pyx_ImportType(__Pyx_BUILTIN_MODULE_NAME, "type", 
   #if CYTHON_COMPILING_IN_PYPY
@@ -8153,7 +10090,7 @@ PyMODINIT_FUNC PyInit_IPO(void)
  *         self.value = 'This is no const value: '+value
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_NewEx(&__pyx_mdef_3IPO_13NonConstError_1init, 0, __pyx_n_s_NonConstError_init, NULL, __pyx_n_s_IPO, __pyx_d, ((PyObject *)__pyx_codeobj__13)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_NewEx(&__pyx_mdef_3IPO_13NonConstError_1init, 0, __pyx_n_s_NonConstError_init, NULL, __pyx_n_s_IPO, __pyx_d, ((PyObject *)__pyx_codeobj__16)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyObject_SetItem(__pyx_t_1, __pyx_n_s_init, __pyx_t_2) < 0) __PYX_ERR(0, 12, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8165,7 +10102,7 @@ PyMODINIT_FUNC PyInit_IPO(void)
  *         return repr(self.value)
  * 
  */
-  __pyx_t_2 = __Pyx_CyFunction_NewEx(&__pyx_mdef_3IPO_13NonConstError_3__str__, 0, __pyx_n_s_NonConstError___str, NULL, __pyx_n_s_IPO, __pyx_d, ((PyObject *)__pyx_codeobj__15)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
+  __pyx_t_2 = __Pyx_CyFunction_NewEx(&__pyx_mdef_3IPO_13NonConstError_3__str__, 0, __pyx_n_s_NonConstError___str, NULL, __pyx_n_s_IPO, __pyx_d, ((PyObject *)__pyx_codeobj__18)); if (unlikely(!__pyx_t_2)) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_GOTREF(__pyx_t_2);
   if (PyObject_SetItem(__pyx_t_1, __pyx_n_s_str, __pyx_t_2) < 0) __PYX_ERR(0, 15, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
@@ -8183,6 +10120,18 @@ PyMODINIT_FUNC PyInit_IPO(void)
   __Pyx_DECREF(__pyx_t_2); __pyx_t_2 = 0;
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
+  /* "IPO.pyx":488
+ * #Affine Hull
+ * 
+ * def affineHull():             # <<<<<<<<<<<<<<
+ *     return 0
+ * 
+ */
+  __pyx_t_1 = PyCFunction_NewEx(&__pyx_mdef_3IPO_1affineHull, NULL, __pyx_n_s_IPO); if (unlikely(!__pyx_t_1)) __PYX_ERR(0, 488, __pyx_L1_error)
+  __Pyx_GOTREF(__pyx_t_1);
+  if (PyDict_SetItem(__pyx_d, __pyx_n_s_affineHull, __pyx_t_1) < 0) __PYX_ERR(0, 488, __pyx_L1_error)
+  __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
+
   /* "IPO.pyx":1
  * ####################################             # <<<<<<<<<<<<<<
  * #Imports
@@ -8193,12 +10142,12 @@ PyMODINIT_FUNC PyInit_IPO(void)
   if (PyDict_SetItem(__pyx_d, __pyx_n_s_test, __pyx_t_1) < 0) __PYX_ERR(0, 1, __pyx_L1_error)
   __Pyx_DECREF(__pyx_t_1); __pyx_t_1 = 0;
 
-  /* "string.to_py":55
+  /* "string.from_py":13
  * 
- * @cname("__pyx_convert_PyByteArray_string_to_py_std__in_string")
- * cdef inline object __pyx_convert_PyByteArray_string_to_py_std__in_string(const string& s):             # <<<<<<<<<<<<<<
- *     return __Pyx_PyByteArray_FromStringAndSize(s.data(), s.size())
- * 
+ * @cname("__pyx_convert_string_from_py_std__in_string")
+ * cdef string __pyx_convert_string_from_py_std__in_string(object o) except *:             # <<<<<<<<<<<<<<
+ *     cdef Py_ssize_t length
+ *     cdef char* data = __Pyx_PyObject_AsStringAndSize(o, &length)
  */
 
   /*--- Wrapped vars code ---*/

@@ -3,12 +3,17 @@
 
 #include <ipo/common.h>
 
-#include "ipo/scip_exception.hpp"
-#include "ipo/affine_hull.h"
-#include "ipo/scip_oracles.h"
-#include "ipo/cache_oracle.h"
-#include "ipo/statistics_oracle.h"
-#include <ipo/vectors.h>
+#include <scip/scip.h>
+#include <scip/scipdefplugins.h>
+#include <scip/cons_linear.h>
+#include "scip_oracles.h"
+#include <scip/debug.h>
+#include "scip_exception.hpp"
+#include "affine_hull.h"
+#include "scip_oracles.h"
+#include "cache_oracle.h"
+#include "statistics_oracle.h"
+#include "vectors.h"
 
 namespace ipo {
 
@@ -19,11 +24,11 @@ namespace ipo {
     //creates ScipOracle with Statistics Wrapper and Cache
     ScipOracleController(std::string name);
     /*
-     * \brief 
+     * \brief nicht prev sondern next
      */
     ScipOracleController(std::string name, ScipOracleController prev);
 
-    ~ScipOracleController();
+    virtual ~ScipOracleController();
 
     /*
      * Methods which can be used by the oracles

@@ -36,6 +36,7 @@ set(IPO_SOURCES
   console_app.cpp
   parser.cpp
   python_wrapper.cpp
+  test.cpp
 )
 
 set(IPO_INSTALL_HEADERS
@@ -62,6 +63,7 @@ set(IPO_INSTALL_HEADERS
   vector_2d.h
   vector_space_generators.h
   python_wrapper.h
+  test.h
 )
 
 set(IPO_OTHER_HEADERS

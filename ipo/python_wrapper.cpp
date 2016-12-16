@@ -1,23 +1,5 @@
 #include "python_wrapper.h"
 
-#ifdef NDEBUG
-  #undef NDEBUG
-  #include <scip/scip.h>
-  #include <scip/scipdefplugins.h>
-  #include <scip/cons_linear.h>
-  #include "scip_exception.hpp"
-  #include "scip_oracles.h"
-  #include <scip/debug.h>
-  #define NDEBUG
-#else
-  #include <scip/scip.h>
-  #include <scip/scipdefplugins.h>
-  #include <scip/cons_linear.h>
-  #include "scip_exception.hpp"
-  #include "scip_oracles.h"
-  #include <scip/debug.h>
-#endif
-
 namespace ipo {
 ScipOracleController::ScipOracleController(std::string filename){
   //Create oracle triple from ScipOracle, StatisticsOracle, CacheOracle
@@ -62,6 +44,10 @@ ScipOracleController::ScipOracleController(std::string filename, ScipOracleContr
   cacheOracle = std::make_shared<StatisticsOracle>(cacheOracleImpl);
 }
 
+ScipOracleController::~ScipOracleController(){
+}
+
+
 std::shared_ptr<StatisticsOracle> ScipOracleController::getConnectionOracle(){
   return this->scipOracle;
 }
@@ -97,6 +83,8 @@ InnerDescription ScipOracleController::affineHullInner(int outputMode){
 
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
 
+  printf("Inner fertig\n");
+
   return inner;
 }
 
@@ -114,6 +102,7 @@ AffineOuterDescription ScipOracleController::affineHullOuter(int outputMode){
 
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
 
+    printf("outer fertig\n");
   return outer;
 }
 }

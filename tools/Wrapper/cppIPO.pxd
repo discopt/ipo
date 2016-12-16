@@ -3,6 +3,7 @@
 from libcpp.string cimport string
 from libcpp cimport bool as bool_cpp
 from libcpp.vector cimport vector
+from libcpp.memory cimport shared_ptr
 
 ####################################
 #Soplex Rational
@@ -89,6 +90,46 @@ cdef extern from "ipo/space.h" namespace "ipo":
         void printLinearConstraint(ostream& stream, const LinearConstraint& constraint)
 
 ####################################
+#IPO Polyhedron
+
+cdef extern from "ipo/oracles.h" namespace "ipo":
+    ctypedef size_t HeuristicLevel
+    cdef cppclass OracleBase:
+        pass
+
+cdef extern from "ipo/polyhedron.h" namespace "ipo":
+    cdef cppclass Polyhedron:
+
+        cppclass Face:
+            Face(const LinearConstraint& inequality) except +
+
+            const LinearConstraint& inequality()
+            bool_cpp hasDimension()
+            const AffineOuterDescription& outerDescription()
+            const InnerDescription& innerDescription()
+            int dimension()
+
+        Polyhedron(const shared_ptr[OracleBase]& oracle) except +
+
+        Space space()
+        size_t numPoints()
+        size_t numRays()
+        size_t numInequalities()
+        shared_ptr[Face] inequalityToFace(const LinearConstraint& constraint)
+        #void affineHull(shared_ptr[Face]& face, vector[AffineHullHandler*]& handlers)
+        void affineHull(shared_ptr[Face]& face)
+        #void affineHull(vector[AffineHullHandler*]& handlers)
+        void affineHull()
+        int dimension()
+        const AffineOuterDescription& affineHullOuterDescription()
+        const InnerDescription& affineHullInnerDescription()
+        void setAffineHullLastCheapHeuristicLevel(HeuristicLevel lastCheapHeuristicLevel)
+        void setAffineHullLastModerateHeuristicLevel(HeuristicLevel lastModerateHeuristicLevel)
+        void addConstraint(const LinearConstraint& constraint)
+        void getFaces(vector[shared_ptr[Face]]& constraints, bool_cpp onlyInequalities, bool_cpp onlyWithDimension)
+
+
+####################################
 #IPO ScipOracle Python Wrapper
 
 cdef extern from "ipo/python_wrapper.h" namespace "ipo":
@@ -96,9 +137,17 @@ cdef extern from "ipo/python_wrapper.h" namespace "ipo":
         ScipOracleController(string name) except +
         ScipOracleController(string name, ScipOracleController prev) except +
 
-        string name();
-        int heuristicLevel_ScipOracle();
-        int heuristicLevel_CacheOracle();
+        string name()
+        int heuristicLevel_ScipOracle()
+        int heuristicLevel_CacheOracle()
 
-        InnerDescription affineHullInner(int outputMode);
-        AffineOuterDescription affineHullOuter(int outputMode);
+        InnerDescription affineHullInner(int outputMode)
+        AffineOuterDescription affineHullOuter(int outputMode)
+
+####################################
+#IPO Test
+
+cdef extern from "ipo/test.h" namespace "ipo":
+    cdef cppclass Foo:
+        Foo() except +
+        string printFoo()
