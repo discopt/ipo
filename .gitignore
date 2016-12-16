@@ -3,3 +3,5 @@ build*
 .project
 *.kdev4
 Makefile
+
+tools/Wrapper/*.cpp
