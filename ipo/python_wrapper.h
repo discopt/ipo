@@ -17,7 +17,7 @@
 
 #include "scip_oracle.h"
 #include "exactscip_oracle.h"
-#include "scip_exception.hpp"
+#include "scip_exception.h"
 #include "affine_hull.h"
 #include "cache_oracle.h"
 #include "statistics_oracle.h"
