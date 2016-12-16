@@ -209,7 +209,6 @@ namespace ipo {
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);
 
   typedef std::vector<LinearConstraint> AffineOuterDescription;
-  
 
 } /* namespace ipo */
 

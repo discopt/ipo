@@ -1,7 +1,6 @@
 
 #include <ipo/common.h>
 
-#ifdef WITH_SCIP
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
@@ -16,7 +15,6 @@
   #include <scip/cons_linear.h>
   #include <ipo/scip_exception.hpp>
   #include <ipo/scip_oracle.h>
-#endif
 #endif
 
 #include "ipo/scip_exception.hpp"
@@ -128,11 +126,11 @@ int main(int argc, char** argv)
   std::cout << "Algorithm statistics (without affine hull computation):\n";
   std::cout << "\n";
   std::cout << "Overall time: " << statsHandler.timeAll() << "\n";
-  std::cout << "Approximate LPs: " << statsHandler.numApproximateLPs() << " in " << statsHandler.timeApproximateLPs() 
+  std::cout << "Approximate LPs: " << statsHandler.numApproximateLPs() << " in " << statsHandler.timeApproximateLPs()
     << " seconds.\n";
   std::cout << "Exact LPs: " << statsHandler.numExactLPs() << " in " << statsHandler.timeExactLPs()
     << " seconds.\n";
-  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles() 
+  std::cout << "Oracle queries: " << statsHandler.numOracleQueries() << " in " << statsHandler.timeOracles()
     << " seconds.\n";
   std::cout << "\n";
   std::cout << "Oracle statistics (without affine hull computation):\n";

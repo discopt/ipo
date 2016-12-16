@@ -20,15 +20,30 @@ namespace ipo {
   class ExactSCIPOracle : public OracleBase
   {
   public:
+#ifdef IPO_WITH_EXACT_SCIP
     /**
      * \brief Constructs an exact SCIP oracle with given \p name in given \p space.
      *
      * Constructs an exact SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is
      * equal to that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling
-     * scip-ex to solve mixed-integer programs over the \p mixedIntegerSet.
+     * scip-ex (as detected by cmake) to solve mixed-integer programs over the \p mixedIntegerSet.
+     *
+     * \note This constructor throws an exception if cmake did not find scip-ex during the build.
      */
 
     ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
+      const std::shared_ptr<OracleBase>& nextOracle = NULL);
+#endif
+
+    /**
+     * \brief Constructs an exact SCIP oracle with given \p name in given \p space.
+     *
+     * Constructs an exact SCIP oracle with given \p name that is optionally associated to \p nextOracle. The ambient space is
+     * equal to that of \p nextOracle and of the space of the given \p mixedIntegerSet. The oracle is implemented by calling
+     * the scip-ex \p binary to solve mixed-integer programs over the \p mixedIntegerSet.
+     */
+
+    ExactSCIPOracle(const std::string& binary, const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**

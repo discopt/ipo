@@ -5,43 +5,42 @@
 #include <sys/stat.h>
 #include "timer.h"
 
-#include "exactscip_config.h"
-
 using namespace soplex;
 
 namespace ipo {
+
+#ifdef IPO_WITH_EXACT_SCIP
 
   ExactSCIPOracle::ExactSCIPOracle(const std::string& name, const std::shared_ptr< MixedIntegerSet >& mixedIntegerSet,
     const std::shared_ptr<OracleBase>& nextOracle)
     : OracleBase(name, nextOracle), _mixedIntegerSet(mixedIntegerSet)
   {
-#ifdef WITH_ExactSCIP
-    setBinaryPath(ExactSCIPPath);
-#endif
+    _binary = IPO_EXACT_SCIP_PATH;
+    createWorkingDirectory();
 
     initializeSpace(_mixedIntegerSet->space());
   }
 
+#endif
+
+   ExactSCIPOracle::ExactSCIPOracle(const std::string& binary, const std::string& name,
+     const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, const std::shared_ptr<OracleBase>& nextOracle)
+     : OracleBase(name, nextOracle), _binary(binary)
+   {
+     createWorkingDirectory();
+
+     initializeSpace(_mixedIntegerSet->space());
+   }
+
+
   ExactSCIPOracle::~ExactSCIPOracle()
   {
-    setBinaryPath("");
+    deleteWorkingDirectory();
   }
 
   void ExactSCIPOracle::setFace(const LinearConstraint& newFace)
   {
     OracleBase::setFace(newFace);
-  }
-
-  void ExactSCIPOracle::setBinaryPath(const std::string& path)
-  {
-    if (_binary != "")
-      deleteWorkingDirectory();
-
-    _binary = path;
-    if (_binary != "")
-    {
-      createWorkingDirectory();
-    }
   }
 
   void ExactSCIPOracle::createWorkingDirectory()

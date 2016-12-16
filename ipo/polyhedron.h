@@ -43,7 +43,7 @@ namespace ipo {
       {
         return _inequality;
       }
-      
+
       inline bool hasDimension() const
       {
         return _hasDimension;
@@ -187,13 +187,13 @@ namespace ipo {
     }
 
     void affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& handlers);
-    
+
     inline void affineHull(std::shared_ptr<Face>& face)
     {
       std::vector<AffineHullHandler*> handlers;
       affineHull(face, handlers);
     }
-    
+
     inline void affineHull(std::vector<AffineHullHandler*>& handlers)
     {
       affineHull(_completeFace, handlers);

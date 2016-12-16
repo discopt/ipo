@@ -27,7 +27,7 @@ namespace ipo {
       {
 
       }
-      
+
       KeyData(const KeyData& other)
         : hash(other.hash), vector(const_cast<Vector&>(other.vector))
       {

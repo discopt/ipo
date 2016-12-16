@@ -1,11 +1,14 @@
 #ifndef IPO_SCIP_ORACLE_H_
 #define IPO_SCIP_ORACLE_H_
 
+#include "common.h"
+
+#ifdef IPO_WITH_SCIP
+
 #include <set>
 #include <map>
 #include <limits>
 
-#include "common.h"
 #include "oracles.h"
 #include "mip.h"
 
@@ -124,5 +127,7 @@ namespace ipo {
   };
 
 } /* namespace ipo */
+
+#endif /* IPO_WITH_SCIP */
 
 #endif /* IPO_SCIP_ORACLE_H_ */

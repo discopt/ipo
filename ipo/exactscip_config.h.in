@@ -1,7 +1,0 @@
-
-namespace ipo
-{
-#ifdef WITH_ExactSCIP
-  const char* ExactSCIPPath = "@ExactSCIP_EXECUTABLE@";
-#endif
-}

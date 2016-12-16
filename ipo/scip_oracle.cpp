@@ -1,5 +1,7 @@
 #include "scip_oracle.h"
 
+#ifdef IPO_WITH_SCIP
+
 #include <limits>
 #include <unistd.h>
 #include <sys/stat.h>
@@ -282,3 +284,5 @@ namespace ipo {
   }
 
 } /* namespace ipo */
+
+#endif /* IPO_WITH_SCIP */
