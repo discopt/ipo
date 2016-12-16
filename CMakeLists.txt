@@ -46,6 +46,7 @@ ENDIF(UNIX)
 find_package(GMPXX REQUIRED)
 find_package(SoPlex REQUIRED)
 find_package(SCIP)
+find_package(ExactSCIP)
 
 ## IPO
 

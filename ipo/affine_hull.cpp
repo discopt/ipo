@@ -1217,7 +1217,9 @@ namespace ipo {
     _timeLastMainLoop = 0.0;
     _timeLastVerification = 0.0;
     _timeLastEvent = 0.0;
+#ifdef IPO_DEBUG
     _lastEvent = END;
+#endif
   }
 
   void StatisticsAffineHullHandler::notify(AffineHullHandler::Event event, AffineHullState& state)

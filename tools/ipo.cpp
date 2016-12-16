@@ -4,37 +4,35 @@
 #include <map>
 
 #include <ipo/common.h>
+#include <ipo/affine_hull.h>
+#include <ipo/facets.h>
+#include <ipo/smallest_face.h>
+#include <ipo/min_norm_2d.h>
+#include <ipo/console_app.h>
+#include <ipo/scip_oracle.h>
+#include <ipo/scip_exception.hpp>
 
-#ifdef WITH_SCIP
+
+#ifdef IPO_WITH_SCIP
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include <ipo/scip_exception.hpp>
-  #include <ipo/scip_oracles.h>
   #define NDEBUG
 #else
   #include <scip/scip.h>
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include <ipo/scip_exception.hpp>
-  #include <ipo/scip_oracles.h>
 #endif
 #endif
-
-#include "ipo/affine_hull.h"
-#include "ipo/facets.h"
-#include "ipo/smallest_face.h"
-#include "ipo/min_norm_2d.h"
-#include "ipo/console_app.h"
 
 using namespace ipo;
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
 #define ORACLE_DEFAULT_SCIP
 #define ORACLE_DEFAULT "scip"
-#elif WITH_EXACT_SCIP
+#elif IPO_WITH_EXACT_SCIP
 #define ORACLE_DEFAULT_EXACT_SCIP
 #define ORACLE_DEFAULT "exactscip"
 #else
@@ -56,7 +54,7 @@ public:
     _useInstanceBounds = true;
     _useInstanceInequalities = true;
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
     _scipOracle = NULL;
 #endif
   }
@@ -109,10 +107,10 @@ public:
   {
     std::cerr << "\n";
     std::cerr << "Oracles that can be used for --oracle and --heuristic (see IPO's build options):\n";
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
     std::cerr << "  scip      Use the MIP solver SCIP from the SCIP Optimization Suite (default oracle).\n";
 #endif
-#ifdef WITH_EXACT_SCIP
+#ifdef IPO_WITH_EXACT_SCIP
     std::cerr << "  exactscip Use the exact MIP solver SCIP-ex from the SCIP Optimization Suite";
 #ifdef ORACLE_DEFAULt_EXACT_SCIP
     std::cerr << " (default oracle)";
@@ -138,13 +136,13 @@ public:
         throw std::runtime_error("Invalid option: --oracle must be followed by an oracle name.");
       _oracleArgument = argument(1);
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
       if (_oracleArgument == "scip")
       {
         return 2;
       }
 #endif
-#ifdef WITH_EXACT_SCIP
+#ifdef IPO_WITH_EXACT_SCIP
       if (_oracleArgument == "exactscip")
       {
         return 2;
@@ -164,13 +162,13 @@ public:
         throw std::runtime_error("Invalid option: --heuristic must be followed by an oracle name.");
       _heuristicArgument = argument(1);
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
       if (_heuristicArgument == "scip")
       {
         return 2;
       }
 #endif
-#ifdef WITH_EXACT_SCIP
+#ifdef IPO_WITH_EXACT_SCIP
       if (_heuristicArgument == "exactscip")
       {
         return 2;
@@ -251,7 +249,7 @@ public:
     /// Now the remaining arguments must be an instance.
 
     if (numArguments() > 1
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
         && _oracleArgument == "scip"
 #endif
             )
@@ -264,7 +262,7 @@ public:
     }
 
     std::shared_ptr<OracleBase> oracle;
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
     if (_oracleArgument == "scip")
     {
       try
@@ -336,7 +334,7 @@ public:
         addObjective(_instanceObjective, "instance");
     }
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
     if (_useInstanceBounds)
     {
       soplex::DVectorRational lower(oracle()->space().dimension());
@@ -377,9 +375,9 @@ protected:
   bool _useInstanceBounds;
   bool _useInstanceInequalities;
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
   std::shared_ptr<SCIPOracle> _scipOracle;
-#endif
+#endif /* IPO_WITH_SCIP */
   Vector _instanceObjective;
 };
 

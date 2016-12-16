@@ -467,6 +467,7 @@ namespace ipo {
 
       _data = other._data;
       _data->_mutableUsage++;
+      return *this;
     }
 
     /**
