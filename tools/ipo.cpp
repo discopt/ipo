@@ -10,8 +10,7 @@
 #include <ipo/min_norm_2d.h>
 #include <ipo/console_app.h>
 #include <ipo/scip_oracle.h>
-#include <ipo/scip_exception.hpp>
-
+#include <ipo/scip_exception.h>
 
 #ifdef IPO_WITH_SCIP
 #ifdef NDEBUG

@@ -1,5 +1,5 @@
-#ifndef SCIP_EXCEPTION_HPP_
-#define SCIP_EXCEPTION_HPP_
+#ifndef SCIP_EXCEPTION_H_
+#define SCIP_EXCEPTION_H_
 
 #include <exception>
 #include <string>

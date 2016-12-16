@@ -10,13 +10,13 @@
   #undef NDEBUG
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include "scip_exception.hpp"
   #define NDEBUG
 #else
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
-  #include "scip_exception.hpp"
 #endif
+
+#include "scip_exception.h"
 
 #include "reconstruct.h"
 #include "timer.h"
