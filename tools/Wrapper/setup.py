@@ -9,6 +9,19 @@ from Cython.Build import cythonize
 import os
 from distutils.util import get_platform
 
+scipLib = "scip-3.2.1.linux.x86_64.gnu.opt"
+scipPath = "/opt/scipoptsuite-3.2.1/lib/"
+objscipLib = "objscip-3.2.1.linux.x86_64.gnu.opt"
+objscipPath = scipPath
+nlpiLib = "nlpi.cppad.linux.x86_64.gnu.opt"
+nlpiPath = scipPath
+lpiLib = "lpispx-3.2.1.linux.x86_64.gnu.opt"
+lpiPath = scipPath
+soplexLib = "soplex-2.2.1.linux.x86_64.gnu.opt"
+soplexPath = "/opt/scipoptsuite-3.2.1/soplex-2.2.1/lib/"
+zimplLib = "zimpl-3.3.3.linux.x86_64.gnu.opt"
+zimplPath = "/opt/scipoptsuite-3.2.1/zimpl-3.3.3/lib"
+
 ext = Extension(
     "IPO",                 # name of extension
 
@@ -17,9 +30,9 @@ ext = Extension(
 
     include_dirs = ["/usr/local/include/", "/opt/scipoptsuite-3.2.1/soplex-2.2.1/src", "/opt/scipoptsuite-3.2.1/scip-3.2.1/src"],
 
-    libraries = ["ipo", "scipopt-3.2.1.linux.x86_64.gnu.opt", "soplex-2.2.1.linux.x86_64.gnu.opt", "scip-3.2.1.linux.x86_64.gnu.opt", "zimpl-3.3.3.linux.x86_64.gnu.opt", "nlpi.cppad.linux.x86_64.gnu.opt", "objscip-3.2.1.linux.x86_64.gnu.opt", "lpispx-3.2.1.linux.x86_64.gnu.opt", "gmp", "gmpxx", "z"],
+    libraries = ["ipo", scipLib, soplexLib, zimplLib, nlpiLib, objscipLib, lpiLib, "gmp", "gmpxx", "z"],
 
-    library_dirs = ["/usr/local/lib/", "/opt/scipoptsuite-3.2.1/lib/", "/opt/scipoptsuite-3.2.1/soplex-2.2.1/lib/", "/opt/scipoptsuite-3.2.1/scip-3.2.1/lib", "/opt/scipoptsuite-3.2.1/zimpl-3.3.3/lib"],
+    library_dirs = ["/usr/local/lib/", scipPath, soplexPath, zimplPath],
 
     runtime_library_dirs = ["/usr/local/lib/", "/opt/scipoptsuite-3.2.1/lib/", "/opt/scipoptsuite-3.2.1/soplex-2.2.1/lib/", "/opt/scipoptsuite-3.2.1/scip-3.2.1/lib", "/opt/scipoptsuite-3.2.1/zimpl-3.3.3/lib"],
 

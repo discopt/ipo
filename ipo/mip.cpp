@@ -3,9 +3,16 @@
 #include "rational.h"
 #include "reconstruct.h"
 
-#ifdef WITH_SCIP
-#include <scip/cons_linear.h>
-#include "scip_oracles.h"
+#ifdef IPO_WITH_SCIP
+  #ifdef NDEBUG
+    #undef NDEBUG
+    #include <scip/cons_linear.h>
+    #include "scip_oracle.h"
+    #define NDEBUG
+  #else
+    #include <scip/cons_linear.h>
+    #include "scip_oracle.h"
+  #endif
 #endif
 
 namespace ipo {
@@ -23,7 +30,7 @@ namespace ipo {
   }
 
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
 
   MixedIntegerSet::MixedIntegerSet(SCIP* scip) : _currentFace()
   {
@@ -129,7 +136,7 @@ namespace ipo {
     }
   }
 
-#endif
+#endif /* IPO_WITH_SCIP */
 
   MixedIntegerSet::~MixedIntegerSet()
   {

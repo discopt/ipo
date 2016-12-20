@@ -33,6 +33,8 @@ set(IPO_SOURCES
   smallest_face.cpp
   statistics_oracle.cpp
   external_oracle.cpp
+  exactscip_oracle.cpp
+  scip_oracle.cpp
   console_app.cpp
   parser.cpp
   python_wrapper.cpp
@@ -58,6 +60,9 @@ set(IPO_INSTALL_HEADERS
   statistics_oracle.h
   timer.h
   unique_vectors.h
+  scip_oracle.h
+  scip_exception.h
+  exactscip_oracle.h
   rational.h
   reconstruct.h
   vector_2d.h
@@ -66,20 +71,34 @@ set(IPO_INSTALL_HEADERS
   test.h
 )
 
-set(IPO_OTHER_HEADERS
-  common-devel.h
-  common-release.h
-  common-debug.h
-  common-relwithdebinfo.h
-  common-minsizerel.h
-)
-
-if (SCIP_FOUND)
-  set(IPO_SOURCES ${IPO_SOURCES} scip_oracles.cpp)
-  set(IPO_INSTALL_HEADERS ${IPO_INSTALL_HEADERS} scip_oracles.h scip_exception.hpp)
+if(SCIP_FOUND)
   string(TOUPPER ${SCIP_LPS} SCIP_LPI)
   add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
+  set(DEFINE_IPO_SCIP "#define IPO_WITH_SCIP\n#define IPO_WITH_SCIP_${SCIP_LPI}")
+else()
+  set(DEFINE_IPO_SCIP "#undef IPO_WITH_SCIP")
 endif()
+
+if(ExactSCIP_FOUND)
+  set(DEFINE_IPO_EXACT_SCIP "#define IPO_WITH_EXACT_SCIP\n\
+#define IPO_EXACT_SCIP_PATH \"${ExactSCIP_EXECUTABLE}\"\n")
+else()
+  set(DEFINE_IPO_EXACT_SCIP "#undef IPO_WITH_EXACT_SCIP")
+endif()
+
+if(CMAKE_BUILD_TYPE STREQUAL "Debug")
+  set(DEFINE_IPO_DEBUG "#define IPO_DEBUG")
+elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
+  set(DEFINE_IPO_DEBUG "#define IPO_DEBUG")
+elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
+  set(DEFINE_IPO_DEBUG "#undef IPO_DEBUG")
+elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
+  set(DEFINE_IPO_DEBUG "#undef IPO_DEBUG")
+endif()
+
+include_directories(${CMAKE_BINARY_DIR})
+configure_file(common.h.in ${CMAKE_BINARY_DIR}/common.h)
+configure_file(${CMAKE_BINARY_DIR}/common.h ${CMAKE_BINARY_DIR}/ipo/common.h COPYONLY)
 
 add_library(ipo-static STATIC ${IPO_SOURCES})
 include_directories(ipo-static ${SoPlex_INCLUDE_DIRS})
@@ -97,7 +116,7 @@ target_link_libraries(ipo-shared
 )
 set_target_properties(ipo-shared PROPERTIES OUTPUT_NAME ipo)
 
-if (SCIP_FOUND)
+if(SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
   target_link_libraries(ipo-static ${SCIP_LIBRARIES})
   target_link_libraries(ipo-shared ${SCIP_LIBRARIES})
@@ -111,8 +130,10 @@ install(FILES ${IPO_INSTALL_HEADERS}                    DESTINATION include/ipo 
 install(FILES vectors-pub.h            RENAME vectors.h           DESTINATION include/ipo  COMPONENT headers)
 install(FILES linear_constraint-pub.h  RENAME linear_constraint.h DESTINATION include/ipo  COMPONENT headers)
 
-install(FILES common-debug.h           RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
-install(FILES common-release.h         RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
-install(FILES common-relwithdebinfo.h  RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
-install(FILES common-minsizerel.h      RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
+install(FILES ${CMAKE_BINARY_DIR}/common.h DESTINATION include/ipo  COMPONENT headers)
+
+# install(FILES common-debug.h           RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
+# install(FILES common-release.h         RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)
+# install(FILES common-relwithdebinfo.h  RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS RelWithDebInfo)
+# install(FILES common-minsizerel.h      RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS MinSizeRel)
 
