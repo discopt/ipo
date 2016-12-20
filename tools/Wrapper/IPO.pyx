@@ -461,11 +461,8 @@ cdef class IPOScipOracle:
             self.oracle = new cppIPO.ScipOracleController(name)
 
     def __dealloc__(self):
-        print "del ScipOracle\n"
         if(self.oracle is not NULL):
-            #del self.oracle
-            free(self.oracle)
-            print "deleted ScipOracle\n"
+            del self.oracle
 
     ## Name Property of the ScipOracle
     #

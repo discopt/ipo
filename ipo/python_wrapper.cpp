@@ -70,6 +70,8 @@ Space ScipOracleController::space(){
 
 InnerDescription ScipOracleController::affineHullInner(int outputMode){
   InnerDescription inner;
+  AffineOuterDescription outer;
+  if(cacheInner == nullptr || cacheOuter == nullptr){
 
   //Create Handlers
   std::vector<AffineHullHandler*> handlers;
@@ -79,16 +81,21 @@ InnerDescription ScipOracleController::affineHullInner(int outputMode){
   handlers.push_back(&debugHandler);
   handlers.push_back(&statsHandler);
 
-  AffineOuterDescription outer;
-
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
+  cacheInner = std::make_shared<InnerDescription>(inner);
+  cacheOuter = std::make_shared<AffineOuterDescription>(outer);
+  }
+  else{
+    inner = *cacheInner.get();
+  }
 
   return inner;
 }
 
 AffineOuterDescription ScipOracleController::affineHullOuter(int outputMode){
   InnerDescription inner;
-
+  AffineOuterDescription outer;
+  if(cacheInner == nullptr || cacheOuter == nullptr){
   //Create Handlers
   std::vector<AffineHullHandler*> handlers;
   DebugAffineHullHandler debugHandler(std::cout);
@@ -96,9 +103,15 @@ AffineOuterDescription ScipOracleController::affineHullOuter(int outputMode){
   handlers.push_back(&debugHandler);
   handlers.push_back(&statsHandler);
 
-  AffineOuterDescription outer;
-
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
+  cacheInner = std::make_shared<InnerDescription>(inner);
+  cacheOuter = std::make_shared<AffineOuterDescription>(outer);
+
+  }
+  else{
+    outer = *cacheOuter.get();
+  }
+
   return outer;
-}
+  }
 }

@@ -86,6 +86,8 @@ namespace ipo {
     std::shared_ptr<SCIPOracle> scipOracleImpl;
     std::shared_ptr<CacheOracle> cacheOracleImpl;
     std::shared_ptr<StatisticsOracle> cacheOracle;
+    std::shared_ptr<InnerDescription> cacheInner;
+    std::shared_ptr<AffineOuterDescription> cacheOuter;
 };
 
 }
