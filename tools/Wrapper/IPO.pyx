@@ -7,6 +7,10 @@
 #Imports
 cimport cppIPO
 
+cdef extern from "stdlib.h":
+  void free(void* ptr)
+
+import ctypes
 from libc cimport stdio
 from cython.operator cimport dereference as deref, address as ref
 from cpython.object cimport Py_LT, Py_LE, Py_EQ, Py_GE, Py_GT, Py_NE
@@ -307,15 +311,22 @@ cdef object CreateConstLinearConstraint(const cppIPO.LinearConstraint *linconst)
 ####################################
 #InnerDesciption/OuterDescription
 
-cdef class IPOInnerDescription:
+class IPOInnerDescription:
     def __init__(self):
-        self.points = []
-        self.rays = []
+        self.dpoints = []
+        self.drays = []
 
-cdef class IPOAffineOuterDescription:
-    def __init__(self, cons):
-        self.constraints = []
+    def getPoints(self):
+        return self.dpoints
 
+    def getRays(self):
+        return self.drays
+
+class IPOAffineOuterDescription:
+    def __init__(self):
+        self.dconstraints = []
+    def getConstraints(self):
+        return self.dconstraints
 
 ####################################
 #IPO Space
@@ -445,11 +456,16 @@ cdef class IPOScipOracle:
     #  @param isNew indicates if the Oracle is a new one (True) or if it needs to set a next pointer (False)
     #
     def __cinit__(self, str name, isNew):
+        self.oracle = NULL
         if(isNew == True):
             self.oracle = new cppIPO.ScipOracleController(name)
 
     def __dealloc__(self):
-        del self.oracle
+        print "del ScipOracle\n"
+        if(self.oracle is not NULL):
+            #del self.oracle
+            free(self.oracle)
+            print "deleted ScipOracle\n"
 
     ## Name Property of the ScipOracle
     #
@@ -472,47 +488,34 @@ cdef class IPOScipOracle:
         #########-1-#########
         #convert inner description to 2-tupel IPOVector lists
         cdef cppIPO.InnerDescription c_inner = self.oracle.affineHullInner(1)
-        print "C++ call inner\n"
 
         #automagically convert to python list
         c_points = c_inner.points
-        print "A\n"
         c_rays = c_inner.rays
-        print "B\n"
         points = []
         rays = []
         cdef cppIPO.Vector *c_vector
-        print "C\n"
         #convert points to python wrapperclass IPOVector
-        for i in range(0,c_points.size()):
-            print "D"+str(i)+"\n"
-            c_vector = ref(c_points[i])
-            print "E"+str(i)+"\n"
-            py_vector = CreateIPOVector(c_vector)
-            print "F"+str(i)+"\n"
-            points.append(py_vector)
-            print "G"+str(i)+"\n"
+        if(c_points.size()>0):
+            for i in range(0,c_points.size()):
+                c_vector = ref(c_points[i])
+                py_vector = CreateIPOVector(c_vector)
+                points.append(py_vector)
 
+        if(c_rays.size() > 0):
         #convert rays to python wrapperclass IPOVector
-        for i in range(0,c_rays.size()):
-            print "H"+str(i)+"\n"
-            c_vector = ref(c_rays[i])
-            print "I"+str(i)+"\n"
-            py_vector = CreateIPOVector(c_vector)
-            print "J"+str(i)+"\n"
-            rays.append(py_vector)
-            print "K"+str(i)+"\n"
+            for i in range(0,c_rays.size()):
+                c_vector = ref(c_rays[i])
+                py_vector = CreateIPOVector(c_vector)
+                rays.append(py_vector)
 
         innerDescription = IPOInnerDescription()
-        print "L\n"
-        innerDescription.points = points
-        print "M\n"
-        innerDescription.rays = rays
-        print "inner verarbeitung\n"
+
+        innerDescription.dpoints = points
+        innerDescription.drays = rays
         #########-2-#########
         #convert outer description to IPOLinearConstraint list
         cdef cppIPO.AffineOuterDescription c_outer = self.oracle.affineHullOuter(1)
-        print "C++ call outer\n"
         outerDescription = IPOAffineOuterDescription()
         outer = []
 
@@ -521,8 +524,7 @@ cdef class IPOScipOracle:
             py_linconst = CreateLinearConstraint(c_linconst)
             outer.append(py_linconst)
 
-        outerDescription.constraints = outer
-        print "FERTIG\n"
+        outerDescription.dconstraints = outer
 
         return (innerDescription, outerDescription)
 

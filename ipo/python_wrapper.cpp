@@ -83,8 +83,6 @@ InnerDescription ScipOracleController::affineHullInner(int outputMode){
 
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
 
-  printf("Inner fertig\n");
-
   return inner;
 }
 
@@ -101,8 +99,6 @@ AffineOuterDescription ScipOracleController::affineHullOuter(int outputMode){
   AffineOuterDescription outer;
 
   affineHull(cacheOracle, inner, outer, handlers, 2, 1);
-
-    printf("outer fertig\n");
   return outer;
 }
 }
