@@ -361,29 +361,14 @@ cdef class IPOSpace:
         else:
             return self.const_space.dimension()
 
-    def printVector(self, stream, IPOVector vector):
-        if (not vector.isConstant()):
-            raise NonConstError('IPOVector')
-    #cout, cerr, clog are ostreams
-        if stream == "cout":
-            #call function with cout
-            print("debug")
-        elif stream == "cerr":
-            #call function with cerr
-            print("debug")
-        elif stream == "clog":
-            #call function with clog
-            print("debug")
+    def printVector(self, IPOVector vector):
+        self.cpp_space.printVector(cppIPO.cout, deref(vector.vec))
 
     def printLinearForm(self, IPOVector vector):
-        if (not vector.isConstant()):
-            raise NonConstError('IPOVector')
-        print("lin")
+        self.cpp_space.printLinearForm(cppIPO.cout, deref(vector.vec))
 
     def printLinearConstraint(self, IPOLinearConstraint lincons):
-        if (not lincons.isConstant()):
-            raise NonConstError('IPOLinearConstraint')
-        print("cons")
+        self.cpp_space.printLinearConstraint(cppIPO.cout, deref(lincons.lin))
 
     ## Special Method for operator overloading
     #  this method overloads the operator [] for indexing

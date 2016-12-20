@@ -73,6 +73,7 @@ cdef extern from "ipo/linear_constraint.h" namespace "ipo":
 cdef extern from "<iostream>" namespace "std":
     cdef cppclass ostream:
         ostream()
+    ostream cout
 
 cdef extern from "ipo/space.h" namespace "ipo":
     cdef cppclass Space:
