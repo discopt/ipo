@@ -128,44 +128,44 @@ cdef class IPOVector:
     ## Special Method for operator overloading
     # this method overloads the operators ==, != and <
     # @return boolean
-    def __richcmp__(IPOVector self, IPOReferenceCountedVector y not None, int op):
+    def __richcmp__(IPOVector self, IPOVector y not None, int op):
         if not y.isConstant():
             if not (self.vec is NULL):
                 if op == Py_LT:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))<y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))<(<cppIPO.ReferenceCountedVector*>(y.vec))
                 elif op == Py_EQ:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))==y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))==(<cppIPO.ReferenceCountedVector*>(y.vec))
                 elif op == Py_NE:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))!=y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))!=(<cppIPO.ReferenceCountedVector*>(y.vec))
                 else:
                     assert False
             else:
                 if op == Py_LT:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))<y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))<(<cppIPO.ReferenceCountedVector*>(y.vec))
                 elif op == Py_EQ:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))==y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))==(<cppIPO.ReferenceCountedVector*>(y.vec))
                 elif op == Py_NE:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))!=y.vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))!=(<cppIPO.ReferenceCountedVector*>(y.vec))
                 else:
                     assert False
 
         else:
             if not (self.vec is NULL):
                 if op == Py_LT:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))<y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))<(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 elif op == Py_EQ:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))==y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))==(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 elif op == Py_NE:
-                    return (<cppIPO.ReferenceCountedVector*>(self.vec))!=y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.vec))!=(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 else:
                     assert False
             else:
                 if op == Py_LT:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))<y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))<(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 elif op == Py_EQ:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))==y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))==(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 elif op == Py_NE:
-                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))!=y.const_vec
+                    return (<cppIPO.ReferenceCountedVector*>(self.const_vec))!=(<cppIPO.ReferenceCountedVector*>(y.const_vec))
                 else:
                     assert False
 
