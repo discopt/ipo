@@ -134,12 +134,11 @@ namespace ipo {
     face->_hasDimension = true;
   }
 
-  void Polyhedron::addConstraint(const LinearConstraint& constraint)
+  void Polyhedron::addConstraint(const LinearConstraint& constraint, bool doNormalize)
   {
-    Rational factor;
-    Vector normal = integralScaled(constraint.normal(), &factor);
-    _collectOracle->_inequalities.insert(normal, std::make_shared<Face>(LinearConstraint(constraint.type(), normal, factor *
-      constraint.rhs())));
+    LinearConstraint normalized = normalize(constraint);
+    Vector normal = normalized.normal();
+    _collectOracle->_inequalities.insert(normal, std::make_shared<Face>(doNormalize ? normalized : constraint));
   }
 
   void Polyhedron::getFaces(std::vector<std::shared_ptr<Face> >& constraints, bool onlyInequalities, bool onlyWithDimension)

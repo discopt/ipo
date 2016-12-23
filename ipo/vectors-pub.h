@@ -233,6 +233,14 @@ namespace ipo {
       return _immutableUsage == 0;
     }
 
+    /**
+     * \brief Scales with an integer.
+     *
+     * Scales with an integer.
+     */
+
+    void scale(int scalar);
+
     friend class ReferenceCountedVector;
     friend class MutableVector;
     friend class Vector;
@@ -520,6 +528,20 @@ namespace ipo {
     void swap(MutableVector& other)
     {
       std::swap(_data, other._data);
+    }
+
+    /**
+     * \brief Scales the vector by given \p scalar.
+     *
+     * Scales the vector by given \p scalar.
+     */
+
+    inline MutableVector& operator*=(int scalar)
+    {
+      if (!isMutable())
+        throw std::runtime_error("MutableVector::operator*= not allowed since underlying vector referenced by Vector.");
+
+      _data->scale(scalar);
     }
   };
 

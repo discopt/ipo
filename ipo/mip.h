@@ -103,6 +103,22 @@ namespace ipo {
     }
 
     /**
+     * \brief Returns the upper bound for a \p variable as a linear constraint.
+     *
+     * Returns the upper bound for a \p variable as a linear constraint.
+     */
+
+    LinearConstraint upperBoundConstraint(std::size_t variable) const;
+
+    /**
+     * \brief Returns the lower bound for a \p variable as a linear constraint.
+     *
+     * Returns the lower bound for a \p variable as a linear constraint.
+     */
+
+    LinearConstraint lowerBoundConstraint(std::size_t variable) const;
+
+    /**
      * \brief Returns a \p row constraint.
      *
      * Returns a const-reference to a \p row constraint.

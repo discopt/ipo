@@ -104,6 +104,16 @@ int main(int argc, char** argv)
     const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
     poly.addConstraint(row);
   }
+  for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+  {
+    LinearConstraint constraint;
+    constraint  = mixedIntegerSet->lowerBoundConstraint(v);
+    if (!constraint.isEquation() && constraint.rhs() > -soplex::infinity)
+      poly.addConstraint(constraint);
+    constraint = mixedIntegerSet->upperBoundConstraint(v);
+    if (!constraint.isEquation() && constraint.rhs() < soplex::infinity)
+      poly.addConstraint(constraint);
+  }
 
   StatisticsAffineHullHandler statsHandler;
   DebugAffineHullHandler debugHandler(std::cout);
@@ -113,7 +123,7 @@ int main(int argc, char** argv)
   if (!constraintDimensions)
     handlers.push_back(&debugHandler);
 
-  std::cout << "Dimension:\n" << std::flush;
+  std::cout << "Dimension: " << std::flush;
   poly.affineHull(handlers);
   int dim = poly.dimension();
   std::cout << dim << "\n\n" << std::flush;
@@ -123,20 +133,46 @@ int main(int argc, char** argv)
   
   if (constraintDimensions)
   {
+    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    {
+      const LinearConstraint& constraint = mixedIntegerSet->lowerBoundConstraint(v);
+      if (constraint.isEquation() || constraint.rhs() == -soplex::infinity)
+        continue;
+      std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
+      std::cout << "Computing dimension of face defined by lower bound ";
+      poly.space().printLinearConstraint(std::cout, constraint);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
+    }
+
+    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    {
+      const LinearConstraint& constraint = mixedIntegerSet->upperBoundConstraint(v);
+      if (constraint.isEquation() || constraint.rhs() == soplex::infinity)
+        continue;
+      std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
+      std::cout << "Computing dimension of face defined by upper bound ";
+      poly.space().printLinearConstraint(std::cout, constraint);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
+    }
+
     for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
     {
       const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
       std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
+      if (row.isEquation())
+        continue;
 
-      if (!row.isEquation())
-      {
-        std::cout << "Computing dimension of face defined by ";
-        poly.space().printLinearConstraint(std::cout, row);
-        std::cout << ": " << std::flush;
-        poly.affineHull(face, handlers);
-        std::cout << face->dimension() << std::endl;
-      }
+      std::cout << "Computing dimension of face defined by ";
+      poly.space().printLinearConstraint(std::cout, row);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
     }
+
   }
 
   std::cout << "\n";

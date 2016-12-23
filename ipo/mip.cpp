@@ -143,6 +143,23 @@ namespace ipo {
 
   }
 
+  LinearConstraint MixedIntegerSet::upperBoundConstraint(std::size_t variable) const
+  {
+    VectorData* data = new VectorData(1);
+    data->add(variable, Rational(1));
+    return LinearConstraint(_variables[variable].upperBound == _variables[variable].lowerBound ? '=' : '<', Vector(data),
+      _variables[variable].upperBound);
+  }
+
+  LinearConstraint MixedIntegerSet::lowerBoundConstraint(std::size_t variable) const
+  {
+    VectorData* data = new VectorData(1);
+    data->add(variable, Rational(1));
+    return LinearConstraint(_variables[variable].upperBound == _variables[variable].lowerBound ? '=' : '>', Vector(data),
+      _variables[variable].lowerBound);
+  }
+
+
 //   bool MixedIntegerSet::checkPointBounds(const SVectorRational* point) const
 //   {
 //     for (int p = point->size() - 1; p >= 0; --p)

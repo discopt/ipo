@@ -175,7 +175,7 @@ namespace ipo {
 
     inline bool definesTrivialFace() const
     {
-      return _type != '=' && _normal.size() ==0;
+      return _type != '=' && _normal.size() == 0;
     }
 
     /**
@@ -204,6 +204,7 @@ namespace ipo {
 
   LinearConstraint completeFaceConstraint();
   LinearConstraint emptyFaceConstraint();
+  LinearConstraint normalize(const LinearConstraint& constraint);
 
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b);
   LinearConstraint operator-(const LinearConstraint& a, const LinearConstraint& b);

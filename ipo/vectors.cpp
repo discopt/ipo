@@ -134,6 +134,20 @@ namespace ipo {
       delete this;
   }
 
+  void VectorData::scale(int scalar)
+  {
+    assert(_immutableUsage == 0);
+    if (scalar != 0)
+    {
+      for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+        _nonzeros[i].value *= scalar;
+    }
+    else
+    {
+      _nonzeros.clear();
+    }
+  }
+
   static VectorData* zeroVectorData = NULL;
 
   ReferenceCountedVector::ReferenceCountedVector()
@@ -404,7 +418,7 @@ namespace ipo {
     return MutableVector(data);
   }
 
-  Vector integralScaled(const Vector& vector, Rational* factor)
+  MutableVector integralScaled(const Vector& vector, Rational* factor)
   {
     // Compute scaling factor.
 
@@ -420,7 +434,7 @@ namespace ipo {
     VectorData* data = new VectorData(vector.size());
     for (std::size_t p = 0; p < vector.size(); ++p)
       data->add(vector.index(p), theFactor * vector.value(p));
-    return Vector(data);
+    return MutableVector(data);
   }
 
   void scaleIntegral(Vector& vector, Rational* factor)
