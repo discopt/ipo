@@ -1,5 +1,6 @@
 #include "vectors.h"
 
+#include <algorithm>
 #include <iostream>
 #include <cmath>
 

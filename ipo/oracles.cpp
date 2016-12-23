@@ -1,5 +1,6 @@
 #include "oracles.h"
 
+#include <algorithm>
 #include <cassert>
 
 #include "unique_vectors.h"

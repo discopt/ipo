@@ -3,6 +3,7 @@
 
 #include <map>
 #include <set>
+#include <random>
 
 #include "common.h"
 #include "vectors.h"
