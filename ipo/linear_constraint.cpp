@@ -55,6 +55,26 @@ namespace ipo {
     return LinearConstraint('=', Vector(), Rational(-1));
   }
 
+  LinearConstraint normalize(const LinearConstraint& constraint)
+  {
+    Rational factor;
+    MutableVector scaled = integralScaled(constraint.normal(), &factor);
+    if (factor == 1 && constraint.type() != '>')
+      return constraint;
+
+    char type = constraint.type();
+    Rational rhs = constraint.rhs();
+    if (constraint.type() == '>')
+    {
+      scaled *= -1;
+      type = '<';
+      rhs *= -1;
+    }
+    rhs *= factor;
+    Vector normal = scaled;
+    return LinearConstraint(type, normal, rhs);
+  }
+
   LinearConstraint operator+(const LinearConstraint& a, const LinearConstraint& b)
   {
     if (a.type() == '>')
