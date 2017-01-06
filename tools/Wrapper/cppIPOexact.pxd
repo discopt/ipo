@@ -10,9 +10,6 @@ from libcpp.memory cimport shared_ptr
 cdef extern from "rational.h" namespace "soplex":
     cdef cppclass Rational:
         Rational() except +
-        double operator double()
-        Rational(const double& r) except +
-
 
 ####################################
 #IPO Vector
@@ -138,14 +135,11 @@ cdef extern from "ipo/polyhedron.h" namespace "ipo":
 
 cdef extern from "ipo/python_wrapper.h" namespace "ipo":
     cdef cppclass OracleControllerBase:
-        OracleControllerBase()
+        pass
 
-    cdef cppclass ScipOracleController(OracleControllerBase):
+    cdef cppclass ScipOracleController:
         ScipOracleController(string name) except +
-        ScipOracleController(string name, OracleControllerBase* next) except +
-        ScipOracleController(string name, OracleControllerBase* next, const shared_ptr[MixedIntegerSet] mixedIntegerSet) except +
-        #ScipOracleController(string name, const shared_ptr[MixedIntegerSet] mixedIntegerSet) except +
-
+        ScipOracleController(string name, OracleControllerBase next) except +
 
         string name()
         int heuristicLevel_ScipOracle()
@@ -155,10 +149,22 @@ cdef extern from "ipo/python_wrapper.h" namespace "ipo":
         InnerDescription affineHullInner(int outputMode)
         AffineOuterDescription affineHullOuter(int outputMode)
 
+    cdef cppclass ExactScipOracleController:
+        ExactScipOracleController(string name, const shared_ptr[MixedIntegerSet] mixedIntegerSet) except +
+        ExactScipOracleController(string name, const shared_ptr[MixedIntegerSet] mixedIntegerSet, OracleControllerBase next) except +
+
+        string name()
+        int heuristicLevel_ExactScipOracle()
+        int heuristicLevel_CacheOracle()
+        shared_ptr[OracleBase] getCacheOracle()
 ####################################
 #IPO MixedIntegerSet class
 
 cdef extern from "ipo/mip.h" namespace "ipo":
+    cdef struct Variable:
+            bool_cpp integral
+            Rational upperBound
+            Rational lowerBound
 
 
     cdef cppclass MixedIntegerSet:
@@ -173,11 +179,6 @@ cdef extern from "ipo/mip.h" namespace "ipo":
         const string& rowName(size_t row)
         bool_cpp isIntegral(size_t variable)
         void setFace(const LinearConstraint& newFace)
-cdef extern from "ipo/mip.h" namespace "ipo::MixedIntegerSet":
-    cdef struct Variable:
-        bool_cpp integral
-        Rational upperBound
-        Rational lowerBound
 
 cdef extern from "ipo/python_wrapper.h" namespace "ipo":
     const shared_ptr[MixedIntegerSet] getMixedIntegerSet(string filename)

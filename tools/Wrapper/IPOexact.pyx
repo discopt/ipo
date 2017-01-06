@@ -5,7 +5,7 @@
 
 ####################################
 #Imports
-cimport cppIPO
+cimport cppIPOexact as cppIPO
 
 cdef extern from "stdlib.h":
   void free(void* ptr)
@@ -527,11 +527,49 @@ cdef class IPOScipOracle(IPOOracleBase):
 
 ## Creates an IPOScipOracle from a filename and the pointer to another ScipOracleController
 #  the ScipOracle of the ScipOracleController is set as the next pointer in the Oracle chain.
-cdef object CreateScipOracle(str name, cppIPO.OracleControllerBase *baseoracle):
+cdef object CreateScipOracle(str name, cppIPO.OracleControllerBase oracle):
     py_oracle = IPOScipOracle(name, 0)
-    py_oracle.oracle = new cppIPO.ScipOracleController(name, baseoracle)
+    py_oracle.oracle = new cppIPO.ScipOracleController(name, oracle)
     return py_oracle
 
+####################################
+#IPO ExactScipOracle
+cdef class IPOExactScipOracle(IPOOracleBase):
+    cdef cppIPO.ExactScipOracleController *exactoracle
+
+    ## Constructor
+    #  @param isNew indicates if the Oracle is a new one (True) or if it needs to set a next pointer (False)
+    #
+    def __cinit__(self, str name, isNew):
+        self.exactoracle = NULL
+        cdef shared_ptr[cppIPO.MixedIntegerSet] mxip = cppIPO.getMixedIntegerSet(name)
+        if(isNew == True):
+            self.exactoracle = new cppIPO.ExactScipOracleController(name, mxip)
+
+    def __dealloc__(self):
+        if(self.exactoracle is not NULL):
+            del self.exactoracle
+
+    ## Name Property of the ScipOracle
+    #
+    def name(self):
+        return self.exactoracle.name()
+
+    ## Heuristic Level of the ScipOracle
+    #
+    def heuristicLevel(self):
+        return self.exactoracle.heuristicLevel_ExactScipOracle()
+
+    ## Heuristic Level of the CacheOracle
+    #
+    def heuristicLevel_CacheOracle(self):
+        return self.exactoracle.heuristicLevel_CacheOracle()
+
+cdef object CreateExactScipOracle(str name, cppIPO.OracleControllerBase oracle):
+    cdef shared_ptr[cppIPO.MixedIntegerSet] mxip = cppIPO.getMixedIntegerSet(name)
+    py_oracle = IPOExactScipOracle(name, 0)
+    py_oracle.exactoracle = new cppIPO.ExactScipOracleController(name, mxip, oracle)
+    return py_oracle
 ####################################
 #IPO Polyhedron
 
