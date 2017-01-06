@@ -1,5 +1,4 @@
 import IPO
-cimport cppIPO
 import sage.all
 
 #vectors
@@ -12,7 +11,7 @@ import rpy2.robjects as robjects
 ####################################
 #Convert IPO-Vector to Sage Vector
 
-def IPOVector_to_SageVector(IPOVector vec)
+def IPOVector_to_SageVector(vec):
     #determine Field
     QQ = RationalField()
     #create list from IPO data
@@ -26,12 +25,15 @@ def IPOVector_to_SageVector(IPOVector vec)
             maxindex = index
 
     #initialize sagelist with zeros
-    for (i in range(0, maxindex)):
+    for i in range(0, maxindex):
         sagelist[i] = 0
 
-    for (p in range(0,size)):
+    for p in range(0,size):
         index = vec.index(p)
         value = vec.value(index)
         sagelist[index] = value
 
+    if (maxindex == 0):
+        sagelist=[1,2,3]
     sagevector = sagevec(QQ, sagelist)
+    return sagevector

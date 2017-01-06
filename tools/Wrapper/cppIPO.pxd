@@ -10,7 +10,7 @@ from libcpp.memory cimport shared_ptr
 cdef extern from "rational.h" namespace "soplex":
     cdef cppclass Rational:
         Rational() except +
-        double operator double()
+        #double operator double() not yet supported
         Rational(const double& r) except +
 
 

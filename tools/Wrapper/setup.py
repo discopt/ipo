@@ -43,7 +43,17 @@ if(scipExactInstalled == 0):
         extra_compile_args=['-std=c++11'],
         language="c++"
     )
+    extSage = Extension(
+        "IPOSage",                 # name of extension
+
+        #["cppSoplexRational.pxd", "SoplexRational.pyx",  "cppIPOVector.pxd", "cppIPOSpace.pxd", "cppIPOLinearConstraint.pxd", "cppScipOracle.pxd", "IPOLinearConstraint.pyx","IPOVector.pyx",  "IPOScipOracle.pyx", "IPOSpace.pyx", "IPOErrors.pyx", "IPO.pyx"],           # filename of Cython source
+        ["IPOSage.pyx"],           # filename of Cython source
+        
+        #needs C++11 standard to compile
+        extra_compile_args=['-std=c++11'],
+        language="c++"
+    )
 
     setup(name = 'IPO', version = '0.1',
-        ext_modules = cythonize([ext])
+        ext_modules = cythonize([ext, extSage])
     )
