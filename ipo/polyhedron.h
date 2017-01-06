@@ -183,7 +183,8 @@ namespace ipo {
 
     inline std::shared_ptr<Face> inequalityToFace(const LinearConstraint& constraint)
     {
-      return _collectOracle->_inequalities[constraint.normal()];
+      LinearConstraint normalized = normalize(constraint);
+      return _collectOracle->_inequalities[normalized.normal()];
     }
 
     void affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& handlers);
@@ -232,7 +233,7 @@ namespace ipo {
       _affineHullLastModerateHeuristic = lastModerateHeuristicLevel;
     }
 
-    void addConstraint(const LinearConstraint& constraint);
+    void addConstraint(const LinearConstraint& constraint, bool normalize = true);
 
     void getFaces(std::vector<std::shared_ptr<Face> >& constraints, bool onlyInequalities = true,
       bool onlyWithDimension = false);

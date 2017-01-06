@@ -29,13 +29,37 @@ int main(int argc, char** argv)
 {
   // Parse arguments.
 
+  bool constraintDimensions = false;
+  std::string instanceFile;
+  if (argc >= 3)
+  {
+    if (std::string(argv[1]) == "-c")
+    {
+      constraintDimensions = true;
+      instanceFile = argv[2];
+    }
+    else
+    {
+      instanceFile = argv[1];
+    }
+  }
+  else if (argc >= 2)
+    instanceFile = argv[1];
+  else
+  {
+    std::cerr << "Usage: " << argv[0] << " [-f] INSTANCE\n" << std::flush;
+    return EXIT_FAILURE;
+  }
+
   // Read instance and create MixedIntegerSet.
+  
+  std::cout << "Creating oracles for mixed-integer set defined by " << instanceFile << ".\n" << std::flush;
 
   SCIP* scip = NULL;
   SCIP_CALL_EXC(SCIPcreate(&scip));
   SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
   SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
-  SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
+  SCIP_CALL_EXC(SCIPreadProb(scip, instanceFile.c_str(), NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   std::shared_ptr<MixedIntegerSet> mixedIntegerSet = std::make_shared<MixedIntegerSet>(scip);
@@ -43,7 +67,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPfree(&scip));
 
   // Initialize oracles.
-
+  
 #ifdef IPO_WITH_EXACT_SCIP
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
@@ -62,41 +86,93 @@ int main(int argc, char** argv)
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
-
+  
   Polyhedron poly(cacheOracleStats);
+
+  // Set affine-hull parameters.
+
+#ifdef IPO_WITH_EXACT_SCIP
   poly.setAffineHullLastModerateHeuristicLevel(1); // Use oracle 0 only for verification.
-  poly.setAffineHullLastCheapHeuristicLevel(2); // Alternate min/max for oracle 2 before using oracle 1.
+  poly.setAffineHullLastCheapHeuristicLevel(2); // Caching is cheap.
+#else
+  poly.setAffineHullLastModerateHeuristicLevel(0); // No verification.
+  poly.setAffineHullLastCheapHeuristicLevel(1); // Caching is cheap.
+#endif
 
   for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
   {
     const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
     poly.addConstraint(row);
   }
+  for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+  {
+    LinearConstraint constraint;
+    constraint  = mixedIntegerSet->lowerBoundConstraint(v);
+    if (!constraint.isEquation() && constraint.rhs() > -soplex::infinity)
+      poly.addConstraint(constraint);
+    constraint = mixedIntegerSet->upperBoundConstraint(v);
+    if (!constraint.isEquation() && constraint.rhs() < soplex::infinity)
+      poly.addConstraint(constraint);
+  }
 
   StatisticsAffineHullHandler statsHandler;
+  DebugAffineHullHandler debugHandler(std::cout);
+
   std::vector<AffineHullHandler*> handlers;
   handlers.push_back(&statsHandler);
+  if (!constraintDimensions)
+    handlers.push_back(&debugHandler);
 
-  std::cout << "Dimension:\n" << std::flush;
+  std::cout << "Dimension: " << std::flush;
   poly.affineHull(handlers);
   int dim = poly.dimension();
   std::cout << dim << "\n\n" << std::flush;
 
-  // Compute constraint dimensions.
-
-  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  if (!constraintDimensions)
+    handlers.pop_back();
+  
+  if (constraintDimensions)
   {
-    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
-    std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
-
-    if (!row.isEquation())
+    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
     {
+      const LinearConstraint& constraint = mixedIntegerSet->lowerBoundConstraint(v);
+      if (constraint.isEquation() || constraint.rhs() == -soplex::infinity)
+        continue;
+      std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
+      std::cout << "Computing dimension of face defined by lower bound ";
+      poly.space().printLinearConstraint(std::cout, constraint);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
+    }
+
+    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    {
+      const LinearConstraint& constraint = mixedIntegerSet->upperBoundConstraint(v);
+      if (constraint.isEquation() || constraint.rhs() == soplex::infinity)
+        continue;
+      std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
+      std::cout << "Computing dimension of face defined by upper bound ";
+      poly.space().printLinearConstraint(std::cout, constraint);
+      std::cout << ": " << std::flush;
+      poly.affineHull(face, handlers);
+      std::cout << face->dimension() << std::endl;
+    }
+
+    for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+    {
+      const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+      std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
+      if (row.isEquation())
+        continue;
+
       std::cout << "Computing dimension of face defined by ";
       poly.space().printLinearConstraint(std::cout, row);
       std::cout << ": " << std::flush;
       poly.affineHull(face, handlers);
       std::cout << face->dimension() << std::endl;
     }
+
   }
 
   std::cout << "\n";
