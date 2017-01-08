@@ -172,7 +172,7 @@ ExactScipOracleController::ExactScipOracleController(std::string filename, const
   cacheOracle = std::make_shared<StatisticsOracle>(cacheOracleImpl);
 }
 
-ExactScipOracleController::ExactScipOracleController(std::string filename, const std::shared_ptr<MixedIntegerSet> mixedIntegerSet, OracleControllerBase next){
+ExactScipOracleController::ExactScipOracleController(std::string filename, const std::shared_ptr<MixedIntegerSet> mixedIntegerSet, OracleControllerBase* next){
   //Create oracle triple from ExactScipOracleController, StatisticsOracle, CacheOracle
   /*SCIP* scip = NULL;
   SCIP_CALL_EXC(SCIPcreate(&scip));
@@ -185,7 +185,7 @@ ExactScipOracleController::ExactScipOracleController(std::string filename, const
 
   //Create SCIPOracle with previously existing Oracle Bundle
   const std::string name = "ExactSCIPOracle("+filename+")";
-  scipOracleImpl = std::make_shared<ExactSCIPOracle>(name, mixedIntegerSet, next.getConnectionOracle());
+  scipOracleImpl = std::make_shared<ExactSCIPOracle>(name, mixedIntegerSet, next->getConnectionOracle());
   //SCIP_CALL_EXC(SCIPfree(&scip));
   scipOracle = std::make_shared<StatisticsOracle>(scipOracleImpl);
 
