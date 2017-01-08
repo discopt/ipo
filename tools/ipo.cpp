@@ -31,7 +31,7 @@ using namespace ipo;
 #ifdef IPO_WITH_SCIP
 #define ORACLE_DEFAULT_SCIP
 #define ORACLE_DEFAULT "scip"
-#elif IPO_WITH_EXACT_SCIP
+#elif defined IPO_WITH_EXACT_SCIP
 #define ORACLE_DEFAULT_EXACT_SCIP
 #define ORACLE_DEFAULT "exactscip"
 #else

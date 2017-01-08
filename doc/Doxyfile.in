@@ -94,7 +94,7 @@ INPUT                  = "@abs_top_srcdir@/doc" \
                          "@abs_top_builddir@/doc/references.dox"
 INPUT_ENCODING         = UTF-8
 FILE_PATTERNS          = *.h \
-                         *.cc \
+                         *.cpp \
                          *.dox
 RECURSIVE              = NO
 EXCLUDE                = 

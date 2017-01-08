@@ -79,9 +79,8 @@ else()
   set(DEFINE_IPO_SCIP "#undef IPO_WITH_SCIP")
 endif()
 
-if(ExactSCIP_FOUND)
-  set(DEFINE_IPO_EXACT_SCIP "#define IPO_WITH_EXACT_SCIP\n\
-#define IPO_EXACT_SCIP_PATH \"${ExactSCIP_EXECUTABLE}\"\n")
+if(ExactSCIP_FOUND OR EXACTSCIP_FOUND)
+  set(DEFINE_IPO_EXACT_SCIP "#define IPO_WITH_EXACT_SCIP\n#define IPO_EXACT_SCIP_PATH \"${ExactSCIP_EXECUTABLE}\"\n")
 else()
   set(DEFINE_IPO_EXACT_SCIP "#undef IPO_WITH_EXACT_SCIP")
 endif()

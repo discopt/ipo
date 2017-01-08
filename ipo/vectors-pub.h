@@ -1,6 +1,7 @@
 #ifndef IPO_VECTORS_H_
 #define IPO_VECTORS_H_
 
+#include <vector>
 #include <set>
 
 #include "common.h"
