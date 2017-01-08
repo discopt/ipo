@@ -101,6 +101,15 @@ namespace ipo {
   {
 
   }
+  
+  Polyhedron::Polyhedron(const std::shared_ptr<DefaultOracleWrapper>& oracleWrapper)
+    : _collectOracle(std::make_shared<CollectOracle>(oracleWrapper->queryOracle())),
+    _completeFace(_collectOracle->_inequalities[zeroVector()]),
+    _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true)
+  {
+
+  }
+
 
   Polyhedron::~Polyhedron()
   {

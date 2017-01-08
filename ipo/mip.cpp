@@ -7,11 +7,15 @@
   #ifdef NDEBUG
     #undef NDEBUG
     #include <scip/cons_linear.h>
+    #include <scip/scipdefplugins.h>
     #include "scip_oracle.h"
+    #include "scip_exception.h"
     #define NDEBUG
   #else
     #include <scip/cons_linear.h>
+    #include <scip/scipdefplugins.h>
     #include "scip_oracle.h"
+    #include "scip_exception.h"
   #endif
 #endif
 
@@ -32,7 +36,7 @@ namespace ipo {
 
 #ifdef IPO_WITH_SCIP
 
-  MixedIntegerSet::MixedIntegerSet(SCIP* scip) : _currentFace()
+  void MixedIntegerSet::initializeFromSCIP(SCIP* scip)
   {
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
@@ -135,6 +139,30 @@ namespace ipo {
       }
     }
   }
+
+  MixedIntegerSet::MixedIntegerSet(SCIP* scip) : _currentFace()
+  {
+    initializeFromSCIP(scip);
+  }
+#endif /* IPO_WITH_SCIP */
+
+#ifdef IPO_WITH_SCIP
+
+  MixedIntegerSet::MixedIntegerSet(const std::string& fileName)
+    : _currentFace()
+  {
+    SCIP* scip = NULL;
+
+    SCIP_CALL_EXC(SCIPcreate(&scip));
+    SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
+    SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
+    SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
+
+    initializeFromSCIP(scip);
+
+    SCIP_CALL_EXC(SCIPfree(&scip));
+  }
+
 
 #endif /* IPO_WITH_SCIP */
 

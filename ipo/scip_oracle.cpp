@@ -85,6 +85,14 @@ namespace ipo {
     initialize(mixedIntegerSet);
   }
 
+  SCIPOracle::SCIPOracle(const std::string& fileName, const std::shared_ptr<OracleBase>& nextOracle)
+    : MIPOracleBase(fileName, nextOracle)
+  {
+    std::shared_ptr<MixedIntegerSet> mixedIntegerSet = constructFromFile(fileName);
+
+    initialize(mixedIntegerSet);
+  }
+
   SCIPOracle::~SCIPOracle()
   {
     for (std::size_t v = 0; v < space().dimension(); ++v)
@@ -186,6 +194,22 @@ namespace ipo {
       SCIP_CALL_EXC(SCIPaddCons(_scip, cons));
       SCIP_CALL_EXC(SCIPreleaseCons(_scip, &cons));
     }
+  }
+  
+  std::shared_ptr<MixedIntegerSet> SCIPOracle::constructFromFile(const std::string& fileName)
+  {
+    SCIP_CALL_EXC(SCIPcreate(&_scip));
+    SCIP_CALL_EXC(SCIPincludeDefaultPlugins(_scip));
+    SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
+    SCIP_CALL_EXC(SCIPreadProb(_scip, fileName.c_str(), NULL));
+    SCIP_CALL_EXC(SCIPtransformProb(_scip));
+
+    std::size_t n = SCIPgetNOrigVars(_scip);
+    SCIP_VAR** origVars = SCIPgetOrigVars(_scip);
+    for (std::size_t v = 0; v < n; ++v)
+      _variables[v] = origVars[v];
+
+    return std::make_shared<MixedIntegerSet>(_scip);
   }
 
   void SCIPOracle::setFace(const LinearConstraint& newFace)

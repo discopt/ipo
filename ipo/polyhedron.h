@@ -5,6 +5,7 @@
 
 #include "common.h"
 #include "oracles.h"
+#include "oracle_wrapper.h"
 #include "unique_vectors.h"
 #include "affine_hull.h"
 
@@ -156,8 +157,9 @@ namespace ipo {
     };
 
   public:
-
     Polyhedron(const std::shared_ptr<OracleBase>& oracle);
+
+    Polyhedron(const std::shared_ptr<DefaultOracleWrapper>& oracleWrapper);
 
     virtual ~Polyhedron();
 

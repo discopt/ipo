@@ -95,6 +95,16 @@ namespace ipo {
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
+     * \brief Constructs a SCIP oracle from a file specified by \p fileName, optionally associated to \p nextOracle.
+     *
+     * Constructs a SCIP oracle from a file specified by \p fileName, optionally associated to \p nextOracle. The ambient space is
+     * defined by the model read from the file (and must be equal to that of \p nextOracle). The oracle is implemented by calling 
+     * SCIP in order to solve mixed-integer programs.
+     */
+
+    SCIPOracle(const std::string& fileName, const std::shared_ptr<OracleBase>& nextOracle = NULL);
+
+    /**
      * \brief Destructor.
      */
 
@@ -116,6 +126,8 @@ namespace ipo {
     std::shared_ptr<MixedIntegerSet> constructFromSCIP(SCIP* originalSCIP);
 
     void constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet);
+
+    std::shared_ptr<MixedIntegerSet> constructFromFile(const std::string& fileName);
 
     virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
       std::vector<double*>& rays);

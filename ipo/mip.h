@@ -52,6 +52,16 @@ namespace ipo {
     MixedIntegerSet(SCIP* scip);
 #endif /* IPO_WITH_SCIP */
 
+#ifdef IPO_WITH_SCIP
+    /**
+     * \brief Constructs a \c MixedIntegerSet from an instance file specified by \p fileName.
+     *
+     * Constructs a \c MixedIntegerSet from an instance file specified by \p fileName.
+     */
+
+    MixedIntegerSet(const std::string& fileName);
+#endif /* IPO_WITH_SCIP */
+    
     /**
      * \brief Destructor.
      */
@@ -259,6 +269,13 @@ namespace ipo {
 //     void getFixedVariableEquations(soplex::LPRowSetRational& rows,
 //       std::vector<std::string>* names = NULL);
 
+  private:
+#ifdef IPO_WITH_SCIP
+
+    void initializeFromSCIP(SCIP* scip);
+
+#endif /* IPO_WITH_SCIP */
+    
   protected:
     Space _space; // Space with column names.
     std::vector<Variable> _variables;
