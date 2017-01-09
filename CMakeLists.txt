@@ -2,10 +2,14 @@ CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
 
 ## Here comes the name of your project:
 
-project(IPO)
+set(PROJECT_NAME "Investigating Polyhedra by Oracles")
+project(${PROJECT_NAME})
+
 # The version number.
 set(IPO_VERSION_MAJOR 1)
 set(IPO_VERSION_MINOR 0)
+
+set(PROJECT_VERSION 1.0)
 
 add_definitions("-std=gnu++11")
 
@@ -45,6 +49,9 @@ ENDIF(UNIX)
 
 find_package(GMPXX REQUIRED)
 find_package(SoPlex REQUIRED)
+
+## Oracles
+  
 find_package(SCIP)
 find_package(ExactSCIP)
 
@@ -71,8 +78,11 @@ else()
   find_package(IPO REQUIRED)
 endif()
 
+## Cython
 
-
+find_package(Cython)
+include(UseCython)
+add_subdirectory(cython)
 
 ## This line finds doxygen (for document creation)
 

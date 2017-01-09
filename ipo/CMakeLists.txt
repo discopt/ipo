@@ -1,13 +1,4 @@
-cmake_minimum_required(VERSION 2.8)
-
-set(PROJECT_NAME "Investigating Polyhedra by Oracles")
-project(${PROJECT_NAME})
-
-set(PROJECT_VERSION 1.0)
-
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
-
-find_package(Doxygen)
 
 set(IPO_SOURCES
   parameters.cpp
