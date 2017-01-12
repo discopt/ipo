@@ -1,6 +1,8 @@
 #ifndef SCIP_EXCEPTION_H_
 #define SCIP_EXCEPTION_H_
 
+#include "common.h"
+
 #include <exception>
 #include <string>
 

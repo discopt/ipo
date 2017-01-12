@@ -1,5 +1,10 @@
-
-#include <ipo/common.h>
+#include <ipo/affine_hull.h>
+#include <ipo/scip_oracle.h>
+#include <ipo/scip_exception.h>
+#include <ipo/exactscip_oracle.h>
+#include <ipo/cache_oracle.h>
+#include <ipo/statistics_oracle.h>
+#include <ipo/polyhedron.h>
 
 #ifdef IPO_WITH_SCIP
 #ifdef NDEBUG
@@ -14,14 +19,6 @@
   #include <scip/cons_linear.h>
 #endif
 #endif
-
-#include <ipo/affine_hull.h>
-#include <ipo/scip_oracle.h>
-#include <ipo/scip_exception.h>
-#include <ipo/exactscip_oracle.h>
-#include <ipo/cache_oracle.h>
-#include <ipo/statistics_oracle.h>
-#include <ipo/polyhedron.h>
 
 using namespace ipo;
 

@@ -1,7 +1,7 @@
 #ifndef IPO_PYTHON_WRAPPER_H_
 #define IPO_PYTHON_WRAPPER_H_
 
-#include <ipo/common.h>
+#include "common.h"
 
 #ifdef NDEBUG
   #undef NDEBUG

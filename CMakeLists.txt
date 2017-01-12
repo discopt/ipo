@@ -81,7 +81,6 @@ endif()
 ## Cython
 
 find_package(Cython)
-include(UseCython)
 add_subdirectory(cython)
 
 ## This line finds doxygen (for document creation)

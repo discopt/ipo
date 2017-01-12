@@ -86,9 +86,9 @@ elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
   set(DEFINE_IPO_DEBUG "#undef IPO_DEBUG")
 endif()
 
-include_directories(${CMAKE_BINARY_DIR})
-configure_file(common.h.in ${CMAKE_BINARY_DIR}/common.h)
-configure_file(${CMAKE_BINARY_DIR}/common.h ${CMAKE_BINARY_DIR}/ipo/common.h COPYONLY)
+include_directories(${CMAKE_BINARY_DIR}/deps/ipo/) # for ipo/common.h
+configure_file(common.h.in ${CMAKE_BINARY_DIR}/deps/ipo/common.h)
+#configure_file(${CMAKE_BINARY_DIR}/common.h ${CMAKE_BINARY_DIR}/ipo/common.h COPYONLY)
 
 add_library(ipo-static STATIC ${IPO_SOURCES})
 include_directories(ipo-static ${SoPlex_INCLUDE_DIRS})

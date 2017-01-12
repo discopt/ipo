@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-#ifdef WITH_SCIP
+#ifdef IPO_WITH_SCIP
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>

@@ -1,6 +1,4 @@
 
-#include <ipo/common.h>
-
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
@@ -14,11 +12,11 @@
 #endif
   
 #include <ipo/scip_oracle.h>
-#include "ipo/scip_exception.h"
-#include "ipo/affine_hull.h"
-#include "ipo/facets.h"
-#include "ipo/cache_oracle.h"
-#include "ipo/statistics_oracle.h"
+#include <ipo/scip_exception.h>
+#include <ipo/affine_hull.h>
+#include <ipo/facets.h>
+#include <ipo/cache_oracle.h>
+#include <ipo/statistics_oracle.h>
 
 using namespace ipo;
 using namespace soplex;

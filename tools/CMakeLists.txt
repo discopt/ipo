@@ -1,7 +1,6 @@
 include_directories(
   ${CMAKE_SOURCE_DIR}
-  ${CMAKE_SOURCE_DIR}/src
-  ${CMAKE_BINARY_DIR}/src
+  ${CMAKE_BINARY_DIR}/deps/ipo/ # for ipo/common.h
   ${SoPlex_INCLUDE_DIRS}
 )
 

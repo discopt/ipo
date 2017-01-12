@@ -1,5 +1,9 @@
-
-#include <ipo/common.h>
+#include <ipo/scip_exception.h>
+#include <ipo/affine_hull.h>
+#include <ipo/scip_oracle.h>
+#include <ipo/cache_oracle.h>
+#include <ipo/statistics_oracle.h>
+#include <ipo/vectors-pub.h>
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -12,13 +16,6 @@
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
 #endif
-
-#include "ipo/scip_exception.h"
-#include "ipo/affine_hull.h"
-#include "ipo/scip_oracle.h"
-#include "ipo/cache_oracle.h"
-#include "ipo/statistics_oracle.h"
-#include "ipo/vectors-pub.h"
 
 using namespace ipo;
 
