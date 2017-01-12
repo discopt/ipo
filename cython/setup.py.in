@@ -2,9 +2,11 @@ import os
 from setuptools import setup, Extension
 from Cython.Build import cythonize
 
-
 GMP_include_dirs = "@GMP_INCLUDE_DIRS@"
 GMP_libraries = "@GMP_LIBRARIES@"
+
+GMPXX_include_dirs = "@GMPXX_INCLUDE_DIRS@"
+GMPXX_libraries = "@GMPXX_LIBRARIES@"
 
 SoPlex_include_dirs = "@SoPlex_INCLUDE_DIRS@"
 SoPlex_libraries = "@SoPlex_LIBRARIES@"
@@ -25,6 +27,7 @@ def parseIncludes(incs):
   return incs
 
 GMP_include_dirs = parseIncludes(GMP_include_dirs)
+GMPXX_include_dirs = parseIncludes(GMPXX_include_dirs)
 SoPlex_include_dirs = parseIncludes(SoPlex_include_dirs)
 SCIP_include_dirs = parseIncludes(SCIP_include_dirs)
 ZIMPL_include_dirs = parseIncludes(ZIMPL_include_dirs)
@@ -38,6 +41,7 @@ def parseLibraries(libs):
   return libs
 
 GMP_libraries = parseLibraries(GMP_libraries)
+GMPXX_libraries = parseLibraries(GMPXX_libraries)
 SoPlex_libraries = parseLibraries(SoPlex_libraries)
 SCIP_libraries = parseLibraries(SCIP_libraries)
 ZIMPL_libraries = parseLibraries(ZIMPL_libraries)
@@ -51,6 +55,8 @@ IPO_library_dirs = parseLibraryDirs(IPO_library_dirs)
 
 print GMP_include_dirs
 print GMP_libraries
+print GMPXX_include_dirs
+print GMPXX_libraries
 print SoPlex_include_dirs
 print SoPlex_libraries
 print SCIP_include_dirs
@@ -64,8 +70,8 @@ print IPO_source
 ext = Extension(
   'IPO',
   ['IPO.pyx'],
-  include_dirs = GMP_include_dirs + SoPlex_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source],
-  libraries = IPO_libraries + SCIP_libraries + ZIMPL_libraries + SoPlex_libraries,
+  include_dirs = GMP_include_dirs + GMPXX_include_dirs + SoPlex_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source],
+  libraries = IPO_libraries + SCIP_libraries + ZIMPL_libraries + SoPlex_libraries + GMP_libraries + GMPXX_libraries,
   library_dirs = IPO_library_dirs,
   runtime_library_dirs = [],
   extra_compile_args = ['-std=c++11'],

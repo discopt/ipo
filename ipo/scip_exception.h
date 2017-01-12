@@ -8,8 +8,15 @@
 
 #ifdef IPO_WITH_SCIP
 
-#include <scip/scip.h>
-#include <scip/pub_misc.h>
+#ifdef NDEBUG
+  #undef NDEBUG
+  #include <scip/scip.h>
+  #include <scip/pub_misc.h>
+  #define NDEBUG
+#else
+  #include <scip/scip.h>
+  #include <scip/pub_misc.h>
+#endif
 
 #define SCIP_MSG_MAX 256
 

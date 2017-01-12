@@ -18,7 +18,8 @@ cdef ctest(fileName):
   print 'before'
   cdef SCIPOracle* oracle
   oracle = new SCIPOracle(fileName)
-#  print oracle.name()
+  print 'after cons'
+  print oracle.name()
   del oracle
   print 'after'
 

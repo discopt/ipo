@@ -96,6 +96,7 @@ include_directories(ipo-static ${SoPlex_INCLUDE_DIRS})
 target_link_libraries(ipo-static
   ${SoPlex_LIBRARIES}
   ${GMP_LIBRARIES}
+  ${GMPXX_LIBRARIES}
 )
 set_target_properties(ipo-static PROPERTIES OUTPUT_NAME ipo)
 
@@ -104,6 +105,7 @@ include_directories(ipo-shared ${SoPlex_INCLUDE_DIRS})
 target_link_libraries(ipo-shared
   ${SoPlex_LIBRARIES}
   ${GMP_LIBRARIES}
+  ${GMPXX_LIBRARIES}
 )
 set_target_properties(ipo-shared PROPERTIES OUTPUT_NAME ipo)
 
@@ -121,7 +123,7 @@ install(FILES ${IPO_INSTALL_HEADERS}                    DESTINATION include/ipo 
 install(FILES vectors-pub.h            RENAME vectors.h           DESTINATION include/ipo  COMPONENT headers)
 install(FILES linear_constraint-pub.h  RENAME linear_constraint.h DESTINATION include/ipo  COMPONENT headers)
 
-install(FILES ${CMAKE_BINARY_DIR}/common.h DESTINATION include/ipo  COMPONENT headers)
+install(FILES ${CMAKE_BINARY_DIR}/deps/ipo/common.h DESTINATION include/ipo  COMPONENT headers)
 
 # install(FILES common-debug.h           RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Debug)
 # install(FILES common-release.h         RENAME common.h  DESTINATION include/ipo  COMPONENT headers CONFIGURATIONS Release)

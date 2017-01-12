@@ -205,6 +205,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPtransformProb(_scip));
 
     std::size_t n = SCIPgetNOrigVars(_scip);
+    _variables.resize(n);
     SCIP_VAR** origVars = SCIPgetOrigVars(_scip);
     for (std::size_t v = 0; v < n; ++v)
       _variables[v] = origVars[v];
