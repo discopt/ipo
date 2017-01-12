@@ -19,6 +19,7 @@ set(IPO_SOURCES
   mip.cpp
   facets.cpp
   affine_hull.cpp
+  oracle_wrapper.cpp
   timer.cpp
   polar_lp.cpp
   smallest_face.cpp
