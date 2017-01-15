@@ -247,6 +247,14 @@ namespace ipo {
     void printVector(std::ostream& stream, const Vector& vector) const;
 
     /**
+     * \brief Prints given \p vector into a string and returns it.
+     *
+     * Prints given \p vector into a string, using stored variable names, and returns it. Nonzeros are delimited by a comma.
+     */
+
+    std::string vectorToString(const Vector& vector) const;
+
+    /**
      * \brief Prints given \p linearForm to given \p stream.
      *
      * Prints given \p linearForm to given \p stream, using stored variable names. Nonzeros are delimited by the sign of the next
@@ -263,6 +271,15 @@ namespace ipo {
      */
 
     void printLinearConstraint(std::ostream& stream, const LinearConstraint& constraint) const;
+
+    /**
+     * \brief Prints given linear \p constraint into a string and returns it.
+     *
+     * Prints given linear \p constraint into a string, using stored variable names, and returns it. Nonzeros are delimited by 
+     * the sign of the next entry.
+     */
+
+    std::string linearConstraintToString(const LinearConstraint& constraint) const;
 
   protected:
     SpaceData* _data; // Pointer to data.

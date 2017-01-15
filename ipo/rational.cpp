@@ -2,6 +2,11 @@
 
 namespace ipo {
 
+  std::string rationalToString(const Rational& number)
+  {
+    soplex::rationalToString(number);
+  }
+
   bool isIntegral(const Rational& number)
   {
     mpq_class y(number.getMpqRef());

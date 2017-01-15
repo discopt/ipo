@@ -202,7 +202,6 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPincludeDefaultPlugins(_scip));
     SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0));
     SCIP_CALL_EXC(SCIPreadProb(_scip, fileName.c_str(), NULL));
-    SCIP_CALL_EXC(SCIPtransformProb(_scip));
 
     std::size_t n = SCIPgetNOrigVars(_scip);
     _variables.resize(n);
@@ -248,8 +247,6 @@ namespace ipo {
   void SCIPOracle::solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
     std::vector<double*>& rays)
   {
-    std::cout << "DEBUG: Query to " << this->name() << std::endl;
-
     std::size_t n = space().dimension();
 
     for (std::size_t v = 0; v < n; ++v)

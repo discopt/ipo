@@ -3,6 +3,8 @@
 
 #include "common.h"
 
+#include <string>
+
 #include <gmpxx.h>
 #define SOPLEX_WITH_GMP
 #define SOPLEX_WITH_RATIONALPARAMS
@@ -11,6 +13,8 @@
 namespace ipo {
 
   typedef soplex::Rational Rational;
+
+    std::string rationalToString(const Rational& number);
 
   bool isIntegral(const Rational& number);
 

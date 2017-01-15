@@ -73,6 +73,13 @@ static SpaceData* emptySpace = NULL;
     }
   }
 
+  std::string Space::vectorToString(const Vector& vector) const
+  {
+    std::stringstream stream;
+    printVector(stream, vector);
+    return stream.str();
+  }
+
   void Space::printLinearForm(std::ostream& stream, const Vector& linearForm) const
   {
     if (linearForm.size() == 0)
@@ -107,5 +114,12 @@ static SpaceData* emptySpace = NULL;
   {
     printLinearForm(stream, constraint.normal());
     stream << ' ' << constraint.type() << "= " << constraint.rhs();
+  }
+
+  std::string Space::linearConstraintToString(const LinearConstraint& constraint) const
+  {
+    std::stringstream stream;
+    printLinearConstraint(stream, constraint);
+    return stream.str();
   }
 }
