@@ -69,7 +69,7 @@ namespace ipo {
   }
 
   SCIPOracle::SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, nextOracle)
+    : MIPOracleBase(name, nextOracle), _timeLimit(0.0)
   {
     std::shared_ptr<MixedIntegerSet> mixedIntegerSet = constructFromSCIP(originalSCIP);
 
@@ -78,7 +78,7 @@ namespace ipo {
 
   SCIPOracle::SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
     const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, nextOracle)
+    : MIPOracleBase(name, nextOracle), _timeLimit(0.0)
   {
     constructFromMixedIntegerSet(mixedIntegerSet);
 
@@ -128,6 +128,13 @@ namespace ipo {
     SCIPhashmapFree(&hashMap);
 
     return std::make_shared<MixedIntegerSet>(originalSCIP);
+  }
+
+  void SCIPOracle::setTimeLimit(double timeLimit)
+  {
+    assert(timeLimit >= 0);
+    _timeLimit = timeLimit;
+    SCIP_CALL_EXC(SCIPsetRealParam(_scip, "limits/time", _timeLimit));
   }
 
   void SCIPOracle::constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)
@@ -221,8 +228,9 @@ namespace ipo {
   }
 
   void SCIPOracle::solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
-    std::vector<double*>& rays)
+    std::vector<double*>& rays, bool& hitLimit)
   {
+    hitLimit = false;
     std::size_t n = space().dimension();
 
     for (std::size_t v = 0; v < n; ++v)
@@ -267,12 +275,16 @@ namespace ipo {
           points.push_back(point);
         }
 
+        if (status != SCIP_STATUS_OPTIMAL && status != SCIP_STATUS_UNBOUNDED)
+          hitLimit = true;
+
         // TODO: Use exact primal SCIP functionality instead of reconstruction.
 
         break;
       }
 
       // Disable presolving for the second round.
+
       SCIP_CALL_EXC(SCIPsetIntParam(_scip, "presolving/maxrounds", 0));
       SCIP_CALL_EXC(SCIPfreeSolve(_scip, true));
       SCIP_CALL_EXC(SCIPfreeTransform(_scip));

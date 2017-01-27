@@ -82,6 +82,14 @@ namespace ipo {
 
     virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
+    /**
+     * \brief Sets a time limit for each oracle call.
+     *
+     * Sets a time limit (in seconds) for each oracle call. If \c heuristicLevel is 0, this raises an exception.
+     */
+
+    void setTimeLimit(double timeLimit);
+
   protected:
 
     /**
@@ -128,6 +136,7 @@ namespace ipo {
     std::string _binary;
     std::string _workingDirectory;
     std::shared_ptr<MixedIntegerSet> _mixedIntegerSet;
+    double _timeLimit;
   };
 
 } /* namespace ipo */

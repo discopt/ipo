@@ -25,31 +25,42 @@
 
 using namespace ipo;
 
+int printUsage(const std::string& program)
+{
+  std::cerr << "Usage: " << program << " [-c] [-t TIMELIMIT] INSTANCE\n" << std::flush;
+  return EXIT_FAILURE;
+}
+
 int main(int argc, char** argv)
 {
   // Parse arguments.
 
   bool constraintDimensions = false;
-  std::string instanceFile;
-  if (argc >= 3)
+  std::string instanceFile = "";
+  double timeLimit = -1;
+  for (int i = 1; i < argc; ++i)
   {
-    if (std::string(argv[1]) == "-c")
+    if (std::string(argv[i]) == "-h")
+      return printUsage(argv[0]);
+    if (std::string(argv[i]) == "-c")
     {
       constraintDimensions = true;
-      instanceFile = argv[2];
+      continue;
     }
-    else
+    if (std::string(argv[i]) == "-t" && i+1 < argc)
     {
-      instanceFile = argv[1];
+      std::stringstream str(argv[i+1]);
+      str >> timeLimit;
+      ++i;
+      continue;
     }
+    if (instanceFile.empty())
+      instanceFile = argv[i];
+    else
+      return printUsage(argv[0]);
   }
-  else if (argc >= 2)
-    instanceFile = argv[1];
-  else
-  {
-    std::cerr << "Usage: " << argv[0] << " [-f] INSTANCE\n" << std::flush;
-    return EXIT_FAILURE;
-  }
+  if (instanceFile.empty())
+    return printUsage(argv[0]);
 
   // Read instance and create MixedIntegerSet.
   
@@ -70,15 +81,23 @@ int main(int argc, char** argv)
   
 #ifdef IPO_WITH_EXACT_SCIP
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
-    "ExactSCIPOracle(" + std::string(argv[1]) + ")", mixedIntegerSet);
-  std::shared_ptr<StatisticsOracle> exactScipOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
+    "ExactSCIPOracle(" + instanceFile + ")", mixedIntegerSet);
+  std::shared_ptr<StatisticsOracle> exactSCIPOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
-    mixedIntegerSet, exactScipOracleStats);
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + instanceFile + ")",
+    mixedIntegerSet, exactSCIPOracleStats);
 #else
-  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + std::string(argv[1]) + ")",
+  std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + instanceFile + ")",
     mixedIntegerSet);
 #endif
+
+  if (timeLimit > 0)
+  {
+    scipOracle->setTimeLimit(timeLimit);
+#ifdef IPO_WITH_EXACT_SCIP
+    exactSCIPOracle->setTimeLimit(timeLimit);
+#endif
+  }
 
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
 
