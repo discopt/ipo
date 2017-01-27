@@ -143,7 +143,15 @@ int main(int argc, char** argv)
     handlers.push_back(&debugHandler);
 
   std::cout << "Dimension: " << std::flush;
-  poly.affineHull(handlers);
+  try
+  {
+    poly.affineHull(handlers);
+  }
+  catch(std::exception& e)
+  {
+    std::cout << "Error: " << e.what() << "\n" << std::flush;
+    return EXIT_FAILURE;
+  }
   int dim = poly.dimension();
   std::cout << dim << "\n\n" << std::flush;
 
