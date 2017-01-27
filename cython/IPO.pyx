@@ -10,13 +10,13 @@ cdef extern from "ipo/rational.h" namespace "ipo":
   cdef cppclass IPORational "ipo::Rational":
     pass
 
-  string IPOrationalToString "rationalToString" (const IPORational& rational)
+  string IPOrationalToString "ipo::rationalToString" (const IPORational& rational)
 
 cdef class Rational:
   cdef IPORational _rational
 
   def __str__(self):
-    return IPOrationalToString(self._rational)
+    return '{' + IPOrationalToString(self._rational) + '}'
 
 cdef _createRational(const IPORational& number):
   result = Rational()
@@ -123,54 +123,132 @@ cdef extern from "ipo/vectors-pub.h" namespace "ipo":
     vector[IPOVector] points
     vector[IPOVector] rays
 
-## Oracles ## 
+## Oracles ##
+
+ctypedef size_t HeuristicLevel
 
 cdef extern from "ipo/oracles.h" namespace "ipo":
   cdef cppclass IPOOracleBase "ipo::OracleBase":
     IPOOracleBase(const string& name) except +
+    string name()
     const IPOSpace& space() const
+    HeuristicLevel heuristicLevel() const
 ctypedef shared_ptr[IPOOracleBase] PtrIPOOracleBase
 
 cdef extern from "ipo/oracle_wrapper.h" namespace "ipo":
   cdef cppclass IPODefaultOracleWrapper "ipo::DefaultOracleWrapper":
     IPODefaultOracleWrapper(PtrIPOOracleBase& mainOracle) except +
     PtrIPOOracleBase queryOracle()
+    PtrIPOOracleBase linkOracle()
 ctypedef shared_ptr[IPODefaultOracleWrapper] PtrIPODefaultOracleWrapper
 
-cdef extern from "ipo/scip_oracle.h" namespace "ipo":
-  cdef cppclass IPOSCIPOracle "ipo::SCIPOracle" (IPOOracleBase):
-    IPOSCIPOracle(string name) except +
-    string name()
-    int heuristicLevel()
-ctypedef shared_ptr[IPOSCIPOracle] PtrIPOSCIPOracle
-
-
-cdef class SCIPOracle:
-  cdef PtrIPOSCIPOracle _scipOracle
+cdef class OracleBase:
   cdef PtrIPODefaultOracleWrapper _wrappedOracle
-
-  def __cinit__(self, fileName):
-    self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(fileName))
-    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
-    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
-
-  def __dealloc__(self):
-    self._wrappedOracle.reset()
-    self._scipOracle.reset()
 
   @property
   def name(self):
-    return deref(self._scipOracle).name()
+    return deref(deref(self._wrappedOracle).linkOracle()).name()
 
   @property
   def heuristicLevel(self):
-    return deref(self._scipOracle).heuristicLevel()
+    return deref(deref(self._wrappedOracle).linkOracle()).heuristicLevel()
+
+  @property
+  def cacheHeuristicLevel(self):
+    return deref(deref(self._wrappedOracle).queryOracle()).heuristicLevel()
 
   @property
   def space(self):
     cdef Space result = Space()
-    result._space = deref(self._scipOracle).space()
+    result._space = deref(deref(self._wrappedOracle).linkOracle()).space()
     return result
+
+  cdef PtrIPOOracleBase getLinkOraclePtr(self):
+    return deref(self._wrappedOracle).linkOracle()
+
+## MixedIntegerSet ##
+
+cdef extern from "ipo/mip.h" namespace "ipo":
+  cdef cppclass IPOMixedIntegerSet "ipo::MixedIntegerSet":
+    IPOMixedIntegerSet(const string& fileName)
+    const IPOSpace& space() const
+ctypedef shared_ptr[IPOMixedIntegerSet] PtrIPOMixedIntegerSet
+
+cdef class MixedIntegerSet:
+  cdef PtrIPOMixedIntegerSet _mixedIntegerSet
+
+  def __cinit__(self, const string& fileName):
+    self._mixedIntegerSet = PtrIPOMixedIntegerSet(new IPOMixedIntegerSet(fileName))
+
+  @property
+  def space(self):
+    return _createSpace(deref(self._mixedIntegerSet).space())
+
+cdef _createMixedIntegerSet(const PtrIPOMixedIntegerSet& mixedIntegerSet):
+  result = MixedIntegerSet()
+  result._mixedIntegerSet = mixedIntegerSet
+  return result
+
+## SCIPOracle ##
+
+cdef extern from "ipo/scip_oracle.h" namespace "ipo":
+  cdef cppclass IPOSCIPOracle "ipo::SCIPOracle" (IPOOracleBase):
+    IPOSCIPOracle(const string&) except +
+    IPOSCIPOracle(const string&, const PtrIPOOracleBase&) except +
+    IPOSCIPOracle(const string&, const PtrIPOMixedIntegerSet& mixedIntegerSet) except +
+    IPOSCIPOracle(const string&, const PtrIPOMixedIntegerSet&, const PtrIPOOracleBase&) except +
+    const PtrIPOMixedIntegerSet& mixedIntegerSet() const
+ctypedef shared_ptr[IPOSCIPOracle] PtrIPOSCIPOracle
+
+cdef class SCIPOracle (OracleBase):
+  cdef PtrIPOSCIPOracle _scipOracle
+
+  # TODO: multiple constructors...
+
+  def __cinit__(self, const string& name, const string& fileName = '', MixedIntegerSet mixedIntegerSet = None, OracleBase nextOracle = None):
+    pass
+
+#  def __init__(self, const string& fileName, OracleBase nextOracle = None):
+#    if nextOracle is None:
+#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(fileName))
+#    else:
+#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(fileName, nextOracle.getLinkOraclePtr()))
+#
+#    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
+#    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+#
+#  def __cinit__(self, const string& name, MixedIntegerSet mixedIntegerSet, OracleBase nextOracle = None):
+#    if nextOracle is None:
+#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet))
+#    else:
+#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet, nextOracle.getLinkOraclePtr()))
+#
+#    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
+#    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+
+  @property
+  def mixedIntegerSet(self):
+    return _createMixedIntegerSet(deref(self._scipOracle).mixedIntegerSet())
+
+## ExactSCIPOracle ##
+
+cdef extern from "ipo/exactscip_oracle.h" namespace "ipo":
+  cdef cppclass IPOExactSCIPOracle "ipo::ExactSCIPOracle" (IPOOracleBase):
+    IPOExactSCIPOracle(const string& name, const PtrIPOMixedIntegerSet& mixedIntegerSet) except +
+ctypedef shared_ptr[IPOExactSCIPOracle] PtrIPOExactSCIPOracle
+
+cdef class ExactSCIPOracle (OracleBase):
+  cdef PtrIPOExactSCIPOracle _exactscipOracle
+
+  def _init(self, name, MixedIntegerSet mixedIntegerSet):
+    cdef PtrIPOMixedIntegerSet mis = mixedIntegerSet._mixedIntegerSet
+    self._exactscipOracle = PtrIPOExactSCIPOracle(new IPOExactSCIPOracle(name, mis))
+    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._exactscipOracle)
+    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+
+  def __cinit__(self, name, mixedIntegerSet):
+    self._init(name, mixedIntegerSet)
+
 
 ## affineHull ##
 
@@ -184,38 +262,43 @@ cdef extern from "ipo/affine_hull.h" namespace "ipo":
   void IPOaffineHull "affineHull" (const PtrIPOOracleBase&, IPOInnerDescription&, IPOAffineOuterDescription&, vector[IPOAffineHullHandler*]&,
     size_t, size_t, vector[IPOLinearConstraint]&, bool)
 
-cdef _affineHull(SCIPOracle oracle, lastCheapHeuristic, lastModerateHeuristic, givenEquations, approximateDirections):
+cdef _affineHull(OracleBase oracle, HeuristicLevel lastCheapHeuristic, HeuristicLevel lastModerateHeuristic,
+  givenEquations, approximateDirections):
+  # Setup parameters.
+  cdef PtrIPOOracleBase queryOracle = deref(oracle._wrappedOracle).queryOracle()
   cdef IPOInnerDescription inner
   cdef IPOAffineOuterDescription outer
   cdef vector[IPOAffineHullHandler*] handlers
-  cdef vector[IPOLinearConstraint] equations
+  cdef vector[IPOLinearConstraint] givenEqns
   cdef bool approx = approximateDirections
-  cdef PtrIPOOracleBase queryOracle = deref(oracle._wrappedOracle).queryOracle()
-  IPOaffineHull(queryOracle, inner, outer, handlers, <size_t>(lastCheapHeuristic), <size_t>(lastModerateHeuristic), equations, approx)
+
+  # Call routine.
+
+  IPOaffineHull(queryOracle, inner, outer, handlers, <size_t>(lastCheapHeuristic), <size_t>(lastModerateHeuristic),
+    givenEqns, approx)
+
+  # Compute dimension.
+  dim = <long>(inner.points.size()) + <long>(inner.rays.size()) - 1
+
+  # Extract inner description.
   points = [None] * <long>(inner.points.size())
   for i in xrange(inner.points.size()):
-    points[i] = _createVector(inner.points[i], deref(oracle._scipOracle).space())
+    points[i] = _createVector(inner.points[i], deref(queryOracle).space())
   rays = [None] * <long>(inner.rays.size())
   for i in xrange(inner.rays.size()):
-    rays[i] = _createVector(inner.rays[i], deref(oracle._scipOracle).space())
-  return (points,rays)
+    rays[i] = _createVector(inner.rays[i], deref(queryOracle).space())
 
-def affineHull(oracle, lastCheapHeuristic, lastModerateHeuristic, givenEquations = [], approximateDirections = True):
-  return _affineHull(oracle, lastModerateHeuristic, lastModerateHeuristic, givenEquations, approximateDirections)
-  
+  # Extract outer description
+  equations = [None] * <long>(outer.size())
+  for i in xrange(outer.size()):
+    equations[i] = _createLinearConstraint(outer[i], deref(queryOracle).space())
 
+  return (dim, (points, rays), equations)
 
-#    cdef cppclass ScipOracleController(OracleControllerBase):
-#        ScipOracleController(string name) except +
-#        ScipOracleController(string name, OracleControllerBase* next) except +
-#        ScipOracleController(string name, OracleControllerBase* next, const shared_ptr[MixedIntegerSet] mixedIntegerSet) except +
-#        #ScipOracleController(string name, const shared_ptr[MixedIntegerSet] mixedIntegerSet) except +
-#
-#
-#        string name()
-#        int heuristicLevel_ScipOracle()
-#        int heuristicLevel_CacheOracle()
-#        shared_ptr[OracleBase] getCacheOracle()
-#
-#        InnerDescription affineHullInner(int outputMode)
-#        AffineOuterDescription affineHullOuter(int outputMode)
+def affineHull(oracle, lastCheapHeuristic = -1, lastModerateHeuristic = -1, givenEquations = [], approximateDirections = True):
+  if lastCheapHeuristic < 0:
+    lastCheapHeuristic = oracle.heuristicLevel + 1
+  if lastModerateHeuristic < 0:
+    lastModerateHeuristic = oracle.heuristicLevel
+  return _affineHull(oracle, lastCheapHeuristic, lastModerateHeuristic, givenEquations, approximateDirections)
+

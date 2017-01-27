@@ -4,7 +4,9 @@ namespace ipo {
 
   std::string rationalToString(const Rational& number)
   {
-    soplex::rationalToString(number);
+    std::stringstream stream;
+    stream << number;
+    return stream.str();
   }
 
   bool isIntegral(const Rational& number)

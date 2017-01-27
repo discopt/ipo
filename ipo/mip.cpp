@@ -38,6 +38,8 @@ namespace ipo {
 
   void MixedIntegerSet::initializeFromSCIP(SCIP* scip)
   {
+    SCIP_CALL_EXC(SCIPtransformProb(scip));
+
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
 //     _worker.reDim(n, true);
@@ -70,6 +72,7 @@ namespace ipo {
     _space = Space(spaceData);
 
     // Setup row constraints.
+
 
     SCIP_CONSHDLR* linearHandler = SCIPfindConshdlr(scip, "linear");
     std::size_t numLinearConstraints = SCIPconshdlrGetNConss(linearHandler);
@@ -138,6 +141,8 @@ namespace ipo {
         }
       }
     }
+
+    SCIP_CALL_EXC( SCIPfreeTransform(scip) );
   }
 
   MixedIntegerSet::MixedIntegerSet(SCIP* scip) : _currentFace()
