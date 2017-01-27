@@ -386,6 +386,7 @@ namespace ipo {
   HeuristicLevel MIPOracleBase::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
+    bool hitLimit = false;
     std::size_t n = space().dimension();
 
     // Scale objective vector.
@@ -420,7 +421,7 @@ namespace ipo {
     assert(_points.empty());
     assert(_rays.empty());
 
-    solverMaximize(_objective, soplex::infinity, _points, _rays);
+    solverMaximize(_objective, soplex::infinity, _points, _rays, hitLimit);
 
     if (!_points.empty())
     {
@@ -456,7 +457,15 @@ namespace ipo {
       result.rays.push_back(OracleResult::Ray(vector));
       return 0;
     }
-    return heuristicLevel();
+
+    if (heuristicLevel() == 0 && hitLimit)
+    {
+      std::stringstream str;
+      str << "Oracle \"" << name() << "\" reached a limit.";
+      throw std::runtime_error(str.str());
+    }
+
+    return  heuristicLevel();
   }
 
   void MIPOracleBase::separatePoint(const soplex::VectorRational& point, soplex::LPRowSetRational& cuts)

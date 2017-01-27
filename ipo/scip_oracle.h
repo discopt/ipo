@@ -121,6 +121,14 @@ namespace ipo {
 
     virtual void setFace(const LinearConstraint& newFace = completeFaceConstraint());
 
+    /**
+     * \brief Sets a time limit for each oracle call.
+     *
+     * Sets a time limit (in seconds) for each oracle call. If \c heuristicLevel is 0, this raises an exception.
+     */
+
+    void setTimeLimit(double timeLimit);
+
   protected:
 
     std::shared_ptr<MixedIntegerSet> constructFromSCIP(SCIP* originalSCIP);
@@ -130,12 +138,13 @@ namespace ipo {
     std::shared_ptr<MixedIntegerSet> constructFromFile(const std::string& fileName);
 
     virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
-      std::vector<double*>& rays);
+      std::vector<double*>& rays, bool& hitLimit);
 
   protected:
     SCIP* _scip; // SCIP instance
     std::vector<SCIP_VAR*> _variables; // SCIP variables.
     SCIP_CONS* _faceConstraint; // Special equation constraint for optimizing over a face.
+    double _timeLimit;
   };
 
 } /* namespace ipo */

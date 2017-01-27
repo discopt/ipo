@@ -421,10 +421,11 @@ namespace ipo {
      * \param objective Objective vector to be maximized.
      * \param points    Returned set of points (each entry is an array of length \c n \c that is free'd by the caller.
      * \param rays      Returned set of rays (each entry is an array of length \c n \c that is free'd by the caller.
+     * \param hitLimit  Set to true iff solver reached some limit, e.g., due to time or memory constraints.
      */
 
     virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
-      std::vector<double*>& rays) = 0;
+      std::vector<double*>& rays, bool& hitLimit) = 0;
 
     /**
      * \brief Method that can add lazy inequalities that cut off a given point.
