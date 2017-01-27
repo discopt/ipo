@@ -69,7 +69,7 @@ namespace ipo {
   }
 
   SCIPOracle::SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, nextOracle), _timeLimit(0.0)
+    : MIPOracleBase(name, nextOracle)
   {
     std::shared_ptr<MixedIntegerSet> mixedIntegerSet = constructFromSCIP(originalSCIP);
 
@@ -78,7 +78,7 @@ namespace ipo {
 
   SCIPOracle::SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
     const std::shared_ptr<OracleBase>& nextOracle)
-    : MIPOracleBase(name, nextOracle), _timeLimit(0.0)
+    : MIPOracleBase(name, nextOracle)
   {
     constructFromMixedIntegerSet(mixedIntegerSet);
 
@@ -130,11 +130,17 @@ namespace ipo {
     return std::make_shared<MixedIntegerSet>(originalSCIP);
   }
 
-  void SCIPOracle::setTimeLimit(double timeLimit)
+  double SCIPOracle::setTimeLimit(double timeLimit)
   {
     assert(timeLimit >= 0);
-    _timeLimit = timeLimit;
-    SCIP_CALL_EXC(SCIPsetRealParam(_scip, "limits/time", _timeLimit));
+    SCIP_CALL_EXC(SCIPsetRealParam(_scip, "limits/time", timeLimit == 0 ? SCIPinfinity(_scip) : timeLimit));
+  }
+
+  double SCIPOracle::getTimeLimit()
+  {
+    double result;
+    SCIP_CALL_EXC(SCIPgetRealParam(_scip, "limits/time", &result));
+    return result;
   }
 
   void SCIPOracle::constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)

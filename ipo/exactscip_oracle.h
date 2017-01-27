@@ -88,7 +88,15 @@ namespace ipo {
      * Sets a time limit (in seconds) for each oracle call. If \c heuristicLevel is 0, this raises an exception.
      */
 
-    void setTimeLimit(double timeLimit);
+    double setTimeLimit(double timeLimit);
+
+    /**
+     * \brief Returns the time limit set for each oracle call.
+     *
+     * Returns the time limit set via setTimeLimit().
+     */
+
+    double getTimeLimit();
 
   protected:
 

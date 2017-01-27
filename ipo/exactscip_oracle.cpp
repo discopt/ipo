@@ -43,7 +43,7 @@ namespace ipo {
     OracleBase::setFace(newFace);
   }
 
-  void ExactSCIPOracle::setTimeLimit(double timeLimit)
+  double ExactSCIPOracle::setTimeLimit(double timeLimit)
   {
     assert(timeLimit >= 0);
     if (timeLimit != _timeLimit)
@@ -52,6 +52,12 @@ namespace ipo {
       deleteWorkingDirectory();
       createWorkingDirectory();
     }
+    return _timeLimit;
+  }
+
+  double ExactSCIPOracle::getTimeLimit()
+  {
+    return _timeLimit;
   }
 
   void ExactSCIPOracle::createWorkingDirectory()
@@ -67,7 +73,7 @@ namespace ipo {
 
     std::string binary = "/usr/bin/time -o '" + _workingDirectory + "/timing.log' -f '%U' " + _binary + " ";
     std::string parameters = "";
-    if (_timeLimit < std::numeric_limits<double>::max())
+    if (_timeLimit < std::numeric_limits<double>::max() && _timeLimit > 0)
     {
       std::stringstream ss;
       ss << " -c \"set limits time ";
