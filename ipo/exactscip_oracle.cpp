@@ -187,7 +187,7 @@ namespace ipo {
   {
     if (system((_workingDirectory + "/script.sh").c_str()) != 0)
     {
-      throw std::runtime_error("Exact SCIP solver returned with nonzero exit status.");
+      throw std::runtime_error("ExactSCIPOracle returned with nonzero exit status (see " + _workingDirectory+ "/solve.log).");
     }
   }
 
@@ -214,7 +214,7 @@ namespace ipo {
         ss >> var >> valueStr;
         Rational value;
         if (!value.readString(valueStr.c_str()))
-          throw std::runtime_error("parseOutput failed when reading a number.");
+          throw std::runtime_error("ExactSCIPOracle failed to parse output while reading a number (see " + _workingDirectory+ "/solve.log).");
         assert(pointData != NULL);
         pointData->add(var, value);
       }
@@ -239,7 +239,7 @@ namespace ipo {
 
     if (!startedSolutionSection)
     {
-      throw std::runtime_error("ExactSCIPOracle did not return useful results (see " + _workingDirectory+ "/solve.log)");
+      throw std::runtime_error("ExactSCIPOracle did not return useful results (see " + _workingDirectory+ "/solve.log).");
     }
 
     return pointData;
