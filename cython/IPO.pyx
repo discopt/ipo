@@ -198,43 +198,47 @@ cdef extern from "ipo/scip_oracle.h" namespace "ipo":
     IPOSCIPOracle(const string&, const PtrIPOMixedIntegerSet& mixedIntegerSet) except +
     IPOSCIPOracle(const string&, const PtrIPOMixedIntegerSet&, const PtrIPOOracleBase&) except +
     const PtrIPOMixedIntegerSet& mixedIntegerSet() const
+    double setTimeLimit(double)
+    double getTimeLimit()
 ctypedef shared_ptr[IPOSCIPOracle] PtrIPOSCIPOracle
 
 cdef class SCIPOracle (OracleBase):
   cdef PtrIPOSCIPOracle _scipOracle
 
-  # TODO: multiple constructors...
-
-  def __cinit__(self, const string& name, const string& fileName = '', MixedIntegerSet mixedIntegerSet = None, OracleBase nextOracle = None):
-    pass
-
-#  def __init__(self, const string& fileName, OracleBase nextOracle = None):
-#    if nextOracle is None:
-#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(fileName))
-#    else:
-#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(fileName, nextOracle.getLinkOraclePtr()))
-#
-#    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
-#    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
-#
-#  def __cinit__(self, const string& name, MixedIntegerSet mixedIntegerSet, OracleBase nextOracle = None):
-#    if nextOracle is None:
-#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet))
-#    else:
-#      self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet, nextOracle.getLinkOraclePtr()))
-#
-#    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
-#    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+  def __cinit__(self, const string& name, MixedIntegerSet mixedIntegerSet = None, OracleBase nextOracle = None):
+    if mixedIntegerSet is None:
+      if nextOracle is None:
+        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name))
+      else:
+        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, nextOracle.getLinkOraclePtr()))
+    else:
+      if nextOracle is None:
+        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet))
+      else:
+        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerSet._mixedIntegerSet, nextOracle.getLinkOraclePtr()))
+    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
+    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
   @property
   def mixedIntegerSet(self):
     return _createMixedIntegerSet(deref(self._scipOracle).mixedIntegerSet())
+
+  @property
+  def timeLimit(self):
+    return deref(self._scipOracle).getTimeLimit()
+
+  @timeLimit.setter
+  def timeLimit(self, limit):
+    assert limit >= 0
+    deref(self._scipOracle).setTimeLimit(limit)
 
 ## ExactSCIPOracle ##
 
 cdef extern from "ipo/exactscip_oracle.h" namespace "ipo":
   cdef cppclass IPOExactSCIPOracle "ipo::ExactSCIPOracle" (IPOOracleBase):
     IPOExactSCIPOracle(const string& name, const PtrIPOMixedIntegerSet& mixedIntegerSet) except +
+    double setTimeLimit(double)
+    double getTimeLimit()
 ctypedef shared_ptr[IPOExactSCIPOracle] PtrIPOExactSCIPOracle
 
 cdef class ExactSCIPOracle (OracleBase):
@@ -248,6 +252,15 @@ cdef class ExactSCIPOracle (OracleBase):
 
   def __cinit__(self, name, mixedIntegerSet):
     self._init(name, mixedIntegerSet)
+
+  @property
+  def timeLimit(self):
+    return deref(self._exactscipOracle).getTimeLimit()
+
+  @timeLimit.setter
+  def timeLimit(self, limit):
+    assert limit >= 0
+    deref(self._exactscipOracle).setTimeLimit(limit)
 
 
 ## affineHull ##
