@@ -237,6 +237,7 @@ cdef class SCIPOracle (OracleBase):
 cdef extern from "ipo/exactscip_oracle.h" namespace "ipo":
   cdef cppclass IPOExactSCIPOracle "ipo::ExactSCIPOracle" (IPOOracleBase):
     IPOExactSCIPOracle(const string& name, const PtrIPOMixedIntegerSet& mixedIntegerSet) except +
+    const PtrIPOMixedIntegerSet& mixedIntegerSet() const
     double setTimeLimit(double)
     double getTimeLimit()
 ctypedef shared_ptr[IPOExactSCIPOracle] PtrIPOExactSCIPOracle
@@ -254,6 +255,10 @@ cdef class ExactSCIPOracle (OracleBase):
     self._init(name, mixedIntegerSet)
 
   @property
+  def mixedIntegerSet(self):
+    return _createMixedIntegerSet(deref(self._exactscipOracle).mixedIntegerSet())
+
+  @property
   def timeLimit(self):
     return deref(self._exactscipOracle).getTimeLimit()
 
@@ -261,7 +266,6 @@ cdef class ExactSCIPOracle (OracleBase):
   def timeLimit(self, limit):
     assert limit >= 0
     deref(self._exactscipOracle).setTimeLimit(limit)
-
 
 ## affineHull ##
 
@@ -314,4 +318,160 @@ def affineHull(oracle, lastCheapHeuristic = -1, lastModerateHeuristic = -1, give
   if lastModerateHeuristic < 0:
     lastModerateHeuristic = oracle.heuristicLevel
   return _affineHull(oracle, lastCheapHeuristic, lastModerateHeuristic, givenEquations, approximateDirections)
+
+## Polyhedron ##
+
+cdef extern from "ipo/polyhedron.h" namespace "ipo":
+  cdef cppclass IPOPolyhedronFace "ipo::Polyhedron::Face":
+    IPOPolyhedronFace(const IPOLinearConstraint&)
+    const IPOLinearConstraint& inequality() const
+    bool hasDimension() const
+    const IPOAffineOuterDescription& outerDescription() const
+    const IPOInnerDescription& innerDescription() const
+    const int dimension() const
+ctypedef shared_ptr[IPOPolyhedronFace] PtrIPOPolyhedronFace
+  
+cdef class Face:
+  cdef PtrIPOPolyhedronFace _face
+  cdef IPOSpace _space
+
+  def __cinit__(self):
+    pass
+
+  @property
+  def inequality(self):
+    return _createLinearConstraint(deref(self._face).inequality(), self._space)
+
+  @property
+  def hasDimension(self):
+    return deref(self._face).hasDimension()
+
+  @property
+  def affineHullOuterDescription(self):
+    cdef IPOAffineOuterDescription outer = deref(self._face).outerDescription()
+    equations = [None] * <long>(outer.size())
+    for i in xrange(outer.size()):
+      equations[i] = _createLinearConstraint(outer[i], self._space)
+    return equations
+
+  @property
+  def affineHullInnerDescription(self):
+    cdef IPOInnerDescription inner = deref(self._face).innerDescription()
+    points = [None] * <long>(inner.points.size())
+    for i in xrange(inner.points.size()):
+      points[i] = _createVector(inner.points[i], self._space)
+    rays = [None] * <long>(inner.rays.size())
+    for i in xrange(inner.rays.size()):
+      rays[i] = _createVector(inner.rays[i], self._space)
+    return (points, rays)
+
+  @property
+  def dimension(self):
+    return deref(self._face).dimension()
+
+cdef _createFace(const PtrIPOPolyhedronFace& face, const IPOSpace& space):
+  result = Face()
+  result._face = face
+  result._space = space
+  return result
+
+cdef extern from "ipo/polyhedron.h" namespace "ipo":
+  cdef cppclass IPOPolyhedron "ipo::Polyhedron":
+    IPOPolyhedron(PtrIPODefaultOracleWrapper&) except +
+    IPOSpace space() const
+    size_t numPoints() const
+    size_t numRays() const
+    size_t numInequalities() const
+    int dimension()
+    void affineHull(PtrIPOPolyhedronFace& face)
+    const IPOAffineOuterDescription& affineHullOuterDescription()
+    const IPOInnerDescription& affineHullInnerDescription()
+    void setAffineHullLastCheapHeuristicLevel(HeuristicLevel)
+    HeuristicLevel getAffineHullLastCheapHeuristicLevel() const
+    void setAffineHullLastModerateHeuristicLevel(HeuristicLevel)
+    HeuristicLevel getAffineHullLastModerateHeuristicLevel() const
+    PtrIPOPolyhedronFace inequalityToFace(const IPOLinearConstraint&)
+    void addConstraint(const IPOLinearConstraint&, bool);
+    void getFaces(vector[PtrIPOPolyhedronFace]& constraints, bool, bool);
+ctypedef shared_ptr[IPOPolyhedron] PtrIPOPolyhedron
+      
+cdef class Polyhedron:
+  cdef PtrIPOPolyhedron _polyhedron
+
+  def __cinit__(self, OracleBase oracle):
+    self._polyhedron = PtrIPOPolyhedron(new IPOPolyhedron(oracle._wrappedOracle))
+
+  @property
+  def space(self):
+    cdef Space result = Space()
+    result._space = deref(self._polyhedron).space()
+    return result
+
+  @property
+  def numPoints(self):
+    return deref(self._polyhedron).numPoints()
+
+  @property
+  def numRays(self):
+    return deref(self._polyhedron).numRays()
+
+  @property
+  def numInequalities(self):
+    return deref(self._polyhedron).numInequalities()
+
+  def inequalityToFace(self, LinearConstraint constraint):
+    return _createFace(deref(self._polyhedron).inequalityToFace(constraint._constraint), deref(self._polyhedron).space())
+
+  @property
+  def dimension(self):
+    return deref(self._polyhedron).dimension()
+
+  def affineHull(self, Face face):
+    deref(self._polyhedron).affineHull(face._face)
+
+  @property
+  def affineHullOuterDescription(self):
+    cdef IPOAffineOuterDescription outer = deref(self._polyhedron).affineHullOuterDescription()
+    equations = [None] * <long>(outer.size())
+    for i in xrange(outer.size()):
+      equations[i] = _createLinearConstraint(outer[i], deref(self._polyhedron).space())
+    return equations
+
+  @property
+  def affineHullInnerDescription(self):
+    cdef IPOInnerDescription inner = deref(self._polyhedron).affineHullInnerDescription()
+    points = [None] * <long>(inner.points.size())
+    for i in xrange(inner.points.size()):
+      points[i] = _createVector(inner.points[i], deref(self._polyhedron).space())
+    rays = [None] * <long>(inner.rays.size())
+    for i in xrange(inner.rays.size()):
+      rays[i] = _createVector(inner.rays[i], deref(self._polyhedron).space())
+    return (points, rays)
+
+  @property
+  def affineHullLastCheapHeuristicLevel(self):
+    return deref(self._polyhedron).getAffineHullLastCheapHeuristicLevel()
+
+  @affineHullLastCheapHeuristicLevel.setter
+  def affineHullLastCheapHeuristicLevel(self, HeuristicLevel heuristicLevel):
+    deref(self._polyhedron).setAffineHullLastCheapHeuristicLevel(heuristicLevel)
+
+  @property
+  def affineHullLastModerateHeuristicLevel(self):
+    return deref(self._polyhedron).getAffineHullLastModerateHeuristicLevel()
+
+  @affineHullLastModerateHeuristicLevel.setter
+  def affineHullLastModerateHeuristicLevel(self, HeuristicLevel heuristicLevel):
+    deref(self._polyhedron).setAffineHullLastModerateHeuristicLevel(heuristicLevel)
+    
+  def addConstraint(self, LinearConstraint constraint, bool normalize = True):
+    deref(self._polyhedron).addConstraint(constraint._constraint, normalize)
+
+  def getFaces(self, bool onlyInequalities = True, bool onlyWithDimension = False):
+    cdef vector[PtrIPOPolyhedronFace] faces
+    deref(self._polyhedron).getFaces(faces, onlyInequalities, onlyWithDimension)
+    result = [None] * <long>(faces.size())
+    for i in xrange(faces.size()):
+      result[i] = _createFace(faces[i], deref(self._polyhedron).space())
+    return result
 

@@ -70,6 +70,11 @@ namespace ipo {
     {
       return _binary;
     }
+    
+    inline const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet() const
+    {
+      return _mixedIntegerSet;
+    }
 
     /**
      * \brief Restricts the oracle to the face defined by \p newFace.

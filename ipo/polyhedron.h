@@ -230,9 +230,19 @@ namespace ipo {
       _affineHullLastCheapHeuristic = lastCheapHeuristicLevel;
     }
 
+    inline HeuristicLevel getAffineHullLastCheapHeuristicLevel() const
+    {
+      return _affineHullLastCheapHeuristic;
+    }
+
     inline void setAffineHullLastModerateHeuristicLevel(HeuristicLevel lastModerateHeuristicLevel)
     {
       _affineHullLastModerateHeuristic = lastModerateHeuristicLevel;
+    }
+
+    inline HeuristicLevel getAffineHullLastModerateHeuristicLevel() const
+    {
+      return _affineHullLastModerateHeuristic;
     }
 
     void addConstraint(const LinearConstraint& constraint, bool normalize = true);
