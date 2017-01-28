@@ -15,7 +15,7 @@ cdef extern from "ipo/rational.h" namespace "ipo":
 cdef class Rational:
   cdef IPORational _rational
 
-  def __str__(self):
+  def __repr__(self):
     return '{' + IPOrationalToString(self._rational) + '}'
 
 cdef _createRational(const IPORational& number):
@@ -72,7 +72,7 @@ cdef class Vector:
   def size(self):
     return self._vector.size()
 
-  def __str__(self):
+  def __repr__(self):
     return self._space.vectorToString(self._vector)
 
   def index(self, position):
@@ -94,6 +94,9 @@ cdef _createVector(const IPOVector& vector, const IPOSpace& space):
 cdef extern from "ipo/linear_constraint-pub.h" namespace "ipo":
   cdef cppclass IPOLinearConstraint "ipo::LinearConstraint":
     const IPOVector& normal() const
+    const IPORational& rhs() const
+    bool isEquation() const
+    char type() const
 
 cdef class LinearConstraint:
   cdef IPOLinearConstraint _constraint
@@ -107,7 +110,19 @@ cdef class LinearConstraint:
   def normal(self):
     return _createVector(self._constraint.normal(), self._space)
 
-  def __str__(self):
+  @property
+  def rhs(self):
+    return _createRational(self._constraint.rhs())
+
+  @property
+  def isEquation(self):
+    return self._constraint.isEquation()
+
+  @property
+  def type(self):
+    return self._constraint.type()
+
+  def __repr__(self):
     return self._space.linearConstraintToString(self._constraint)
 
 cdef _createLinearConstraint(const IPOLinearConstraint& constraint, const IPOSpace& space):
@@ -169,10 +184,26 @@ cdef class OracleBase:
 ## MixedIntegerSet ##
 
 cdef extern from "ipo/mip.h" namespace "ipo":
+  cdef cppclass IPOMixedIntegerSetVariable "ipo::MixedIntegerSet::Variable":
+    bool integral
+    IPORational upperBound
+    IPORational lowerBound
+
   cdef cppclass IPOMixedIntegerSet "ipo::MixedIntegerSet":
     IPOMixedIntegerSet(const string& fileName)
     const IPOSpace& space() const
+    size_t numVariables() const
+    size_t numRows() const
+    const IPOMixedIntegerSetVariable& variable(size_t) const
+    IPOLinearConstraint upperBoundConstraint(size_t) const
+    IPOLinearConstraint lowerBoundConstraint(size_t) const
+    const IPOLinearConstraint& rowConstraint(size_t row) const
+    const vector[IPOLinearConstraint]& rowConstraints() const
+    const string& rowName(size_t) const
 ctypedef shared_ptr[IPOMixedIntegerSet] PtrIPOMixedIntegerSet
+
+class Variable:
+  pass
 
 cdef class MixedIntegerSet:
   cdef PtrIPOMixedIntegerSet _mixedIntegerSet
@@ -183,6 +214,48 @@ cdef class MixedIntegerSet:
   @property
   def space(self):
     return _createSpace(deref(self._mixedIntegerSet).space())
+
+  @property
+  def numVariables(self):
+    return deref(self._mixedIntegerSet).numVariables()
+
+  @property
+  def numRows(self):
+    return deref(self._mixedIntegerSet).numRows()
+
+  def variable(self, long variableIndex):
+    cdef IPOMixedIntegerSetVariable var = deref(self._mixedIntegerSet).variable(variableIndex)
+    result = Variable()
+    result.integral = var.integral
+    result.upperBound = _createRational(var.upperBound)
+    result.lowerBound = _createRational(var.lowerBound)
+    return result
+
+  @property
+  def variables(self):
+    result = [None] * self.numVariables
+    for i in xrange(self.numVariables):
+      result[i] = self.variable(i)
+    return result
+
+  def upperBoundConstraint(self, long variableIndex):
+    return _createLinearConstraint(deref(self._mixedIntegerSet).upperBoundConstraint(variableIndex), deref(self._mixedIntegerSet).space())
+
+  def lowerBoundConstraint(self, long variableIndex):
+    return _createLinearConstraint(deref(self._mixedIntegerSet).lowerBoundConstraint(variableIndex), deref(self._mixedIntegerSet).space())
+
+  def rowConstraint(self, long rowIndex):
+    return _createLinearConstraint(deref(self._mixedIntegerSet).rowConstraint(rowIndex), deref(self._mixedIntegerSet).space())
+
+  @property
+  def rowConstraints(self):
+    result = [None] * self.numRows
+    for i in xrange(self.numRows):
+      result[i] = self.rowConstraint(i)
+    return result
+  
+  def rowName(self, long rowIndex):
+    return deref(self._mixedIntegerSet).rowName(rowIndex) 
 
 cdef _createMixedIntegerSet(const PtrIPOMixedIntegerSet& mixedIntegerSet):
   result = MixedIntegerSet()
