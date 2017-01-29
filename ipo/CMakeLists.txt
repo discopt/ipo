@@ -29,7 +29,6 @@ set(IPO_SOURCES
   scip_oracle.cpp
   console_app.cpp
   parser.cpp
-  python_wrapper.cpp
   test.cpp
 )
 
@@ -59,7 +58,6 @@ set(IPO_INSTALL_HEADERS
   reconstruct.h
   vector_2d.h
   vector_space_generators.h
-  python_wrapper.h
   test.h
 )
 
