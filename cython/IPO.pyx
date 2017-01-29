@@ -352,9 +352,13 @@ cdef extern from "ipo/affine_hull.h" namespace "ipo":
   void IPOaffineHull "affineHull" (const PtrIPOOracleBase&, IPOInnerDescription&, IPOAffineOuterDescription&, vector[IPOAffineHullHandler*]&,
     size_t, size_t, vector[IPOLinearConstraint]&, bool)
 
-cdef _affineHull(OracleBase oracle, HeuristicLevel lastCheapHeuristic, HeuristicLevel lastModerateHeuristic,
-  givenEquations, approximateDirections):
+def affineHull(OracleBase oracle, HeuristicLevel lastCheapHeuristic = -1, HeuristicLevel lastModerateHeuristic = -1,
+  givenEquations = [], approximateDirections = True):
   # Setup parameters.
+  if lastCheapHeuristic < 0:
+    lastCheapHeuristic = oracle.heuristicLevel + 1
+  if lastModerateHeuristic < 0:
+    lastModerateHeuristic = oracle.heuristicLevel
   cdef PtrIPOOracleBase queryOracle = deref(oracle._wrappedOracle).queryOracle()
   cdef IPOInnerDescription inner
   cdef IPOAffineOuterDescription outer
@@ -385,14 +389,7 @@ cdef _affineHull(OracleBase oracle, HeuristicLevel lastCheapHeuristic, Heuristic
 
   return (dim, (points, rays), equations)
 
-def affineHull(oracle, lastCheapHeuristic = -1, lastModerateHeuristic = -1, givenEquations = [], approximateDirections = True):
-  if lastCheapHeuristic < 0:
-    lastCheapHeuristic = oracle.heuristicLevel + 1
-  if lastModerateHeuristic < 0:
-    lastModerateHeuristic = oracle.heuristicLevel
-  return _affineHull(oracle, lastCheapHeuristic, lastModerateHeuristic, givenEquations, approximateDirections)
-
-## Polyhedron ##
+## Polyhedron::Face ##
 
 cdef extern from "ipo/polyhedron.h" namespace "ipo":
   cdef cppclass IPOPolyhedronFace "ipo::Polyhedron::Face":
@@ -467,7 +464,9 @@ cdef extern from "ipo/polyhedron.h" namespace "ipo":
     void addConstraint(const IPOLinearConstraint&, bool);
     void getFaces(vector[PtrIPOPolyhedronFace]& constraints, bool, bool);
 ctypedef shared_ptr[IPOPolyhedron] PtrIPOPolyhedron
-      
+
+## Polyhedron ##
+
 cdef class Polyhedron:
   cdef PtrIPOPolyhedron _polyhedron
 
@@ -547,4 +546,7 @@ cdef class Polyhedron:
     for i in xrange(faces.size()):
       result[i] = _createFace(faces[i], deref(self._polyhedron).space())
     return result
+
+## SoPlex ##
+
 
