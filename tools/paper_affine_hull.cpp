@@ -16,6 +16,7 @@
 #endif
 
 #include <ipo/affine_hull.h>
+#include <ipo/lp.h>
 #include <ipo/scip_oracle.h>
 #include <ipo/scip_exception.h>
 #include <ipo/exactscip_oracle.h>
@@ -63,7 +64,7 @@ int main(int argc, char** argv)
     return printUsage(argv[0]);
 
   // Read instance and create MixedIntegerSet.
-  
+
   std::cout << "Creating oracles for mixed-integer set defined by " << instanceFile << ".\n" << std::flush;
 
   SCIP* scip = NULL;
@@ -73,22 +74,22 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, instanceFile.c_str(), NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<MixedIntegerSet> mixedIntegerSet = std::make_shared<MixedIntegerSet>(scip);
+  std::shared_ptr<MixedIntegerLinearSet> mixedIntegerLinearSet = std::make_shared<MixedIntegerLinearSet>(scip);
 
   SCIP_CALL_EXC(SCIPfree(&scip));
-
+  
   // Initialize oracles.
   
 #ifdef IPO_WITH_EXACT_SCIP
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
-    "ExactSCIPOracle(" + instanceFile + ")", mixedIntegerSet);
+    "ExactSCIPOracle(" + instanceFile + ")", mixedIntegerLinearSet);
   std::shared_ptr<StatisticsOracle> exactSCIPOracleStats = std::make_shared<StatisticsOracle>(exactSCIPOracle);
 
   std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + instanceFile + ")",
-    mixedIntegerSet, exactSCIPOracleStats);
+    mixedIntegerLinearSet, exactSCIPOracleStats);
 #else
   std::shared_ptr<SCIPOracle> scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + instanceFile + ")",
-    mixedIntegerSet);
+    mixedIntegerLinearSet);
 #endif
 
   if (timeLimit > 0)
@@ -118,18 +119,18 @@ int main(int argc, char** argv)
   poly.setAffineHullLastCheapHeuristicLevel(1); // Caching is cheap.
 #endif
 
-  for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+  for (std::size_t r = 0; r < mixedIntegerLinearSet->numRows(); ++r)
   {
-    const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+    const LinearConstraint& row = mixedIntegerLinearSet->rowConstraint(r);
     poly.addConstraint(row);
   }
-  for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+  for (std::size_t v = 0; v < mixedIntegerLinearSet->numVariables(); ++v)
   {
     LinearConstraint constraint;
-    constraint  = mixedIntegerSet->lowerBoundConstraint(v);
+    constraint  = mixedIntegerLinearSet->lowerBoundConstraint(v);
     if (!constraint.isEquation() && constraint.rhs() > -soplex::infinity)
       poly.addConstraint(constraint);
-    constraint = mixedIntegerSet->upperBoundConstraint(v);
+    constraint = mixedIntegerLinearSet->upperBoundConstraint(v);
     if (!constraint.isEquation() && constraint.rhs() < soplex::infinity)
       poly.addConstraint(constraint);
   }
@@ -139,10 +140,11 @@ int main(int argc, char** argv)
 
   std::vector<AffineHullHandler*> handlers;
   handlers.push_back(&statsHandler);
-  if (!constraintDimensions)
+  if (constraintDimensions)
+    std::cout << "Dimension: " << std::flush;
+  else
     handlers.push_back(&debugHandler);
-
-  std::cout << "Dimension: " << std::flush;
+  
   try
   {
     poly.affineHull(handlers);
@@ -153,16 +155,13 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
   int dim = poly.dimension();
-  std::cout << dim << "\n\n" << std::flush;
-
-  if (!constraintDimensions)
-    handlers.pop_back();
-  
   if (constraintDimensions)
   {
-    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    std::cout << dim << "\n\n" << std::flush;
+
+    for (std::size_t v = 0; v < mixedIntegerLinearSet->numVariables(); ++v)
     {
-      const LinearConstraint& constraint = mixedIntegerSet->lowerBoundConstraint(v);
+      const LinearConstraint& constraint = mixedIntegerLinearSet->lowerBoundConstraint(v);
       if (constraint.isEquation() || constraint.rhs() == -soplex::infinity)
         continue;
       std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
@@ -173,9 +172,9 @@ int main(int argc, char** argv)
       std::cout << face->dimension() << std::endl;
     }
 
-    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    for (std::size_t v = 0; v < mixedIntegerLinearSet->numVariables(); ++v)
     {
-      const LinearConstraint& constraint = mixedIntegerSet->upperBoundConstraint(v);
+      const LinearConstraint& constraint = mixedIntegerLinearSet->upperBoundConstraint(v);
       if (constraint.isEquation() || constraint.rhs() == soplex::infinity)
         continue;
       std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(constraint);
@@ -186,9 +185,9 @@ int main(int argc, char** argv)
       std::cout << face->dimension() << std::endl;
     }
 
-    for (std::size_t r = 0; r < mixedIntegerSet->numRows(); ++r)
+    for (std::size_t r = 0; r < mixedIntegerLinearSet->numRows(); ++r)
     {
-      const LinearConstraint& row = mixedIntegerSet->rowConstraint(r);
+      const LinearConstraint& row = mixedIntegerLinearSet->rowConstraint(r);
       std::shared_ptr<Polyhedron::Face> face = poly.inequalityToFace(row);
       if (row.isEquation())
         continue;
@@ -199,7 +198,6 @@ int main(int argc, char** argv)
       poly.affineHull(face, handlers);
       std::cout << face->dimension() << std::endl;
     }
-
   }
 
   std::cout << "\n";

@@ -3,21 +3,24 @@
 
 #include "common.h"
 
-#ifdef IPO_WITH_SCIP
-
 #include <set>
 #include <map>
 #include <limits>
 
 #include "oracles.h"
-#include "mip.h"
+#include "lp.h"
+#include "mip_oracle.h"
+
+#ifdef IPO_WITH_SCIP
 
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
   #define NDEBUG
 #else
   #include <scip/scip.h>
+  #include <scip/scipdefplugins.h>
 #endif
 
 namespace ipo {
@@ -91,7 +94,7 @@ namespace ipo {
      * to solve mixed-integer programs over the \p mixedIntegerSet.
      */
 
-    SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
+    SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet,
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
@@ -129,9 +132,9 @@ namespace ipo {
 
   protected:
 
-    std::shared_ptr<MixedIntegerSet> constructFromSCIP(SCIP* originalSCIP);
+    std::shared_ptr<MixedIntegerLinearSet> constructFromSCIP(SCIP* originalSCIP);
 
-    void constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet);
+    void constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet);
 
     virtual void solverMaximize(double* objective, double objectiveBound, std::vector<double*>& points,
       std::vector<double*>& rays, bool& hitLimit);

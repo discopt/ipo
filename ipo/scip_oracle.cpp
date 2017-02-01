@@ -71,18 +71,18 @@ namespace ipo {
   SCIPOracle::SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle)
     : MIPOracleBase(name, nextOracle)
   {
-    std::shared_ptr<MixedIntegerSet> mixedIntegerSet = constructFromSCIP(originalSCIP);
+    std::shared_ptr<MixedIntegerLinearSet> mixedIntegerLinearSet = constructFromSCIP(originalSCIP);
 
-    initialize(mixedIntegerSet);
+    initialize(mixedIntegerLinearSet);
   }
 
-  SCIPOracle::SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
+  SCIPOracle::SCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet,
     const std::shared_ptr<OracleBase>& nextOracle)
     : MIPOracleBase(name, nextOracle)
   {
-    constructFromMixedIntegerSet(mixedIntegerSet);
+    constructFromMixedIntegerSet(mixedIntegerLinearSet);
 
-    initialize(mixedIntegerSet);
+    initialize(mixedIntegerLinearSet);
   }
 
   SCIPOracle::~SCIPOracle()
@@ -92,7 +92,7 @@ namespace ipo {
     SCIP_CALL_EXC(SCIPfree(&_scip));
   }
 
-  std::shared_ptr<MixedIntegerSet> SCIPOracle::constructFromSCIP(SCIP* originalSCIP)
+  std::shared_ptr<MixedIntegerLinearSet> SCIPOracle::constructFromSCIP(SCIP* originalSCIP)
   {
     if (!SCIPisTransformed(originalSCIP))
     {
@@ -127,7 +127,7 @@ namespace ipo {
     }
     SCIPhashmapFree(&hashMap);
 
-    return std::make_shared<MixedIntegerSet>(originalSCIP);
+    return std::make_shared<MixedIntegerLinearSet>(originalSCIP);
   }
 
   double SCIPOracle::setTimeLimit(double timeLimit)
@@ -143,9 +143,9 @@ namespace ipo {
     return result;
   }
 
-  void SCIPOracle::constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet)
+  void SCIPOracle::constructFromMixedIntegerSet(const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet)
   {
-    std::size_t n = mixedIntegerSet->space().dimension();
+    std::size_t n = mixedIntegerLinearSet->space().dimension();
 
     // Initialize SCIP.
 
@@ -158,21 +158,20 @@ namespace ipo {
 
     // Create variables.
 
-    _variables.resize(mixedIntegerSet->numVariables());
-    for (std::size_t v = 0; v < mixedIntegerSet->numVariables(); ++v)
+    _variables.resize(mixedIntegerLinearSet->numVariables());
+    for (std::size_t v = 0; v < mixedIntegerLinearSet->numVariables(); ++v)
     {
-      const MixedIntegerSet::Variable& variable = mixedIntegerSet->variable(v);
-      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[v], mixedIntegerSet->space()[v].c_str(), double(variable.lowerBound),
-        double(variable.upperBound), 0.0, mixedIntegerSet->isIntegral(v) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
+      SCIP_CALL_EXC(SCIPcreateVarBasic(_scip, &_variables[v], mixedIntegerLinearSet->space()[v].c_str(), 
+        double(mixedIntegerLinearSet->lowerBound(v)), double(mixedIntegerLinearSet->upperBound(v)), 0.0, 
+        mixedIntegerLinearSet->isIntegral(v) ? SCIP_VARTYPE_INTEGER : SCIP_VARTYPE_CONTINUOUS));
       SCIP_CALL_EXC(SCIPaddVar(_scip, _variables[v]));
     }
 
     // Create row constraints.
 
-    const std::vector<LinearConstraint>& rows = mixedIntegerSet->rowConstraints();
-    for (std::size_t r = 0; r < rows.size(); ++r)
+    for (std::size_t r = 0; r < mixedIntegerLinearSet->numRows(); ++r)
     {
-      const LinearConstraint& constraint = rows[r];
+      const LinearConstraint& constraint = mixedIntegerLinearSet->rowConstraint(r);
       SCIP_CONS* cons = NULL;
       double lhs, rhs;
       if (constraint.type() == '<')
@@ -190,7 +189,7 @@ namespace ipo {
         assert(constraint.type() == '=');
         lhs = rhs = constraint.rhs();
       }
-      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mixedIntegerSet->rowName(r).c_str(), 0, 0, 0, lhs, rhs));
+      SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mixedIntegerLinearSet->rowName(r).c_str(), 0, 0, 0, lhs, rhs));
       const Vector& normal = constraint.normal();
       for (std::size_t p = 0; p < normal.size(); ++p)
       {

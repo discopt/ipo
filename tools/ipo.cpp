@@ -338,17 +338,19 @@ public:
     {
       soplex::DVectorRational lower(oracle()->space().dimension());
       soplex::DVectorRational upper(oracle()->space().dimension());
-      const MixedIntegerSet& mis = *_scipOracle->mixedIntegerSet();
-      for (std::size_t v = 0; v < mis.numVariables(); ++v)
+      std::shared_ptr<MixedIntegerLinearSet> mis = _scipOracle->mixedIntegerLinearSet();
+      for (std::size_t v = 0; v < mis->numVariables(); ++v)
       {
-        lower[v] = mis.variable(v).lowerBound;
-        upper[v] = mis.variable(v).upperBound;
+        lower[v] = mis->lowerBound(v);
+        upper[v] = mis->upperBound(v);
       }
       setRelaxationBounds(lower, upper);
     }
     if (_useInstanceInequalities)
     {
-      addRelaxationConstraints(_scipOracle->mixedIntegerSet()->rowConstraints());
+      std::vector<LinearConstraint> rowConstraints;
+      _scipOracle->mixedIntegerLinearSet()->getConstraints(rowConstraints, false, false);
+      addRelaxationConstraints(rowConstraints);
     }
 #endif
 

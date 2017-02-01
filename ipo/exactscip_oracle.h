@@ -7,7 +7,7 @@
 
 #include "common.h"
 #include "oracles.h"
-#include "mip.h"
+#include "lp.h"
 
 namespace ipo {
 
@@ -31,7 +31,7 @@ namespace ipo {
      * \note This constructor throws an exception if cmake did not find scip-ex during the build.
      */
 
-    ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
+    ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet,
       const std::shared_ptr<OracleBase>& nextOracle = NULL);
 #endif
 
@@ -43,8 +43,8 @@ namespace ipo {
      * the scip-ex \p binary to solve mixed-integer programs over the \p mixedIntegerSet.
      */
 
-    ExactSCIPOracle(const std::string& binary, const std::string& name, const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet,
-      const std::shared_ptr<OracleBase>& nextOracle = NULL);
+    ExactSCIPOracle(const std::string& binary, const std::string& name,
+      const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet, const std::shared_ptr<OracleBase>& nextOracle = NULL);
 
     /**
      * \brief Destructor.
@@ -143,7 +143,7 @@ namespace ipo {
   protected:
     std::string _binary;
     std::string _workingDirectory;
-    std::shared_ptr<MixedIntegerSet> _mixedIntegerSet;
+    std::shared_ptr<MixedIntegerLinearSet> _mixedIntegerLinearSet;
     double _timeLimit;
   };
 
