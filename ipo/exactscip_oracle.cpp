@@ -11,25 +11,25 @@ namespace ipo {
 
 #ifdef IPO_WITH_EXACT_SCIP
 
-  ExactSCIPOracle::ExactSCIPOracle(const std::string& name, const std::shared_ptr< MixedIntegerSet >& mixedIntegerSet,
+  ExactSCIPOracle::ExactSCIPOracle(const std::string& name, const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet,
     const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase(name, nextOracle), _mixedIntegerSet(mixedIntegerSet), _timeLimit(0)
+    : OracleBase(name, nextOracle), _mixedIntegerLinearSet(mixedIntegerLinearSet), _timeLimit(0)
   {
     _binary = IPO_EXACT_SCIP_PATH;
     createWorkingDirectory();
 
-    initializeSpace(_mixedIntegerSet->space());
+    initializeSpace(_mixedIntegerLinearSet->space());
   }
 
 #endif
 
    ExactSCIPOracle::ExactSCIPOracle(const std::string& binary, const std::string& name,
-     const std::shared_ptr<MixedIntegerSet>& mixedIntegerSet, const std::shared_ptr<OracleBase>& nextOracle)
+     const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet, const std::shared_ptr<OracleBase>& nextOracle)
      : OracleBase(name, nextOracle), _binary(binary), _timeLimit(0)
    {
      createWorkingDirectory();
 
-     initializeSpace(_mixedIntegerSet->space());
+     initializeSpace(_mixedIntegerLinearSet->space());
    }
 
 
@@ -134,16 +134,15 @@ namespace ipo {
 
     for (std::size_t v = 0; v < space().dimension(); ++v)
     {
-      const MixedIntegerSet::Variable& var = _mixedIntegerSet->variable(v);
       file << "var x" << v;
-      if (var.integral)
+      if (_mixedIntegerLinearSet->isIntegral(v))
         file << " integer";
       else
         file << " real";
-      if (var.lowerBound > -infinity)
-        file << " >= " << var.lowerBound;
-      if (var.upperBound < infinity)
-        file << " <= " << var.upperBound;
+      if (_mixedIntegerLinearSet->lowerBound(v) > -soplex::infinity)
+        file << " >= " << _mixedIntegerLinearSet->lowerBound(v);
+      if (_mixedIntegerLinearSet->upperBound(v) < soplex::infinity)
+        file << " <= " << _mixedIntegerLinearSet->upperBound(v);
       file << ";\n";
     }
     file << "\nmaximize cost:";
@@ -162,9 +161,10 @@ namespace ipo {
     if (first)
       file << "0*x0";
     file << ";\n\n";
-    for (std::size_t r = 0; r <= _mixedIntegerSet->numRows(); ++r)
+    for (std::size_t r = 0; r <= _mixedIntegerLinearSet->numRows(); ++r)
     {
-      const LinearConstraint& row = r < _mixedIntegerSet->numRows() ? _mixedIntegerSet->rowConstraint(r) : currentFace();
+      const LinearConstraint& row = r < _mixedIntegerLinearSet->numRows() ? _mixedIntegerLinearSet->rowConstraint(r) 
+        : currentFace();
       file << "\nsubto row" << r << ":";
       first = true;
       for (std::size_t p = 0; p < row.normal().size(); ++p)

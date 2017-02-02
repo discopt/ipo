@@ -178,12 +178,12 @@ namespace ipo {
       return _collectOracle->_rays.size();
     }
 
-    inline std::size_t numInequalities() const
+    inline std::size_t numConstraints() const
     {
       return _collectOracle->_inequalities.size();
     }
 
-    inline std::shared_ptr<Face> inequalityToFace(const LinearConstraint& constraint)
+    inline std::shared_ptr<Face> constraintToFace(const LinearConstraint& constraint)
     {
       LinearConstraint normalized = normalize(constraint);
       return _collectOracle->_inequalities[normalized.normal()];

@@ -16,7 +16,8 @@ set(IPO_SOURCES
   reconstruct.cpp
   vector_2d.cpp
   min_norm_2d.cpp
-  mip.cpp
+  mip_oracle.cpp
+  lp.cpp
   facets.cpp
   affine_hull.cpp
   oracle_wrapper.cpp
@@ -39,7 +40,7 @@ set(IPO_INSTALL_HEADERS
   console_app.h
   facets.h
   min_norm_2d.h
-  mip.h
+  mip_oracle.h
   oracles.h
   parameters.h
   parser.h

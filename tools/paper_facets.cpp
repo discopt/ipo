@@ -32,7 +32,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
-  std::shared_ptr<MixedIntegerSet> mixedIntegerSet= std::make_shared<MixedIntegerSet>(scip);
+  std::shared_ptr<MixedIntegerLinearSet> mixedIntegerSet = std::make_shared<MixedIntegerLinearSet>(scip);
 
   SCIP_CALL_EXC(SCIPfree(&scip));
 
@@ -77,17 +77,19 @@ int main(int argc, char** argv)
   spx.setIntParam(SoPlex::OBJSENSE, SoPlex::OBJSENSE_MAXIMIZE);
   spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
 
-  const MixedIntegerSet& mis = *scipOracle->mixedIntegerSet();
-  LPColSetRational cols(mis.numVariables());
+  std::shared_ptr<MixedIntegerLinearSet> mis = scipOracle->mixedIntegerLinearSet();
+  LPColSetRational cols(mis->numVariables());
   DSVectorRational zero;
   for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
   {
-    cols.add(Rational(1), mis.variable(v).lowerBound, zero, mis.variable(v).upperBound);
+    cols.add(Rational(1), mis->lowerBound(v), zero, mis->upperBound(v));
   }
   spx.addColsRational(cols);
-  addToLP(spx, mis.rowConstraints());
+  std::vector<LinearConstraint> rowConstraints;
+  mis->getConstraints(rowConstraints, false, false);
+  addToLP(spx, rowConstraints);
 
-  DVectorRational solution(mis.numVariables());
+  DVectorRational solution(mis->numVariables());
   while (true)
   {
     std::cout << "Solving relaxation LP with " << spx.numRowsRational() << " rows." << std::endl;
