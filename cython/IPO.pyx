@@ -4,6 +4,8 @@ from libcpp.memory cimport shared_ptr
 from libcpp.vector cimport vector
 from libcpp cimport bool
 
+include "config.pxi" # Compile-time definitions
+
 ## Rational ##
 
 cdef extern from "ipo/rational.h" namespace "ipo":
@@ -347,54 +349,58 @@ cdef _createLinearProgram(const PtrIPOLinearProgram& linearProgram):
   result._linearProgram = linearProgram
   return result
 
-## SCIPOracle ##
+IF IPO_WITH_SCIP:
 
-cdef extern from "ipo/scip_oracle.h" namespace "ipo":
-  cdef cppclass IPOSCIPOracle "ipo::SCIPOracle" (IPOOracleBase):
-    IPOSCIPOracle(const string&) except +
-    IPOSCIPOracle(const string&, const PtrIPOOracleBase&) except +
-    IPOSCIPOracle(const string&, const PtrIPOMixedIntegerLinearSet&) except +
-    IPOSCIPOracle(const string&, const PtrIPOMixedIntegerLinearSet&, const PtrIPOOracleBase&) except +
-    const PtrIPOMixedIntegerLinearSet& mixedIntegerLinearSet() const
-    double setTimeLimit(double)
-    double getTimeLimit()
-ctypedef shared_ptr[IPOSCIPOracle] PtrIPOSCIPOracle
+  ## SCIPOracle ##
 
-cdef class SCIPOracle (OracleBase):
-  cdef PtrIPOSCIPOracle _scipOracle
+  cdef extern from "ipo/scip_oracle.h" namespace "ipo":
+    cdef cppclass IPOSCIPOracle "ipo::SCIPOracle" (IPOOracleBase):
+      IPOSCIPOracle(const string&) except +
+      IPOSCIPOracle(const string&, const PtrIPOOracleBase&) except +
+      IPOSCIPOracle(const string&, const PtrIPOMixedIntegerLinearSet&) except +
+      IPOSCIPOracle(const string&, const PtrIPOMixedIntegerLinearSet&, const PtrIPOOracleBase&) except +
+      const PtrIPOMixedIntegerLinearSet& mixedIntegerLinearSet() const
+      double setTimeLimit(double)
+      double getTimeLimit()
+  ctypedef shared_ptr[IPOSCIPOracle] PtrIPOSCIPOracle
 
-  def __cinit__(self, const string& name, MixedIntegerLinearSet mixedIntegerLinearSet = None, OracleBase nextOracle = None):
-    if mixedIntegerLinearSet is None:
-      if nextOracle is None:
-        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name))
+  cdef class SCIPOracle (OracleBase):
+    cdef PtrIPOSCIPOracle _scipOracle
+
+    def __cinit__(self, const string& name, MixedIntegerLinearSet mixedIntegerLinearSet = None, OracleBase nextOracle = None):
+      if mixedIntegerLinearSet is None:
+        if nextOracle is None:
+          self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name))
+        else:
+          self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, nextOracle.getLinkOraclePtr()))
       else:
-        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, nextOracle.getLinkOraclePtr()))
-    else:
-      if nextOracle is None:
-        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerLinearSet._mixedIntegerLinearSet))
-      else:
-        self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerLinearSet._mixedIntegerLinearSet, nextOracle.getLinkOraclePtr()))
-    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
-    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+        if nextOracle is None:
+          self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerLinearSet._mixedIntegerLinearSet))
+        else:
+          self._scipOracle = PtrIPOSCIPOracle(new IPOSCIPOracle(name, mixedIntegerLinearSet._mixedIntegerLinearSet, nextOracle.getLinkOraclePtr()))
+      cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._scipOracle)
+      self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
-  @property
-  def mixedIntegerLinearSet(self):
-    return _createMixedIntegerLinearSet(deref(self._scipOracle).mixedIntegerLinearSet())
+    @property
+    def mixedIntegerLinearSet(self):
+      return _createMixedIntegerLinearSet(deref(self._scipOracle).mixedIntegerLinearSet())
 
-  @property
-  def timeLimit(self):
-    return deref(self._scipOracle).getTimeLimit()
+    @property
+    def timeLimit(self):
+      return deref(self._scipOracle).getTimeLimit()
 
-  @timeLimit.setter
-  def timeLimit(self, limit):
-    assert limit >= 0
-    deref(self._scipOracle).setTimeLimit(limit)
+    @timeLimit.setter
+    def timeLimit(self, limit):
+      assert limit >= 0
+      deref(self._scipOracle).setTimeLimit(limit)
 
 ## ExactSCIPOracle ##
 
 cdef extern from "ipo/exactscip_oracle.h" namespace "ipo":
   cdef cppclass IPOExactSCIPOracle "ipo::ExactSCIPOracle" (IPOOracleBase):
+ 
     IPOExactSCIPOracle(const string& name, const PtrIPOMixedIntegerLinearSet&) except +
+    IPOExactSCIPOracle(const string& binary, const string& name, const PtrIPOMixedIntegerLinearSet&) except +
     const PtrIPOMixedIntegerLinearSet& mixedIntegerLinearSet() const
     double setTimeLimit(double)
     double getTimeLimit()
@@ -402,15 +408,28 @@ ctypedef shared_ptr[IPOExactSCIPOracle] PtrIPOExactSCIPOracle
 
 cdef class ExactSCIPOracle (OracleBase):
   cdef PtrIPOExactSCIPOracle _exactscipOracle
+      
+  IF IPO_WITH_EXACT_SCIP:
 
-  def _init(self, name, MixedIntegerLinearSet mixedIntegerLinearSet):
-    cdef PtrIPOMixedIntegerLinearSet mis = mixedIntegerLinearSet._mixedIntegerLinearSet
-    self._exactscipOracle = PtrIPOExactSCIPOracle(new IPOExactSCIPOracle(name, mis))
-    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._exactscipOracle)
-    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+    def _init(self, name, MixedIntegerLinearSet mixedIntegerLinearSet):
+      cdef PtrIPOMixedIntegerLinearSet mis = mixedIntegerLinearSet._mixedIntegerLinearSet
+      self._exactscipOracle = PtrIPOExactSCIPOracle(new IPOExactSCIPOracle(name, mis))
+      cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._exactscipOracle)
+      self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
-  def __cinit__(self, name, mixedIntegerLinearSet):
-    self._init(name, mixedIntegerLinearSet)
+    def __cinit__(self, name, mixedIntegerLinearSet):
+      self._init(name, mixedIntegerLinearSet)
+
+  ELSE:
+
+    def _init(self, binary, name, MixedIntegerLinearSet mixedIntegerLinearSet):
+      cdef PtrIPOMixedIntegerLinearSet mis = mixedIntegerLinearSet._mixedIntegerLinearSet
+      self._exactscipOracle = PtrIPOExactSCIPOracle(new IPOExactSCIPOracle(binary, name, mis))
+      cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._exactscipOracle)
+      self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+
+    def __cinit__(self, binary, name, mixedIntegerLinearSet):
+      self._init(binary, name, mixedIntegerLinearSet)
 
   @property
   def mixedIntegerLinearSet(self):
@@ -631,7 +650,4 @@ cdef class Polyhedron:
     for i in xrange(faces.size()):
       result[i] = _createFace(faces[i], deref(self._polyhedron).space())
     return result
-
-## SoPlex ##
-
 
