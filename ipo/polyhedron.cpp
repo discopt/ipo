@@ -165,4 +165,23 @@ namespace ipo {
     }
   }
 
+  bool Polyhedron::separatePoint(const Vector& point, std::vector<FacetSeparationHandler*>& extraHandlers, LinearConstraint& constraint,
+    InnerDescription* certificate)
+  {
+    // We need a set of spanning points and rays.
+
+    affineHull();
+    
+    std::vector<FacetSeparationHandler*> handlers;
+    std::copy(extraHandlers.begin(), extraHandlers.end(), std::back_inserter(handlers));
+#ifdef DEBUG
+    DebugFacetSeparationHandler debugHandler(std::cout);
+    handlers.push_back(&debugHandler);
+#endif
+
+    return ipo::separatePoint(_collectOracle, point, _completeFace->_innerDescription, handlers, constraint, certificate);
+
+    // TODO: Add facet with certificates to list of faces.
+  }
+
 }

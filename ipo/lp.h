@@ -39,7 +39,7 @@ namespace ipo {
      * Creates a linear set as a copy of another one.
      */
     
-    LinearSet(const std::shared_ptr<LinearSet>& other);
+    LinearSet(const LinearSet& other);
 
 #ifdef IPO_WITH_SCIP
 
@@ -270,6 +270,22 @@ namespace ipo {
       const std::vector<std::string>& variableNames = std::vector<std::string>(), 
       const std::vector<std::string>& rowNames = std::vector<std::string>());
 
+    /**
+     * \brief Creates a mixed-integer linear set as a copy of another mixed-integer linear set.
+     *
+     * Creates a mixed-integer linear set as a copy of another mixed-integer linear set.
+     */
+
+    MixedIntegerLinearSet(const MixedIntegerLinearSet& other);
+
+    /**
+     * \brief Creates a mixed-integer linear set from a \ref LinearSet.
+     *
+     * Creates a mixed-integer linear set from a \ref LinearSet.
+     */
+
+    MixedIntegerLinearSet(const LinearSet& linearSet);
+
 #ifdef IPO_WITH_SCIP
 
     /**
@@ -343,6 +359,22 @@ namespace ipo {
       const std::vector<std::string>& variableNames = std::vector<std::string>(),
       const std::vector<std::string >& rowNames = std::vector<std::string>());
 
+    /**
+     * \brief Creates a linear program as a copy of another linear program.
+     *
+     * Creates a linear program as a copy of another linear program.
+     */
+
+    LinearProgram(const LinearProgram& linearProgram);
+
+    /**
+     * \brief Creates a linear program from a \ref LinearSet.
+     *
+     * Creates a linear program from a \ref LinearSet.
+     */
+
+    LinearProgram(const LinearSet& linearSet);
+
 #ifdef IPO_WITH_SCIP
 
     /**
@@ -370,8 +402,6 @@ namespace ipo {
     void constructObjective(SCIP *scip);
 
 #endif /* IPO_WITH_SCIP */
-
-    LinearProgram(const std::shared_ptr<LinearSet>& other);
 
     /**
      * \brief Destructor.

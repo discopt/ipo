@@ -112,8 +112,27 @@ int main(int argc, char** argv)
         addToLP(spx, constraint);
       }
       else
-        break;
-
+      {
+        std::default_random_engine generator(0);
+        std::normal_distribution<double> distribution;
+        DVectorReal randomVector(oracle->space().dimension());
+        double norm = 0;
+        for (std::size_t c = 0; c < oracle->space().dimension(); ++c)
+        {
+          double x = distribution(generator);
+          randomVector[c] = x;
+          norm += x*x;
+        }
+        if (norm > 0)
+        {
+          norm = std::sqrt(norm);
+          for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
+          {
+            double x = randomVector[v] / norm;
+            spx.changeObjRational(v, Rational(x));
+          }
+        }
+      }
     }
     else
       assert(false);

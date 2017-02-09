@@ -8,6 +8,7 @@
 #include "oracle_wrapper.h"
 #include "unique_vectors.h"
 #include "affine_hull.h"
+#include "facets.h"
 
 namespace ipo {
 
@@ -249,6 +250,15 @@ namespace ipo {
 
     void getFaces(std::vector<std::shared_ptr<Face> >& constraints, bool onlyInequalities = true,
       bool onlyWithDimension = false);
+
+    bool separatePoint(const Vector& point, std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint,
+      InnerDescription* certificate = NULL);
+
+    inline bool separatePoint(const Vector& point, LinearConstraint& constraint, InnerDescription* certificate)
+    {
+      std::vector<FacetSeparationHandler*> handlers;
+      return separatePoint(point, handlers, constraint, certificate);
+    }
 
   protected:
     std::shared_ptr<CollectOracle> _collectOracle;

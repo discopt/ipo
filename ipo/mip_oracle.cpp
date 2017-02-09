@@ -313,7 +313,7 @@ namespace ipo {
   void MIPOracleBase::initialize(const std::shared_ptr<MixedIntegerLinearSet>& mixedIntegerLinearSet)
   {
     _mixedIntegerLinearSet = mixedIntegerLinearSet;
-    _correctionLP = std::make_shared<LinearProgram>(mixedIntegerLinearSet);
+    _correctionLP = std::make_shared<LinearProgram>(*mixedIntegerLinearSet);
 
     OracleBase::initializeSpace(_mixedIntegerLinearSet->space());
 

@@ -65,8 +65,8 @@ namespace ipo {
     }
   }
 
-  LinearSet::LinearSet(const std::shared_ptr<LinearSet>& other)
-    : _space(other->space()), _rowNames(other->_rowNames)
+  LinearSet::LinearSet(const LinearSet& other)
+    : _space(other.space()), _rowNames(other._rowNames)
   {
     _solver.setIntParam(soplex::SoPlex::SOLVEMODE, soplex::SoPlex::SOLVEMODE_RATIONAL);
     _solver.setIntParam(soplex::SoPlex::SYNCMODE, soplex::SoPlex::SYNCMODE_AUTO);
@@ -78,16 +78,16 @@ namespace ipo {
 
     // Setup columns.
     
-    std::size_t n = other->_solver.numColsRational();
+    std::size_t n = other._solver.numColsRational();
     soplex::LPColSetRational cols(n);
-    other->_solver.getColsRational(0, n - 1, cols);
+    other._solver.getColsRational(0, n - 1, cols);
     _solver.addColsRational(cols);
 
     // Setup rows.
 
-    std::size_t m = other->_solver.numRowsRational();
+    std::size_t m = other._solver.numRowsRational();
     soplex::LPRowSetRational rows(m);
-    other->_solver.getRowsRational(0, m - 1, rows);
+    other._solver.getRowsRational(0, m - 1, rows);
     _solver.addRowsRational(rows);
 
     assert(m == _rowNames.size());
@@ -363,6 +363,18 @@ namespace ipo {
   {
     assert(integrality.size() == lowerBounds.size());
   }
+
+  MixedIntegerLinearSet::MixedIntegerLinearSet(const MixedIntegerLinearSet& other)
+    : LinearSet(other), _integrality(other._integrality)
+  {
+
+  }
+
+  MixedIntegerLinearSet::MixedIntegerLinearSet(const LinearSet& linearSet)
+    : LinearSet(linearSet)
+  {
+    _integrality.resize(linearSet.numVariables(), false);
+  }
   
 #ifdef IPO_WITH_SCIP
   
@@ -405,13 +417,21 @@ namespace ipo {
     changeObjective(objective);
   }
 
-#ifdef IPO_WITH_SCIP
+  LinearProgram::LinearProgram(const LinearProgram& linearProgram)
+    : LinearSet(linearProgram)
+  {
+    soplex::DVectorRational objective(linearProgram.numVariables());
+    linearProgram._solver.getObjRational(objective);
+    _solver.changeObjRational(objective);
+  }
 
-  LinearProgram::LinearProgram(const std::shared_ptr<LinearSet>& other)
-    : LinearSet(other)
+  LinearProgram::LinearProgram(const LinearSet& linearSet)
+    : LinearSet(linearSet)
   {
 
   }
+
+#ifdef IPO_WITH_SCIP
 
   LinearProgram::LinearProgram(SCIP* scip)
     : LinearSet(scip)

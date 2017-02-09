@@ -10,15 +10,29 @@ include "config.pxi" # Compile-time definitions
 
 cdef extern from "ipo/rational.h" namespace "ipo":
   cdef cppclass IPORational "ipo::Rational":
-    pass
+    IPORational()
+    IPORational(double x)
+    IPORational(int x)
 
   string IPOrationalToString "ipo::rationalToString" (const IPORational& rational)
 
 cdef class Rational:
   cdef IPORational _rational
 
+  def __init__(self, init = None):
+    if isinstance(init, float):
+      self._initFromFloat(init)
+    elif isinstance(init, int):
+      self._initFromInt(init)
+
+  def _initFromFloat(self, double x):
+    self._rational = IPORational(x)
+
+  def _initFromInt(self, int x):
+    self._rational = IPORational(x)
+
   def __repr__(self):
-    return '{' + IPOrationalToString(self._rational) + '}'
+    return IPOrationalToString(self._rational)
 
 cdef _createRational(const IPORational& number):
   result = Rational()
@@ -45,6 +59,9 @@ cdef class Space:
   @property
   def dimension(self):
     return self._space.dimension()
+
+  def __repr__(self):
+    return '(' + ','.join([ self.__getitem__(v) for v in xrange(self.dimension) ]) + ')'
 
 cdef _createSpace(const IPOSpace& space):
   result = Space()
@@ -133,6 +150,9 @@ cdef _createLinearConstraint(const IPOLinearConstraint& constraint, const IPOSpa
   result._space = space
   return result
 
+cdef extern from "ipo/linear_constraint.h" namespace "ipo":
+  void IPOscaleIntegral "ipo::scaleIntegral" (IPOLinearConstraint& vector)
+
 ## InnerDescription ##
 
 cdef extern from "ipo/vectors-pub.h" namespace "ipo":
@@ -188,6 +208,7 @@ cdef class OracleBase:
 cdef extern from "ipo/lp.h" namespace "ipo":
   cdef cppclass IPOLinearSet "ipo::LinearSet":
     IPOLinearSet(const string& fileName)
+    IPOLinearSet(const IPOLinearSet& linearSet)
     const IPOSpace& space() const
     size_t numVariables() const
     size_t numRows() const
@@ -209,7 +230,18 @@ ctypedef shared_ptr[IPOLinearSet] PtrIPOLinearSet
 cdef class LinearSet:
   cdef PtrIPOLinearSet _linearSet
 
-  def __init__(self, const string& fileName):
+  def __init__(self, init):
+    if isinstance(init, str):
+      self._initFromString(init)
+    elif isinstance(init, LinearSet):
+      self._initFromLinearSet(init)
+    else:
+      raise Exception('Cannot initialize IPO.LinearSet from %s' % (type(init)))
+
+  def _initFromLinearSet(self, LinearSet linearSet):
+    self._linearSet = PtrIPOLinearSet(new IPOLinearSet(deref(linearSet._getIPOLinearSet())))
+
+  def _initFromString(self, const string& fileName):
     self._linearSet = PtrIPOLinearSet(new IPOLinearSet(fileName))
 
   cdef IPOLinearSet* _getIPOLinearSet(self):
@@ -220,7 +252,7 @@ cdef class LinearSet:
 
   @property
   def space(self):
-    return _createSpace(deref(self._linearSet).space())
+    return _createSpace(self._getIPOLinearSet().space())
 
   @property
   def numVariables(self):
@@ -268,7 +300,7 @@ cdef class LinearSet:
   def changeBounds(self, long variableIndex, Rational newLower, Rational newUpper):
     deref(self._getIPOLinearSet()).changeBounds(variableIndex, newLower._rational, newUpper._rational)
 
-  def addConstraint(self, LinearConstraint constraint, const string& name):
+  def addConstraint(self, LinearConstraint constraint, const string& name = ''):
     deref(self._getIPOLinearSet()).addConstraint(constraint._constraint, name)
 
   def removeConstraint(self, long rowIndex):
@@ -284,13 +316,26 @@ cdef _createLinearSet(const PtrIPOLinearSet& linearSet):
 cdef extern from "ipo/lp.h" namespace "ipo":
   cdef cppclass IPOMixedIntegerLinearSet "ipo::MixedIntegerLinearSet" (IPOLinearSet):
     IPOMixedIntegerLinearSet(const string& fileName)
+    IPOMixedIntegerLinearSet(const IPOMixedIntegerLinearSet& mixedIntegerLinearSet)
+    IPOMixedIntegerLinearSet(const IPOLinearSet& linearSet)
     bool isIntegral(size_t) const
 ctypedef shared_ptr[IPOMixedIntegerLinearSet] PtrIPOMixedIntegerLinearSet
 
 cdef class MixedIntegerLinearSet (LinearSet):
   cdef PtrIPOMixedIntegerLinearSet _mixedIntegerLinearSet
 
-  def __init__(self, const string& fileName):
+  def __init__(self, init):
+    if isinstance(init, str):
+      self._initFromString(init)
+    elif isinstance(init, LinearSet):
+      self._initFromLinearSet(init)
+    else:
+      raise Exception('Cannot initialize IPO.MixedIntegerLinearSet from %s' % (type(init)))
+
+  def _initFromLinearSet(self, LinearSet linearSet):
+    self._mixedIntegerLinearSet = PtrIPOMixedIntegerLinearSet(new IPOMixedIntegerLinearSet(deref(linearSet._getIPOLinearSet())))
+
+  def _initFromString(self, const string& fileName):
     self._mixedIntegerLinearSet = PtrIPOMixedIntegerLinearSet(new IPOMixedIntegerLinearSet(fileName))
 
   cdef IPOLinearSet* _getIPOLinearSet(self):
@@ -315,6 +360,8 @@ cdef extern from "ipo/lp.h" namespace "ipo":
 cdef extern from "ipo/lp.h" namespace "ipo":
   cdef cppclass IPOLinearProgram "ipo::LinearProgram" (IPOLinearSet):
     IPOLinearProgram(const string& fileName)
+    IPOLinearProgram(const PtrIPOLinearSet& linearSet)
+    IPOLinearProgram(const IPOLinearSet& other)
     void changeObjective(const vector[IPORational]&)
     IPOLinearProgramResult solve(IPOVector&, IPORational&)
 ctypedef shared_ptr[IPOLinearProgram] PtrIPOLinearProgram
@@ -322,18 +369,46 @@ ctypedef shared_ptr[IPOLinearProgram] PtrIPOLinearProgram
 cdef class LinearProgram (LinearSet):
   cdef PtrIPOLinearProgram _linearProgram
 
-  def __init__(self, const string& fileName):
+  INFEASIBLE = -1
+  OPTIMAL = 0
+  UNBOUNDED = 1
+
+  def __init__(self, init):
+    if isinstance(init, str):
+      self._initFromString(init)
+    if isinstance(init, LinearProgram):
+      self._initFromLinearProgram(init)
+    elif isinstance(init, LinearSet):
+      self._initFromLinearSet(init)
+    else:
+      raise Exception('Cannot initialize IPO.LinearProgram from %s' % (type(init)))
+
+  def _initFromLinearProgram(self, LinearProgram linearProgram):
+    self._linearProgram = PtrIPOLinearProgram(new IPOLinearProgram(deref(linearProgram._getIPOLinearProgram())))
+
+  def _initFromLinearSet(self, LinearSet linearSet):
+    self._linearProgram = PtrIPOLinearProgram(new IPOLinearProgram(deref(linearSet._getIPOLinearSet())))
+
+  def _initFromString(self, const string& fileName):
     self._linearProgram = PtrIPOLinearProgram(new IPOLinearProgram(fileName))
+
+  cdef IPOLinearProgram* _getIPOLinearProgram(self):
+    return self._linearProgram.get()
 
   cdef IPOLinearSet* _getIPOLinearSet(self):
     return self._linearProgram.get()
 
   def changeObjective(self, objective):
+    assert len(objective) == self.numVariables
     cdef Rational x
     cdef vector[IPORational] obj
-    obj.resize(self.numVariables())
+    obj.resize(self.numVariables)
     for i in xrange(self.numVariables):
-      x = objective[i]
+      c = objective[i]
+      if isinstance(c, Rational):
+        x = objective[i]
+      else:
+        x = Rational(c)
       obj[i] = x._rational
     deref(self._linearProgram).changeObjective(obj)
 
@@ -398,7 +473,7 @@ IF IPO_WITH_SCIP:
 
 cdef extern from "ipo/exactscip_oracle.h" namespace "ipo":
   cdef cppclass IPOExactSCIPOracle "ipo::ExactSCIPOracle" (IPOOracleBase):
- 
+
     IPOExactSCIPOracle(const string& name, const PtrIPOMixedIntegerLinearSet&) except +
     IPOExactSCIPOracle(const string& binary, const string& name, const PtrIPOMixedIntegerLinearSet&) except +
     const PtrIPOMixedIntegerLinearSet& mixedIntegerLinearSet() const
@@ -408,7 +483,7 @@ ctypedef shared_ptr[IPOExactSCIPOracle] PtrIPOExactSCIPOracle
 
 cdef class ExactSCIPOracle (OracleBase):
   cdef PtrIPOExactSCIPOracle _exactscipOracle
-      
+
   IF IPO_WITH_EXACT_SCIP:
 
     def _init(self, name, MixedIntegerLinearSet mixedIntegerLinearSet):
@@ -504,7 +579,7 @@ cdef extern from "ipo/polyhedron.h" namespace "ipo":
     const IPOInnerDescription& innerDescription() const
     const int dimension() const
 ctypedef shared_ptr[IPOPolyhedronFace] PtrIPOPolyhedronFace
-  
+
 cdef class Face:
   cdef PtrIPOPolyhedronFace _face
   cdef IPOSpace _space
@@ -567,6 +642,7 @@ cdef extern from "ipo/polyhedron.h" namespace "ipo":
     PtrIPOPolyhedronFace constraintToFace(const IPOLinearConstraint&)
     void addConstraint(const IPOLinearConstraint&, bool);
     void getFaces(vector[PtrIPOPolyhedronFace]& constraints, bool, bool);
+    bool separatePoint(const IPOVector&, IPOLinearConstraint&, IPOInnerDescription*)
 ctypedef shared_ptr[IPOPolyhedron] PtrIPOPolyhedron
 
 ## Polyhedron ##
@@ -639,7 +715,7 @@ cdef class Polyhedron:
   @affineHullLastModerateHeuristicLevel.setter
   def affineHullLastModerateHeuristicLevel(self, HeuristicLevel heuristicLevel):
     deref(self._polyhedron).setAffineHullLastModerateHeuristicLevel(heuristicLevel)
-    
+
   def addConstraint(self, LinearConstraint constraint, bool normalize = True):
     deref(self._polyhedron).addConstraint(constraint._constraint, normalize)
 
@@ -650,4 +726,26 @@ cdef class Polyhedron:
     for i in xrange(faces.size()):
       result[i] = _createFace(faces[i], deref(self._polyhedron).space())
     return result
+
+  def separatePoint(self, point, withCertificate = False, scaleIntegral = True):
+    cdef Vector cppPoint = point
+    cdef IPOVector ipoPoint = cppPoint._vector
+    cdef IPOLinearConstraint ipoConstraint
+    cdef IPOInnerDescription inner
+    cdef bool separated
+    if withCertificate:
+      separated = deref(self._polyhedron).separatePoint(ipoPoint, ipoConstraint, &inner)
+    else:
+      separated = deref(self._polyhedron).separatePoint(ipoPoint, ipoConstraint, NULL)
+    if separated:
+      if scaleIntegral:
+        IPOscaleIntegral(ipoConstraint)
+      constraint = _createLinearConstraint(ipoConstraint, deref(self._polyhedron).space())
+    else:
+      constraint = None
+    if withCertificate:
+      return (separated, constraint, None)
+      # TODO: Convert inner...
+    else:
+      return constraint
 
