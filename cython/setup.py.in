@@ -53,19 +53,20 @@ def parseLibraryDirs(dirs):
 
 IPO_library_dirs = parseLibraryDirs(IPO_library_dirs)
 
-#print GMP_include_dirs
-#print GMP_libraries
-print GMPXX_include_dirs
-print GMPXX_libraries
-print SoPlex_include_dirs
-print SoPlex_libraries
-print SCIP_include_dirs
-print SCIP_libraries
-print ZIMPL_include_dirs
-print ZIMPL_libraries
-print IPO_include_dirs
-print IPO_libraries
-print IPO_source
+if False:
+  print GMP_include_dirs
+  print GMP_libraries
+  print GMPXX_include_dirs
+  print GMPXX_libraries
+  print SoPlex_include_dirs
+  print SoPlex_libraries
+  print SCIP_include_dirs
+  print SCIP_libraries
+  print ZIMPL_include_dirs
+  print ZIMPL_libraries
+  print IPO_include_dirs
+  print IPO_libraries
+  print IPO_source
 
 ext = Extension(
   'IPO',

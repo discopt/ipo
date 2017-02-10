@@ -78,6 +78,10 @@ else()
   find_package(IPO REQUIRED)
 endif()
 
+## Python
+
+find_package(PythonInterp)
+
 ## Cython
 
 find_package(Cython)
