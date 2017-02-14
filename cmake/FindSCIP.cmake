@@ -8,6 +8,9 @@
 # SCIP_LPS
 #   Set this variable to "spx" (="spx2") or "spx1" (others not implemented, yet).
 #   The default is "spx".
+# SCIP_TPI
+#   Set this variable to "none", "openmp" or "tnycthrd".
+#   The default is "none"
 # SCIP_BUILD
 #   Set this variable to "opt", "dbg" or "prf" for corresponding builds.
 #   The default is "opt".
@@ -66,12 +69,15 @@ set(_SCIP_ROOT_HINTS ${SCIP_ROOT_DIR} ENV ${SCIP_ROOT_DIR})
 
 # Handle SCIP_USE_STATIC_LIBS.
 if(SCIP_USE_STATIC_LIBS)
+  set(_SCIP_LIB_PATHS lib lib/static)
   set(_SCIP_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES ${CMAKE_FIND_LIBRARY_SUFFIXES})
   if(WIN32)
     set(CMAKE_FIND_LIBRARY_SUFFIXES .lib .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
   else()
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a )
   endif()
+else()
+  set(_SCIP_LIB_PATHS lib lib/shared)
 endif()
 
 # Read SCIP_BUILD from (environment) variable.
@@ -89,6 +95,14 @@ elseif ($ENV{SCIP_LPS} MATCHES "^(spx|spx2|spx1)$")
   set(SCIP_LPS $ENV{SCIP_LPS})
 else()
   set(SCIP_LPS "spx")
+endif()
+
+# Read SCIP_TPI from (environment) variable.
+if (${SCIP_TPI} MATCHES "^(none|openmp|tnycthrd)$")
+elseif ($ENV{SCIP_TPI} MATCHES "^(none|openmp|tnycthrd)$")
+  set(SCIP_TPI $ENV{SCIP_TPI})
+else()
+  set(SCIP_TPI "none")
 endif()
 
 # Read SCIP_LPS_BUILD from (environment) variable.
@@ -148,7 +162,10 @@ endif()
 find_path(SCIP_ROOT_DIR NAMES include/scip/scip.h src/scip/scip.h HINTS ${_SCIP_ROOT_HINTS})
 
 # Include directory.
-find_path(SCIP_INCLUDE_DIR NAMES scip/scip.h PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES include src)
+find_path(SCIP_INCLUDE_DIR NAMES scip/scip.h HINTS ${SCIP_ROOT_DIR} PATH_SUFFIXES include src
+  NO_DEFAULT_PATH NO_CMAKE_ENVIRONMENT_PATH NO_CMAKE_PATH NO_SYSTEM_ENVIRONMENT_PATH NO_CMAKE_SYSTEM_PATH NO_CMAKE_FIND_ROOT_PATH)
+find_path(SCIP_INCLUDE_DIR NAMES scip/scip.h HINTS ${SCIP_ROOT_DIR} PATH_SUFFIXES include src)
+
 if (SCIP_INCLUDE_DIR)
   set(SCIP_INCLUDE_DIRS ${SCIP_INCLUDE_DIR})
 
@@ -167,9 +184,11 @@ if (SCIP_INCLUDE_DIR)
   # Search for libscip corresponding to version.
   set(SCIP_VERSION "${SCIP_VERSION_MAJOR}.${SCIP_VERSION_MINOR}.${SCIP_VERSION_PATCH}")
   set(_SCIP_VERSION_SUFFIX "${_SCIP_OSTYPE}.${_SCIP_ARCH}.${_SCIP_COMP}.${_SCIP_BUILD}")
-  find_library(SCIP_SCIP_LIBRARY NAMES "scip-${SCIP_VERSION}.${_SCIP_VERSION_SUFFIX}" "scip-${SCIP_VERSION}.${SCIP_VERSION_SUBVERSION}.${_SCIP_VERSION_SUFFIX}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+
+  find_library(SCIP_SCIP_LIBRARY NAMES "scip-${SCIP_VERSION}.${_SCIP_VERSION_SUFFIX}" "scip-${SCIP_VERSION}.${SCIP_VERSION_SUBVERSION}.${_SCIP_VERSION_SUFFIX}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
+
   if(NOT SCIP_SCIP_LIBRARY)
-    find_library(SCIP_SCIP_LIBRARY NAMES "scip-${SCIP_VERSION}.${_SCIP_VERSION_SUFFIX}" "scip-${SCIP_VERSION}.${SCIP_VERSION_SUBVERSION}.${_SCIP_VERSION_SUFFIX}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    find_library(SCIP_SCIP_LIBRARY NAMES "scip-${SCIP_VERSION}.${_SCIP_VERSION_SUFFIX}" "scip-${SCIP_VERSION}.${SCIP_VERSION_SUBVERSION}.${_SCIP_VERSION_SUFFIX}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
   endif()
 
   if (SCIP_SCIP_LIBRARY)
@@ -180,7 +199,7 @@ if (SCIP_INCLUDE_DIR)
       message(STATUS "SCIP library libscip-${SCIP_VERSION}[.${SCIP_VERSION_SUBVERSION}].${_SCIP_VERSION_SUFFIX} was not found. Search paths: ${_SCIP_ROOT_HINTS}")
 
       # Check if some other version was found and report to user.
-      find_library(SCIP_SCIP_LIBRARY_TEST NAMES "scip" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+      find_library(SCIP_SCIP_LIBRARY_TEST NAMES "scip" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
       if (SCIP_SCIP_LIBRARY_TEST)
         message(STATUS "Found SCIP library ${SCIP_SCIP_LIBRARY_TEST} different from the one promised by ${SCIP_INCLUDE_DIRS}/scip/def.h")
       endif()
@@ -188,9 +207,9 @@ if (SCIP_INCLUDE_DIR)
   endif()
   
   # Search for libobjscip
-  find_library(SCIP_OBJSCIP_LIBRARY NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(SCIP_OBJSCIP_LIBRARY NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
   if(NOT ${SCIP_OBJSCIP_LIBRARY})
-    find_library(SCIP_OBJSCIP_LIBRARY NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    find_library(SCIP_OBJSCIP_LIBRARY NAMES "objscip-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
   endif()
   if(NOT ${SCIP_OBJSCIP_LIBRARY} MATCHES "objscip")
     set(_SCIP_FOUND_ALL FALSE)
@@ -200,9 +219,9 @@ if (SCIP_INCLUDE_DIR)
   endif()
   
   # Search for nlpi. TODO: cppad is currently hard-coded, while ipopt is not recognized.
-  find_library(SCIP_NLPI_LIBRARY NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+  find_library(SCIP_NLPI_LIBRARY NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
   if(NOT ${SCIP_NLPI_LIBRARY})
-    find_library(SCIP_NLPI_LIBRARY NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+    find_library(SCIP_NLPI_LIBRARY NAMES "nlpi.cppad-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
   endif()
   if(NOT ${SCIP_NLPI_LIBRARY} MATCHES "nlpi")
     set(_SCIP_FOUND_ALL FALSE)
@@ -210,13 +229,29 @@ if (SCIP_INCLUDE_DIR)
       message(STATUS "SCIP library libnlpi.cppad-${SCIP_VERSION_STRING} was not found.")
     endif()
   endif()
-  
+
+  if(${SCIP_VERSION_MAJOR} GREATER 3)
+    # Search for libtpi${SCIP_TPI}
+    find_library(SCIP_TPI_LIBRARY NAMES "tpi${SCIP_TPI}-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
+    if(NOT ${SCIP_TPI_LIBRARY})
+      find_library(SCIP_TPI_LIBRARY NAMES "lpi${SCIP_TPI}-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
+    endif()
+    if(NOT ${SCIP_TPI_LIBRARY} MATCHES "${SCIP_TPI}")
+      set(_SCIP_FOUND_ALL FALSE)
+      if(NOT SCIP_FIND_QUIETLY)
+        message(STATUS "SCIP library libtpi${SCIP_TPI}-${SCIP_VERSION_STRING} was not found.")
+      endif()
+    endif()
+  else()
+    set(SCIP_TPI_LIBRARY)
+  endif()
+
   # Search for the LP solver: spx
   if(${SCIP_LPS} STREQUAL "spx")
     # Search for liblpispx
-    find_library(SCIP_LPI_LIBRARY NAMES "lpispx-${SCIP_VERSION_STRING}" "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    find_library(SCIP_LPI_LIBRARY NAMES "lpispx-${SCIP_VERSION_STRING}" "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
     if(NOT ${SCIP_LPI_LIBRARY})
-      find_library(SCIP_LPI_LIBRARY NAMES "lpispx-${SCIP_VERSION_STRING}" "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+      find_library(SCIP_LPI_LIBRARY NAMES "lpispx-${SCIP_VERSION_STRING}" "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
     endif()
     if(NOT ${SCIP_LPI_LIBRARY} MATCHES "spx")
       set(_SCIP_FOUND_ALL FALSE)
@@ -243,9 +278,9 @@ if (SCIP_INCLUDE_DIR)
   # Search for the LP solver: spx2
   if (${SCIP_LPS} STREQUAL "spx2")
     # Search for liblpispx2
-    find_library(SCIP_LPI_LIBRARY NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    find_library(SCIP_LPI_LIBRARY NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
     if(NOT ${SCIP_LPI_LIBRARY})
-      find_library(SCIP_LPI_LIBRARY NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+      find_library(SCIP_LPI_LIBRARY NAMES "lpispx2-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
     endif()
     if(NOT ${SCIP_LPI_LIBRARY} MATCHES "spx2")
       set(_SCIP_FOUND_ALL FALSE)
@@ -272,9 +307,9 @@ if (SCIP_INCLUDE_DIR)
   # Search for the LP solver: spx1
   if (${SCIP_LPS} STREQUAL "spx1")
     # Search for liblpispx1
-    find_library(SCIP_LPI_LIBRARY NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib NO_DEFAULT_PATH)
+    find_library(SCIP_LPI_LIBRARY NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS} NO_DEFAULT_PATH)
     if(NOT ${SCIP_LPI_LIBRARY})
-      find_library(SCIP_LPI_LIBRARY NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES lib)
+      find_library(SCIP_LPI_LIBRARY NAMES "lpispx1-${SCIP_VERSION_STRING}" PATHS ${SCIP_ROOT_DIR} PATH_SUFFIXES ${_SCIP_LIB_PATHS})
     endif()
     if(NOT ${SCIP_LPI_LIBRARY} MATCHES "liblpispx1")
       set(_SCIP_FOUND_ALL FALSE)
@@ -300,7 +335,7 @@ if (SCIP_INCLUDE_DIR)
   
   if (_SCIP_FOUND_ALL)
     set(SCIP_LIBRARIES
-      ${SCIP_OBJSCIP_LIBRARY} ${SCIP_SCIP_LIBRARY} ${SCIP_LPI_LIBRARY} ${SCIP_NLPI_LIBRARY} ${_SCIP_LIB_LPSOLVER}
+      ${SCIP_OBJSCIP_LIBRARY} ${SCIP_SCIP_LIBRARY} ${SCIP_TPI_LIBRARY} ${SCIP_LPI_LIBRARY} ${SCIP_NLPI_LIBRARY} ${_SCIP_LIB_LPSOLVER}
       ${ZLIB_LIBRARIES} ${Readline_LIBRARY} ${GMP_LIBRARIES}
     )
     if (ZIMPL_FOUND)
