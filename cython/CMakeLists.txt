@@ -23,12 +23,14 @@ if(Cython_FOUND AND PYTHONINTERP_FOUND)
   configure_file(config.pxi config.pxi)
 
   set(OUTPUT "${CMAKE_CURRENT_BINARY_DIR}/build")
+  set(TIMESTAMP "${OUTPUT}/ipo-cython.timestamp")
 
-  add_custom_command(OUTPUT ${OUTPUT}/timestamp 
+  add_custom_command(OUTPUT ${TIMESTAMP}
     COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/setup.py build
-    COMMAND ${CMAKE_COMMAND} -E touch ${OUTPUT}/timestamp
+    COMMAND ${CMAKE_COMMAND} -E touch ${TIMESTAMP}
     DEPENDS ${CMAKE_CURRENT_SOURCE_DIR}/setup.py.in ${CMAKE_CURRENT_SOURCE_DIR}/IPO.pyx
   )
-  add_custom_target(target ALL DEPENDS ${OUTPUT}/timestamp)
+
+  add_custom_target(ipo-cython ALL DEPENDS ${TIMESTAMP})
 
 endif()
