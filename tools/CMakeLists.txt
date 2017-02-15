@@ -21,6 +21,8 @@ if(SCIP_FOUND)
     ${IPO_LIBRARIES}
     ${SCIP_LIBRARIES}
   )
+
+  install(TARGETS ipo-paper-affine-hull DESTINATION bin COMPONENT runtime)
 endif()
 
 # paper-facets
@@ -34,17 +36,6 @@ if(SCIP_FOUND)
     ${IPO_LIBRARIES}
     ${SCIP_LIBRARIES}
   )
-endif()
 
-# sage-playground
-
-if(SCIP_FOUND)
-  add_executable(sage-playground
-    sage_playground.cpp
-  )
-
-  target_link_libraries(sage-playground
-    ${IPO_LIBRARIES}
-    ${SCIP_LIBRARIES}
-  )
+  install(TARGETS ipo-paper-facets DESTINATION bin COMPONENT runtime)
 endif()

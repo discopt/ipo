@@ -10,7 +10,7 @@
   #include <scip/scipdefplugins.h>
   #include <scip/cons_linear.h>
 #endif
-  
+
 #include <ipo/scip_oracle.h>
 #include <ipo/scip_exception.h>
 #include <ipo/affine_hull.h>
@@ -57,6 +57,14 @@ int main(int argc, char** argv)
   AffineOuterDescription outer;
   affineHull(oracle, inner, outer, affineHullHandlers, 2, 0);
   std::cout << "Dimension: " << (long(inner.points.size() + inner.rays.size()) - 1) << std::endl;
+
+  std::cout << "Equations:\n";
+  for (std::size_t i = 0; i < outer.size(); ++i)
+  {
+    oracle->space().printLinearConstraint(std::cout, outer[i]);
+    std::cout << "\n";
+  }
+  std::cout << std::endl;
 
 //   exactScipOracleStats->reset();
   scipOracleStats->reset();
