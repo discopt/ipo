@@ -490,6 +490,7 @@ namespace ipo {
     Vector vector;
     while (true)
     {
+      _correctionLP->writeToFile("foo.lp");
       LinearProgram::Result result = _correctionLP->solve(vector, objectiveValue);
       
       if (result == LinearProgram::UNBOUNDED)

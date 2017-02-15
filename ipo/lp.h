@@ -427,6 +427,14 @@ namespace ipo {
      */
 
     Result solve(Vector& vector, Rational& objectiveValue);
+
+    /**
+     * \brief Writes the LP to \p fileName.
+     * 
+     * Writes the LP to \p fileName.
+     */
+
+    void writeToFile(const std::string& fileName);
   };
 
 } /* namespace ipo */

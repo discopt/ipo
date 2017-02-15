@@ -511,7 +511,9 @@ namespace ipo {
     _timeApproximateLPs = 0.0;
     _timeExactLPs = 0.0;
     _timeOracles = 0.0;
+    _timeLastBegin = 0.0;
     _timeLastEvent = 0.0;
+    _timeAll = 0.0;
   }
 
   void StatisticsFacetSeparationHandler::notify(FacetSeparationHandler::Event event, FacetSeparationState& state)

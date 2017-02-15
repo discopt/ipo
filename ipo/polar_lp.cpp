@@ -46,7 +46,7 @@ namespace ipo {
     data->addVariable("beta");
     _space = new Space(data);
 
-    _spx = new ReproSoPlex;
+    _spx = new SoPlex;
     _spx->setIntParam(SoPlex::SOLVEMODE, approximate ? SoPlex::SOLVEMODE_REAL : SoPlex::SOLVEMODE_RATIONAL);
     _spx->setIntParam(SoPlex::SYNCMODE, SoPlex::SYNCMODE_AUTO);
     if (!approximate)

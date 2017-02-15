@@ -1,0 +1,71 @@
+#!/usr/bin/python
+
+import sys
+import IPO
+import random
+
+A =      [[ 1, 1, 0, 0, 1 ],
+          [ 0, 1, 1, 0, 1 ],
+          [ 0, 0, 1, 1, 1 ],
+          [ 1, 0, 0, 1, 1 ]]
+
+weights = [ 0.0, 0.0, 0.0, 0.0, 1.0 ]
+N = 500
+
+m = len(A)
+n = len(A[0])
+
+# Print LP.
+
+print('max  %s\n' % (weights))
+print('vars  %s' % (' '.join([ ('x%02d' % (c+1)) for c in xrange(n) ])))
+for r in xrange(m):
+  if r == 0:
+    st = 's.t.'
+  else:
+    st = '    '
+  row = ' '.join([('%3d' % (x)) for x in A[r]])
+  print('%s %s   <= 1' % (st, row))
+
+# Write LP.
+
+fileName = '/tmp/hypergraph.lp'
+lpData = '''
+minimize cost: 0 x01
+s.t.
+'''
+for r in xrange(m):
+  lpData += ' + '.join([ ('%d x%02d' % (A[r][c], c+1)) for c in xrange(n) ]) + ' <= 1\n'
+lpData += 'binaries\n'
+lpData += ' '.join([ ('x%02d' % (c+1)) for c in xrange(n) ]) + '\n'
+lpData += 'end\n'
+lpFile = open(fileName, 'w')
+lpFile.write(lpData)
+lpFile.close()
+
+mils = IPO.MixedIntegerLinearSet(fileName)
+oracle = IPO.SCIPOracle(fileName, mils)
+P = IPO.Polyhedron(oracle)
+
+cons = mils.getConstraints()
+lp = IPO.LinearProgram(mils)
+
+print 'Generating facets for %d directions.' % (N)
+for i in xrange(N):
+  #print('Random objective #%d' % (i+1))
+  objective = [ weights[c] + random.random() for c in xrange(lp.numVariables) ]
+  lp.changeObjective(objective)
+
+  while True:
+    sys.stdout.write('.')
+    sys.stdout.flush()
+    #print('Solving LP with %d rows.' % (lp.numRows))
+    (status, point, value) = lp.solve()
+    assert status == IPO.LinearProgram.OPTIMAL
+    #print('LP-optimum: %s' % (point))
+    con = P.separatePoint(point)
+    if con is None:
+      break
+    print('Separated facet: %s' % (cons))
+    lp.addConstraint(con)
+print

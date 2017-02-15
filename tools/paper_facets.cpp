@@ -65,7 +65,7 @@ int main(int argc, char** argv)
   std::vector<FacetSeparationHandler*> facetSeparationHandlers;
   DebugFacetSeparationHandler debugHandler(std::cout, true, true);
   StatisticsFacetSeparationHandler statsHandler;
-  facetSeparationHandlers.push_back(&debugHandler);
+//   facetSeparationHandlers.push_back(&debugHandler);
   facetSeparationHandlers.push_back(&statsHandler);
 
   SoPlex spx;
@@ -90,7 +90,7 @@ int main(int argc, char** argv)
   addToLP(spx, rowConstraints);
 
   DVectorRational solution(mis->numVariables());
-  while (true)
+  for (std::size_t i = 0; i < 20; ++i)
   {
     std::cout << "Solving relaxation LP with " << spx.numRowsRational() << " rows." << std::endl;
 

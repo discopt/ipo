@@ -207,7 +207,7 @@ namespace ipo {
       SCIP_CALL_EXC(SCIPreleaseCons(_scip, &cons));
     }
   }
-  
+
   std::shared_ptr<MixedIntegerLinearSet> SCIPOracle::constructFromFile(const std::string& fileName)
   {
     SCIP_CALL_EXC(SCIPcreate(&_scip));

@@ -188,5 +188,33 @@ namespace ipo {
       scaleIntegral(constraints[i]);
   }
 
+  void addToLP(soplex::ReproSoPlex& spx, const LinearConstraint& constraint)
+  {
+    const Rational& rhs = constraint.rhs();
+    soplex::DSVectorRational normal(constraint.normal().size());
+    vectorToSparse(constraint.normal(), normal);
+    if (constraint.type() == '<')
+      spx.addRowRational(soplex::LPRowRational(-soplex::infinity, normal, rhs));
+    else if (constraint.type() == '>')
+      spx.addRowRational(soplex::LPRowRational(rhs, normal, soplex::infinity));
+    else
+      spx.addRowRational(soplex::LPRowRational(rhs, normal, rhs));
+  }
+
+  void addToLP(soplex::ReproSoPlex& spx, const std::vector< LinearConstraint >& constraints)
+  {
+    soplex::DSVectorRational normal(spx.numColsRational());
+    for (std::size_t i = 0; i < constraints.size(); ++i)
+    {
+      const Rational& rhs = constraints[i].rhs();
+      vectorToSparse(constraints[i].normal(), normal);
+      if (constraints[i].type() == '<')
+        spx.addRowRational(soplex::LPRowRational(-soplex::infinity, normal, rhs));
+      else if (constraints[i].type() == '>')
+        spx.addRowRational(soplex::LPRowRational(rhs, normal, soplex::infinity));
+      else
+        spx.addRowRational(soplex::LPRowRational(rhs, normal, rhs));
+    }
+  }
 
 } /* namespace ipo */

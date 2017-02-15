@@ -38,9 +38,11 @@ namespace ipo {
     {
       if (variableNames.empty())
       {
-        std::stringstream str;
-        str << "var#" << v << std::endl;
-        spaceData->addVariable(str.str());
+        char buffer[256];
+        snprintf(buffer, 256, "var#%ld", v);
+//         std::stringstream str;
+//         str << "var#" << v << std::endl;
+        spaceData->addVariable(buffer);
       }
       else
       {
@@ -58,9 +60,9 @@ namespace ipo {
       _rowNames.resize(_solver.numRowsRational());
       for (std::size_t r = 0; r < _solver.numRowsRational(); ++r)
       {
-        std::stringstream str;
-        str << "row#" << r;
-        _rowNames[r] = str.str();
+        char buffer[256];
+        snprintf(buffer, 256, "row#%ld", r);
+        _rowNames[r] = buffer;
       }
     }
   }
@@ -81,6 +83,9 @@ namespace ipo {
     std::size_t n = other._solver.numColsRational();
     soplex::LPColSetRational cols(n);
     other._solver.getColsRational(0, n - 1, cols);
+    // Clear column vectors - they are added later.
+    for (std::size_t c = 0; c < n; ++c)
+      cols.colVector_w(c).clear();
     _solver.addColsRational(cols);
 
     // Setup rows.
@@ -508,6 +513,11 @@ namespace ipo {
     }
     else
       throw std::runtime_error("Error while solving a LinearProgram using SoPlex.");
+  }
+
+  void LinearProgram::writeToFile(const std::string& fileName)
+  {
+    _solver.writeFileRational(fileName.c_str());
   }
 
 } /* namespace ipo */

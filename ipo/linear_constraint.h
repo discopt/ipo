@@ -3,6 +3,8 @@
 
 #include "linear_constraint-pub.h"
 
+#include "soplex_reproduce.h"
+
 namespace ipo {
 
   LinearConstraint addScaled(char type, const LinearConstraint& a, int scaleA, const LinearConstraint& b, int scaleB);
@@ -14,6 +16,12 @@ namespace ipo {
   LinearConstraint integralScaled(const LinearConstraint& constraint);
   void scaleIntegral(LinearConstraint& constraint);
   void scaleIntegral(std::vector<LinearConstraint>& constraints);
+  
+  // DEBUG:
+  
+  void addToLP(soplex::ReproSoPlex& spx, const LinearConstraint& constraint);
+
+  void addToLP(soplex::ReproSoPlex& spx, const std::vector<LinearConstraint>& constraints);
 
 
 } /* namespace ipo */

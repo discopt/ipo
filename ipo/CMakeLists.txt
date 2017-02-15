@@ -21,6 +21,7 @@ set(IPO_SOURCES
   facets.cpp
   affine_hull.cpp
   oracle_wrapper.cpp
+  soplex_reproduce.cpp
   timer.cpp
   polar_lp.cpp
   smallest_face.cpp
