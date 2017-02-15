@@ -47,7 +47,7 @@ Alternative A: Install ZIMPL, SoPlex and SCIP to some folder, e.g., /usr/local/:
 4. If you already have SCIP installed, note that IPO needs certain header files
    (see `cp` command above).
 
-5. Subsequently, by ${ZIMPL}, ${SOPLEX} and ${SCIP} this manual refers to the installation path, e.g., /usr/local/
+5. Subsequently, by ${ZIMPL}, ${SoPlex} and ${SCIP} this manual refers to the installation path, e.g., /usr/local/
 
 
 
@@ -75,7 +75,7 @@ Alternative B: Just compile ZIMPL, SoPlex and SCIP:
    $ cd scip-*/
    $ make OPT=opt LPS=spx2 LPSOPT=opt
 
-4. Subsequently, by ${ZIMPL}, ${SOPLEX} and ${SCIP} this manual refers to the 
+4. Subsequently, by ${ZIMPL}, ${SoPlex} and ${SCIP} this manual refers to the 
    respective paths in scipoptsuite-*.
 
 
@@ -95,8 +95,9 @@ issue the following commands:
   $ cd build
 
 3. Perform system checks and create the makefiles.
+   Note that it must be `SoPlex` and not `SOPLEX`!
 
-  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSoPlex_ROOT_DIR=${SOPLEX} ..
+  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSoPlex_ROOT_DIR=${SoPlex} ..
 
 4. Build IPO.
 
