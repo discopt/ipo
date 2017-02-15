@@ -33,4 +33,6 @@ if(Cython_FOUND AND PYTHONINTERP_FOUND)
 
   add_custom_target(ipo-cython ALL DEPENDS ${TIMESTAMP})
 
+  install(CODE "execute_process(COMMAND ${PYTHON_EXECUTABLE} ${CMAKE_CURRENT_BINARY_DIR}/setup.py install --prefix=${CMAKE_INSTALL_PREFIX} WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/)")
+
 endif()

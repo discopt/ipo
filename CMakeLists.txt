@@ -7,9 +7,9 @@ project(${PROJECT_NAME})
 
 # The version number.
 set(IPO_VERSION_MAJOR 1)
-set(IPO_VERSION_MINOR 0)
+set(IPO_VERSION_MINOR 1)
 
-set(PROJECT_VERSION 1.0)
+set(PROJECT_VERSION 1.1)
 
 add_definitions("-std=gnu++11")
 
