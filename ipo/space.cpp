@@ -4,7 +4,17 @@ using namespace soplex;
 
 namespace ipo {
 
-static SpaceData* emptySpace = NULL;
+  static SpaceData* emptySpace = NULL;
+
+  void freeStaticSpace()
+  {
+    if (emptySpace != NULL)
+    {
+      assert(emptySpace->usage() == 1);
+      delete emptySpace;
+      emptySpace = NULL;
+    }
+  }
 
   SpaceData::SpaceData()
     : _usage(0)

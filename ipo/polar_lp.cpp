@@ -79,6 +79,7 @@ namespace ipo {
 
   XPolarLP::~XPolarLP()
   {
+    delete _space;
     delete _spx;
   }
 

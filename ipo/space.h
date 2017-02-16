@@ -11,6 +11,8 @@
 
 namespace ipo {
 
+  void freeStaticSpace();
+
   class Space;
 
   /**
@@ -113,6 +115,17 @@ namespace ipo {
      */
 
     void unmarkUsed();
+
+    /**
+     * \brief Returns the usage counter.
+     *
+     * Returns the usage counter.
+     */
+
+    inline std::size_t usage() const
+    {
+      return _usage;
+    }
 
     friend class Space;
 
@@ -275,7 +288,7 @@ namespace ipo {
     /**
      * \brief Prints given linear \p constraint into a string and returns it.
      *
-     * Prints given linear \p constraint into a string, using stored variable names, and returns it. Nonzeros are delimited by 
+     * Prints given linear \p constraint into a string, using stored variable names, and returns it. Nonzeros are delimited by
      * the sign of the next entry.
      */
 
