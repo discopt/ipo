@@ -11,8 +11,6 @@
 
 namespace ipo {
 
-  void freeStaticSpace();
-
   class Space;
 
   /**
@@ -145,6 +143,14 @@ namespace ipo {
   class Space
   {
   public:
+    /**
+     * \brief Frees the static memory for the empty space.
+     *
+     * Frees the static memory for the empty space.
+     */
+
+    static void freeStaticMem();
+
     /**
      * \brief Constructs the empty space.
      *

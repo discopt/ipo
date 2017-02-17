@@ -6,16 +6,6 @@ namespace ipo {
 
   static SpaceData* emptySpace = NULL;
 
-  void freeStaticSpace()
-  {
-    if (emptySpace != NULL)
-    {
-      assert(emptySpace->usage() == 1);
-      delete emptySpace;
-      emptySpace = NULL;
-    }
-  }
-
   SpaceData::SpaceData()
     : _usage(0)
   {
@@ -55,6 +45,16 @@ namespace ipo {
     _usage--;
     if (_usage == 0)
       delete this;
+  }
+
+  void Space::freeStaticMem()
+  {
+    if (emptySpace != NULL)
+    {
+      assert(emptySpace->usage() == 1);
+      delete emptySpace;
+      emptySpace = NULL;
+    }
   }
 
   Space::Space()

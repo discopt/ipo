@@ -1,7 +1,6 @@
 #include "linear_constraint.h"
 
 namespace ipo {
-
   LinearConstraint::LinearConstraint()
     : _type('<'), _normal(), _rhs(0)
   {

@@ -557,6 +557,14 @@ namespace ipo {
   {
   public:
     /**
+     * \brief Frees the static memory for the zero vector.
+     *
+     * Frees the static memory for the zero vector.
+     */
+
+    static void freeStaticMem();
+
+    /**
      * \brief Constructs the zero vector.
      *
      * Constructs the zero vector.

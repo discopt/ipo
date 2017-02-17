@@ -234,5 +234,9 @@ int main(int argc, char** argv)
     std::cout << " has dimension " << faces[i]->dimension() << "\n" << std::flush;
   }
 
+  soplex::Rational::freeListMem();
+  ipo::Space::freeStaticMem();
+  ipo::Vector::freeStaticMem();
+
   return 0;
 }

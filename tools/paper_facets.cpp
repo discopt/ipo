@@ -335,7 +335,9 @@ int main(int argc, char** argv)
     std::cout << std::endl;
   }
 
-  freeStaticSpace();
+  soplex::Rational::freeListMem();
+  ipo::Space::freeStaticMem();
+  ipo::Vector::freeStaticMem();
 
   return 0;
 }

@@ -161,6 +161,19 @@ namespace ipo {
     _data = zeroVectorData;
   }
 
+  void Vector::freeStaticMem()
+  {
+    if (zeroVectorData != NULL)
+    {
+      zeroVectorData->_immutableUsage--;
+      if (zeroVectorData->_immutableUsage == 0 && zeroVectorData->_mutableUsage == 0)
+      {
+        delete zeroVectorData;
+        zeroVectorData = NULL;
+      }
+    }
+  }
+
   MutableVector zeroVector()
   {
     return MutableVector(new VectorData());
