@@ -8,7 +8,8 @@ namespace ipo {
 
   LinearSet::LinearSet(const std::vector<Rational>& lowerBounds, const std::vector<Rational>& upperBounds, 
     const std::vector<LinearConstraint>& rows, const std::vector<std::string>& variableNames,
-    const std::vector<std::string >& rowNames) : _rowNames(rowNames)
+    const std::vector<std::string>& rowNames)
+    : _rowNames(rowNames)
   {
     std::size_t n = lowerBounds.size();
     assert(lowerBounds.size() == n);
@@ -231,7 +232,7 @@ namespace ipo {
     _solver.addRowsRational(rows);
   }
 
-  SCIP* LinearSet::readSCIP(const std::__cxx11::string& fileName)
+  SCIP* LinearSet::readSCIP(const std::string& fileName)
   {
     SCIP* scip = NULL;
     SCIP_CALL_EXC(SCIPcreate(&scip));

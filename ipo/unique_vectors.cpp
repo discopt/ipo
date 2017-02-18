@@ -34,6 +34,7 @@ namespace ipo {
   UniqueVectors::UniqueVectors(std::size_t ambientDimension)
     : _hashVector(ambientDimension)
   {
+    assert(ambientDimension > 0);
     std::default_random_engine generator(0);
     std::normal_distribution<double> distribution;
     soplex::DVectorReal randomVector(ambientDimension);

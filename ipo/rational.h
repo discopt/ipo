@@ -14,7 +14,9 @@ namespace ipo {
 
   typedef soplex::Rational Rational;
 
-    std::string rationalToString(const Rational& number);
+  static const double infinity = soplex::infinity;
+
+  std::string rationalToString(const Rational& number);
 
   bool isIntegral(const Rational& number);
 

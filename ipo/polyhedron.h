@@ -260,6 +260,15 @@ namespace ipo {
       return separatePoint(point, handlers, constraint, certificate);
     }
 
+    bool separateRay(const Vector& ray, std::vector<FacetSeparationHandler*>& handlers, LinearConstraint& constraint,
+      InnerDescription* certificate = NULL);
+
+    inline bool separateRay(const Vector& ray, LinearConstraint& constraint, InnerDescription* certificate)
+    {
+      std::vector<FacetSeparationHandler*> handlers;
+      return separateRay(ray, handlers, constraint, certificate);
+    }
+
   protected:
     std::shared_ptr<CollectOracle> _collectOracle;
     std::shared_ptr<Face> _completeFace;

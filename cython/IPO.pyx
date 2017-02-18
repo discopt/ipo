@@ -16,6 +16,8 @@ cdef extern from "ipo/rational.h" namespace "ipo":
 
   string IPOrationalToString "ipo::rationalToString" (const IPORational& rational)
 
+  cdef const double infinity
+
 cdef class Rational:
   cdef IPORational _rational
 
@@ -160,7 +162,7 @@ cdef extern from "ipo/vectors-pub.h" namespace "ipo":
     vector[IPOVector] points
     vector[IPOVector] rays
 
-## Oracles ##
+## OracleBase ##
 
 ctypedef size_t HeuristicLevel
 
@@ -200,13 +202,37 @@ cdef class OracleBase:
     result._space = deref(deref(self._wrappedOracle).linkOracle()).space()
     return result
 
+  cdef PtrIPOOracleBase getQueryOraclePtr(self):
+    return deref(self._wrappedOracle).queryOracle()
+
   cdef PtrIPOOracleBase getLinkOraclePtr(self):
     return deref(self._wrappedOracle).linkOracle()
+
+## SubmissiveOracle
+
+cdef extern from "ipo/submissive.h" namespace "ipo":
+  cdef cppclass IPOSubmissiveOracle "ipo::SubmissiveOracle" (IPOOracleBase):
+    IPOSubmissiveOracle(const string& name, const PtrIPOOracleBase& sourceOracle, const PtrIPOOracleBase& nextOracle) except +
+ctypedef shared_ptr[IPOSubmissiveOracle] PtrIPOSubmissiveOracle
+
+cdef class SubmissiveOracle (OracleBase):
+  cdef PtrIPOSubmissiveOracle _submissiveOracle
+
+  def __cinit__(self, const string& name, OracleBase sourceOracle, OracleBase nextOracle = None):
+    cdef PtrIPOOracleBase ptrNextOracle
+    if not nextOracle is None:
+      ptrNextOracle = nextOracle.getLinkOraclePtr()
+    self._submissiveOracle = PtrIPOSubmissiveOracle(new IPOSubmissiveOracle(name, sourceOracle.getQueryOraclePtr(), ptrNextOracle))
+    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._submissiveOracle)
+    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+
 
 ## LinearSet ##
 
 cdef extern from "ipo/lp.h" namespace "ipo":
   cdef cppclass IPOLinearSet "ipo::LinearSet":
+    IPOLinearSet(const vector[IPORational]&, const vector[IPORational]&, const vector[IPOLinearSet]&,
+      const vector[string]&, const vector[string]&)
     IPOLinearSet(const string& fileName)
     IPOLinearSet(const IPOLinearSet& linearSet)
     const IPOSpace& space() const
@@ -359,6 +385,8 @@ cdef extern from "ipo/lp.h" namespace "ipo":
 
 cdef extern from "ipo/lp.h" namespace "ipo":
   cdef cppclass IPOLinearProgram "ipo::LinearProgram" (IPOLinearSet):
+    IPOLinearProgram(const vector[IPORational]& objective, const vector[IPORational]&, const vector[IPORational]&,
+      const vector[IPOLinearConstraint]&, const vector[string]&, const vector[string]&)
     IPOLinearProgram(const string& fileName)
     IPOLinearProgram(const PtrIPOLinearSet& linearSet)
     IPOLinearProgram(const IPOLinearSet& other)
@@ -380,6 +408,8 @@ cdef class LinearProgram (LinearSet):
       self._initFromLinearProgram(init)
     elif isinstance(init, LinearSet):
       self._initFromLinearSet(init)
+    elif isinstance(init, Space):
+      self._initFromSpace(init)
     else:
       raise Exception('Cannot initialize IPO.LinearProgram from %s' % (type(init)))
 
@@ -391,6 +421,24 @@ cdef class LinearProgram (LinearSet):
 
   def _initFromString(self, const string& fileName):
     self._linearProgram = PtrIPOLinearProgram(new IPOLinearProgram(fileName))
+
+  def _initFromSpace(self, Space space):
+    cdef vector[IPORational] objective
+    cdef vector[IPORational] lowerBounds
+    cdef vector[IPORational] upperBounds
+    cdef vector[IPOLinearConstraint] constraints
+    cdef vector[string] variableNames
+    cdef vector[string] rowNames
+    cdef IPORational zero = IPORational(0)
+    cdef IPORational plusInfinity = IPORational(-infinity)
+    cdef IPORational minusInfinity = IPORational(+infinity)
+    for i in xrange(space.dimension):
+      objective.push_back(zero)
+      lowerBounds.push_back(plusInfinity)
+      upperBounds.push_back(minusInfinity)
+      variableNames.push_back(space[i])
+    self._linearProgram = PtrIPOLinearProgram(new IPOLinearProgram(objective, lowerBounds, upperBounds, constraints,
+      variableNames, rowNames))
 
   cdef IPOLinearProgram* _getIPOLinearProgram(self):
     return self._linearProgram.get()
@@ -643,6 +691,7 @@ cdef extern from "ipo/polyhedron.h" namespace "ipo":
     void addConstraint(const IPOLinearConstraint&, bool);
     void getFaces(vector[PtrIPOPolyhedronFace]& constraints, bool, bool);
     bool separatePoint(const IPOVector&, IPOLinearConstraint&, IPOInnerDescription*)
+    bool separateRay(const IPOVector&, IPOLinearConstraint&, IPOInnerDescription*)
 ctypedef shared_ptr[IPOPolyhedron] PtrIPOPolyhedron
 
 ## Polyhedron ##
@@ -749,4 +798,25 @@ cdef class Polyhedron:
     else:
       return constraint
 
+  def separateRay(self, ray, withCertificate = False, scaleIntegral = True):
+    cdef Vector cppRay = ray
+    cdef IPOVector ipoRay = cppRay._vector
+    cdef IPOLinearConstraint ipoConstraint
+    cdef IPOInnerDescription inner
+    cdef bool separated
+    if withCertificate:
+      separated = deref(self._polyhedron).separateRay(ipoRay, ipoConstraint, &inner)
+    else:
+      separated = deref(self._polyhedron).separateRay(ipoRay, ipoConstraint, NULL)
+    if separated:
+      if scaleIntegral:
+        IPOscaleIntegral(ipoConstraint)
+      constraint = _createLinearConstraint(ipoConstraint, deref(self._polyhedron).space())
+    else:
+      constraint = None
+    if withCertificate:
+      return (separated, constraint, None)
+      # TODO: Convert inner...
+    else:
+      return constraint
 

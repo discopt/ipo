@@ -7,6 +7,7 @@ set(IPO_SOURCES
   unique_vectors.cpp
   vectors.cpp
   rational.cpp
+  submissive.cpp
   spx_gmp.cpp
   space.cpp
   oracles.cpp
@@ -50,6 +51,7 @@ set(IPO_INSTALL_HEADERS
   smallest_face.h
   space.h
   spx_gmp.h
+  submissive.h
   statistics_oracle.h
   timer.h
   unique_vectors.h
