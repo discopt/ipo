@@ -229,52 +229,60 @@ namespace ipo {
       _approximateLP.clear();
       _exactLP.clear();
 
+      // Add points and collect data for (dense) normalization constraint.
+
+      notify(FacetSeparationHandler::POINTS_BEGIN);
+      for (std::size_t i = 0; i < spanning.points.size(); ++i)
+      {
+        if (!separatingRay())
+          dense -= spanning.points[i];
+        _approximateLP.addPointRow(spanning.points[i], false);
+        _exactLP.addPointRow(spanning.points[i], false);
+        notify(FacetSeparationHandler::POINT);
+      }
+      notify(FacetSeparationHandler::POINTS_END);
+
+      // Add rays.
+      
+      notify(FacetSeparationHandler::RAYS_BEGIN);
+      for (std::size_t i = 0; i < spanning.rays.size(); ++i)
+      {
+        dense -= spanning.rays[i];
+        _approximateLP.addPointRow(spanning.rays[i], false);
+        _exactLP.addPointRow(spanning.rays[i], false);
+        notify(FacetSeparationHandler::RAY);
+      }
+      notify(FacetSeparationHandler::RAYS_END);
+
+      // Normalization constraint.
+      
       if (separatingRay())
       {
-        assert(false);
+        if (spanning.rays.size() > 1)
+          dense /= int(spanning.rays.size());
       }
       else
       {
-        // Normalization constraint.
-
-        notify(FacetSeparationHandler::POINTS_BEGIN);
-        for (std::size_t i = 0; i < spanning.points.size(); ++i)
-        {
-          dense -= spanning.points[i];
-          _approximateLP.addPointRow(spanning.points[i], false);
-          _exactLP.addPointRow(spanning.points[i], false);
-          notify(FacetSeparationHandler::POINT);
-        }
-        notify(FacetSeparationHandler::POINTS_END);
-
-        notify(FacetSeparationHandler::RAYS_BEGIN);
-        for (std::size_t i = 0; i < spanning.rays.size(); ++i)
-        {
-          dense -= spanning.rays[i];
-          _approximateLP.addPointRow(spanning.rays[i], false);
-          _exactLP.addPointRow(spanning.rays[i], false);
-          notify(FacetSeparationHandler::RAY);
-        }
-        notify(FacetSeparationHandler::RAYS_END);
-
+        assert(spanning.points.size() + spanning.rays.size() > 0);
         dense /= int(spanning.points.size() + spanning.rays.size());
-
-        for (std::size_t p = 0; p < _targetVector.size(); ++p)
-          dense[_targetVector.index(p)] += _targetVector.value(p);
-
-        DSVectorRational sparse(dense);
-        _approximateLP.addRow(-soplex::infinity, sparse, Rational(1), false);
-        _exactLP.addRow(-soplex::infinity, sparse, Rational(1), false);
-
-        // Objective.
-
-        dense.clear();
-        for (std::size_t p = 0; p < _targetVector.size(); ++p)
-          dense[_targetVector.index(p)] = _targetVector.value(p);
-        dense[polarSpace().dimension() - 1] = -1;
-        _approximateLP.setObjective(dense);
-        _exactLP.setObjective(dense);
       }
+
+      for (std::size_t p = 0; p < _targetVector.size(); ++p)
+        dense[_targetVector.index(p)] += _targetVector.value(p);
+
+      DSVectorRational sparse(dense);
+      _approximateLP.addRow(-soplex::infinity, sparse, Rational(1), false);
+      _exactLP.addRow(-soplex::infinity, sparse, Rational(1), false);
+
+      // Objective.
+
+      dense.clear();
+      for (std::size_t p = 0; p < _targetVector.size(); ++p)
+        dense[_targetVector.index(p)] = _targetVector.value(p);
+      if (!separatingRay())
+        dense[polarSpace().dimension() - 1] = -1;
+      _approximateLP.setObjective(dense);
+      _exactLP.setObjective(dense);      
 
       notify(FacetSeparationHandler::INITIALIZED);
 
