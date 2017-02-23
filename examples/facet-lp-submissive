@@ -19,7 +19,7 @@ P = IPO.Polyhedron(submissiveOracle)
 cons = mils.getConstraints()
 lp = IPO.LinearProgram(mils.space)
 
-for i in xrange(10):
+for i in xrange(1000):
   print('Random objective #%d' % (i+1))
   objective = [ (random.random() - 0.5) for i in xrange(lp.numVariables) ]
   lp.changeObjective(objective)

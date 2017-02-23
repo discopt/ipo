@@ -30,7 +30,7 @@ namespace ipo {
      * \param innerBehavior Whether to cache/search valid inequalities.
      */
 
-    CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior = CACHE_AND_SEARCH,
+    CacheOracle(const std::shared_ptr<OracleBase>& nextOracle, Behavior outerBehavior = CACHE_ONLY,
       Behavior innerBehavior = CACHE_AND_SEARCH);
 
     /**

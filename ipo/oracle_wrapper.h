@@ -13,7 +13,7 @@ namespace ipo {
     typedef CacheOracle::Behavior Behavior;
 
   public:
-    StatisticsCacheOracleWrapper(std::shared_ptr<OracleBase>& mainOracle, Behavior outerBehavior = Behavior::CACHE_AND_SEARCH, 
+    StatisticsCacheOracleWrapper(std::shared_ptr<OracleBase>& mainOracle, Behavior outerBehavior = Behavior::CACHE_ONLY,
       Behavior innerBehavior = Behavior::CACHE_AND_SEARCH);
 
     ~StatisticsCacheOracleWrapper();
