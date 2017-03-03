@@ -75,6 +75,7 @@ int main(int argc, char** argv)
     {
       std::stringstream str(argv[i+1]);
       str >> numIterations;
+      ++i;
     }
     else if (arg == "-h" || arg == "--help")
       return printUsage(argv[0]);
@@ -98,7 +99,7 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPcreate(&scip));
   SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
   SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
-  SCIP_CALL_EXC(SCIPreadProb(scip, argv[1], NULL));
+  SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   std::shared_ptr<MixedIntegerLinearSet> mixedIntegerSet = std::make_shared<MixedIntegerLinearSet>(scip);
