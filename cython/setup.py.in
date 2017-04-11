@@ -23,7 +23,7 @@ IPO_library_dirs = IPO_include_dirs # TODO: replace by cmake-generated.
 IPO_source = "@CMAKE_SOURCE_DIR@"
 
 def parseIncludes(incs):
-  incs = incs.split(';')
+  incs = incs.replace(';;', ';').split(';')
   return incs
 
 #GMP_include_dirs = parseIncludes(GMP_include_dirs)
@@ -38,6 +38,8 @@ def parseLibraries(libs):
   for i in xrange(len(libs)):
     if libs[i].startswith('-l'):
       libs[i] = libs[i][2:]
+  if len(libs) == 0:
+    return None
   return libs
 
 #GMP_libraries = parseLibraries(GMP_libraries)
@@ -68,10 +70,13 @@ if False:
   print IPO_libraries
   print IPO_source
 
+include_dirs = GMPXX_include_dirs + SoPlex_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source]
+include_dirs = filter(lambda x: x is not '', include_dirs)
+
 ext = Extension(
   'IPO',
   ['IPO.pyx'],
-  include_dirs = GMPXX_include_dirs + SoPlex_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source],
+  include_dirs = include_dirs,
   libraries = IPO_libraries + SCIP_libraries + ZIMPL_libraries + SoPlex_libraries + GMPXX_libraries,
   library_dirs = IPO_library_dirs,
   runtime_library_dirs = [],
