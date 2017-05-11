@@ -97,7 +97,8 @@ namespace ipo {
 
   Polyhedron::Polyhedron(const std::shared_ptr<OracleBase>& oracle)
     : _collectOracle(std::make_shared<CollectOracle>(oracle)), _completeFace(_collectOracle->_inequalities[zeroVector()]),
-    _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true)
+    _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true), 
+    _affineHullExactDirectionTimeLimit(std::numeric_limits<double>::max())
   {
 
   }
@@ -105,7 +106,8 @@ namespace ipo {
   Polyhedron::Polyhedron(const std::shared_ptr<DefaultOracleWrapper>& oracleWrapper)
     : _collectOracle(std::make_shared<CollectOracle>(oracleWrapper->queryOracle())),
     _completeFace(_collectOracle->_inequalities[zeroVector()]),
-    _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true)
+    _affineHullLastCheapHeuristic(1), _affineHullLastModerateHeuristic(0), _affineHullApproximateDirections(true),
+    _affineHullExactDirectionTimeLimit(std::numeric_limits<double>::max())
   {
 
   }
@@ -139,7 +141,7 @@ namespace ipo {
     }
 
     ipo::affineHull(_collectOracle, face->_innerDescription, face->_outerDescription, handlers, _affineHullLastCheapHeuristic,
-      _affineHullLastModerateHeuristic, givenEquations, _affineHullApproximateDirections);
+      _affineHullLastModerateHeuristic, givenEquations, _affineHullApproximateDirections, _affineHullExactDirectionTimeLimit);
     face->_hasDimension = true;
   }
 

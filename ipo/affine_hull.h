@@ -325,7 +325,7 @@ namespace ipo {
   void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription,
     AffineOuterDescription& resultOuterDescription, std::vector<AffineHullHandler*>& handlers, HeuristicLevel lastCheapHeuristic,
     HeuristicLevel lastModerateHeuristic, const std::vector<LinearConstraint>& givenEquations = std::vector<LinearConstraint>(),
-    bool approximateDirections = true);
+    bool approximateDirections = true, double exactDirectionTimeLimit = std::numeric_limits<double>::infinity());
 
   /**
    * \brief Class for debugging an affine-hull computation.

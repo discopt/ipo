@@ -612,8 +612,16 @@ namespace ipo {
 
     void updateExactDirection(std::size_t column)
     {
+      Timer timer;
+      timer.start();
+
       NonbasicColumn& col = _columns[column];
       _factorization.computeKernelVector(column, col.exactDirection);
+
+      if (timer.time() > limitExactDirectionTime)
+      {
+        throw std::runtime_error("Affine hull computation reached time limit per exact direction computation!");
+      }
 
       col.exactRhs = col.exactDirection[_n];
       col.exactDirection.reDim(_n);
@@ -979,6 +987,7 @@ namespace ipo {
     HeuristicLevel paramLastModerateHeuristic;
     bool paramApproximateDirections;
     double paramApproximateDirectionEpsilon;
+    double limitExactDirectionTime;
 
   protected:
     std::vector<AffineHullHandler*>& _handlers;
@@ -1025,13 +1034,14 @@ namespace ipo {
   void affineHull(const std::shared_ptr<OracleBase>& oracle, InnerDescription& resultInnerDescription,
     std::vector<LinearConstraint>& resultOuterDescription, std::vector<AffineHullHandler*>& handlers,
     HeuristicLevel lastCheapHeuristic, HeuristicLevel lastModerateHeuristic,
-    const std::vector<LinearConstraint>& givenEquations, bool approximateDirections)
+    const std::vector<LinearConstraint>& givenEquations, bool approximateDirections, double exactDirectionTimeLimit)
   {
     XAffineHull algorithm(handlers, oracle, resultInnerDescription, resultOuterDescription);
     algorithm.paramLastCheapHeuristic = lastCheapHeuristic;
     algorithm.paramLastModerateHeuristic = lastModerateHeuristic;
     algorithm.paramApproximateDirections = approximateDirections;
     algorithm.paramApproximateDirectionEpsilon = 1.0e-7;
+    algorithm.limitExactDirectionTime = exactDirectionTimeLimit;
     algorithm.run(givenEquations);
   }
 

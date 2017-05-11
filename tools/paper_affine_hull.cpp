@@ -24,7 +24,7 @@ using namespace ipo;
 
 int printUsage(const std::string& program)
 {
-  std::cerr << "Usage: " << program << " [-c] [-t TIMELIMIT] INSTANCE\n" << std::flush;
+  std::cerr << "Usage: " << program << " [-c] [-t ORACLE-TIMELIMIT] [-d DIRECTION-TIMELIMIT] INSTANCE\n" << std::flush;
   return EXIT_FAILURE;
 }
 
@@ -34,7 +34,8 @@ int main(int argc, char** argv)
 
   bool constraintDimensions = false;
   std::string instanceFile = "";
-  double timeLimit = -1;
+  double oracleTimeLimit = -1;
+  double directionTimeLimit = std::numeric_limits<double>::max();
   for (int i = 1; i < argc; ++i)
   {
     if (std::string(argv[i]) == "-h")
@@ -47,7 +48,14 @@ int main(int argc, char** argv)
     if (std::string(argv[i]) == "-t" && i+1 < argc)
     {
       std::stringstream str(argv[i+1]);
-      str >> timeLimit;
+      str >> oracleTimeLimit;
+      ++i;
+      continue;
+    }
+    if (std::string(argv[i]) == "-d" && i+1 < argc)
+    {
+      std::stringstream str(argv[i+1]);
+      str >> directionTimeLimit;
       ++i;
       continue;
     }
@@ -88,11 +96,11 @@ int main(int argc, char** argv)
     mixedIntegerLinearSet);
 #endif
 
-  if (timeLimit > 0)
+  if (oracleTimeLimit > 0)
   {
-    scipOracle->setTimeLimit(timeLimit);
+    scipOracle->setTimeLimit(oracleTimeLimit);
 #ifdef IPO_WITH_EXACT_SCIP
-    exactSCIPOracle->setTimeLimit(timeLimit);
+    exactSCIPOracle->setTimeLimit(oracleTimeLimit);
 #endif
   }
 

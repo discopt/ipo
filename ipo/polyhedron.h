@@ -226,6 +226,16 @@ namespace ipo {
       return _completeFace->innerDescription();
     }
 
+    inline void setAffineHullExactDirectionTimeLimit(double limit = std::numeric_limits<double>::max())
+    {
+      _affineHullExactDirectionTimeLimit = limit;
+    }
+
+    inline HeuristicLevel getAffineHullExactDirectionTimeLimit() const
+    {
+      return _affineHullExactDirectionTimeLimit;
+    }
+
     inline void setAffineHullLastCheapHeuristicLevel(HeuristicLevel lastCheapHeuristicLevel)
     {
       _affineHullLastCheapHeuristic = lastCheapHeuristicLevel;
@@ -276,6 +286,7 @@ namespace ipo {
     HeuristicLevel _affineHullLastCheapHeuristic;
     HeuristicLevel _affineHullLastModerateHeuristic;
     bool _affineHullApproximateDirections;
+    double _affineHullExactDirectionTimeLimit;
   };
 
 
