@@ -291,8 +291,13 @@ namespace ipo {
       }
 
       SCIP_STATUS status = SCIPgetStatus(_scip);
+      if (status == SCIP_STATUS_UNBOUNDED && attempt == 2 && !hasRay)
+      {
+        throw std::runtime_error("SCIP reports unboundedness without ray!");
+      }
+      
       std::size_t numSolutions = SCIPgetNSols(_scip);
-      if (status != SCIP_STATUS_INFEASIBLE && status != SCIP_STATUS_INFORUNBD && numSolutions > 0)
+      if (status != SCIP_STATUS_INFEASIBLE && status != SCIP_STATUS_INFORUNBD && status != SCIP_STATUS_UNBOUNDED && numSolutions > 0)
       {
         SCIP_SOL** solutions = SCIPgetSols(_scip);
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
