@@ -217,14 +217,18 @@ int main(int argc, char** argv)
   std::vector<LinearConstraint> rowConstraints;
   mis->getConstraints(rowConstraints, false, false);
   addToLP(spx, rowConstraints);
+  
+  addToLP(spx, outer);
+  
+  spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
+  std::default_random_engine generator(0);
   for (std::size_t i = 0; i < numIterations; ++i)
   {
     if (i > 0)
     {
       std::cout << "Using random objective. " << std::flush;
-      std::default_random_engine generator(0);
       std::normal_distribution<double> distribution;
       DVectorReal randomVector(oracle->space().dimension());
       double norm = 0;
@@ -240,9 +244,16 @@ int main(int argc, char** argv)
         for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
         {
           double x = randomVector[v] / norm;
+//           std::cerr << "Obj#" << v << " = " << x << std::endl;
           spx.changeObjRational(v, Rational(x));
         }
       }
+    }
+    else
+    {
+      for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
+        spx.changeObjRational(v, Rational(0));
+      spx.changeObjRational(36, Rational(-1));
     }
 
     std::cout << "Solving relaxation LP. " << std::flush;
@@ -252,16 +263,18 @@ int main(int argc, char** argv)
       SPxSolver::Status status = spx.solve();
       if (status == SPxSolver::OPTIMAL)
       {
-        std::cout << "Separating LP optimum..." << std::flush;
+        std::cout << "\nSeparating LP optimum..." << std::flush;
         spx.getPrimalRational(solution);
         ipo::Vector point = denseToVector(solution, false);
+        oracle->space().printVector(std::cout, point);
+        std::cout << "\n";
         InnerDescription certificate;
         LinearConstraint constraint;
         if (separatePoint(oracle, point, inner, facetSeparationHandlers, constraint, &certificate))
         {
           scaleIntegral(constraint);
 
-          std::cout << " separated with ";
+          std::cout << "\n\n separated with ";
           oracle->space().printLinearConstraint(std::cout, constraint);
           std::cout << std::endl;
 
@@ -299,6 +312,8 @@ int main(int argc, char** argv)
       else if (status == SPxSolver::INFEASIBLE)
       {
         std::cout << "LP infeasible." << std::endl;
+        spx.writeFileRational("infeasible.lp");
+        numIterations = i;
         break;
       }
       else

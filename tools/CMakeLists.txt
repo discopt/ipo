@@ -13,29 +13,37 @@ endif()
 # paper-affine-hull
 
 if(SCIP_FOUND)
-  add_executable(ipo-paper-affine-hull
+  add_executable(paper-affine-hull
     paper_affine_hull.cpp
   )
 
-  target_link_libraries(ipo-paper-affine-hull
+  target_link_libraries(paper-affine-hull
     ${IPO_LIBRARIES}
     ${SCIP_LIBRARIES}
   )
-
-  install(TARGETS ipo-paper-affine-hull DESTINATION bin COMPONENT runtime)
 endif()
 
 # paper-facets
 
 if(SCIP_FOUND)
-  add_executable(ipo-paper-facets
+  add_executable(paper-facets
     paper_facets.cpp
   )
 
-  target_link_libraries(ipo-paper-facets
+  target_link_libraries(paper-facets
     ${IPO_LIBRARIES}
     ${SCIP_LIBRARIES}
   )
+endif()
 
-  install(TARGETS ipo-paper-facets DESTINATION bin COMPONENT runtime)
+# paper-lp-relax
+
+if(SCIP_FOUND)
+  add_executable(paper-lp-relax
+    paper_lp_relax.cpp
+  )
+
+  target_link_libraries(paper-lp-relax
+    ${SCIP_LIBRARIES}
+  )
 endif()
