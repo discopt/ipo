@@ -293,8 +293,8 @@ namespace ipo {
       assert(false);
   }
 
-  void LinearSet::getConstraints(std::vector<LinearConstraint>& constraints, bool excludeEquations, bool includeBounds,
-    bool includeRows) const
+  void LinearSet::getConstraints(std::vector<LinearConstraint>& constraints, bool includeBounds, bool includeRows,
+    bool excludeEquations, bool excludeInequalities) const
   {
     if (includeBounds)
     {
@@ -303,6 +303,8 @@ namespace ipo {
         const Rational& lower = lowerBound(v);
         const Rational& upper = upperBound(v);
         if (excludeEquations && lower == upper)
+          continue;
+        if (excludeInequalities && lower < upper)
           continue;
         if (lower > -soplex::infinity)
           constraints.push_back(lowerBoundConstraint(v));
@@ -315,6 +317,10 @@ namespace ipo {
     {
       for (std::size_t r = 0; r < numRows(); ++r)
       {
+        if (excludeEquations && rowConstraint(r).isEquation())
+          continue;
+        if (excludeInequalities && !rowConstraint(r).isEquation())
+          continue;
         constraints.push_back(rowConstraint(r));
       }
     }        

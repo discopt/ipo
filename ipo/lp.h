@@ -199,8 +199,8 @@ namespace ipo {
      * Returns the row index by \p rowIndex.
      */
 
-    void getConstraints(std::vector<LinearConstraint>& constraints, bool excludeEquations = false, 
-      bool includeBounds = true, bool includeRows = true) const;
+    void getConstraints(std::vector<LinearConstraint>& constraints, bool includeBounds = true, bool includeRows = true,
+    bool excludeEquations = false, bool excludeInequalities = false) const;
 
     /**
      * \brief Changes the lower bound of the specified variable.

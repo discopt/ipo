@@ -190,7 +190,8 @@ namespace ipo {
       return _collectOracle->_inequalities[normalized.normal()];
     }
 
-    void affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& handlers);
+    void affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& handlers, const std::vector<LinearConstraint>& givenEquations = 
+      std::vector<LinearConstraint>());
 
     inline void affineHull(std::shared_ptr<Face>& face)
     {

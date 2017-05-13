@@ -562,6 +562,7 @@ namespace ipo {
           ++count;
         }
       }
+      return count;
     }
 
     void computeAllowedDirectionColumn()

@@ -245,7 +245,7 @@ cdef extern from "ipo/lp.h" namespace "ipo":
     const string& variableName(size_t) const
     const string& rowName(size_t) const
     const IPOLinearConstraint& rowConstraint(size_t) const
-    void getConstraints(vector[IPOLinearConstraint]&, bool, bool, bool) const
+    void getConstraints(vector[IPOLinearConstraint]&, bool, bool, bool, bool) const
     void changeLowerBound(size_t, const IPORational&)
     void changeUpperBound(size_t, const IPORational&)
     void changeBounds(size_t, const IPORational&, const IPORational&)
@@ -309,9 +309,9 @@ cdef class LinearSet:
   def rowConstraint(self, long rowIndex):
     return _createLinearConstraint(deref(self._getIPOLinearSet()).rowConstraint(rowIndex), self._getIPOSpace())
 
-  def getConstraints(self, bool excludeEquations = False, bool includeBounds = True, bool includeRows = True):
+  def getConstraints(self, bool includeBounds = True, includeRows = True, excludeEquations = False, bool excludeInequalities = False):
     cdef vector[IPOLinearConstraint] cons
-    deref(self._getIPOLinearSet()).getConstraints(cons, excludeEquations, includeBounds, includeRows)
+    deref(self._getIPOLinearSet()).getConstraints(cons, includeBounds, includeRows, excludeEquations, excludeInequalities)
     result = [None] * <long>(cons.size())
     for i in xrange(len(result)):
       result[i] = _createLinearConstraint(cons[i], self._getIPOSpace())

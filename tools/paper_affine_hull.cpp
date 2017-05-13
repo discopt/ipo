@@ -24,7 +24,7 @@ using namespace ipo;
 
 int printUsage(const std::string& program)
 {
-  std::cerr << "Usage: " << program << " [-c] [-t ORACLE-TIMELIMIT] [-d DIRECTION-TIMELIMIT] INSTANCE\n" << std::flush;
+  std::cerr << "Usage: " << program << " [-o|-c] [-t ORACLE-TIMELIMIT] [-d DIRECTION-TIMELIMIT] INSTANCE\n" << std::flush;
   return EXIT_FAILURE;
 }
 
@@ -33,6 +33,7 @@ int main(int argc, char** argv)
   // Parse arguments.
 
   bool constraintDimensions = false;
+  bool optimalFaceDimension = false;
   std::string instanceFile = "";
   double oracleTimeLimit = -1;
   double directionTimeLimit = std::numeric_limits<double>::max();
@@ -43,6 +44,11 @@ int main(int argc, char** argv)
     if (std::string(argv[i]) == "-c")
     {
       constraintDimensions = true;
+      continue;
+    }
+    if (std::string(argv[i]) == "-o")
+    {
+      optimalFaceDimension = true;
       continue;
     }
     if (std::string(argv[i]) == "-t" && i+1 < argc)
@@ -64,7 +70,7 @@ int main(int argc, char** argv)
     else
       return printUsage(argv[0]);
   }
-  if (instanceFile.empty())
+  if (instanceFile.empty() || (optimalFaceDimension && constraintDimensions))
     return printUsage(argv[0]);
 
   // Read instance and create MixedIntegerSet.
@@ -80,10 +86,12 @@ int main(int argc, char** argv)
 
   std::shared_ptr<MixedIntegerLinearSet> mixedIntegerLinearSet = std::make_shared<MixedIntegerLinearSet>(scip);
 
+  Vector instanceObjective = getSCIPObjective(scip);
+
   SCIP_CALL_EXC(SCIPfree(&scip));
-  
+
   // Initialize oracles.
-  
+
 #ifdef IPO_WITH_EXACT_SCIP
   std::shared_ptr<ExactSCIPOracle> exactSCIPOracle = std::make_shared<ExactSCIPOracle>(
     "ExactSCIPOracle(" + instanceFile + ")", mixedIntegerLinearSet);
@@ -110,8 +118,23 @@ int main(int argc, char** argv)
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
 
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
+
+  LinearConstraint faceConstraint = completeFaceConstraint();
+  if (optimalFaceDimension)
+  {
+    OracleResult result;
+    cacheOracleStats->maximize(result, instanceObjective);
+    if (result.isInfeasible() || result.isUnbounded())
+    {
+      std::cout << "Dimension of optimal face: -1\n" << std::flush;
+      return EXIT_SUCCESS;
+    }
+
+    faceConstraint = LinearConstraint('<', instanceObjective, result.objectiveValue());
+  }
   
   Polyhedron poly(cacheOracleStats);
+  poly.addConstraint(faceConstraint);
 
   // Set affine-hull parameters.
 
@@ -122,6 +145,7 @@ int main(int argc, char** argv)
   poly.setAffineHullLastModerateHeuristicLevel(0); // No verification.
   poly.setAffineHullLastCheapHeuristicLevel(1); // Caching is cheap.
 #endif
+  poly.setAffineHullExactDirectionTimeLimit(directionTimeLimit);
 
   for (std::size_t r = 0; r < mixedIntegerLinearSet->numRows(); ++r)
   {
@@ -131,7 +155,7 @@ int main(int argc, char** argv)
   for (std::size_t v = 0; v < mixedIntegerLinearSet->numVariables(); ++v)
   {
     LinearConstraint constraint;
-    constraint  = mixedIntegerLinearSet->lowerBoundConstraint(v);
+    constraint = mixedIntegerLinearSet->lowerBoundConstraint(v);
     if (!constraint.isEquation() && constraint.rhs() > -soplex::infinity)
       poly.addConstraint(constraint);
     constraint = mixedIntegerLinearSet->upperBoundConstraint(v);
@@ -141,6 +165,9 @@ int main(int argc, char** argv)
 
   StatisticsAffineHullHandler statsHandler;
   DebugAffineHullHandler debugHandler(std::cout);
+  
+  std::vector<LinearConstraint> givenEquations;
+  mixedIntegerLinearSet->getConstraints(givenEquations, false, true, false, true);
 
   std::vector<AffineHullHandler*> handlers;
   handlers.push_back(&statsHandler);
@@ -151,7 +178,8 @@ int main(int argc, char** argv)
   
   try
   {
-    poly.affineHull(handlers);
+    std::shared_ptr<Polyhedron::Face> face = poly.constraintToFace(faceConstraint);
+    poly.affineHull(face, handlers, givenEquations);
   }
   catch(std::exception& e)
   {

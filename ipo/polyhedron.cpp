@@ -118,7 +118,8 @@ namespace ipo {
 
   }
 
-  void Polyhedron::affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& extraHandlers)
+  void Polyhedron::affineHull(std::shared_ptr<Face>& face, std::vector<AffineHullHandler*>& extraHandlers,
+    const std::vector<LinearConstraint>& givenEquations)
   {
     if (face->hasDimension())
       return;
@@ -133,15 +134,16 @@ namespace ipo {
     handlers.push_back(&debugHandler);
 #endif
 
-    std::vector<LinearConstraint> givenEquations;
+    std::vector<LinearConstraint> initialEquations;
+    std::copy(givenEquations.begin(), givenEquations.end(), std::back_inserter(initialEquations));
     if (!faceConstraint.definesCompleteFace())
     {
       std::copy(_completeFace->_outerDescription.begin(), _completeFace->_outerDescription.end(),
-        std::back_inserter(givenEquations));
+        std::back_inserter(initialEquations));
     }
 
     ipo::affineHull(_collectOracle, face->_innerDescription, face->_outerDescription, handlers, _affineHullLastCheapHeuristic,
-      _affineHullLastModerateHeuristic, givenEquations, _affineHullApproximateDirections, _affineHullExactDirectionTimeLimit);
+      _affineHullLastModerateHeuristic, initialEquations, _affineHullApproximateDirections, _affineHullExactDirectionTimeLimit);
     face->_hasDimension = true;
   }
 
