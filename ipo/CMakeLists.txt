@@ -63,6 +63,7 @@ set(IPO_INSTALL_HEADERS
   vector_2d.h
   vector_space_generators.h
   test.h
+  lp.h
 )
 
 if(SCIP_FOUND)

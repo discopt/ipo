@@ -425,7 +425,7 @@ namespace ipo {
       return 0;
     }
 
-    if (heuristicLevel() == 0 && hitLimit)
+    if (hitLimit) // TODO: Add soft- and hard limits: Soft limits for HeuristicLevel > 0 should not raise an exception.
     {
       std::stringstream str;
       str << "Oracle \"" << name() << "\" reached a limit.";

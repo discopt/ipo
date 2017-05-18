@@ -211,6 +211,13 @@ namespace ipo {
 
   typedef std::vector<LinearConstraint> AffineOuterDescription;
 
+  void addToLP(soplex::SoPlex& spx, const LinearConstraint& constraint);
+  void addToLP(soplex::SoPlex& spx, const std::vector<LinearConstraint>& constraints);
+
+  void scaleIntegral(LinearConstraint& constraint);
+  void scaleIntegral(std::vector<LinearConstraint>& constraints);
+  LinearConstraint integralScaled(const LinearConstraint& constraint);
+
 } /* namespace ipo */
 
 #endif /* IPO_LINEAR_CONSTRAINT_H_ */
