@@ -176,9 +176,9 @@ int main(int argc, char** argv)
   else
     handlers.push_back(&debugHandler);
   
+  std::shared_ptr<Polyhedron::Face> face = poly.constraintToFace(faceConstraint);
   try
   {
-    std::shared_ptr<Polyhedron::Face> face = poly.constraintToFace(faceConstraint);
     poly.affineHull(face, handlers, givenEquations);
   }
   catch(std::exception& e)
@@ -186,7 +186,7 @@ int main(int argc, char** argv)
     std::cout << "Error: " << e.what() << "\n" << std::flush;
     return EXIT_FAILURE;
   }
-  int dim = poly.dimension();
+  int dim = face->dimension();
   if (constraintDimensions)
   {
     std::cout << dim << "\n\n" << std::flush;
