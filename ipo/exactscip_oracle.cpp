@@ -185,9 +185,12 @@ namespace ipo {
 
   void ExactSCIPOracle::solveModel()
   {
-    if (system((_workingDirectory + "/script.sh").c_str()) != 0)
+    int status = system((_workingDirectory + "/script.sh").c_str());
+    if (status != 0)
     {
-      throw std::runtime_error("ExactSCIPOracle returned with nonzero exit status (see " + _workingDirectory+ "/solve.log).");
+      std::stringstream str;
+      str << "ExactSCIPOracle returned with exit status " << status << " (see " << _workingDirectory << "/solve.log).";
+      throw std::runtime_error(str.str());
     }
   }
 
