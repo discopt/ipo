@@ -140,7 +140,7 @@ namespace ipo {
 
     void restoreSolver();
 
-    Vector extendPoint(double* point, soplex::Rational& objectiveValue);
+    Vector extendPoint(double* point, soplex::Rational& objectiveValue, bool& isRay);
 
     Vector computeRay();
 

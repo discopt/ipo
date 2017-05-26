@@ -69,6 +69,7 @@ namespace ipo {
     _numCalls = 0;
     _numForwards = 0;
     _timer.reset();
+    _forwardedTimer.reset();
   }
 
   HeuristicLevel StatisticsOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
@@ -105,7 +106,7 @@ namespace ipo {
   {
     // The target oracle will forward to its next associated oracle.
 
-    _timer.stop();
+    _forwardedTimer.start();
     _numForwards++;
   }
 
@@ -113,7 +114,7 @@ namespace ipo {
   {
     // The target oracle did forward to its next associated oracle.
 
-    _timer.start();
+    _forwardedTimer.stop();
   }
 
   HeuristicLevel StatisticsOracle::maximizeImplementation(OracleResult& result, const soplex::VectorRational& objective,

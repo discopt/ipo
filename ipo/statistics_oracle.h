@@ -97,7 +97,7 @@ namespace ipo {
 
     inline double time() const
     {
-      return _timer.time();
+      return _timer.time() - _forwardedTimer.time();
     }
 
   protected:
@@ -140,6 +140,7 @@ namespace ipo {
     std::size_t _numCalls;
     std::size_t _numForwards;
     Timer _timer;
+    Timer _forwardedTimer;
   };
 
 } /* namespace */

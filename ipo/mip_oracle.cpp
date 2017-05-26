@@ -400,7 +400,15 @@ namespace ipo {
       for (std::size_t i = 0; i < _points.size(); ++i)
       {
         Rational objValue;
-        Vector vector = extendPoint(_points[i], objValue);
+        bool isRay = false;
+        Vector vector = extendPoint(_points[i], objValue, isRay);
+        if (isRay)
+        {
+          result.points.clear();
+          result.rays.push_back(OracleResult::Ray(vector));
+          delete[] _points[i];
+          break;
+        }
         result.points.push_back(OracleResult::Point(vector, objValue));
         delete[] _points[i];
       }
@@ -467,14 +475,17 @@ namespace ipo {
     _correctionLP->removeLastConstraints(_mixedIntegerLinearSet->numRows());
   }
 
-  Vector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue)
+  Vector MIPOracleBase::extendPoint(double* approxPoint, Rational& objectiveValue, bool& isRay)
   {
     std::size_t n = space().dimension();
+    isRay = false;
 
     // Fix variable bounds for the integer variables.
 
     for (std::size_t v = 0; v < n; ++v)
     {
+//      std::cerr << "Correction LP var #" << v << ": " << _mixedIntegerLinearSet->lowerBound(v) << " <= " << space()[v] << " <= "
+//        << _mixedIntegerLinearSet->upperBound(v) << " (" << (_mixedIntegerLinearSet->isIntegral(v) ? "integral" : "continuous") << ". value = " << approxPoint[v] << std::endl;
       if (_mixedIntegerLinearSet->isIntegral(v))
       {
         Rational value = Rational(int(approxPoint[v] + 0.5));
@@ -495,9 +506,11 @@ namespace ipo {
       if (result == LinearProgram::UNBOUNDED)
       {
         separateRay(vector, _cuts);
-        if (_cuts.size() == 0)
-          throw std::runtime_error("MIPOracle: Claim is bounded, but candidate ray is not separated.");
-
+        if (_cuts.empty())
+        {
+          isRay = true;
+          break;
+        }
         for (std::size_t i = 0; i < _cuts.size(); ++i)
           _correctionLP->addConstraint(_cuts[i]);
         _cuts.clear();
@@ -506,7 +519,7 @@ namespace ipo {
         throw std::runtime_error("MIPOracle: Claim is bounded, point could not be extended.");
 
       separatePoint(vector, _cuts);
-      if (_cuts.size() == 0)
+      if (_cuts.empty())
         break;
 
       for (std::size_t i = 0; i < _cuts.size(); ++i)
