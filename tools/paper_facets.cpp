@@ -217,10 +217,10 @@ int main(int argc, char** argv)
   std::vector<LinearConstraint> rowConstraints;
   mis->getConstraints(rowConstraints, false, false);
   addToLP(spx, rowConstraints);
-  
+
   addToLP(spx, outer);
   
-  spx.writeFileRational("init.lp");
+//   spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
   std::default_random_engine generator(0);

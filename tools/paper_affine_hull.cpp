@@ -24,7 +24,7 @@ using namespace ipo;
 
 int printUsage(const std::string& program)
 {
-  std::cerr << "Usage: " << program << " [-o|-c] [-t ORACLE-TIMELIMIT] [-d DIRECTION-TIMELIMIT] INSTANCE\n" << std::flush;
+  std::cerr << "Usage: " << program << " [-r|-o|-c] [-t ORACLE-TIMELIMIT] [-d DIRECTION-TIMELIMIT] INSTANCE\n" << std::flush;
   return EXIT_FAILURE;
 }
 
@@ -34,6 +34,7 @@ int main(int argc, char** argv)
 
   bool constraintDimensions = false;
   bool optimalFaceDimension = false;
+  bool runOriginal = false;
   std::string instanceFile = "";
   double oracleTimeLimit = -1;
   double directionTimeLimit = std::numeric_limits<double>::max();
@@ -49,6 +50,11 @@ int main(int argc, char** argv)
     if (std::string(argv[i]) == "-o")
     {
       optimalFaceDimension = true;
+      continue;
+    }
+    if (std::string(argv[i]) == "-r")
+    {
+      runOriginal = true;
       continue;
     }
     if (std::string(argv[i]) == "-t" && i+1 < argc)
@@ -120,7 +126,7 @@ int main(int argc, char** argv)
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
 
   LinearConstraint faceConstraint = completeFaceConstraint();
-  if (optimalFaceDimension)
+  if (optimalFaceDimension || runOriginal)
   {
     OracleResult result;
     cacheOracleStats->maximize(result, instanceObjective);
@@ -131,6 +137,12 @@ int main(int argc, char** argv)
     }
 
     faceConstraint = LinearConstraint('<', instanceObjective, result.objectiveValue());
+  }
+
+  if (runOriginal)
+  {
+    std::cout << "Solved original instance." << std::endl;
+    return 0; 
   }
   
   Polyhedron poly(cacheOracleStats);

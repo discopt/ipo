@@ -355,7 +355,7 @@ cdef class MixedIntegerLinearSet (LinearSet):
       self._initFromString(init)
     elif isinstance(init, LinearSet):
       self._initFromLinearSet(init)
-    else:
+    elif init is not None:
       raise Exception('Cannot initialize IPO.MixedIntegerLinearSet from %s' % (type(init)))
 
   def _initFromLinearSet(self, LinearSet linearSet):
@@ -371,7 +371,7 @@ cdef class MixedIntegerLinearSet (LinearSet):
     return deref(self._mixedIntegerLinearSet).isIntegral(variableIndex)
 
 cdef _createMixedIntegerLinearSet(const PtrIPOMixedIntegerLinearSet& mixedIntegerLinearSet):
-  result = MixedIntegerLinearSet()
+  result = MixedIntegerLinearSet(None)
   result._mixedIntegerLinearSet = mixedIntegerLinearSet
   return result
 
@@ -447,17 +447,24 @@ cdef class LinearProgram (LinearSet):
     return self._linearProgram.get()
 
   def changeObjective(self, objective):
-    assert len(objective) == self.numVariables
     cdef Rational x
     cdef vector[IPORational] obj
     obj.resize(self.numVariables)
-    for i in xrange(self.numVariables):
-      c = objective[i]
-      if isinstance(c, Rational):
-        x = objective[i]
-      else:
-        x = Rational(c)
-      obj[i] = x._rational
+    if isinstance(objective, list):
+      assert len(objective) == self.numVariables
+      for i in xrange(self.numVariables):
+        c = objective[i]
+        if isinstance(c, Rational):
+          x = objective[i]
+        else:
+          x = Rational(c)
+        obj[i] = x._rational
+    elif isinstance(objective, Vector):
+      for p in xrange(objective.size):
+        x = objective.value(p)
+        obj[objective.index(p)] = x._rational
+    else:
+      raise Exception('Unknown type for IPO.LinearProgram objective')
     deref(self._linearProgram).changeObjective(obj)
 
   def solve(self):
@@ -475,6 +482,9 @@ cdef _createLinearProgram(const PtrIPOLinearProgram& linearProgram):
 IF IPO_WITH_SCIP:
 
   ## SCIPOracle ##
+
+  cdef extern from "ipo/scip_oracle.h" namespace "ipo":
+    IPOVector IPOgetSCIPObjective "ipo::getSCIPObjective" (const string&, bool) 
 
   cdef extern from "ipo/scip_oracle.h" namespace "ipo":
     cdef cppclass IPOSCIPOracle "ipo::SCIPOracle" (IPOOracleBase):
@@ -819,4 +829,27 @@ cdef class Polyhedron:
       # TODO: Convert inner...
     else:
       return constraint
+
+## Auxiliary Methods ##
+
+def readSCIP(fileName):
+  oracle = SCIPOracle(fileName)
+  mils = oracle.mixedIntegerLinearSet
+  P = Polyhedron(oracle)
+  cdef IPOVector obj = IPOgetSCIPObjective(fileName, True)
+  cdef Space space = oracle.space
+  cdef IPOSpace ipoSpace = space._space
+  return (P, mils, _createVector(obj, ipoSpace))
+
+def generateFacets(P, mixedIntegerLinearSet, objective):
+  lp = LinearProgram(mixedIntegerLinearSet)
+  lp.changeObjective(objective)
+  while True:
+    (status, point, value) = lp.solve()
+    assert status == LinearProgram.OPTIMAL
+    cons = P.separatePoint(point)
+    if cons is None:
+      break
+    yield cons
+    lp.addConstraint(cons)
 

@@ -420,6 +420,14 @@ namespace ipo {
     void changeObjective(const std::vector<Rational>& objective);
 
     /**
+     * \brief Returns objective coefficient.
+     * 
+     * Returns objective coefficient.
+     */
+
+    const Rational getObjective(std::size_t index) const;
+
+    /**
      * \brief Solves the LP.
      *
      * Solves the LP and returns the result. If the LP is unbounded, \p vector contains an unbounded ray,

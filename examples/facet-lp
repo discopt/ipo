@@ -1,36 +1,17 @@
-#!/usr/bin/python
-
-import sys
-import IPO
 import random
+import IPO
+import sys
 
-useExact = False
+(P,mils,origObj) = IPO.readSCIP(sys.argv[1])
 
-fileName = sys.argv[1]
-mils = IPO.MixedIntegerLinearSet(fileName)
-if useExact:
-  exactOracle = IPO.ExactSCIPOracle(fileName, mils)
-  approxOracle = IPO.SCIPOracle(fileName, mils, exactOracle)
-else:
-  approxOracle = IPO.SCIPOracle(fileName, mils)
-P = IPO.Polyhedron(approxOracle)
-
-cons = mils.getConstraints()
-lp = IPO.LinearProgram(mils)
+print P.dimension
 
 for i in xrange(10):
-  print('Random objective #%d' % (i+1))
-  objective = [ (random.random() - 0.5) for i in xrange(lp.numVariables) ]
-  lp.changeObjective(objective)
-
-  while True:
-    print('Solving LP with %d rows.' % (lp.numRows))
-    (status, point, value) = lp.solve()
-    assert status == IPO.LinearProgram.OPTIMAL
-    print('LP-optimum: %s' % (point))
-    cons = P.separatePoint(point)
-    if cons is None:
-      break
-    print('Separated facet: %s' % (cons))
-    lp.addConstraint(cons)
-  print
+  if i == 0:
+    print('Original objective')
+    objective = origObj
+  else:
+    print('Random objective #%d' % (i))
+    objective = [ (random.random() - 0.5) for j in xrange(P.space.dimension) ]
+  for facet in IPO.generateFacets(P, mils, objective):
+    print facet

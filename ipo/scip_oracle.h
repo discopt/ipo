@@ -58,11 +58,24 @@ namespace ipo {
    * \param scip
    *   SCIP instance
    * \param makeMaximization
-   *   If \c true, the objective is scaled such that it
-   *   corresponds to a maximization problem.
+   *   If \c true, the objective is scaled such that it corresponds to a maximization problem.
    */
 
   Vector getSCIPObjective(SCIP* scip, bool makeMaximization = true);
+
+  /**
+   * \brief Extracts the objective from a SCIP instance that is read from \p fileName.
+   *
+   * Extracts the objective from the given SCIP instance that is read from \p fileName. The variables are ordered canonically (see 
+   * \ref getSCIPvarToIndexMap()). By default, the objective is scaled such that it corresponds to a maximization problem.
+   *
+   * \param fileName
+   *   File name for SCIP instance.
+   * \param makeMaximization
+   *   If \c true, the objective is scaled such that it corresponds to a maximization problem.
+   */
+
+  Vector getSCIPObjective(const std::string& fileName, bool makeMaximization = true);
 
   /**
    * \brief An oracle based on the SCIP solver.

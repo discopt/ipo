@@ -52,7 +52,7 @@ A =      [[ 1, 0, 0, 0, 0, 0, 0, 0, 1 ], # v1
 
 weights = [ 1, 1, 1, 1, 1, 1, 1, 1, 1 ]
 
-A = readMat('/home/matthias/work/Unimodularity-Test/data/test.mat')
+A = readMat(sys.argv[1])
 weights = [1] * len(A[0])
 
 

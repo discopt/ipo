@@ -388,8 +388,10 @@ namespace ipo {
     assert(_points.empty());
     assert(_rays.empty());
 
-    solverMaximize(_objective, soplex::infinity, _points, _rays, hitLimit);
+//     std::cerr << "solverMaximize(" << _objective << ")" << std::endl;
 
+    solverMaximize(_objective, soplex::infinity, _points, _rays, hitLimit);
+   
     if (!_points.empty())
     {
       sort = true;
@@ -402,6 +404,9 @@ namespace ipo {
         Rational objValue;
         bool isRay = false;
         Vector vector = extendPoint(_points[i], objValue, isRay);
+//         std::cerr << "One of the returned points: ";
+//         space().printVector(std::cerr, vector);
+//         std::cerr << std::endl;
         if (isRay)
         {
           result.points.clear();
@@ -440,7 +445,7 @@ namespace ipo {
       throw std::runtime_error(str.str());
     }
 
-    return  heuristicLevel();
+    return heuristicLevel();
   }
 
   void MIPOracleBase::separatePoint(const Vector& point, std::vector< LinearConstraint >& cuts)
@@ -482,6 +487,8 @@ namespace ipo {
 
     // Fix variable bounds for the integer variables.
 
+    Rational integralObjective = 0;
+    std::size_t numContinuous = 0;
     for (std::size_t v = 0; v < n; ++v)
     {
 //      std::cerr << "Correction LP var #" << v << ": " << _mixedIntegerLinearSet->lowerBound(v) << " <= " << space()[v] << " <= "
@@ -490,41 +497,62 @@ namespace ipo {
       {
         Rational value = Rational(int(approxPoint[v] + 0.5));
         _correctionLP->changeBounds(v, value, value);
+        integralObjective += _correctionLP->getObjective(v) * value;
       }
       else
       {
         assert(_mixedIntegerLinearSet->lowerBound(v) == _correctionLP->lowerBound(v));
         assert(_mixedIntegerLinearSet->upperBound(v) == _correctionLP->upperBound(v));
+        ++numContinuous;
       }
     }
 
     Vector vector;
-    while (true)
+    if (numContinuous == 0)
     {
-      LinearProgram::Result result = _correctionLP->solve(vector, objectiveValue);
-      
-      if (result == LinearProgram::UNBOUNDED)
+      VectorData* data =  new VectorData(n);
+      for (std::size_t v = 0; v < n; ++v)
       {
-        separateRay(vector, _cuts);
-        if (_cuts.empty())
+        Rational value = Rational(int(approxPoint[v] + 0.5));
+        if (value == 0)
+          continue;
+        data->add(v, value);
+      }
+      isRay = false;
+      objectiveValue = integralObjective;
+      vector = Vector(data);
+//       space().printVector(std::cerr, vector);
+//       std::cerr << std::endl;
+    }
+    else
+    {
+      while (true)
+      {
+        LinearProgram::Result result = _correctionLP->solve(vector, objectiveValue);
+        
+        if (result == LinearProgram::UNBOUNDED)
         {
-          isRay = true;
-          break;
+          separateRay(vector, _cuts);
+          if (_cuts.empty())
+          {
+            isRay = true;
+            break;
+          }
+          for (std::size_t i = 0; i < _cuts.size(); ++i)
+            _correctionLP->addConstraint(_cuts[i]);
+          _cuts.clear();
         }
+        else if (result != LinearProgram::OPTIMAL)
+          throw std::runtime_error("MIPOracle: Claim is bounded, point could not be extended.");
+
+        separatePoint(vector, _cuts);
+        if (_cuts.empty())
+          break;
+
         for (std::size_t i = 0; i < _cuts.size(); ++i)
           _correctionLP->addConstraint(_cuts[i]);
         _cuts.clear();
       }
-      else if (result != LinearProgram::OPTIMAL)
-        throw std::runtime_error("MIPOracle: Claim is bounded, point could not be extended.");
-
-      separatePoint(vector, _cuts);
-      if (_cuts.empty())
-        break;
-
-      for (std::size_t i = 0; i < _cuts.size(); ++i)
-        _correctionLP->addConstraint(_cuts[i]);
-      _cuts.clear();
     }
 
     return vector;

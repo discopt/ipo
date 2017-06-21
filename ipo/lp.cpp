@@ -123,7 +123,7 @@ namespace ipo {
     _solver.setBoolParam(soplex::SoPlex::RATFAC, true);
     _solver.setIntParam(soplex::SoPlex::OBJSENSE, soplex::SoPlex::OBJSENSE_MAXIMIZE);
     _solver.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
-    
+
     std::size_t n = SCIPgetNOrigVars(scip);
     SCIP_VAR** origVars = SCIPgetOrigVars(scip);
 
@@ -140,7 +140,7 @@ namespace ipo {
     for (std::size_t v = 0; v < n; ++v)
     {
       // Lower bound.
-      
+
       double realLowerBound = SCIPvarGetLbGlobal(origVars[v]);
       Rational lowerBound;
       if (realLowerBound > -SCIPinfinity(scip))
@@ -168,18 +168,19 @@ namespace ipo {
 
     // Setup row constraints.
 
-    SCIP_CONSHDLR* linearHandler = SCIPfindConshdlr(scip, "linear");
-    std::size_t m = SCIPconshdlrGetNConss(linearHandler);
+    std::size_t m = SCIPgetNConss(scip);
     soplex::LPRowSetRational rows(m);
     if (m == 0)
       return;
-    
-    SCIP_CONS** linearConstraints = SCIPconshdlrGetConss(linearHandler);
+
+    SCIP_CONS** constraints = SCIPgetConss(scip);
     _rowNames.reserve(2 * m);
     soplex::DSVectorRational normal;
     for (std::size_t i = 0; i < m; ++i)
     {
-      SCIP_CONS* cons = linearConstraints[i];
+      SCIP_CONS* cons = constraints[i];
+      if (std::string(SCIPconshdlrGetName(SCIPconsGetHdlr(cons))) != "linear")
+        continue;
 
       double realLhs = SCIPgetLhsLinear(scip, cons);
       Rational lhs;
@@ -493,10 +494,17 @@ namespace ipo {
     for (std::size_t v = 0; v < numVariables(); ++v)
       _solver.changeObjRational(v, objective[v]);
   }
+  
+  const Rational LinearProgram::getObjective(std::size_t index) const
+  {
+    Rational result;
+    _solver.getObjRational(index, result);
+    return result;
+  }
 
   LinearProgram::Result LinearProgram::solve(Vector& vector, Rational& objectiveValue)
   {
-    soplex::SPxSolver::Status status = _solver.solve();
+    soplex::SPxSolver::Status status = _solver.solve();    
     if (status == soplex::SPxSolver::OPTIMAL)
     {
       soplex::DVectorRational primalSolution(numVariables());

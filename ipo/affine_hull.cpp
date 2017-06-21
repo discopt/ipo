@@ -719,6 +719,9 @@ namespace ipo {
       const ObjectiveBound& objectiveBound = ObjectiveBound(), HeuristicLevel minHeuristicLevel = 0,
       HeuristicLevel maxHeuristicLevel = std::numeric_limits<HeuristicLevel>::max())
     {
+//       std::cerr << "Querying oracle for objective vector " << objective << " with heuristics in [" << _oracleMinHeuristicLevel << "," 
+//         << _oracleMaxHeuristicLevel << "]" << std::endl;
+      
       _oracleMaxHeuristicLevel = maxHeuristicLevel;
       _oracleMinHeuristicLevel = minHeuristicLevel;
 
@@ -726,6 +729,9 @@ namespace ipo {
 
       _oracle->maximize(_result, objective, objectiveBound, minHeuristicLevel, maxHeuristicLevel);
       _oracleResultHeuristicLevel = _result.heuristicLevel();
+
+      _result.sortPoints();
+//       std::cerr << "Maximum value = " << _result.objectiveValue() << std::endl;
 
       if (event == AffineHullHandler::ORACLE_VERIFY_BEGIN)
         _verifySuccess = _result.isFeasible() && _result.points.front().objectiveValue == objectiveBound.value;

@@ -68,6 +68,22 @@ namespace ipo {
     return Vector(data);
   }
 
+  Vector getSCIPObjective(const std::string& fileName, bool makeMaximization)
+  {
+    SCIP* scip = NULL;
+
+    SCIP_CALL_EXC(SCIPcreate(&scip));
+    SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
+    SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
+    SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
+
+    Vector result = getSCIPObjective(scip, makeMaximization);
+
+    SCIP_CALL_EXC(SCIPfree(&scip));
+
+    return result;
+  }
+
   SCIPOracle::SCIPOracle(const std::string& name, SCIP* originalSCIP, const std::shared_ptr<OracleBase>& nextOracle)
     : MIPOracleBase(name, nextOracle)
   {
@@ -117,8 +133,7 @@ namespace ipo {
     SCIP_HASHMAP* hashMap = NULL;
     SCIP_CALL_EXC(SCIPhashmapCreate(&hashMap, SCIPblkmem(originalSCIP), n));
     SCIP_CALL_EXC(SCIPcreate(&_scip));
-    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, FALSE,
-      &validSCIP));
+    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, FALSE, &validSCIP));
     if (!validSCIP)
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
@@ -197,6 +212,7 @@ namespace ipo {
         assert(constraint.type() == '=');
         lhs = rhs = constraint.rhs();
       }
+
       SCIP_CALL_EXC(SCIPcreateConsBasicLinear(_scip, &cons, mixedIntegerLinearSet->rowName(r).c_str(), 0, 0, 0, lhs, rhs));
       const Vector& normal = constraint.normal();
       for (std::size_t p = 0; p < normal.size(); ++p)

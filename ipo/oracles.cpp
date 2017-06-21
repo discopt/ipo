@@ -53,6 +53,7 @@ namespace ipo {
       if (points[i].objectiveValue == -infinity)
       {
         points[i].objectiveValue = *_objective * points[i].vector;
+//         std::cerr << "Objective of point " << i << " is " <<  points[i].objectiveValue << std::endl;
       }
     }
   }
