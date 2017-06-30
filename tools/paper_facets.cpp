@@ -102,6 +102,8 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
+  ipo::Vector originalObjective = getSCIPObjective(scip, true);
+
   std::shared_ptr<MixedIntegerLinearSet> mixedIntegerSet = std::make_shared<MixedIntegerLinearSet>(scip);
 
   SCIP_CALL_EXC(SCIPfree(&scip));
@@ -209,18 +211,19 @@ int main(int argc, char** argv)
   std::shared_ptr<MixedIntegerLinearSet> mis = scipOracle->mixedIntegerLinearSet();
   LPColSetRational cols(mis->numVariables());
   DSVectorRational zero;
+  DVectorRational denseOriginalObjective(mis->numVariables());
+  vectorToDense(originalObjective, denseOriginalObjective);
   for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
   {
-    cols.add(Rational(1), mis->lowerBound(v), zero, mis->upperBound(v));
+    cols.add(denseOriginalObjective[v], mis->lowerBound(v), zero, mis->upperBound(v));
   }
   spx.addColsRational(cols);
   std::vector<LinearConstraint> rowConstraints;
   mis->getConstraints(rowConstraints, false, false);
   addToLP(spx, rowConstraints);
-
   addToLP(spx, outer);
-  
-//   spx.writeFileRational("init.lp");
+
+  spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
   std::default_random_engine generator(0);
@@ -249,12 +252,6 @@ int main(int argc, char** argv)
         }
       }
     }
-    else
-    {
-      for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
-        spx.changeObjRational(v, Rational(0));
-      spx.changeObjRational(36, Rational(-1));
-    }
 
     std::cout << "Solving relaxation LP. " << std::flush;
 
@@ -274,7 +271,7 @@ int main(int argc, char** argv)
         {
           scaleIntegral(constraint);
 
-          std::cout << "\n\n separated with ";
+          std::cout << "\n\n separated with facet or equation ";
           oracle->space().printLinearConstraint(std::cout, constraint);
           std::cout << std::endl;
 
@@ -297,7 +294,7 @@ int main(int argc, char** argv)
         {
           scaleIntegral(constraint);
 
-          std::cout << " separated with ";
+          std::cout << "\n\n separated with facet or equation ";
           oracle->space().printLinearConstraint(std::cout, constraint);
           std::cout << std::endl;
 
