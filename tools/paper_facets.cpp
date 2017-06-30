@@ -18,6 +18,7 @@
 #include <ipo/facets.h>
 #include <ipo/cache_oracle.h>
 #include <ipo/statistics_oracle.h>
+#include <ipo/min_norm_2d.h>
 
 using namespace ipo;
 using namespace soplex;
@@ -270,6 +271,7 @@ int main(int argc, char** argv)
         if (separatePoint(oracle, point, inner, facetSeparationHandlers, constraint, &certificate))
         {
           scaleIntegral(constraint);
+          manhattanNormImproveInequality(mis->numVariables(), constraint, outer);
 
           std::cout << "\n\n separated with facet or equation ";
           oracle->space().printLinearConstraint(std::cout, constraint);
@@ -293,6 +295,7 @@ int main(int argc, char** argv)
         if (separateRay(oracle, ray, inner, facetSeparationHandlers, constraint, &certificate))
         {
           scaleIntegral(constraint);
+          manhattanNormImproveInequality(mis->numVariables(), constraint, outer);
 
           std::cout << "\n\n separated with facet or equation ";
           oracle->space().printLinearConstraint(std::cout, constraint);
