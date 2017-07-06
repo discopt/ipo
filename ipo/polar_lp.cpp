@@ -5,7 +5,7 @@
 #include <vector>
 
 // DEBUGGING
-#include "soplex_reproduce.h"
+//#include "soplex_reproduce.h"
 
 using namespace soplex;
 
@@ -133,7 +133,7 @@ namespace ipo {
     vectorToSparse(point, _sparseColumnVector);
     _sparseColumnVector.add(_oracle->space().dimension(), Rational(-1));
 
-    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(0)));
+    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(-_spx->realParam(SoPlex::FEASTOL))));
     _rows.push_back(RowInfo(dynamic, 'p', point));
     if (!dynamic)
       _firstDynamicRow = _spx->numRowsRational();
@@ -150,7 +150,7 @@ namespace ipo {
     _sparseColumnVector.setMax(std::max<int>(_sparseColumnVector.max(), ray.size()));
     vectorToSparse(ray, _sparseColumnVector);
 
-    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(0)));
+    _spx->addRowRational(LPRowRational(-soplex::infinity, _sparseColumnVector, Rational(-_spx->realParam(SoPlex::FEASTOL))));
     _rows.push_back(RowInfo(dynamic, 'r', ray));
     if (!dynamic)
       _firstDynamicRow = _spx->numRowsRational();
@@ -185,7 +185,6 @@ namespace ipo {
         _oracle->maximize(_result, _oracleObjective, ObjectiveBound(inequalityRhs + getTolerance(), true));
         _oracleObjectiveValue = _result.objectiveValue();
         notify(PolarLPHandler::ORACLE_END);
-
 
         progress = false;
         if (_result.isInfeasible())
