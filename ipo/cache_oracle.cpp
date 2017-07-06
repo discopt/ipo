@@ -228,6 +228,8 @@ namespace ipo {
     }
     if (!result.rays.empty())
       return 0;
+    else
+      searchResult.clear();
 
     // Search points.
 
