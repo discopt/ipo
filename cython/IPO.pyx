@@ -226,6 +226,23 @@ cdef class SubmissiveOracle (OracleBase):
     cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._submissiveOracle)
     self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
+## DominantOracle
+
+cdef extern from "ipo/dominant.h" namespace "ipo":
+  cdef cppclass IPODominantOracle "ipo::DominantOracle" (IPOOracleBase):
+    IPODominantOracle(const string& name, const PtrIPOOracleBase& sourceOracle, const PtrIPOOracleBase& nextOracle) except +
+ctypedef shared_ptr[IPODominantOracle] PtrIPODominantOracle
+
+cdef class DominantOracle (OracleBase):
+  cdef PtrIPODominantOracle _submissiveOracle
+
+  def __cinit__(self, const string& name, OracleBase sourceOracle, OracleBase nextOracle = None):
+    cdef PtrIPOOracleBase ptrNextOracle
+    if not nextOracle is None:
+      ptrNextOracle = nextOracle.getLinkOraclePtr()
+    self._submissiveOracle = PtrIPODominantOracle(new IPODominantOracle(name, sourceOracle.getQueryOraclePtr(), ptrNextOracle))
+    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._submissiveOracle)
+    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
 ## LinearSet ##
 
@@ -482,6 +499,10 @@ cdef _createLinearProgram(const PtrIPOLinearProgram& linearProgram):
 IF IPO_WITH_SCIP:
 
   ## SCIPOracle ##
+
+  cdef extern from "ipo/scip_exception.h" namespace "ipo":
+    cdef cppclass IPOSCIPException "ipo::SCIPException":
+      pass
 
   cdef extern from "ipo/scip_oracle.h" namespace "ipo":
     IPOVector IPOgetSCIPObjective "ipo::getSCIPObjective" (const string&, bool) 
