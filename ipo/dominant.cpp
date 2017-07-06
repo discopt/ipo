@@ -19,6 +19,8 @@ namespace ipo {
   HeuristicLevel DominantOracle::maximizeImplementation(OracleResult& result, const VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
+    // Check for feasibility!
+
     if (!_isFeasible)
     {
       DVectorRational zero;
@@ -30,6 +32,8 @@ namespace ipo {
       else
         return 0;
     }
+
+    // Check if objective has positive coefficient and return unbounded ray.
 
     for (std::size_t v = 0; v < space().dimension(); ++v)
     {
