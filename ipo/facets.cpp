@@ -248,8 +248,8 @@ namespace ipo {
       for (std::size_t i = 0; i < spanning.rays.size(); ++i)
       {
         dense -= spanning.rays[i];
-        _approximateLP.addPointRow(spanning.rays[i], false);
-        _exactLP.addPointRow(spanning.rays[i], false);
+        _approximateLP.addRayRow(spanning.rays[i], false);
+        _exactLP.addRayRow(spanning.rays[i], false);
         notify(FacetSeparationHandler::RAY);
       }
       notify(FacetSeparationHandler::RAYS_END);
