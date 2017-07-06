@@ -304,7 +304,7 @@ namespace ipo {
 // //   }
 
   MIPOracleBase::MIPOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase(name, nextOracle)
+    : OracleBase(name, nextOracle), _objective(NULL)
   {
 
 
@@ -346,7 +346,8 @@ namespace ipo {
 
   MIPOracleBase::~MIPOracleBase()
   {
-    delete[] _objective;
+    if (_objective != NULL)
+      delete[] _objective;
 //     delete _spx;
   }
 
