@@ -243,7 +243,7 @@ namespace ipo {
       notify(FacetSeparationHandler::POINTS_END);
 
       // Add rays.
-      
+
       notify(FacetSeparationHandler::RAYS_BEGIN);
       for (std::size_t i = 0; i < spanning.rays.size(); ++i)
       {
@@ -255,7 +255,7 @@ namespace ipo {
       notify(FacetSeparationHandler::RAYS_END);
 
       // Normalization constraint.
-      
+
       if (separatingRay())
       {
         if (spanning.rays.size() > 1)
@@ -263,8 +263,9 @@ namespace ipo {
       }
       else
       {
-        assert(spanning.points.size() + spanning.rays.size() > 0);
-        dense /= int(spanning.points.size() + spanning.rays.size());
+        assert(spanning.points.size());
+        if (spanning.points.size() > 1)
+          dense /= int(spanning.points.size());
       }
 
       for (std::size_t p = 0; p < _targetVector.size(); ++p)
@@ -282,7 +283,7 @@ namespace ipo {
       if (!separatingRay())
         dense[polarSpace().dimension() - 1] = -1;
       _approximateLP.setObjective(dense);
-      _exactLP.setObjective(dense);      
+      _exactLP.setObjective(dense);
 
       notify(FacetSeparationHandler::INITIALIZED);
 
@@ -330,6 +331,8 @@ namespace ipo {
         *certificate = pointsRays;
 
       constraint = _exactLP.currentInequality();
+
+
       std::size_t resultDimMinus1 = pointsRays.points.size() + pointsRays.rays.size();
       std::size_t givenDimMinus1 = spanning.points.size() + spanning.rays.size();
       if (resultDimMinus1 == givenDimMinus1)
