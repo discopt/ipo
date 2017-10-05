@@ -244,6 +244,46 @@ cdef class DominantOracle (OracleBase):
     cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._submissiveOracle)
     self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
 
+## Projection
+
+cdef extern from "ipo/projection.h" namespace "ipo":
+  cdef cppclass IPOProjection "ipo::Projection":
+    IPOProjection(const IPOSpace& sourceSpace, const vector[size_t]& variableSubset) except +
+    IPOProjection(const IPOSpace& sourceSpace, const string& variableSubsetRegularExpression) except +
+    const IPOSpace& imageSpace() const
+
+ctypedef shared_ptr[IPOProjection] PtrIPOProjection
+
+cdef class Projection:
+  cdef PtrIPOProjection _projection
+
+  def __cinit__(self, Space space, string variableSubsetRegularExpression):
+    self._projection = PtrIPOProjection(new IPOProjection(space._space, variableSubsetRegularExpression))
+
+  @property
+  def imageSpace(self):
+    cdef Space result = Space()
+    result._space = deref(self._projection).imageSpace()
+    return result
+
+## ProjectionOracle
+
+cdef extern from "ipo/projection.h" namespace "ipo":
+  cdef cppclass IPOProjectionOracle "ipo::ProjectionOracle" (IPOOracleBase):
+    IPOProjectionOracle(const string& name, const IPOProjection& projection, PtrIPOOracleBase& oracle) except +
+ctypedef shared_ptr[IPOProjectionOracle] PtrIPOProjectionOracle
+
+cdef class ProjectionOracle (OracleBase):
+  cdef PtrIPOProjectionOracle _projectionOracle
+
+  def __cinit__(self, const string& name, Projection projection, OracleBase oracle):
+    cdef PtrIPOOracleBase ptrBaseOracle
+    if not oracle is None:
+      ptrBaseOracle = oracle.getQueryOraclePtr() # TODO: Or use getLinkOraclePtr()?
+    self._projectionOracle = PtrIPOProjectionOracle(new IPOProjectionOracle(name, deref(projection._projection), ptrBaseOracle))
+    cdef PtrIPOOracleBase mainOracle = <PtrIPOOracleBase>(self._projectionOracle)
+    self._wrappedOracle = PtrIPODefaultOracleWrapper(new IPODefaultOracleWrapper(mainOracle))
+
 ## LinearSet ##
 
 cdef extern from "ipo/lp.h" namespace "ipo":
@@ -866,11 +906,22 @@ def generateFacets(P, mixedIntegerLinearSet, objective):
   lp = LinearProgram(mixedIntegerLinearSet)
   lp.changeObjective(objective)
   while True:
-    (status, point, value) = lp.solve()
-    assert status == LinearProgram.OPTIMAL
-    cons = P.separatePoint(point)
-    if cons is None:
+    (status, vector, value) = lp.solve()
+    if status == LinearProgram.UNBOUNDED:
+      cons = P.separateRay(vector)
+      if cons is None:
+        break
+      yield cons
+      lp.addConstraint(cons)
+    elif status == LinearProgram.OPTIMAL:
+      cons = P.separatePoint(vector)
+      if cons is None:
+        break
+      yield cons
+      lp.addConstraint(cons)
+    elif status == LinearProgram.INFEASIBLE:
+      print 'LP is infeasible'
       break
-    yield cons
-    lp.addConstraint(cons)
+    else:
+      raise Exception('Unexpected LP status %s.' % (str(status)))
 

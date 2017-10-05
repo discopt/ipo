@@ -1,5 +1,7 @@
 #include "projection.h"
 
+#include <regex>
+
 using namespace soplex;
 
 namespace ipo {
@@ -20,6 +22,26 @@ namespace ipo {
 
     for (std::size_t iv = 0; iv < variableSubset.size(); ++iv)
       _map.push_back(unitVector(variableSubset[iv]));
+
+    _shift.resize(variableNames.size(), Rational(0));
+
+    _imageSpaceData = new SpaceData(variableNames);
+    _imageSpaceData->markUsed();
+  }
+
+  ProjectionData::ProjectionData(const Space& sourceSpace, const std::string& variableSubsetRegularExpression)
+    : _sourceSpace(sourceSpace)
+  {
+    std::vector<std::string> variableNames;
+    std::regex re(variableSubsetRegularExpression);
+    for (std::size_t v = 0; v < sourceSpace.dimension(); ++v)
+    {
+      if (std::regex_match(sourceSpace[v], re))
+      {
+        variableNames.push_back(sourceSpace[v]);
+        _map.push_back(unitVector(v));
+      }
+    }
 
     _shift.resize(variableNames.size(), Rational(0));
 
@@ -71,6 +93,19 @@ namespace ipo {
     if (_usage == 0)
       delete this;
   }
+  
+  Projection::Projection(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset)
+    : _data(new ProjectionData(sourceSpace, variableSubset)), _imageSpace(_data->imageSpace())
+  {
+    _data->markUsed();
+  }
+
+
+  Projection::Projection(const Space& sourceSpace, const std::string& variableSubsetRegularExpression)
+    : _data(new ProjectionData(sourceSpace, variableSubsetRegularExpression)), _imageSpace(_data->imageSpace())
+  {
+    _data->markUsed();
+  }
 
   Vector Projection::projectPoint(const Vector& point) const
   {
@@ -106,6 +141,8 @@ namespace ipo {
   LinearConstraint Projection::liftLinearConstraint(const LinearConstraint& constraint) const
   {
     soplex::DVectorRational liftedNormal(sourceSpace().dimension());
+    for (std::size_t i = 0 ; i < liftedNormal.dim(); ++i)
+      liftedNormal[i] = 0;
     Rational liftedRhs = constraint.rhs();
     for (std::size_t p = 0; p < constraint.normal().size(); ++p)
     {

@@ -57,7 +57,7 @@ namespace ipo {
   HeuristicLevel Polyhedron::CollectOracle::maximizeController(OracleResult& result, const VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
-     HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
+    HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDups);
 
     if (level == 0 && result.isFeasible())

@@ -10,6 +10,7 @@ namespace ipo {
   public:
     ProjectionData(const Space& sourceSpace);
     ProjectionData(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset);
+    ProjectionData(const Space& sourceSpace, const std::string& variableSubsetRegularExpression);
     ~ProjectionData();
 
     bool operator==(const ProjectionData& other) const;
@@ -99,6 +100,10 @@ namespace ipo {
     {
       _data->markUsed();
     }
+
+    Projection(const Space& sourceSpace, const std::vector<std::size_t>& variableSubset);
+
+    Projection(const Space& sourceSpace, const std::string& variableSubsetRegularExpression);
 
     ~Projection()
     {

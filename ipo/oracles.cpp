@@ -159,6 +159,10 @@ namespace ipo {
     bool sort = false;
     bool checkDuplicates = false;
 
+#ifdef IPO_DEBUG
+    std::cerr << "Oracle <" << name() << "> called with objective = " << objective << std::endl;
+#endif
+
     result._heuristicLevel = maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDuplicates);
 
@@ -182,6 +186,10 @@ namespace ipo {
     assert((heuristicLevel() == 0 && _nextOracle == NULL)
       || heuristicLevel() > 0 && _nextOracle != NULL);
     assert(minHeuristic <= maxHeuristic);
+
+#ifdef IPO_DEBUG
+    std::cerr << "Oracle <" << name() << ">'s maximizeController called with objective = " << objective << std::endl;
+#endif
 
     // If requested, forward to next oracle.
 

@@ -504,7 +504,16 @@ namespace ipo {
 
   LinearProgram::Result LinearProgram::solve(Vector& vector, Rational& objectiveValue)
   {
-    soplex::SPxSolver::Status status = _solver.solve();    
+    soplex::SPxSolver::Status status;
+    try
+    {
+      status = _solver.solve();    
+    }
+    catch (soplex::SPxException& e)
+    {
+      std::cerr << e.what() << std::endl;
+      throw std::runtime_error("Error while solving a LinearProgram using SoPlex.");
+    }
     if (status == soplex::SPxSolver::OPTIMAL)
     {
       soplex::DVectorRational primalSolution(numVariables());
