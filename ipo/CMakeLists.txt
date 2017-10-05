@@ -1,39 +1,39 @@
 set(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
 
 set(IPO_SOURCES
-  parameters.cpp
-  polyhedron.cpp
-  linear_constraint.cpp
-  unique_vectors.cpp
-  vectors.cpp
-  rational.cpp
-  submissive.cpp
-  dominant.cpp
-  spx_gmp.cpp
-  space.cpp
-  oracles.cpp
-  projection.cpp
+  affine_hull.cpp
   cache_oracle.cpp
-  vector_space_generators.cpp
-  reconstruct.cpp
-  vector_2d.cpp
+  console_app.cpp
+  dominant.cpp
+  exactscip_oracle.cpp
+  external_oracle.cpp
+  facets.cpp
+  linear_constraint.cpp
+  lp.cpp
   min_norm_2d.cpp
   mip_oracle.cpp
-  lp.cpp
-  facets.cpp
-  affine_hull.cpp
+  oracles.cpp
   oracle_wrapper.cpp
-  soplex_reproduce.cpp
-  timer.cpp
-  polar_lp.cpp
-  smallest_face.cpp
-  statistics_oracle.cpp
-  external_oracle.cpp
-  exactscip_oracle.cpp
-  scip_oracle.cpp
-  console_app.cpp
+  parameters.cpp
   parser.cpp
+  polar_lp.cpp
+  polyhedron.cpp
+  projection.cpp
+  rational.cpp
+  reconstruct.cpp
+  scip_oracle.cpp
+  smallest_face.cpp
+  soplex_reproduce.cpp
+  space.cpp
+  spx_gmp.cpp
+  statistics_oracle.cpp
+  submissive.cpp
   test.cpp
+  timer.cpp
+  unique_vectors.cpp
+  vectors.cpp
+  vector_2d.cpp
+  vector_space_generators.cpp
 )
 
 set(IPO_INSTALL_HEADERS
