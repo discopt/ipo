@@ -166,9 +166,7 @@ namespace ipo {
     {
       notify(PolarLPHandler::LP_BEGIN);
 
-      std::cerr << "<solve>" << std::endl;
       SPxSolver::Status status = _spx->solve();
-      std::cerr << "</solve>" << std::endl;
 
       if (status == SPxSolver::OPTIMAL)
       {
