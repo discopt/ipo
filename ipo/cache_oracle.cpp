@@ -130,6 +130,7 @@ namespace ipo {
       }
 
       _inequalities.changeObjRational(objective);
+      _inequalities.writeFileReal("foo.lp");
       SPxSolver::Status status = _inequalities.solve();
 
       if (status == SPxSolver::OPTIMAL && _inequalities.objValueRational() == result.points.front().objectiveValue)

@@ -127,7 +127,7 @@ int main(int argc, char** argv)
     scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + fileName + ")", mixedIntegerSet);
   }
   std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
-  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats, CacheOracle::CACHE_AND_SEARCH);
+  std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats);
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
 
@@ -224,7 +224,7 @@ int main(int argc, char** argv)
   addToLP(spx, rowConstraints);
   addToLP(spx, outer);
 
-  spx.writeFileRational("init.lp");
+//   spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
   std::default_random_engine generator(0);
