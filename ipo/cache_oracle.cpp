@@ -117,6 +117,8 @@ namespace ipo {
   HeuristicLevel CacheOracle::maximizeController(OracleResult& result, const soplex::VectorRational& objective,
     const ObjectiveBound& objectiveBound, HeuristicLevel minHeuristic, HeuristicLevel maxHeuristic, bool& sort, bool& checkDups)
   {
+//     std::cerr << "Objective = " << objective << std::endl;
+
     HeuristicLevel level = OracleBase::maximizeController(result, objective, objectiveBound, minHeuristic, maxHeuristic, sort,
       checkDups);
 
@@ -150,14 +152,30 @@ namespace ipo {
       const Rational& optimum = result.points.front().objectiveValue;
       std::size_t numNonzeros = 0;
       std::size_t nonzero = 0;
+      Rational maxAbs = 0;
+      Rational minAbs = soplex::infinity;
       for (std::size_t v = 0; v < space().dimension(); ++v)
       {
-        if (objective[v] != 0)
+        Rational x = objective[v];
+        if (x != 0)
         {
           numNonzeros++;
           nonzero = v;
-          if (numNonzeros >= 2)
-            break;
+          if (x > 0)
+          {
+            if (x > maxAbs)
+              maxAbs = x;
+            if (x < minAbs)
+              minAbs = x;
+          }
+          else if (x < 0)
+          {
+            x = -x;
+            if (x > maxAbs)
+              maxAbs = x;
+            if (x < minAbs)
+              minAbs = x;
+          }
         }
       }
       if (numNonzeros == 1)
@@ -180,8 +198,17 @@ namespace ipo {
       }
       else if (numNonzeros > 1)
       {
-        DSVectorRational normal(objective);
-        _inequalities.addRowRational(LPRowRational(-infinity, normal, optimum));
+        if (minAbs * 1024 >= maxAbs)
+        {
+          DSVectorRational normal(objective);
+          normal *= Rational(1) / minAbs;
+//           std::cerr << "Caching normal " << normal << " with max / min = " << (double(maxAbs) / double(minAbs)) << std::endl;
+          _inequalities.addRowRational(LPRowRational(-infinity, normal, optimum));
+        }
+        else
+        {
+//           std::cerr << "Rejecting to cache inequality for objective bad numerics: max / min = " << (double(maxAbs) / double(minAbs)) << std::endl;
+        }
       }
     }
 
