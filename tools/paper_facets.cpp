@@ -220,11 +220,11 @@ int main(int argc, char** argv)
   }
   spx.addColsRational(cols);
   std::vector<LinearConstraint> rowConstraints;
-  mis->getConstraints(rowConstraints, false, false);
+  mis->getConstraints(rowConstraints, true, true);
   addToLP(spx, rowConstraints);
   addToLP(spx, outer);
 
-//   spx.writeFileRational("init.lp");
+  //spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
   std::default_random_engine generator(0);

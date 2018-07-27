@@ -69,8 +69,8 @@ set(IPO_INSTALL_HEADERS
 )
 
 if(SCIP_FOUND)
-  string(TOUPPER ${SCIP_LPS} SCIP_LPI)
-  add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
+#  string(TOUPPER ${SCIP_LPS} SCIP_LPI)
+  add_definitions(-DWITH_SCIP)# -DWITH_SCIP_LPI_${SCIP_LPI})
   set(DEFINE_IPO_SCIP "#define IPO_WITH_SCIP\n#define IPO_WITH_SCIP_${SCIP_LPI}")
 else()
   set(DEFINE_IPO_SCIP "#undef IPO_WITH_SCIP")
@@ -97,18 +97,20 @@ configure_file(common.h.in ${CMAKE_BINARY_DIR}/deps/ipo/common.h)
 #configure_file(${CMAKE_BINARY_DIR}/common.h ${CMAKE_BINARY_DIR}/ipo/common.h COPYONLY)
 
 add_library(ipo-static STATIC ${IPO_SOURCES})
-include_directories(ipo-static ${SoPlex_INCLUDE_DIRS})
+include_directories(ipo-static ${SOPLEX_INCLUDE_DIRS})
 target_link_libraries(ipo-static
-  ${SoPlex_LIBRARIES}
+  ${SOPLEX_LIBRARIES}
   ${GMP_LIBRARIES}
   ${GMPXX_LIBRARIES}
 )
 set_target_properties(ipo-static PROPERTIES OUTPUT_NAME ipo)
 
 add_library(ipo-shared SHARED ${IPO_SOURCES})
-include_directories(ipo-shared ${SoPlex_INCLUDE_DIRS})
+include_directories(ipo-shared ${SOPLEX_INCLUDE_DIRS})
+
+
+# User of libipo.so has to link to libsoplex on his/her own since he/she might also link to SCIP which includes soplex.
 target_link_libraries(ipo-shared
-  ${SoPlex_LIBRARIES}
   ${GMP_LIBRARIES}
   ${GMPXX_LIBRARIES}
 )
@@ -116,8 +118,8 @@ set_target_properties(ipo-shared PROPERTIES OUTPUT_NAME ipo)
 
 if(SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
-  target_link_libraries(ipo-static ${SCIP_LIBRARIES})
-  target_link_libraries(ipo-shared ${SCIP_LIBRARIES})
+#  target_link_libraries(ipo-static ${SCIP_LIBRARIES})
+#target_link_libraries(ipo-shared ${SCIP_LIBRARIES})
 endif()
 
 install(TARGETS ipo-static   ARCHIVE DESTINATION lib   LIBRARY DESTINATION lib   COMPONENT library)

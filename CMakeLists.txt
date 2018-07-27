@@ -48,11 +48,18 @@ ENDIF(UNIX)
 ## ZIMPL, SoPlex and SCIP
 
 find_package(GMPXX REQUIRED)
-find_package(SoPlex REQUIRED)
+
+find_package(SOPLEX REQUIRED)
 
 ## Oracles
-  
-find_package(SCIP)
+
+find_package(SCIP QUIET)
+if (SCIP_FOUND)
+  message(STATUS "Found SCIP")
+else()
+  message(STATUS "Could NOT find SCIP")
+endif()
+
 find_package(ExactSCIP)
 
 ## IPO

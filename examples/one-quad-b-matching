@@ -1,0 +1,94 @@
+#!/usr/bin/python
+
+import sys
+import IPO
+import random
+
+A = [2, 2, 2, 2]
+B = [2, 2, 2, 2]
+
+#objectiveType = 'weights'
+#objectiveType = 'random'
+#objectiveType = '0/1-random'
+objectiveType = '0/1-random'
+objectiveZeroProbability = 0.5
+
+N = 100000
+
+# Write LP.
+
+fileName = '/tmp/ipo.lp'
+lpData = '''
+minimize cost: -y
+s.t.
+  y - x#0#0 <= 0
+  y - x#1#1 <= 0
+  x#0#0 <= 1
+  x#1#1 <= 1
+  x#0#0 + x#1#1 - y <= 1
+'''
+for a in xrange(len(A)):
+  lpData += '  ' + ' + '.join([ ('x#%d#%d' % (a,b)) for b in xrange(len(B)) ]) + ' <= ' + str(A[a]) + '\n'
+for b in xrange(len(B)):
+  lpData += '  ' + ' + '.join([ ('x#%d#%d' % (a,b)) for a in xrange(len(A)) ]) + ' <= ' + str(B[b]) + '\n'
+for a in xrange(len(A)):
+  for b in xrange(len(B)):
+    lpData += '  x#%d#%d <= 1' % (a, b)
+lpData += 'generals\n'
+lpData += '  ' + ' '.join([ ('x#%d#%d' % (a,b)) for a in xrange(len(A)) for b in xrange(len(B)) ]) + '\n'
+lpData += 'binaries\n'
+lpData += '  y\n'
+lpData += 'end\n'
+lpFile = open(fileName, 'w')
+lpFile.write(lpData)
+lpFile.close()
+
+mils = IPO.MixedIntegerLinearSet(fileName)
+oracle = IPO.SCIPOracle(fileName, mils)
+P = IPO.Polyhedron(oracle)
+
+cons = mils.getConstraints()
+lp = IPO.LinearProgram(mils)
+
+print 'Generating facets for %d directions.' % (N)
+for i in xrange(N):
+  #print('Random objective #%d' % (i+1))
+  objective = [None] * lp.numVariables
+  if objectiveType == 'weights':
+    for c in xrange(lp.numVariables):
+      objective[c] = weights[c] + random.random()
+  elif objectiveType == 'random':
+    for c in xrange(lp.numVariables):
+      objective[c] = random.random() - 0.5
+  elif objectiveType == '0/1-random':
+    for c in xrange(lp.numVariables):
+      rnd = random.random()
+      if rnd <= objectiveZeroProbability:
+        objective[c] = 0
+      else:
+        objective[c] = 1
+  elif objectiveType == '-1/0/1-random':
+    for c in xrange(lp.numVariables):
+      if random.random() <= objectiveZeroProbability:
+        objective[c] = 0
+      elif random.random() > 0.5:
+        objective[c] = 1
+      else:
+        objective[c] = -1
+  else:
+    assert False
+  lp.changeObjective(objective)
+
+  while True:
+#    sys.stdout.write('.')
+#    sys.stdout.flush()
+    #print('Solving LP with %d rows.' % (lp.numRows))
+    (status, point, value) = lp.solve()
+    assert status == IPO.LinearProgram.OPTIMAL
+    #print('LP-optimum: %s' % (point))
+    con = P.separatePoint(point)
+    if con is None:
+      break
+    print('Separated facet: %s' % (con))
+    lp.addConstraint(con)
+print

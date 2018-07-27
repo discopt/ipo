@@ -8,14 +8,14 @@ from Cython.Build import cythonize
 GMPXX_include_dirs = "@GMPXX_INCLUDE_DIRS@"
 GMPXX_libraries = "@GMPXX_LIBRARIES@"
 
-SoPlex_include_dirs = "@SoPlex_INCLUDE_DIRS@"
-SoPlex_libraries = "@SoPlex_LIBRARIES@"
+SOPLEX_include_dirs = "@SOPLEX_INCLUDE_DIRS@"
+SOPLEX_libraries = "@SOPLEX_LIBRARIES@".replace('lib', '')
 
 SCIP_include_dirs = "@SCIP_INCLUDE_DIRS@"
-SCIP_libraries = "@SCIP_LIBRARIES@"
+SCIP_libraries = "@SCIP_LIBRARIES@".replace('lib', '')
 
 ZIMPL_include_dirs = "@ZIMPL_INCLUDE_DIRS@"
-ZIMPL_libraries = "@ZIMPL_LIBRARIES@"
+ZIMPL_libraries = "@ZIMPL_LIBRARIES@".replace('lib', '')
 
 IPO_include_dirs = "@IPO_INCLUDE_DIRS@"
 IPO_libraries = "@IPO_LIBRARIES@".replace('ipo-shared', 'ipo')
@@ -28,7 +28,7 @@ def parseIncludes(incs):
 
 #GMP_include_dirs = parseIncludes(GMP_include_dirs)
 GMPXX_include_dirs = parseIncludes(GMPXX_include_dirs)
-SoPlex_include_dirs = parseIncludes(SoPlex_include_dirs)
+SOPLEX_include_dirs = parseIncludes(SOPLEX_include_dirs)
 SCIP_include_dirs = parseIncludes(SCIP_include_dirs)
 ZIMPL_include_dirs = parseIncludes(ZIMPL_include_dirs)
 IPO_include_dirs = parseIncludes(IPO_include_dirs)
@@ -44,7 +44,7 @@ def parseLibraries(libs):
 
 #GMP_libraries = parseLibraries(GMP_libraries)
 GMPXX_libraries = parseLibraries(GMPXX_libraries)
-SoPlex_libraries = parseLibraries(SoPlex_libraries)
+SOPLEX_libraries = parseLibraries(SOPLEX_libraries)
 SCIP_libraries = parseLibraries(SCIP_libraries)
 ZIMPL_libraries = parseLibraries(ZIMPL_libraries)
 IPO_libraries = parseLibraries(IPO_libraries)
@@ -56,12 +56,10 @@ def parseLibraryDirs(dirs):
 IPO_library_dirs = parseLibraryDirs(IPO_library_dirs)
 
 if False:
-  print GMP_include_dirs
-  print GMP_libraries
   print GMPXX_include_dirs
   print GMPXX_libraries
-  print SoPlex_include_dirs
-  print SoPlex_libraries
+  print SOPLEX_include_dirs
+  print SOPLEX_libraries
   print SCIP_include_dirs
   print SCIP_libraries
   print ZIMPL_include_dirs
@@ -70,14 +68,14 @@ if False:
   print IPO_libraries
   print IPO_source
 
-include_dirs = GMPXX_include_dirs + SoPlex_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source]
+include_dirs = GMPXX_include_dirs + SOPLEX_include_dirs + ZIMPL_include_dirs + SCIP_include_dirs + IPO_include_dirs + [IPO_source]
 include_dirs = filter(lambda x: x is not '', include_dirs)
 
 ext = Extension(
   'IPO',
   ['IPO.pyx'],
   include_dirs = include_dirs,
-  libraries = IPO_libraries + SCIP_libraries + ZIMPL_libraries + SoPlex_libraries + GMPXX_libraries,
+  libraries = IPO_libraries + SCIP_libraries + ZIMPL_libraries + SOPLEX_libraries + GMPXX_libraries,
   library_dirs = IPO_library_dirs,
   runtime_library_dirs = [],
   extra_compile_args = ['-std=c++11'],

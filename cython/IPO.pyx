@@ -459,9 +459,9 @@ cdef class LinearProgram (LinearSet):
   UNBOUNDED = 1
 
   def __init__(self, init):
-    if isinstance(init, str):
+    if isinstance(init, basestring):
       self._initFromString(init)
-    if isinstance(init, LinearProgram):
+    elif isinstance(init, LinearProgram):
       self._initFromLinearProgram(init)
     elif isinstance(init, LinearSet):
       self._initFromLinearSet(init)
