@@ -45,17 +45,21 @@ ELSE(UNIX)
                        "Subdir for installing the examples")
 ENDIF(UNIX)
 
-## ZIMPL, SoPlex and SCIP
+## GMP and SoPlex
 
 find_package(GMPXX REQUIRED)
-
 find_package(SOPLEX REQUIRED)
+
+set(IPO_INCLUDE_DIRS ${IPO_SOURCE_ROOT_DIR} ${CMAKE_BINARY_DIR}/deps/ipo ${GMPXX_INCLUDE_DIRS} ${SOPLEX_INCLUDE_DIRS})
+set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
 
 ## Oracles
 
 find_package(SCIP QUIET)
-if (SCIP_FOUND)
-  message(STATUS "Found SCIP")
+if(SCIP_FOUND)
+  message(STATUS "Found SCIP: ${SCIP_INCLUDE_DIRS} and ${SCIP_LIBRARIES}")
+  set(IPO_INCLUDE_DIRS ${IPO_INCLUDE_DIRS} ${SCIP_INCLUDE_DIRS})
+  set(IPO_LIBRARIES ${IPO_LIBRARIES} ${SCIP_LIBRARIES})
 else()
   message(STATUS "Could NOT find SCIP")
 endif()
@@ -71,11 +75,6 @@ find_path(IPO_SOURCE_ROOT_DIR CMakeLists.txt
 
 if(EXISTS ${IPO_SOURCE_ROOT_DIR})
   add_subdirectory(${IPO_SOURCE_ROOT_DIR} deps/ipo)
-  set(IPO_INCLUDE_DIRS
-    ${IPO_SOURCE_ROOT_DIR}
-    ${CMAKE_BINARY_DIR}/deps/ipo
-  )
-  set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES})
   unset(IPO_ROOT_DIR CACHE)
   unset(IPO_DIR CACHE)
   unset(IPO_INCLUDE_DIR CACHE)

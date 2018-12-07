@@ -3,7 +3,7 @@
 
 #include "common.h"
 
-#include <timer.h>
+#include <soplex/timer.h>
 
 namespace ipo {
 

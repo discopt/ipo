@@ -3,8 +3,8 @@
 
 #include <string>
 
-#include <rational.h>
-#include <dsvector.h>
+#include <soplex/rational.h>
+#include <soplex/dsvector.h>
 #include <soplex.h>
 
 namespace soplex

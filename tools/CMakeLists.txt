@@ -5,8 +5,6 @@ include_directories(
 )
 
 if (SCIP_FOUND)
-#  string(TOUPPER ${SCIP_LPS} SCIP_LPI)
-#  add_definitions(-DWITH_SCIP -DWITH_SCIP_LPI_${SCIP_LPI})
   include_directories(${SCIP_INCLUDE_DIRS})
 endif()
 
@@ -19,8 +17,6 @@ if(SCIP_FOUND)
 
   target_link_libraries(paper-affine-hull
     ${IPO_LIBRARIES}
-    ${SCIP_LIBRARIES}
-#    ${SOPLEX_LIBRARIES}
   )
 endif()
 
@@ -33,8 +29,6 @@ if(SCIP_FOUND)
 
   target_link_libraries(paper-facets
     ${IPO_LIBRARIES}
-    ${SCIP_LIBRARIES}
-#    ${SOPLEX_LIBRARIES}
   )
 endif()
 
@@ -47,6 +41,5 @@ if(SCIP_FOUND)
 
   target_link_libraries(paper-lp-relax
     ${SCIP_LIBRARIES}
-#    ${SOPLEX_LIBRARIES}
   )
 endif()
