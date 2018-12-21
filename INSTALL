@@ -97,7 +97,7 @@ issue the following commands:
 3. Perform system checks and create the makefiles.
    Note that it must be `SoPlex` and not `SOPLEX`!
 
-  $ cmake -DBUILD_TYPE=Release -DSCIP_ROOT_DIR=${SCIP} -DZIMPL_ROOT_DIR=${ZIMPL} -DSoPlex_ROOT_DIR=${SoPlex} ..
+  $ cmake -DBUILD_TYPE=Release -DSCIP_DIR=${SCIP} ..
 
 4. Build IPO.
 
