@@ -45,13 +45,15 @@ ELSE(UNIX)
                        "Subdir for installing the examples")
 ENDIF(UNIX)
 
+option(CYTHON "should Cython be used" ON)
+
 ## GMP and SoPlex
 
 find_package(GMPXX REQUIRED)
 find_package(SOPLEX REQUIRED)
 
 set(IPO_INCLUDE_DIRS ${IPO_SOURCE_ROOT_DIR} ${CMAKE_BINARY_DIR}/deps/ipo ${GMPXX_INCLUDE_DIRS} ${SOPLEX_INCLUDE_DIRS})
-set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
+set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES})
 
 ## Oracles
 
@@ -62,6 +64,7 @@ if(SCIP_FOUND)
   set(IPO_LIBRARIES ${IPO_LIBRARIES} ${SCIP_LIBRARIES})
 else()
   message(STATUS "Could NOT find SCIP")
+   set(IPO_LIBRARIES ${IPO_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
 endif()
 
 find_package(ExactSCIP)
@@ -84,14 +87,16 @@ else()
   find_package(IPO REQUIRED)
 endif()
 
-## Python
+if(CYTHON)
+   ## Python
 
-find_package(PythonInterp)
+   find_package(PythonInterp)
 
-## Cython
+   ## Cython
 
-find_package(Cython)
-add_subdirectory(cython)
+   find_package(Cython)
+   add_subdirectory(cython)
+endif()
 
 ## This line finds doxygen (for document creation)
 
