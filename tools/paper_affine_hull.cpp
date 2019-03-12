@@ -274,7 +274,7 @@ int main(int argc, char** argv)
   // Output constraint dimensions.
 
   std::vector<std::shared_ptr<Polyhedron::Face> > faces;
-  poly.getFaces(faces, true, true);
+  poly.getFaces(faces, false, true);
   for (std::size_t i = 0; i < faces.size(); ++i)
   {
     std::cout << "Constraint #" << i << ": ";
