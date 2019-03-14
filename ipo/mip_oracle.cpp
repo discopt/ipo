@@ -304,7 +304,7 @@ namespace ipo {
 // //   }
 
   MIPOracleBase::MIPOracleBase(const std::string& name, const std::shared_ptr<OracleBase>& nextOracle)
-    : OracleBase(name, nextOracle), _objective(NULL)
+    : OracleBase(name, nextOracle), _objective(NULL), _currentFaceConstraint(std::numeric_limits<std::size_t>::max())
   {
 
 
@@ -392,7 +392,7 @@ namespace ipo {
 //     std::cerr << "solverMaximize(" << _objective << ")" << std::endl;
 
     solverMaximize(_objective, soplex::infinity, _points, _rays, hitLimit);
-   
+
     if (!_points.empty())
     {
       sort = true;
@@ -462,8 +462,6 @@ namespace ipo {
   void MIPOracleBase::setFace(const LinearConstraint& newFace)
   {
     OracleBase::setFace(newFace);
-
-    throw std::runtime_error("MIPOracleBase::setFace not implemented, yet!");
   }
 
   void MIPOracleBase::prepareSolver(const soplex::VectorRational& objective)
@@ -472,12 +470,18 @@ namespace ipo {
     for (std::size_t v = 0; v < obj.size(); ++v)
       obj[v] = objective[v];
     _correctionLP->changeObjective(obj);
+
+    _currentFaceConstraint = currentFace().definesCompleteFace() ? std::numeric_limits<std::size_t>::max()
+       : _correctionLP->addConstraint(currentFace());
   }
 
   void MIPOracleBase::restoreSolver()
   {
+      if (currentFace().definesCompleteFace())
+         _correctionLP->removeConstraint(_currentFaceConstraint);
+
     // Remove all added rows.
-    
+
     _correctionLP->removeLastConstraints(_mixedIntegerLinearSet->numRows());
   }
 
@@ -530,7 +534,7 @@ namespace ipo {
       while (true)
       {
         LinearProgram::Result result = _correctionLP->solve(vector, objectiveValue);
-        
+
         if (result == LinearProgram::UNBOUNDED)
         {
           separateRay(vector, _cuts);

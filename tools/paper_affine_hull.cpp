@@ -271,17 +271,19 @@ int main(int argc, char** argv)
   }
   std::cout << std::endl;
 
-  // Output constraint dimensions.
-
-  std::vector<std::shared_ptr<Polyhedron::Face> > faces;
-  poly.getFaces(faces, false, true);
-  for (std::size_t i = 0; i < faces.size(); ++i)
+  if (constraintDimensions)
   {
-    std::cout << "Constraint #" << i << ": ";
-    poly.space().printLinearConstraint(std::cout, faces[i]->inequality());
-    std::cout << " has dimension " << faces[i]->dimension() << "\n" << std::flush;
-  }
+      // Output constraint dimensions.
 
+      std::vector<std::shared_ptr<Polyhedron::Face> > faces;
+      poly.getFaces(faces, false, true);
+      for (std::size_t i = 0; i < faces.size(); ++i)
+      {
+         std::cout << "Constraint #" << i << ": ";
+         poly.space().printLinearConstraint(std::cout, faces[i]->inequality());
+         std::cout << " has dimension " << faces[i]->dimension() << "\n" << std::flush;
+      }
+  }
   soplex::Rational::freeListMem();
   ipo::Space::freeStaticMem();
   ipo::Vector::freeStaticMem();

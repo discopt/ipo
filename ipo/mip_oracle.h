@@ -150,6 +150,7 @@ namespace ipo {
     std::vector<LinearConstraint> _cuts;
     std::vector<double*> _points; // Array of points returned by the underlying LP solver.
     std::vector<double*> _rays; // Array of rays returned by the underlying LP solver.
+    std::size_t _currentFaceConstraint; // Row index for face constraint
   };
 
 } /* namespace ipo */

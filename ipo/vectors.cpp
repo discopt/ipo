@@ -141,7 +141,10 @@ namespace ipo {
     if (scalar != 0)
     {
       for (std::size_t i = 0; i < _nonzeros.size(); ++i)
+      {
         _nonzeros[i].value *= scalar;
+        _nonzeros[i].approximation *= scalar;
+      }
     }
     else
     {
