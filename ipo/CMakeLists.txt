@@ -109,8 +109,8 @@ add_library(ipo-shared SHARED ${IPO_SOURCES})
 include_directories(ipo-shared ${SOPLEX_INCLUDE_DIRS})
 
 
-# User of libipo.so has to link to libsoplex on his/her own since he/she might also link to SCIP which includes soplex.
 target_link_libraries(ipo-shared
+  ${SOPLEX_PIC_LIBRARIES}
   ${GMP_LIBRARIES}
   ${GMPXX_LIBRARIES}
 )
