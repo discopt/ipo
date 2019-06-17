@@ -66,3 +66,22 @@ find_package_handle_standard_args(GMPXX REQUIRED_VARS GMPXX_INCLUDE_DIR GMPXX_LI
 if(GMPXX_USE_STATIC_LIBS)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ${_GMPXX_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
 endif()
+
+if(GMPXX_FOUND)
+  if(NOT TARGET GMP::GMPXX)
+    add_library(GMP::GMPXX UNKNOWN IMPORTED)
+    if(GMPXX_INCLUDE_DIR)
+      set_target_properties(GMP::GMPXX
+        PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${GMPXX_INCLUDE_DIR}")
+    endif()
+    if(EXISTS "${GMPXX_LIBRARY}")
+      set_target_properties(GMP::GMPXX
+        PROPERTIES
+          IMPORTED_LINK_INTERFACE_LANGUAGES "C++"
+          IMPORTED_LOCATION "${GMPXX_LIBRARY}")
+    endif()
+  endif()
+endif()
+
+mark_as_advanced(GMPXX_INCLUDE_DIR GMPXX_LIBRARY)

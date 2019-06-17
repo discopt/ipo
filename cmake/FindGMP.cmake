@@ -62,3 +62,21 @@ find_package_handle_standard_args(GMP REQUIRED_VARS GMP_INCLUDE_DIRS GMP_LIBRARI
 if(GMP_USE_STATIC_LIBS)
   set(CMAKE_FIND_LIBRARY_SUFFIXES ${_GMP_ORIG_CMAKE_FIND_LIBRARY_SUFFIXES})
 endif()
+
+if(GMP_FOUND)
+  if(NOT TARGET GMP::GMP)
+    add_library(GMP::GMP UNKNOWN IMPORTED)
+    if(GMP_INCLUDE_DIR)
+      set_target_properties(GMP::GMP
+        PROPERTIES
+          INTERFACE_INCLUDE_DIRECTORIES "${GMP_INCLUDE_DIR}")
+    endif()
+    if(EXISTS "${GMP_LIBRARY}")
+      set_target_properties(GMP::GMP
+        PROPERTIES
+          IMPORTED_LINK_INTERFACE_LANGUAGES "C++"
+          IMPORTED_LOCATION "${GMP_LIBRARY}")
+    endif()
+  endif()
+endif()
+

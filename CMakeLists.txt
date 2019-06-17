@@ -1,127 +1,157 @@
-CMAKE_MINIMUM_REQUIRED(VERSION 2.6)
+cmake_minimum_required(VERSION 3.5)
 
-## Here comes the name of your project:
+project(IPO
+   VERSION 2.0
+   LANGUAGES CXX)
 
-set(PROJECT_NAME "Investigating Polyhedra by Oracles")
-project(${PROJECT_NAME})
+option(SHARED "Build shared libraries" ON)
+set(BUILD_SHARED_LIBS ${SHARED})
+message(STATUS "Build shared libraries: " ${SHARED})
 
-# The version number.
-set(IPO_VERSION_MAJOR 1)
-set(IPO_VERSION_MINOR 1)
+# Add cmake/ to CMAKE_MODULE_PATH.
+list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
-set(PROJECT_VERSION 1.1)
-
-add_definitions("-std=gnu++11")
-
-# Set default BUILD_TYPE:
+# Set default build type.
 if(NOT CMAKE_BUILD_TYPE)
-  set(CMAKE_BUILD_TYPE "Release" CACHE STRING
-  "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel."
-  FORCE)
+   set(CMAKE_BUILD_TYPE "Release"
+      CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 
-SET(CMAKE_MODULE_PATH ${PROJECT_SOURCE_DIR}/cmake)
+# Find dependencies.
+find_package(GMPXX)
+set(IPO_WITH_GMP ${GMPXX_FOUND})
 
-IF(UNIX)
-  SET(INSTALL_BIN_DIR "bin" CACHE STRING
-    "Subdir for installing the binaries")
-  SET(INSTALL_DOC_DIR "share/doc/${PROJECT_NAME}"
-    CACHE STRING
-    "Subdir for installing the doc")
-  SET(INSTALL_DATA_DIR "share/data/${PROJECT_NAME}"
-    CACHE STRING
-    "Subdir for installing the map data")
-  SET(INSTALL_EXAMPLES_DIR "share/doc/${PROJECT_NAME}/examples"
-    CACHE STRING
-    "Subdir for installing the examples")
-ELSE(UNIX)
-  SET(INSTALL_BIN_DIR "." CACHE STRING
-                  "Subdir for installing the binaries")
-  SET(INSTALL_DOC_DIR "doc" CACHE STRING
-                  "Subdir for installing the doc")
-  SET(INSTALL_DATA_DIR "data" CACHE STRING
-                  "Subdir for installing the map data")
-  SET(INSTALL_EXAMPLES_DIR "examples" CACHE STRING
-                       "Subdir for installing the examples")
-ENDIF(UNIX)
-
-option(CYTHON "should Cython be used" ON)
-
-## GMP and SoPlex
-
-find_package(GMPXX REQUIRED)
-find_package(SOPLEX REQUIRED)
-
-set(IPO_INCLUDE_DIRS ${IPO_SOURCE_ROOT_DIR} ${CMAKE_BINARY_DIR}/deps/ipo ${GMPXX_INCLUDE_DIRS} ${SOPLEX_INCLUDE_DIRS})
-set(IPO_LIBRARIES ipo-shared ${GMPXX_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
-
-## Oracles
-
-find_package(SCIP QUIET)
-if(SCIP_FOUND)
-  message(STATUS "Found SCIP: ${SCIP_INCLUDE_DIRS} and ${SCIP_LIBRARIES}")
-  set(IPO_INCLUDE_DIRS ${IPO_INCLUDE_DIRS} ${SCIP_INCLUDE_DIRS})
-  set(IPO_LIBRARIES ${IPO_LIBRARIES} ${SCIP_LIBRARIES})
-else()
-  message(STATUS "Could NOT find SCIP")
-   set(IPO_LIBRARIES ${IPO_LIBRARIES} ${SOPLEX_PIC_LIBRARIES})
-endif()
-
-find_package(ExactSCIP)
-
-## IPO
-
-find_path(IPO_SOURCE_ROOT_DIR CMakeLists.txt
-  PATHS ${CMAKE_SOURCE_DIR}/ipo ${CMAKE_SOURCE_DIR}/deps/ipo
-  NO_DEFAULT_PATH
-  DOC "Location of IPO source as a CMAKE subproject")
-
-if(EXISTS ${IPO_SOURCE_ROOT_DIR})
-  add_subdirectory(${IPO_SOURCE_ROOT_DIR} deps/ipo)
-  unset(IPO_ROOT_DIR CACHE)
-  unset(IPO_DIR CACHE)
-  unset(IPO_INCLUDE_DIR CACHE)
-  unset(IPO_LIBRARY CACHE)
-else()
-  find_package(IPO QUIET NO_MODULE)
-  find_package(IPO REQUIRED)
-endif()
-
-if(CYTHON)
-   ## Python
-
-   find_package(PythonInterp)
-
-   ## Cython
-
-   find_package(Cython)
-   add_subdirectory(cython)
-endif()
-
-## This line finds doxygen (for document creation)
-
-find_package(Doxygen)
-find_package(Ghostscript)
-include(FindPythonInterp)
-
-## These are the include directories used by the compiler.
-
-INCLUDE_DIRECTORIES(
-  ${PROJECT_SOURCE_DIR}
-  ${PROJECT_BINARY_DIR}
+# Target for the IPO library.
+add_library(ipo
+   src/ipo/oracles.cpp
+   src/ipo/space.cpp
 )
 
-IF(CMAKE_COMPILER_IS_GNUCXX)
-  SET(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall")
-  SET(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall")
-ENDIF(CMAKE_COMPILER_IS_GNUCXX)
+# SCIP.
+find_package(SCIP QUIET)
+if(SCIP_FOUND)
+   message(STATUS "Found SCIP version ${SCIP_VERSION}.")
+else()
+   message(STATUS
+      "Could not find SCIP. Please set SCIP_DIR to point to build or installation directory.")
+endif()
+set(IPO_WITH_SCIP ${SCIP_FOUND})
+if(SCIP_FOUND)
+   target_sources(ipo
+      PRIVATE src/ipo/oracles_scip.cpp
+   )
+   target_link_libraries(ipo
+      PRIVATE libscip
+   )
+endif()
 
-ADD_SUBDIRECTORY(tools)
+# Target for the ipo-mip binary.
+add_executable(ipo_mip
+   src/mip/main.cpp)
+target_link_libraries(ipo_mip
+   PRIVATE
+      IPO::ipo
+)
+set_target_properties(ipo_mip PROPERTIES OUTPUT_NAME ipo-mip)
 
-ENABLE_TESTING()
+# Write compilation settings to ipo/config.hpp.
+configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ipo/config.hpp.in ${CMAKE_BINARY_DIR}/ipo/config.hpp @ONLY)
 
-## The auxiliary doxygen files (.dox) should be placed in the 'doc'
-## subdirectory. The next line includes the CMAKE config of that directory.
+# Write export settings to ipo/export.hpp.
+include(GenerateExportHeader)
+generate_export_header(ipo EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/ipo/export.hpp)
 
-ADD_SUBDIRECTORY(doc)
+# TODO: Why both things below?
+# Add an alias so that library can be used inside the build tree.
+add_library(IPO::ipo ALIAS ipo)
+
+# This is required so that the exported target has the name IPO and not just ipo.
+set_target_properties(ipo PROPERTIES EXPORT_NAME IPO)
+
+# Hide non-exported symbols in shared library.
+set_target_properties(ipo PROPERTIES CXX_VISIBILITY_PRESET hidden)
+set_target_properties(ipo PROPERTIES VISIBILITY_INLINES_HIDDEN 1)
+
+# Set target properties.
+target_include_directories(ipo
+   PUBLIC
+      $<INSTALL_INTERFACE:include> # <PREFIX>/include/ contains all installed headers.
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/include> # contains all regular headers.
+      $<BUILD_INTERFACE:${CMAKE_CURRENT_BINARY_DIR}> # contains all configured headers such as ipo/config.hpp and ipo/export.hpp.
+   PRIVATE
+      ${CMAKE_CURRENT_SOURCE_DIR}/src/ipo/
+)
+
+target_compile_features(ipo PRIVATE cxx_auto_type)
+target_compile_options(ipo PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wall>)
+
+if(GMPXX_FOUND)
+   target_link_libraries(ipo
+      INTERFACE
+         GMP::GMP
+         GMP::GMPXX
+   )
+endif()
+
+### Installation ###
+include(GNUInstallDirs)
+
+install(TARGETS ipo_mip
+   RUNTIME
+      DESTINATION bin
+)
+
+install(TARGETS ipo
+   EXPORT ipo-targets
+   LIBRARY
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}
+   ARCHIVE
+      DESTINATION ${CMAKE_INSTALL_LIBDIR}
+)
+
+install(DIRECTORY include
+   DESTINATION ${CMAKE_INSTALL_INCLUDEDIR})
+
+# Export the targets to a script.
+set(INSTALL_CONFIGDIR ${CMAKE_INSTALL_LIBDIR}/cmake/ipo/)
+install(EXPORT ipo-targets
+   FILE
+      IPOTargets.cmake
+      NAMESPACE IPO::
+      DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+include(CMakePackageConfigHelpers)
+
+# Create IPOConfig.cmake
+configure_package_config_file(${CMAKE_CURRENT_LIST_DIR}/cmake/IPOConfig.cmake.in
+   ${CMAKE_CURRENT_BINARY_DIR}/IPOConfig.cmake
+   INSTALL_DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Create IPOConfigVersion.cmake.
+write_basic_package_version_file(
+   ${CMAKE_CURRENT_BINARY_DIR}/IPOConfigVersion.cmake
+   VERSION ${PROJECT_VERSION}
+   COMPATIBILITY SameMajorVersion
+)
+
+# Install IPOConfig.cmake and IPOConfigVersion.cmake.
+install(FILES
+   ${CMAKE_CURRENT_BINARY_DIR}/IPOConfig.cmake
+   ${CMAKE_CURRENT_BINARY_DIR}/IPOConfigVersion.cmake
+   DESTINATION ${INSTALL_CONFIGDIR}
+)
+
+# Write exported targets.
+export(EXPORT ipo-targets
+   FILE ${CMAKE_CURRENT_BINARY_DIR}/IPOTargets.cmake NAMESPACE IPO::)
+
+# Register package in user's package registry.
+export(PACKAGE IPO)
+
+add_subdirectory(doc)
+
+enable_testing()
+add_subdirectory(test)
 

@@ -1,0 +1,6 @@
+get_filename_component(IPO_CMAKE_DIR "${CMAKE_CURRENT_LIST_FILE}" PATH)
+include(CMakeFindDependencyMacro)
+
+if(NOT TARGET IPO::IPO)
+   include("${TU_CMAKE_DIR}/IPOTargets.cmake")
+endif()
