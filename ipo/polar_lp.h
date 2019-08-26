@@ -339,7 +339,7 @@ namespace ipo {
 
     inline std::size_t numNonzeros() const
     {
-      return _stabilizing ? _stabLP->numNonzeros() : _mainLP->numRowsRational();
+      return _stabilizing ? _stabLP->numNonzerosReal() : _mainLP->numRowsRational();
     }
 
     inline double lastMainObjective() const

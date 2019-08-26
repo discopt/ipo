@@ -45,7 +45,7 @@ ELSE(UNIX)
                        "Subdir for installing the examples")
 ENDIF(UNIX)
 
-option(CYTHON "should Cython be used" ON)
+option(CYTHON "should Cython be used" OFF)
 
 ## GMP and SoPlex
 

@@ -112,8 +112,8 @@ namespace ipo {
   SCIPOracle::~SCIPOracle()
   {
     for (std::size_t v = 0; v < space().dimension(); ++v)
-      SCIP_CALL_EXC(SCIPreleaseVar(_scip, &_variables[v]));
-    SCIP_CALL_EXC(SCIPfree(&_scip));
+      SCIP_CALL_ABORT(SCIPreleaseVar(_scip, &_variables[v]));
+    SCIP_CALL_ABORT(SCIPfree(&_scip));
   }
 
   std::shared_ptr<MixedIntegerLinearSet> SCIPOracle::constructFromSCIP(SCIP* originalSCIP)
@@ -133,7 +133,7 @@ namespace ipo {
     SCIP_HASHMAP* hashMap = NULL;
     SCIP_CALL_EXC(SCIPhashmapCreate(&hashMap, SCIPblkmem(originalSCIP), n));
     SCIP_CALL_EXC(SCIPcreate(&_scip));
-    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, FALSE, TRUE, &validSCIP));
+    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, TRUE, &validSCIP));
     if (!validSCIP)
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));
