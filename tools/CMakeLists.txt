@@ -8,38 +8,38 @@ if (SCIP_FOUND)
   include_directories(${SCIP_INCLUDE_DIRS})
 endif()
 
-# paper-affine-hull
+# ipo-affine-hull
 
 if(SCIP_FOUND)
-  add_executable(paper-affine-hull
+  add_executable(ipo-affine-hull
     paper_affine_hull.cpp
   )
 
-  target_link_libraries(paper-affine-hull
+  target_link_libraries(ipo-affine-hull
     ${IPO_LIBRARIES}
   )
 endif()
 
-# paper-facets
+# ipo-facets
 
 if(SCIP_FOUND)
-  add_executable(paper-facets
+  add_executable(ipo-facets
     paper_facets.cpp
   )
 
-  target_link_libraries(paper-facets
+  target_link_libraries(ipo-facets
     ${IPO_LIBRARIES}
   )
 endif()
 
-# paper-lp-relax
+# ipo-lp-relax
 
 if(SCIP_FOUND)
-  add_executable(paper-lp-relax
+  add_executable(ipo-lp-relax
     paper_lp_relax.cpp
   )
 
-  target_link_libraries(paper-lp-relax
+  target_link_libraries(ipo-lp-relax
     ${SCIP_LIBRARIES}
   )
 endif()
