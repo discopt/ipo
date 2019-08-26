@@ -106,6 +106,7 @@ namespace ipo {
 #ifdef IPO_DEBUG
     _initialized = false;
 #endif
+    _currentFace = completeFaceConstraint();
   }
 
   void OracleBase::initializeSpace(const Space& space)
