@@ -9,6 +9,7 @@ endif()
 # Target for the googletest.
 add_executable(ipo_gtest
    test_space.cpp
+   test_data.cpp
    test_main.cpp)
 
 if(SCIP_FOUND)

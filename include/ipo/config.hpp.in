@@ -5,4 +5,5 @@
 #define IPO_VERSION_PATCH @IPO_VERSION_PATCH@
 
 #cmakedefine IPO_WITH_GMP
+#cmakedefine IPO_WITH_SOPLEX
 #cmakedefine IPO_WITH_SCIP
