@@ -106,12 +106,19 @@ namespace ipo
         }
       };
 
+      struct Ray
+      {
+        Vector vector;
+
+        Ray(const Vector& vector);
+      };
+
       /// Whether the time limit was reached.
       bool hitTimeLimit;
       /// Array with objective values and vectors of all points.
       std::vector<Point> points;
       /// Array with all rays.
-      std::vector<Vector> rays;
+      std::vector<Ray> rays;
       /// Upper bound on the optimal solution value.
       Value dualBound;
 

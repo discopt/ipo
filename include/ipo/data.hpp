@@ -241,6 +241,14 @@ namespace ipo
       return _data->usage;
     }
 
+    IPO_EXPORT
+    double squaredRealNorm() const;
+
+#if defined(IPO_WITH_GMP)
+    IPO_EXPORT
+    mpq_class squaredRationalNorm() const;
+#endif /* IPO_WITH_GMP */
+
     struct Header
     {
       unsigned short usage;
@@ -254,7 +262,17 @@ namespace ipo
     Header* _data;
   };
 
+  IPO_EXPORT
   Value operator*(const Vector& a, const Vector& b);
+  
+#if defined(IPO_WITH_GMP)
+
+  IPO_EXPORT
+  mpq_class operator*(const Vector& a, const mpq_class* b);
+#endif /* IPO_WITH_GMP */  
+
+  IPO_EXPORT
+  double operator*(const Vector& a, const double* b);
 
   struct HashVector
   {
@@ -323,8 +341,10 @@ namespace ipo
 
   };
 
+  IPO_EXPORT
   Constraint alwaysSatisfiedConstraint();
 
+  IPO_EXPORT
   Constraint neverSatisfiedConstraint();
 
   struct HashConstraint

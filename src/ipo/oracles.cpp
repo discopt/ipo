@@ -42,6 +42,12 @@ namespace ipo
     
   }
 
+  OptimizationOracle::Result::Ray::Ray(const Vector& vec)
+    : vector(vec)
+  {
+
+  }
+
   OptimizationOracle::Result::Result()
   {
     reset();

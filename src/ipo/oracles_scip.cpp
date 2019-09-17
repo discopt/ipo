@@ -4,8 +4,6 @@
 #include <functional>
 #include <chrono>
 
-#include <iostream> // TODO: debug
-
 #ifdef NDEBUG
   #undef NDEBUG
   #include <scip/scipdefplugins.h>
@@ -580,7 +578,8 @@ namespace ipo
           if (!SCIPisZero(_solver->_scip, y))
             entries.push_back(std::make_pair(i, y));
         }
-        result.rays.push_back(Vector(entries));
+        result.rays.push_back(OptimizationOracle::Result::Ray(
+          Vector(entries)));
         break;
       }
 

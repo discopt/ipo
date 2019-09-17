@@ -149,8 +149,9 @@ namespace ipo
       {
         _spx.getPrimalRayRational(_coefficients, _integrality.size());
         
-        result.rays.resize(1);
-        result.rays.front() = Vector(_coefficients, _integrality.size(), true);
+        result.rays.clear();
+        result.rays.push_back(OptimizationOracle::Result::Ray(
+          Vector(_coefficients, _integrality.size(), true)));
       }
       else
       {

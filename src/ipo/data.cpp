@@ -380,6 +380,32 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
+  double Vector::squaredRealNorm() const
+  {
+    double result = 0.0;
+    for (std::size_t p = 0; p < this->size(); ++p)
+    {
+      double x = this->real(p);
+      result += x*x;
+    }
+    return result;
+  }
+
+#if defined(IPO_WITH_GMP)
+
+  mpq_class Vector::squaredRationalNorm() const
+  {
+    mpq_class result = 0.0;
+    for (std::size_t p = 0; p < this->size(); ++p)
+    {
+      const mpq_class& x = this->rational(p);
+      result += x*x;
+    }
+    return result;
+  }
+
+#endif /* IPO_WITH_GMP */
+
   Value operator*(const Vector& a, const Vector& b)
   {
     Value result;
@@ -465,6 +491,26 @@ namespace ipo
 #endif /* IPO_WITH_GMP */
     }
     return result;
+  }
+
+#if defined(IPO_WITH_GMP)
+  
+  mpq_class operator*(const ipo::Vector& a, const mpq_class* b)
+  {
+    mpq_class product = 0;
+    for (std::size_t i = 0; i < a.size(); ++i)
+      product += a.real(i) * b[a.coordinate(i)];
+    return product;
+  }
+
+#endif /* IPO_WITH_GMP */
+
+  double operator*(const ipo::Vector& a, const double* b)
+  {
+    double product = 0;
+    for (std::size_t i = 0; i < a.size(); ++i)
+      product += a.real(i) * b[a.coordinate(i)];
+    return product;
   }
 
   Constraint alwaysSatisfiedConstraint()
