@@ -1255,7 +1255,9 @@ namespace ipo {
       break;
       case DIRECTIONS_APPROXIMATE_END:
         _numDirectionApproximateSolves += state.directionApproximateSolves();
+#ifdef IPO_DEBUG
         assert(_lastEvent == DIRECTIONS_APPROXIMATE_BEGIN);
+#endif
         _timeApproximateDirections += time - _timeLastEvent;
       break;
       case DIRECTIONS_EXACT_BEGIN:
@@ -1273,8 +1275,10 @@ namespace ipo {
       case ORACLE_MAXIMIZE_END:
       case ORACLE_MINIMIZE_END:
       case ORACLE_VERIFY_END:
+#ifdef IPO_DEBUG
         assert(_lastEvent == ORACLE_ZERO_BEGIN || _lastEvent == ORACLE_MAXIMIZE_BEGIN || _lastEvent == ORACLE_MINIMIZE_BEGIN
           || _lastEvent == ORACLE_VERIFY_BEGIN);
+#endif
         _numOracleQueries++;
         _timeOracles += time - _timeLastEvent;
         assert(state.oracleResultHeuristicLevel() < _numHeuristicLevelAnswers.size());
@@ -1283,7 +1287,9 @@ namespace ipo {
       case POINT_END:
       case RAY_END:
         _numFactorizations++;
+#ifdef IPO_DEBUG
         assert(_lastEvent == POINT_BEGIN || _lastEvent == RAY_BEGIN);
+#endif
         _timeFactorizations += time - _timeLastEvent;
       break;
       case VERIFY_BEGIN:
