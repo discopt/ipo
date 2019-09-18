@@ -63,8 +63,6 @@ namespace ipo
 #endif /* IPO_WITH_GMP */
       /// The caller will only use points having at least this value.
       double minObjectiveValue;
-      /// Minimum number of solutions for early termination.
-      std::size_t minNumSolutions;
       /// Maximum number of solutions to return.
       std::size_t maxNumSolutions;
       /// Time limit

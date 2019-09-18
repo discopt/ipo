@@ -546,12 +546,9 @@ namespace ipo
     double oldObjectiveLimit = SCIPgetObjlimit(_solver->_scip);
     int oldSolutionLimit;
     SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "limits/solutions", &oldSolutionLimit) );
-    if (query.minObjectiveValue < std::numeric_limits<double>::infinity())
-    {
-      SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip, query.minObjectiveValue) );
-      SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions",
-        std::max(int(query.minNumSolutions), 2)) );
-    }
+    SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip,
+      query.minObjectiveValue > -std::numeric_limits<double>::infinity() ? query.minObjectiveValue
+      : -SCIPinfinity(_solver->_scip) ) );
 
     std::size_t n = space()->dimension();
 

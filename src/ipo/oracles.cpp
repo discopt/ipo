@@ -24,7 +24,6 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
     rational = false;
 #endif
-    minNumSolutions = 1;
     maxNumSolutions = 10;
     minObjectiveValue = std::numeric_limits<double>::infinity();
     timeLimit = std::numeric_limits<double>::infinity();

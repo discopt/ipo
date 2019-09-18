@@ -44,16 +44,22 @@ namespace ipo
       // Compute scalar product with each ray.
 
       for (auto& rayData : _rays)
+      {
+#if defined(IPO_WITH_GMP)
         rayData.product = (rayData.vector * objectiveVector) * rayData.normalization;
+        rayData.rationalProduct = 0;
+#endif /* IPO_WITH_GMP */
+      }
 
       // Sort rays according to product.
 
       std::sort(_rays.begin(), _rays.end());
 
-      // Add best rays as longs as they have sufficiently positive product.
+      // Add best rays as long as they have sufficiently positive product.
 
       assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
-      std::size_t maxNum = query.maxNumSolutions - result.rays.size() - result.points.size();
+      std::size_t maxNum = std::min(_rays.size(),
+        query.maxNumSolutions - result.rays.size() - result.points.size());
       double epsilon = _normalizedRayEpsilon * objectiveNorm;
       for (std::size_t i = 0; i < maxNum; ++i)
       {
@@ -66,29 +72,35 @@ namespace ipo
           break;
       }
 
+      // Skip further computations if we are done already.
+
+      if (query.maxNumSolutions == result.rays.size() + result.points.size())
+        return;
+
       // Compute scalar product with each point.
 
       for (auto& pointData : _points)
+      {
+#if defined(IPO_WITH_GMP)
         pointData.product = pointData.vector * objectiveVector;
+        pointData.rationalProduct = 0;
+#endif /* IPO_WITH_GMP */
+      }
 
       // Sort points according to product.
 
       std::sort(_points.begin(), _points.end());
 
       // Add best points as longs as they have sufficiently positive product.
-      
+
       assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
-      maxNum = query.maxNumSolutions - result.rays.size() - result.points.size();
+      maxNum = std::min(_points.size(),
+        query.maxNumSolutions - result.rays.size() - result.points.size());
       for (std::size_t i = 0; i < maxNum; ++i)
       {
-        if (_points[i].product > _normalizedPointEpsilon)
-        {
-          result.points.push_back(OptimizationOracle::Result::Point(_points[i].vector,
-            _points[i].product));
-          _points[i].lastSuccess = _queryCount;
-        }
-        else
-          break;
+        result.points.push_back(OptimizationOracle::Result::Point(_points[i].vector,
+          _points[i].product));
+        _points[i].lastSuccess = _queryCount;
       }
     }
 
@@ -97,7 +109,71 @@ namespace ipo
     virtual void maximize(const mpq_class* objectiveVector, const OptimizationOracle::Query& query,
       OptimizationOracle::Result& result) override
     {
+      ++_queryCount;
+
+      // TODO: Respect time limit.
       
+      // Compute scalar product with each ray.
+
+      for (auto& rayData : _rays)
+      {
+#if defined(IPO_WITH_GMP)
+        rayData.rationalProduct = rayData.vector * objectiveVector;
+        if (rayData.rationalProduct > 0)
+          rayData.product = rayData.rationalProduct.get_d() * rayData.normalization;
+#endif /* IPO_WITH_GMP */
+      }
+
+      // Sort rays according to product.
+
+      std::sort(_rays.begin(), _rays.end());
+
+      // Add best rays as long as they have sufficiently positive product.
+
+      assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
+      std::size_t maxNum = std::min(_rays.size(),
+        query.maxNumSolutions - result.rays.size() - result.points.size());
+      for (std::size_t i = 0; i < maxNum; ++i)
+      {
+        if (_rays[i].product > 0)
+        {
+          result.rays.push_back(OptimizationOracle::Result::Ray(_rays[i].vector));
+          _rays[i].lastSuccess = _queryCount;
+        }
+        else
+          break;
+      }
+
+      // Skip further computations if we are done already.
+
+      if (query.maxNumSolutions == result.rays.size() + result.points.size())
+        return;
+
+      // Compute scalar product with each point.
+
+      for (auto& pointData : _points)
+      {
+#if defined(IPO_WITH_GMP)
+        pointData.rationalProduct = pointData.vector * objectiveVector;
+        pointData.product = pointData.rationalProduct.get_d();
+#endif /* IPO_WITH_GMP */
+      }
+
+      // Sort points according to product.
+
+      std::sort(_points.begin(), _points.end());
+
+      // Add best points as longs as they have sufficiently positive product.
+      
+      assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
+      maxNum = std::min(_points.size(),
+        query.maxNumSolutions - result.rays.size() - result.points.size());
+      for (std::size_t i = 0; i < maxNum; ++i)
+      {
+        result.points.push_back(OptimizationOracle::Result::Point(_points[i].vector,
+          _points[i].product));
+        _points[i].lastSuccess = _queryCount;
+      }
     }
 
 #endif /* IPO_WITH_GMP */
@@ -106,6 +182,9 @@ namespace ipo
     struct Data
     {
       double product;
+#if defined(IPO_WITH_GMP)
+      mpq_class rationalProduct;
+#endif /* IPO_WITH_GMP */
       std::size_t lastSuccess; /// Largest query number at which this vector was returned.
       Vector vector; /// The cached point/ray.
       double normalization; /// Inverse of Euclidean norm of vector.
@@ -123,6 +202,12 @@ namespace ipo
           return true;
         if (product < other.product)
           return false;
+
+#if defined(IPO_WITH_GMP)
+        int result = cmp(rationalProduct, other.rationalProduct);
+        if (result != 0)
+          return result > 0;          
+#endif /* IPO_WITH_GMP */
 
         return lastSuccess > other.lastSuccess;
       }
