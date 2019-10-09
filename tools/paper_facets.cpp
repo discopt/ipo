@@ -1,3 +1,4 @@
+#include <unordered_map>
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -19,6 +20,7 @@
 #include <ipo/cache_oracle.h>
 #include <ipo/statistics_oracle.h>
 #include <ipo/min_norm_2d.h>
+#include <ipo/projection.h>
 
 using namespace ipo;
 using namespace soplex;
@@ -28,14 +30,15 @@ int printUsage(const std::string& program)
   std::cout << program << " [OPTIONS] MODEL\n";
   std::cout << "Options:\n";
 #ifdef IPO_WITH_EXACT_SCIP
-  std::cout << " -x  Use ExactSCIP.\n";
+  std::cout << " -x       Use ExactSCIP.\n";
 #endif /* IPO_WITH_EXACT_SCIP */
-  std::cout << " -e  Print equations from affine-hull computation.\n";
-  std::cout << " -ad Debug affine-hull computation.\n";
-  std::cout << " -as Print statistics for affine-hull computation.\n";
-  std::cout << " -d  Debug facet separation.\n";
-  std::cout << " -s  Print statistics for facet separation.\n";
-  std::cout << " -h  Show this help and exit.\n";
+  std::cout << " -e       Print equations from affine-hull computation.\n";
+  std::cout << " -ad      Debug affine-hull computation.\n";
+  std::cout << " -as      Print statistics for affine-hull computation.\n";
+  std::cout << " -d       Debug facet separation.\n";
+  std::cout << " -s       Print statistics for facet separation.\n";
+  std::cout << " -p REGEX Project onto all variables matching REGEX.\n";
+  std::cout << " -h       Show this help and exit.\n";
   std::cout << std::flush;
   return EXIT_FAILURE;
 }
@@ -52,6 +55,7 @@ int main(int argc, char** argv)
   bool printEquations = false;
   bool separationDebug = false;
   bool separationStats = false;
+  std::string projectionRegex;
   std::size_t numIterations = 100;
   std::string fileName = "";
 
@@ -72,6 +76,11 @@ int main(int argc, char** argv)
       separationDebug = true;
     else if (arg == "-s" || arg == "--stats")
       separationStats = true;
+    else if ((arg == "-p" || arg == "--project") && i + 1 < argc)
+    {
+      projectionRegex = argv[i+1];
+      ++i;
+    }
     else if ((arg == "-i" || arg == "--iterations") && (i + 1 < argc))
     {
       std::stringstream str(argv[i+1]);
@@ -100,7 +109,18 @@ int main(int argc, char** argv)
   SCIP_CALL_EXC(SCIPcreate(&scip));
   SCIP_CALL_EXC(SCIPincludeDefaultPlugins(scip));
   SCIP_CALL_EXC(SCIPsetIntParam(scip, "display/verblevel", 0));
-  SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
+  try
+  {
+    SCIP_CALL_EXC(SCIPreadProb(scip, fileName.c_str(), NULL));
+  }
+  catch (SCIPException& exc)
+  {
+    if (exc.getRetcode() != SCIP_PLUGINNOTFOUND)
+      throw exc;
+
+    std::cerr << "SCIP could not read \"" << fileName << "\": plugin not found." << std::endl;
+    return EXIT_FAILURE;
+  }
   SCIP_CALL_EXC(SCIPtransformProb(scip));
 
   ipo::Vector originalObjective = getSCIPObjective(scip, true);
@@ -126,7 +146,21 @@ int main(int argc, char** argv)
   {
     scipOracle = std::make_shared<SCIPOracle>("SCIPOracle(" + fileName + ")", mixedIntegerSet);
   }
-  std::shared_ptr<StatisticsOracle> scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
+
+
+  std::shared_ptr<ProjectionOracle> projectionOracle;
+  std::shared_ptr<StatisticsOracle> scipOracleStats;
+  if (projectionRegex.empty())
+  {
+    scipOracleStats = std::make_shared<StatisticsOracle>(scipOracle);
+  }
+  else
+  {
+    auto projection = Projection(scipOracle->space(), projectionRegex);
+    projectionOracle = std::make_shared<ProjectionOracle>("proj(" + scipOracle->name() + "," + projectionRegex + ")", projection, scipOracle);
+    scipOracleStats = std::make_shared<StatisticsOracle>(projectionOracle);
+  }
+
   std::shared_ptr<CacheOracle> cacheOracle = std::make_shared<CacheOracle>(scipOracleStats, CacheOracle::CACHE_AND_SEARCH);
   std::shared_ptr<StatisticsOracle> cacheOracleStats = std::make_shared<StatisticsOracle>(cacheOracle);
   std::shared_ptr<OracleBase> oracle = cacheOracleStats;
@@ -210,10 +244,52 @@ int main(int argc, char** argv)
   spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
 
   std::shared_ptr<MixedIntegerLinearSet> mis = scipOracle->mixedIntegerLinearSet();
+  DVectorRational denseOriginalObjective(projectionOracle->projection().imageSpace().dimension());
+  if (projectionRegex.empty())
+  {
+    vectorToDense(originalObjective, denseOriginalObjective);
+  }
+  else
+  {
+    std::vector<bool> integrality;
+    std::vector<Rational> lowerBounds;
+    std::vector<Rational> upperBounds;
+    std::vector<LinearConstraint> rows;
+    std::vector<std::string> variableNames;
+
+    const Projection& projection = projectionOracle->projection();
+    integrality.resize(projection.imageSpace().dimension());
+    lowerBounds.resize(projection.imageSpace().dimension());
+    upperBounds.resize(projection.imageSpace().dimension());
+    variableNames.resize(projection.imageSpace().dimension());
+    std::unordered_map<std::size_t, std::size_t> variableMap;
+    for (std::size_t imageVar = 0; imageVar < projection.imageSpace().dimension(); ++imageVar)
+    {
+      auto row = projection.row(imageVar);
+      assert(row.size() == 1);
+      std::size_t sourceVar = row.index(0);
+      integrality[imageVar] = mis->isIntegral(sourceVar);
+      lowerBounds[imageVar] = mis->lowerBound(sourceVar);
+      upperBounds[imageVar] = mis->upperBound(sourceVar);
+      variableNames[imageVar] = mis->space()[sourceVar];
+      variableMap[sourceVar] = imageVar;
+    }
+
+    mis = std::make_shared<MixedIntegerLinearSet>(integrality, lowerBounds, upperBounds, rows, variableNames);
+
+    // Objective vector:.
+
+    denseOriginalObjective.clear();
+    for (std::size_t p = 0; p < originalObjective.size(); ++p)
+    {
+      const auto iter = variableMap.find(originalObjective.index(p));
+      if (iter != variableMap.end())
+        denseOriginalObjective[iter->second] = originalObjective.value(p);
+    }
+  }
+
   LPColSetRational cols(mis->numVariables());
   DSVectorRational zero;
-  DVectorRational denseOriginalObjective(mis->numVariables());
-  vectorToDense(originalObjective, denseOriginalObjective);
   for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
   {
     cols.add(denseOriginalObjective[v], mis->lowerBound(v), zero, mis->upperBound(v));
@@ -223,8 +299,6 @@ int main(int argc, char** argv)
   mis->getConstraints(rowConstraints, true, true);
   addToLP(spx, rowConstraints);
   addToLP(spx, outer);
-
-  //spx.writeFileRational("init.lp");
 
   DVectorRational solution(mis->numVariables());
   std::default_random_engine generator(0);
@@ -248,7 +322,6 @@ int main(int argc, char** argv)
         for (std::size_t v = 0; v < oracle->space().dimension(); ++v)
         {
           double x = randomVector[v] / norm;
-//           std::cerr << "Obj#" << v << " = " << x << std::endl;
           spx.changeObjRational(v, Rational(x));
         }
       }

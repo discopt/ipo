@@ -82,16 +82,6 @@ else()
   set(DEFINE_IPO_EXACT_SCIP "#undef IPO_WITH_EXACT_SCIP")
 endif()
 
-if(CMAKE_BUILD_TYPE STREQUAL "Debug")
-  set(DEFINE_IPO_DEBUG "#define IPO_DEBUG")
-elseif(CMAKE_BUILD_TYPE STREQUAL "RelWithDebInfo")
-  set(DEFINE_IPO_DEBUG "#define IPO_DEBUG")
-elseif(CMAKE_BUILD_TYPE STREQUAL "MinSizeRel")
-  set(DEFINE_IPO_DEBUG "#undef IPO_DEBUG")
-elseif(CMAKE_BUILD_TYPE STREQUAL "Release")
-  set(DEFINE_IPO_DEBUG "#undef IPO_DEBUG")
-endif()
-
 include_directories(${CMAKE_BINARY_DIR}/deps/ipo/) # for ipo/common.h
 configure_file(common.h.in ${CMAKE_BINARY_DIR}/deps/ipo/common.h)
 #configure_file(${CMAKE_BINARY_DIR}/common.h ${CMAKE_BINARY_DIR}/ipo/common.h COPYONLY)
