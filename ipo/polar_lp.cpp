@@ -719,13 +719,13 @@ soplex::VectorRational& normal,
         numLastCacheRounds = 0;
       lastObjective = _stabLP->objValueReal();
 
-      if (!_stabLP->getPrimalReal(primalSolution))
+      if (!_stabLP->getPrimal(primalSolution))
         throw std::runtime_error("Stabilization: No primal solution available.");
       for (std::size_t v = 0; v < _n; ++v)
         inequalityApproxDenseNormal[v] = primalSolution[v];
       inequalityApproxRhs = primalSolution[_n];
       dualSolution.reDim(numRows, false);
-      if (!_stabLP->getDualReal(dualSolution))
+      if (!_stabLP->getDual(dualSolution))
         throw std::runtime_error("Stabilization: No dual solution available.");
 
       _lastMainObjective = 0;

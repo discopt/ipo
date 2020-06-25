@@ -477,8 +477,8 @@ namespace ipo {
 
   void MIPOracleBase::restoreSolver()
   {
-      if (currentFace().definesCompleteFace())
-         _correctionLP->removeConstraint(_currentFaceConstraint);
+    if (!currentFace().definesCompleteFace())
+      _correctionLP->removeConstraint(_currentFaceConstraint);
 
     // Remove all added rows.
 
