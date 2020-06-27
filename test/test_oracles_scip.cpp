@@ -225,19 +225,12 @@ TEST(SCIP, MakeRational)
     query.rational = true;
     oracle->maximize(vector, query, result);
 
-  //   ASSERT_GE(result.numPointsRays(), 1);
-  //   auto best = result.bestPointRay();
-  //   auto first = result.firstIndex(best);
-  //   auto beyond = result.beyondIndex(best);
-  //   ASSERT_EQ(first + 2, beyond);
-  //   std::map<std::string, mpq_class> point;
-  //   point[space[result.nonzeroCoordinates[first]]] = result.rationalNonzeroValues[first];
-  //   point[space[result.nonzeroCoordinates[first + 1]]] = result.rationalNonzeroValues[first + 1];
-  //   point[space[result.nonzeroCoordinates[first + 2]]] = result.rationalNonzeroValues[first + 2];
-
-  //   ASSERT_EQ(point["x"], mpq_class(6, 7));
-  //   ASSERT_EQ(point["y"], mpq_class(1));
-  //   ASSERT_EQ(point["z"], mpq_class(1));
+    ASSERT_FALSE(result.rays.empty());
+    ASSERT_TRUE(result.isUnbounded());
+    std::map<std::string, mpq_class> ray;
+    ray[space[result.rays.begin()->vector.coordinate(0)]] = mpq_class(result.rays.begin()->vector.rational(0));
+    ray[space[result.rays.begin()->vector.coordinate(1)]] = mpq_class(result.rays.begin()->vector.rational(1));
+    ASSERT_EQ(ray["x"] / ray["y"], mpq_class(4, 3));
   }
 }
 
