@@ -178,8 +178,13 @@ namespace ipo
     {
       SCIP_VAR* var = vars[v];
       entries.front().first = v;
-      visitor(Constraint(Value(mpq_class(SCIPvarGetLbGlobal(var))), Vector(entries),
-        Value(mpq_class(SCIPvarGetUbGlobal(var)))));
+      double lower = SCIPvarGetLbGlobal(var);
+      Value lowerValue = SCIPisInfinity(scip, -lower)
+        ? Value(-std::numeric_limits<double>::infinity()) : Value(mpq_class(lower));
+      double upper = SCIPvarGetUbGlobal(var);
+      Value upperValue = SCIPisInfinity(scip, upper)
+        ? Value(std::numeric_limits<double>::infinity()) : Value(mpq_class(upper));
+      visitor(Constraint(lowerValue, Vector(entries), upperValue));
     }
   }
 
