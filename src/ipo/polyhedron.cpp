@@ -4,16 +4,19 @@
 #include <chrono>
 #include <cmath>
 
+// TODO: Create shared pointer to the CacheOptimizationOracle that is separate from _optimization
+// array.
+
 namespace ipo
 {
   class CacheOptimizationOracle : public OptimizationOracle
   {
   public:
-    CacheOptimizationOracle()
+    CacheOptimizationOracle(std::shared_ptr<Space> space)
       : OptimizationOracle("CacheOptimizationOracle"), _normalizedRayEpsilon(1.0e-6),
       _normalizedPointEpsilon(1.0e-6), _queryCount(0)
     {
-      
+      _space = space;
     }
 
     void setEpsilon(double normalizedRayEpsilon, double normalizedPointEpsilon)
@@ -96,8 +99,11 @@ namespace ipo
       assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
       maxNum = std::min(_points.size(),
         query.maxNumSolutions - result.rays.size() - result.points.size());
+      double threshold = query.minObjectiveValue + _normalizedPointEpsilon * objectiveNorm;
       for (std::size_t i = 0; i < maxNum; ++i)
       {
+        if (_points[i].product < threshold)
+          break;
         result.points.push_back(OptimizationOracle::Result::Point(_points[i].vector,
           _points[i].product));
         _points[i].lastSuccess = _queryCount;
@@ -168,8 +174,11 @@ namespace ipo
       assert(result.rays.size() + result.points.size() <= query.maxNumSolutions);
       maxNum = std::min(_points.size(),
         query.maxNumSolutions - result.rays.size() - result.points.size());
+      double threshold = query.minObjectiveValue;
       for (std::size_t i = 0; i < maxNum; ++i)
       {
+        if (_points[i].product <= threshold)
+          break;
         result.points.push_back(OptimizationOracle::Result::Point(_points[i].vector,
           _points[i].product));
         _points[i].lastSuccess = _queryCount;
@@ -177,6 +186,11 @@ namespace ipo
     }
 
 #endif /* IPO_WITH_GMP */
+
+    void reduceCacheSize()
+    {
+
+    }
 
   protected:
     struct Data
@@ -221,25 +235,77 @@ namespace ipo
   };
   
   template <>
-  Polyhedron::Data<OptimizationOracle>::Data(std::shared_ptr<OptimizationOracle> o)
-    : expectedRunningTime(0), expectedSuccess(0), oracle(o)
+  Polyhedron::Data<OptimizationOracle>::Data(std::shared_ptr<OptimizationOracle> o, bool cache)
+    : sumRunningTime(0.0), sumSuccess(0), oracle(o), isCache(cache)
   {
 
   }
 
   template <>
-  Polyhedron::Data<SeparationOracle>::Data(std::shared_ptr<SeparationOracle> o)
-    : expectedRunningTime(0), expectedSuccess(0), oracle(o)
+  Polyhedron::Data<SeparationOracle>::Data(std::shared_ptr<SeparationOracle> o, bool cache)
+    : sumRunningTime(0.0), sumSuccess(0), oracle(o), isCache(cache)
+  {
+
+  }
+
+  template <>
+  bool Polyhedron::Data<OptimizationOracle>::operator<(const Data<OptimizationOracle>& other) const
+  {
+    return priority < other.priority;
+  }
+
+  template <>
+  void Polyhedron::Data<OptimizationOracle>::swap(Data<OptimizationOracle>& other)
+  {
+    std::swap(sumRunningTime, other.sumRunningTime);
+    std::swap(sumSuccess, other.sumSuccess);
+    std::swap(priority, other.priority);
+    oracle.swap(other.oracle);
+    history.swap(other.history);
+    std::swap(isCache, other.isCache);
+  }
+
+  template <>
+  void Polyhedron::Data<OptimizationOracle>::updateHistory(double runningTime, bool success,
+    std::size_t historySize)
+  {
+    history.push_back(QueryStatistics(runningTime, success));
+    sumRunningTime += runningTime;
+    if (success)
+      ++sumSuccess;
+
+    // If history is too long, remove the first entry.
+
+    if (history.size() > historySize)
+    {
+      sumRunningTime -= history.front().runningTime;
+      if (history.front().success)
+        --sumSuccess;
+      history.pop_front();
+    }
+
+    // We always add a bonus of +1 to the number of successful runs. This avoids division by 0
+    // and gives some advantage to unsuccessful oracles that do not require too much time.
+
+    priority = sumRunningTime / (sumSuccess + 1);  
+  }
+
+  Polyhedron::QueryStatistics::QueryStatistics(double rt, bool succ)
+    : runningTime(rt), success(succ)
   {
 
   }
 
   Polyhedron::Polyhedron(std::shared_ptr<OptimizationOracle> optimizationOracle)
+    : _historySize(16)
   {
+    auto cache = std::make_shared<CacheOptimizationOracle>(optimizationOracle->space());
+    _optimization.push_back(Data<OptimizationOracle>(cache, true));
     _optimization.push_back(Data<OptimizationOracle>(optimizationOracle));
   }
 
   Polyhedron::Polyhedron(std::shared_ptr<SeparationOracle> o)
+    : _historySize(16)
   {
     _separation.push_back(Data<SeparationOracle>(o));
   }
@@ -256,6 +322,98 @@ namespace ipo
     if (!_separation.empty())
       return _separation.front().oracle->space();
     return std::shared_ptr<Space>();
+  }
+
+  void Polyhedron::maximize(const double* objectiveVector, const OptimizationOracle::Query& query,
+    OptimizationOracle::Result& result)
+  {
+    tuneOracles();
+
+    result.reset();
+    std::size_t lastOracle = 0;
+    for (; lastOracle < _optimization.size(); ++lastOracle)
+    {
+      Data<OptimizationOracle>& data = _optimization[lastOracle];
+      // Run current oracle.
+
+      std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
+      data.oracle->maximize(objectiveVector, query, result);
+      std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+
+      data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
+
+      // If the current oracle found a ray or a point, we stop.
+      if (!result.isInfeasible())
+        return;
+    }
+  }
+
+  void Polyhedron::maximize(const mpq_class* objectiveVector,
+    const OptimizationOracle::Query& query, OptimizationOracle::Result& result)
+  {
+    tuneOracles();
+
+    result.reset();
+    std::size_t lastOracle = 0;
+    for (; lastOracle < _optimization.size(); ++lastOracle)
+    {
+      Data<OptimizationOracle>& data = _optimization[lastOracle];
+      // Run current oracle.
+
+      std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
+      data.oracle->maximize(objectiveVector, query, result);
+      std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+
+      data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
+
+      // If the current oracle found a ray or a point, we stop.
+      if (!result.isInfeasible())
+        return;
+    }
+  }
+
+  void Polyhedron::tuneOracles()
+  {
+    // In case the expected successful running times have changed, we reorder the oracles such that
+    // the one with the smallest value is queried first.
+
+    if (!std::is_sorted(_optimization.begin(), _optimization.end()))
+      std::sort(_optimization.begin(), _optimization.end());
+
+    if (_optimization.size() > 1)
+    {
+      // Maybe adjust allowed size of cache oracle.
+      std::size_t cacheOracle = std::numeric_limits<std::size_t>::max();
+      double maxRunningTime = 0.0;
+      for (std::size_t o = 0; o < _optimization.size(); ++o)
+      {
+        if (_optimization[o].isCache)
+        {
+          cacheOracle = o;
+          continue;
+        }
+
+        if (!_optimization[o].history.empty())
+        {
+          double runningTime = _optimization[o].sumRunningTime / _optimization[o].history.size();
+          maxRunningTime = std::max(maxRunningTime, runningTime);
+        }
+      }
+
+      if (cacheOracle < std::numeric_limits<std::size_t>::max())
+      {
+        // If the expected running time of cache oracle is at least that of the slowest oracle, then
+        // we have to reduce the cache size.
+
+        double cacheRunningTime = _optimization[cacheOracle].sumRunningTime
+          / _optimization[cacheOracle].history.size();
+        if (cacheRunningTime >= maxRunningTime)
+        {
+          auto oracle = dynamic_cast<CacheOptimizationOracle&>(*_optimization[cacheOracle].oracle);
+          oracle.reduceCacheSize();
+        }
+      }
+    }
   }
 
 } /* namespace ipo */
