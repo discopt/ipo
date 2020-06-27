@@ -110,9 +110,9 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracle> getOptimizationOracle(Constraint constraint)
+    inline std::shared_ptr<SCIPOptimizationOracle> getOptimizationOracle(Constraint face)
     {
-      return std::make_shared<SCIPOptimizationOracle>(shared_from_this(), constraint);
+      return std::make_shared<SCIPOptimizationOracle>(shared_from_this(), face);
     }
 
     /**
@@ -126,13 +126,13 @@ namespace ipo
     }
 
     /**
-     * \brief Returns a separation oracle for the requested \p face.
+     * \brief Returns a separation oracle for the \p face.
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracle> getSeparationOracle(Constraint constraint)
+    inline std::shared_ptr<SCIPSeparationOracle> getSeparationOracle(Constraint face)
     {
-      return std::make_shared<SCIPSeparationOracle>(shared_from_this(), constraint);
+      return std::make_shared<SCIPSeparationOracle>(shared_from_this(), face);
     }
 
   protected:
@@ -188,7 +188,7 @@ namespace ipo
      * \brief Constructs oracle using the \p solver.
      *
      * \param solver The solver instance that is used to answer the queries.
-     * \param faceIndex The face we are optimizing over.
+     * \param face The face we are optimizing over.
      */
 
     IPO_EXPORT
