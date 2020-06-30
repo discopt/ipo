@@ -11,7 +11,7 @@
 namespace ipo
 {
 
-  class Polyhedron : public std::enable_shared_from_this<Polyhedron>
+  class Polyhedron: public std::enable_shared_from_this<Polyhedron>
   {
   public:
     Polyhedron(std::shared_ptr<OptimizationOracle> optimizationOracle);
@@ -59,7 +59,7 @@ namespace ipo
 
   protected:
     void tuneOracles();
-    
+
   protected:
     struct QueryStatistics
     {

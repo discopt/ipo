@@ -1,5 +1,7 @@
 #include <ipo/data.hpp>
 
+#include <iostream> // TODO: only for debugging
+
 namespace ipo
 {
   
@@ -143,13 +145,13 @@ namespace ipo
   Vector::Vector(const std::vector<double>& entries)
   {
     std::size_t size = 0;
-    for (std::size_t i = 0; i < entries.size(); ++i)
+    for (std::size_t coordinate = 0; coordinate < entries.size(); ++coordinate)
     {
-      if (entries[i] != 0.0)
+      if (entries[coordinate] != 0.0)
         ++size;
     }
 
-    _data = (Header*)(new char[calculateMemoryReal(entries.size())]);
+    _data = (Header*)(new char[calculateMemoryReal(size)]);
     _data->usage = 1;
     _data->properties = 0;
     _data->size = size;
@@ -172,6 +174,24 @@ namespace ipo
   std::size_t Vector::coordinate(std::size_t index) const
   {
     return getFirstCoordinate(_data)[index];
+  }
+
+  std::size_t Vector::findCoordinate(std::size_t coord) const
+  {
+    std::size_t left = 0;
+    std::size_t right = this->size();
+    while (left < right)
+    {
+      std::size_t mid = (left + right) / 2;
+      std::size_t c = coordinate(mid);
+      if (c == coord)
+        return mid;
+      else if (c < coord)
+        left = mid + 1;
+      else
+        right = mid;
+    }
+    return std::numeric_limits<std::size_t>::max();
   }
 
   double Vector::real(std::size_t index) const

@@ -8,9 +8,11 @@ endif()
 
 # Target for the googletest.
 add_executable(ipo_gtest
-   test_space.cpp
    test_data.cpp
-   test_main.cpp)
+   test_lu.cpp
+   test_main.cpp
+   test_redundancy.cpp
+   test_space.cpp)
 
 if(SCIP_FOUND)
    target_sources(ipo_gtest

@@ -12,6 +12,10 @@
 
 namespace ipo
 {
+#ifdef IPO_WITH_GMP
+  static mpq_class _zero(0);
+#endif /* IPO_WITH_GMP */
+  
   struct Value
   {
 #ifdef IPO_WITH_GMP
@@ -36,7 +40,7 @@ namespace ipo
     }
 
 #ifdef IPO_WITH_GMP
-    
+
     IPO_EXPORT
     Value(const mpq_class& x)
       : rational(x), real(x.get_d())
@@ -135,6 +139,30 @@ namespace ipo
     {
       return !(*this < other);
     }
+
+    IPO_EXPORT
+    inline void get(double& result) const
+    {
+      result = real;
+    }
+
+#if defined(IPO_WITH_GMP)
+    IPO_EXPORT
+    inline void get(mpq_class& result) const
+    {
+      result = rational;
+    }
+#endif /* IPO_WITH_GMP */
+
+    IPO_EXPORT
+    inline Value operator-(const Value& other) const
+    {
+#if defined(IPO_WITH_GMP)
+      if (isFinite() && other.isFinite())
+        return Value(this->rational - other.rational);
+#endif /* IPO_WITH_GMP */
+      return Value(this->real - other.real);
+    }
   };
 
   Value minusInfinity();
@@ -191,7 +219,29 @@ namespace ipo
     std::size_t coordinate(std::size_t index) const;
 
     IPO_EXPORT
+    std::size_t findCoordinate(std::size_t coordinate) const;
+
+    IPO_EXPORT
     double real(std::size_t index) const;
+
+    IPO_EXPORT
+    inline void get(std::size_t index, double& result) const
+    {
+      result = real(index);
+    }
+
+    IPO_EXPORT
+    inline double findReal(std::size_t coord) const
+    {
+      std::size_t i = findCoordinate(coord);
+      return i == std::numeric_limits<std::size_t>::max() ? 0.0 : real(i);
+    }
+
+    IPO_EXPORT
+    inline void findEntry(std::size_t coord, double& result) const
+    {
+      result = findReal(coord);
+    }
 
 #if defined(IPO_WITH_GMP)
     IPO_EXPORT
@@ -218,6 +268,25 @@ namespace ipo
 
     IPO_EXPORT
     const mpq_class& rational(std::size_t index) const;
+
+    IPO_EXPORT
+    inline void get(std::size_t index, mpq_class& result) const
+    {
+      result = rational(index);
+    }
+
+    IPO_EXPORT
+    inline const mpq_class& findRational(std::size_t coord) const
+    {
+      std::size_t i = findCoordinate(coord);
+      return i == std::numeric_limits<std::size_t>::max() ? _zero : rational(i);
+    }
+
+    IPO_EXPORT
+    inline void findEntry(std::size_t coord, mpq_class& result) const
+    {
+      result = findRational(coord);
+    }
 #endif /* IPO_WITH_GMP */
 
     IPO_EXPORT
