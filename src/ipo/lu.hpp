@@ -1,5 +1,7 @@
 #pragma once
 
+#define IPO_DEBUG_LU
+
 #include <ipo/config.hpp>
 
 #include <vector>
@@ -53,15 +55,15 @@ namespace ipo
     {
 #ifdef IPO_DEBUG_LU
       std::cout << "IncrementalLUFactorization::extend" << std::endl;
-      std::cout << "  a = [";
+      std::cout << "  row = [";
       for (std::size_t i = 0; i < size(); ++i)
         std::cout << (i > 0 ? " " : "") << newRow[i];
       std::cout << "]" << std::endl;
-      std::cout << "  b = [";
+      std::cout << "  column = [";
       for (std::size_t i = 0; i < size(); ++i)
         std::cout << (i > 0 ? " " : "") << newColumn[i];
       std::cout << "]" << std::endl;
-      std::cout << "  beta = " << newDiagonal << std::endl;
+      std::cout << "  diagonal = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU */        
 
       /* Compute L^{-1} b */
@@ -101,8 +103,10 @@ namespace ipo
           if (p_j == _upperRows[j].size())
             continue;
           else if (_upperRows[j][p_j] == i)
+          {
             newRow[j] -= _upperEntries[j][p_j] * x_i;
-          positions[j]++;
+            positions[j]++;
+          }
         }
       }
 #ifdef IPO_DEBUG_LU
@@ -118,7 +122,8 @@ namespace ipo
 #ifdef IPO_DEBUG_LU
       std::cout << "last diagonal = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU */
-      assert(!_isZero(newDiagonal));
+      bool invertible = !_isZero(newDiagonal);
+      assert(invertible);
 
       /* Add the new row to L. */
       for (std::size_t i = 0; i < n; ++i)
