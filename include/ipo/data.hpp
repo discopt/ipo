@@ -309,6 +309,20 @@ namespace ipo
       assert(_data != nullptr);
       return _data->usage;
     }
+    
+    IPO_EXPORT
+    void checkConsistency() const
+    {
+      assert(this->size() >= 0);
+      for (std::size_t i = 0; i < size(); ++i)
+      {
+        assert(this->coordinate(i) != std::numeric_limits<std::size_t>::max());
+        assert(this->real(i) != std::numeric_limits<double>::quiet_NaN());
+#if defined(IPO_WITH_GMP)
+        assert(this->rational(i).get_d() != std::numeric_limits<double>::quiet_NaN());
+#endif /* IPO_WITH_GMP */
+      }
+    }
 
     IPO_EXPORT
     double squaredRealNorm() const;

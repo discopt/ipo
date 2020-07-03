@@ -1,7 +1,5 @@
 #pragma once
 
-#define IPO_DEBUG_LU
-
 #include <ipo/config.hpp>
 
 #include <vector>

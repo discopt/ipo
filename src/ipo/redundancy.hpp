@@ -33,7 +33,7 @@ namespace ipo
     {
       return _basis.size();
     }
-    
+
     EquationRedundancy test(const Constraint& constraint) const
     {
       if (!isZero(constraint.lhs - constraint.rhs, T(0)))

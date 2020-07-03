@@ -1,7 +1,5 @@
 #include <ipo/data.hpp>
 
-#include <iostream> // TODO: only for debugging
-
 namespace ipo
 {
   
@@ -310,10 +308,10 @@ namespace ipo
     std::size_t i = 0;
     for (std::size_t coordinate = 0; coordinate < entries.size(); ++coordinate)
     {
-      if (entries[i] != 0)
+      if (entries[coordinate] != 0)
       {
         firstCoordinate[i] = coordinate;
-        mpq_class* x = new (&firstRational[i]) mpq_class(entries[i]);
+        mpq_class* x = new (&firstRational[i]) mpq_class(entries[coordinate]);
         firstReal[i] = x->get_d();
         ++i;
       }
@@ -376,14 +374,14 @@ namespace ipo
     std::size_t i = 0;
     for (std::size_t coordinate = 0; coordinate < entries.size(); ++coordinate)
     {
-      if (entries[i] != 0)
+      if (entries[coordinate] != 0)
       {
         firstCoordinate[i] = coordinate;
         mpq_class* x = new (&firstRational[i]) mpq_class();
         if (swap)
-          x->swap(entries[i]);
+          x->swap(entries[coordinate]);
         else
-          *x = entries[i];
+          *x = entries[coordinate];
         firstReal[i] = x->get_d();
         ++i;
       }
