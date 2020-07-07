@@ -3,7 +3,9 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 #include <ipo/space.hpp>
-#include <ipo/data.hpp>
+#include <ipo/sparse_vector.hpp>
+#include <ipo/rational.hpp>
+#include <ipo/constraint.hpp>
 
 #include <memory>
 
@@ -13,6 +15,7 @@ namespace ipo
   * \brief Base class for all IPO oracles.
   */
 
+  template <typename T>
   class Oracle
   {
   public:
@@ -21,7 +24,10 @@ namespace ipo
      */
 
     IPO_EXPORT
-    Oracle(const std::string& name);
+    Oracle(const std::string& name)
+      : _name(name), _space(nullptr)
+    {
+    }
 
     /**
      * \brief Returns the oracle's name.
@@ -48,7 +54,8 @@ namespace ipo
     std::shared_ptr<Space> _space;
   };
 
-  class OptimizationOracle: public Oracle
+  template <typename T>
+  class OptimizationOracle: public Oracle<T>
   {
   public:
     /**
@@ -57,12 +64,8 @@ namespace ipo
 
     struct Query
     {
-#if defined(IPO_WITH_GMP)
-      /// Are rational points/rays requested?
-      bool rational;
-#endif /* IPO_WITH_GMP */
       /// The caller will only use points having at least this value.
-      double minObjectiveValue;
+      T minObjectiveValue;
       /// Maximum number of solutions to return.
       std::size_t maxNumSolutions;
       /// Time limit
@@ -73,14 +76,23 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Query();
+      Query()
+      {
+        reset();
+      }
 
       /**
        * \brief Clears the query data.
        */
 
       IPO_EXPORT
-      void reset();
+      void reset()
+      {
+        maxNumSolutions = 10;
+        minObjectiveValue = std::numeric_limits<double>::infinity();
+        timeLimit = std::numeric_limits<double>::infinity();
+      }
+
     };
 
     /**
@@ -91,12 +103,32 @@ namespace ipo
     {
       struct Point
       {
-        Value objectiveValue;
-        Vector vector;
+        T objectiveValue;
+        sparse_vector<T> vector;
 
-        Point(const Vector& vector);
+        Point(const sparse_vector<T>& vec)
+          : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
+        {
 
-        Point(const Vector& vector, const Value& value);
+        }
+
+        Point(sparse_vector<T>&& vec)
+          : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(std::move(vec))
+        {
+
+        }
+
+        Point(const sparse_vector<T>& vec, const T& value)
+          : objectiveValue(value), vector(vec)
+        {
+
+        }
+
+        Point(sparse_vector<T>&& vec, const T& value)
+          : objectiveValue(value), vector(std::move(vec))
+        {
+
+        }
 
         inline bool operator<(const Point& other) const
         {
@@ -106,33 +138,53 @@ namespace ipo
 
       struct Ray
       {
-        Vector vector;
+        sparse_vector<T> vector;
 
-        Ray(const Vector& vector);
+        Ray(const sparse_vector<T>& vec)
+          : vector(vec)
+        {
+
+        }
+
+        Ray(sparse_vector<T>&& vec)
+          : vector(std::move(vec))
+        {
+
+        }
       };
 
-      /// Whether the time limit was reached.
-      bool hitTimeLimit;
+      
       /// Array with objective values and vectors of all points.
       std::vector<Point> points;
       /// Array with all rays.
       std::vector<Ray> rays;
       /// Upper bound on the optimal solution value.
-      Value dualBound;
+      T dualBound;
+      /// Whether the time limit was reached.
+      bool hitTimeLimit;
 
       /**
        * \brief Constructs the result structure.
        */
 
       IPO_EXPORT
-      Result();
+      Result()
+        : dualBound(std::numeric_limits<double>::infinity()), hitTimeLimit(false)
+      {
+
+      }
 
       /**
-       * \brief Clears the result data.
+       * \brief Move-construcs the result structure.
        */
 
       IPO_EXPORT
-      void reset();
+      Result(Result&& other)
+        : points(std::move(other.points)), rays(std::move(other.rays)), dualBound(other.dualBound),
+        hitTimeLimit(other.hitTimeLimit)
+      {
+
+      }
 
       /**
        * \brief Returns \c true if the problem was infeasible.
@@ -171,7 +223,10 @@ namespace ipo
        */
 
       IPO_EXPORT
-      void sortPoints();
+      void sortPoints()
+      {
+        std::sort(points.begin(), points.end());
+      }
 
       /**
        * \brief Checks that points are sorted by decreasing objective value.
@@ -188,45 +243,39 @@ namespace ipo
      */
 
     IPO_EXPORT
-    OptimizationOracle(const std::string& name);
+    OptimizationOracle(const std::string& name)
+      : Oracle<T>(name)
+    {
 
-    /**
-     * \brief Returns true iff the oracle is exact.
-     *
-     * Returns true iff the oracle is exact in the sense of being able to return solutions as
-     * exact rational vectors.
-     */
-
-    IPO_EXPORT
-    virtual bool isExact() const = 0;
+    }
 
     /**
      * \brief Maximize a floating-point objective vector.
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
-     * \param query Structure for query.
-     * \param result Structure for returning the result.
+     * \param query Parameters of query.
+     * \return Optimization result.
      **/
 
-    virtual void maximize(const double* objectiveVector, const Query& query, Result& result) = 0;
-
-#if defined(IPO_WITH_GMP)
+    virtual Result maximizeDouble(const double* objectiveVector, const Query& query)
+    {
+      T* temp = new T[this->space()->dimension()];
+      for (std::size_t i = 0; i < this->space()->dimension(); ++i)
+        temp[i] = objectiveVector[i];
+      Result result(maximize(temp, query));
+      delete[] temp;
+      return result;
+    }
 
     /**
-     * \brief Maximize a rational objective vector.
-     *
-     * Maximize a rational objective vector. The default implementation just converts the
-     * objective vector to a floating-point vector and calls \ref maximize.
+     * \brief Maximize an objective vector of type \ref T.
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
-     * \param query Structure for query.
-     * \param result Structure for returning the result.
+     * \param query Parameters of query.
+     * \return Optimization result.
      **/
 
-    IPO_EXPORT
-    virtual void maximize(const mpq_class* objectiveVector, const Query& query, Result& result);
-
-#endif /* IPO_WITH_GMP */
+    virtual Result maximize(const T* objectiveVector, const Query& query) = 0;
 
   };
 
@@ -237,7 +286,8 @@ namespace ipo
    * (including none) of (less-than-or-equal) inequalities.
    */
 
-  class SeparationOracle: public Oracle
+  template <typename T>
+  class SeparationOracle: public Oracle<T>
   {
   public:
     /**
@@ -246,11 +296,6 @@ namespace ipo
 
     struct Query
     {
-#if defined(IPO_WITH_GMP)
-      /// Are rational inequalities in addition to the floating-point ones requested?
-      bool rational;
-#endif /* IPO_WITH_GMP */
-
       /// Maximum number of solutions to return.
       std::size_t maxNumInequalities;
       /// Time limit
@@ -261,14 +306,21 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Query();
+      Query()
+      {
+        reset();
+      }
 
       /**
        * \brief Clears the query data.
        */
 
       IPO_EXPORT
-      void reset();
+      void reset()
+      {
+        maxNumInequalities = 50;
+        timeLimit = std::numeric_limits<double>::infinity();
+      }
     };
 
     /**
@@ -277,24 +329,71 @@ namespace ipo
 
     struct Result
     {
+      /// Array with constraints.
+      std::vector<Constraint<T>> constraints;
       /// Whether the time limit was reached.
       bool hitTimeLimit;
-      /// Array with constraints.
-      std::vector<Constraint> constraints;
 
       /**
        * \brief Constructs the result structure.
        */
 
       IPO_EXPORT
-      Result();
+      Result()
+        : hitTimeLimit(false)
+      {
+        
+      }
 
       /**
-       * \brief Clears the result data.
+       * \brief Move-constructs result structure.
        */
 
       IPO_EXPORT
-      void reset();
+      Result(Result&& other)
+        : constraints(std::move(other.constraints)), hitTimeLimit(other.hitTimeLimit)
+      {
+
+      }
+
+      /**
+       * \brief Move-assignment operator.
+       * 
+       * Move-assignment operator.
+       */
+
+      IPO_EXPORT
+      inline Result& operator=(Result&& other)
+      {
+        constraints = std::move(other.constraints);
+        hitTimeLimit = other.hitTimeLimit;
+        return *this;
+      }
+
+      /**
+       * \brief Assignment operator.
+       * 
+       * Assignment operator.
+       */
+
+      IPO_EXPORT
+      inline Result& operator=(const Result& other)
+      {
+        constraints = other.constraints;
+        hitTimeLimit = other.hitTimeLimit;
+        return *this;
+      }
+
+      /**
+       * \brief Returns the number of generated constraints. 
+       */
+
+      IPO_EXPORT
+      inline std::size_t numConstraints() const
+      {
+        return constraints.size();
+      }
+
     };
 
     /**
@@ -302,21 +401,31 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SeparationOracle(const std::string& name);
+    SeparationOracle(const std::string& name)
+      : Oracle<T>(name)
+    {
+
+    }
 
     /**
      * \brief Returns initially known inequalities.
      *
      * \param query Structure for query.
-     * \param result Structure for returning the result.
+     * \return Separation result.
      **/
 
     IPO_EXPORT
-    virtual void getInitial(const Query& query, Result& result);
+    virtual Result getInitial(const Query& query)
+    {
+      return Result();
+    }
 
     /**
      * \brief Separates a point/ray with floating-point coordinates.
      *
+     * Separates a point/ray with floating-point coordinates. This default implementation converts
+     * the double objective to one of type \ref T.
+     *
      * \param vector Array that maps coordinates to point/ray coordinates.
      * \param query Structure for query.
      * \param isPoint Whether a point shall be separated.
@@ -325,13 +434,18 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    virtual bool separate(const double* vector, bool isPoint, const Query& query,
-      Result& result) = 0;
-
-#if defined(IPO_WITH_GMP)
+    virtual Result separateDouble(const double* vector, bool isPoint, const Query& query)
+    {
+      T* temp = new T[this->space()->dimension()];
+      for (std::size_t i = 0; i < this->space()->dimension(); ++i)
+        temp[i] = vector[i];
+      Result result(std::move(separate(temp, isPoint, query)));
+      delete[] temp;
+      return result;
+    }
 
     /**
-     * \brief Separates a point/ray with rational coordinates.
+     * \brief Separates a point/ray of the corresponding type.
      *
      * \param vector Array that maps coordinates to point/ray coordinates.
      * \param query Structure for query.
@@ -341,11 +455,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
-    virtual bool separate(const mpq_class* vector, bool isPoint, const Query& query,
-      Result& result);
-
-#endif /* IPO_WITH_GMP */
+    virtual Result separate(const T* vector, bool isPoint, const Query& query) = 0;
 
   };
 

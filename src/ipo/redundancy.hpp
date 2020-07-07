@@ -1,7 +1,7 @@
 #pragma once
 
 #include <ipo/config.hpp>
-#include <ipo/data.hpp>
+#include <ipo/constraint.hpp>
 #include "lu.hpp"
 
 namespace ipo
@@ -10,7 +10,7 @@ namespace ipo
   {
     EQUATION_INDEPENDENT,
     EQUATION_REDUNDANT,
-    EQUATION_INFEASIBLE,
+    EQUATION_INCONSISTENT,
     EQUATION_INVALID
   };
   
@@ -18,7 +18,7 @@ namespace ipo
   class EquationRedundancyCheck
   {
   public:
-    EquationRedundancyCheck(std::size_t numVariables, const IsZero isZero)
+    EquationRedundancyCheck(std::size_t numVariables, const IsZero isZero = IsZero())
       : _numVariables(numVariables), _isZero(isZero), _lu(isZero)
     {
 
@@ -34,16 +34,21 @@ namespace ipo
       return _basis.size();
     }
 
-    EquationRedundancy test(const Constraint& constraint) const
+    inline Constraint<T>& getEquation(std::size_t e)
     {
-      if (!isZero(constraint.lhs - constraint.rhs, T(0)))
+      return _equations[e];
+    }
+
+    EquationRedundancy test(const Constraint<T>& constraint) const
+    {
+      if (!_isZero(constraint.lhs() - constraint.rhs()))
         EQUATION_INVALID;
 
       std::size_t newBasic;
       return test(constraint, newBasic);
     }
 
-    EquationRedundancy add(const Constraint& constraint)
+    EquationRedundancy add(const Constraint<T>& constraint)
     {
 #if defined(IPO_DEBUG_REDUNDANCY)
       std::cout << "EquationRedundancy.add(" << constraint.lhs.real << " <= [";
@@ -52,8 +57,8 @@ namespace ipo
       std::cout << "] <= " << constraint.rhs.real << std::endl;
 #endif /* IPO_DEBUG_REDUNDANCY */
 
-      if (!isZero(constraint.lhs - constraint.rhs, T(0)))
-        EQUATION_INVALID;
+      if (!_isZero(constraint.lhs() - constraint.rhs()))
+        return EQUATION_INVALID;
 
       std::size_t newBasic;
       EquationRedundancy result = test(constraint, newBasic);
@@ -68,9 +73,13 @@ namespace ipo
       std::vector<T> basisColumn(_basis.size() + 1, 0);
       _basis.push_back(newBasic);
       for (std::size_t b = 0; b + 1 < _basis.size(); ++b)
-        _equations[b].vector.findEntry(newBasic, basisRow[b]);
+      {
+        basisRow[b] = _equations[b].vector().find(newBasic, 0);
+      }
       for (std::size_t b = 0; b < _basis.size(); ++b)
-        constraint.vector.findEntry(_basis[b], basisColumn[b]);
+      {
+        basisColumn[b] = constraint.vector().find(_basis[b], 0);
+      }
 
       _lu.extend(&basisRow[0], &basisColumn[0], basisColumn.back());
 
@@ -78,49 +87,39 @@ namespace ipo
     }
 
   protected:
-    inline bool isZero(const Value& value, double dummy) const
-    {
-      return _isZero(value.real);
-    }
+//     inline bool isZero(const Value& value, double dummy) const
+//     {
+//       return _isZero(value.real);
+//     }
+// 
+//     inline bool isZero(const Value& value, const mpq_class& dummy) const
+//     {
+//       return _isZero(value.rational);
+//     }
 
-    inline bool isZero(const Value& value, const mpq_class& dummy) const
-    {
-      return _isZero(value.rational);
-    }
-
-    EquationRedundancy test(const Constraint& constraint, std::size_t& newBasic) const
+    EquationRedundancy test(const Constraint<T>& constraint, std::size_t& newBasic) const
     {
       /* Find multipliers such that combined equation agrees with given one on basic variables.
        * To this end, solve Ax = r, where r is the basic part of the constraint vector. */
       std::vector<T> multipliers(_basis.size());
       for (std::size_t b = 0; b < _basis.size(); ++b)
-        constraint.vector.get(_basis[b], multipliers[b]);
+        multipliers[b] = constraint.vector().find(_basis[b], 0);
       _lu.solveLeft(&multipliers[0]);
       _lu.solveUpper(&multipliers[0]);
 
       /* Combine equations according to multipliers. */
       std::vector<T> dense(numVariables(), 0);
       T rhs = 0;
-      T x;
       for (std::size_t e = 0; e < _equations.size(); ++e)
       {
-        const Vector& vector = _equations[e].vector;
-        for (std::size_t i = 0; i < vector.size(); ++i)
-        {
-          vector.get(i, x);
-          dense[vector.coordinate(i)] += multipliers[e] * x;
-        }
-        _equations[e].rhs.get(x);
-        rhs += multipliers[e] * x;
+        for (const auto& iter : _equations[e].vector())
+          dense[iter.first] += multipliers[e] * iter.second;
+        rhs += multipliers[e] * _equations[e].rhs();
       }
       /* Subtract given equation normal. */
-      for (std::size_t i = 0; i < constraint.vector.size(); ++i)
-      {
-        constraint.vector.get(i, x);
-        dense[constraint.vector.coordinate(i)] -= x;
-      }
-      constraint.rhs.get(x);
-      rhs -= x;
+      for (const auto& iter : constraint.vector())
+        dense[iter.first] -= iter.second;
+      rhs -= constraint.rhs();
 
 #if defined(IPO_DEBUG_REDUNDANCY)
       for (std::size_t v = 0; v < numVariables(); ++v)
@@ -137,7 +136,7 @@ namespace ipo
         }
       }
       newBasic = std::numeric_limits<std::size_t>::max();
-      return _isZero(rhs) ? EQUATION_REDUNDANT : EQUATION_INFEASIBLE;
+      return _isZero(rhs) ? EQUATION_REDUNDANT : EQUATION_INCONSISTENT;
     }
 
   protected:
@@ -145,7 +144,7 @@ namespace ipo
     IsZero _isZero;
     IncrementalLUFactorization<T, IsZero> _lu;
     std::vector<std::size_t> _basis;
-    std::vector<Constraint> _equations;
+    std::vector<Constraint<T>> _equations;
   };
 
 } /* namespace ipo */

@@ -3,16 +3,6 @@
 namespace ipo
 {
   
-  Value minusInfinity()
-  {
-    return Value(-std::numeric_limits<double>::infinity());
-  }
-
-  Value plusInfinity()
-  {
-    return Value(std::numeric_limits<double>::infinity());
-  }
-  
   inline std::size_t* getFirstCoordinate(Vector::Header* data)
   {
     return (std::size_t*)((char*)(data) + sizeof(Vector::Header));
@@ -423,6 +413,24 @@ namespace ipo
   }
 
 #endif /* IPO_WITH_GMP */
+
+  std::ostream& Vector::operator<<(std::ostream& stream) const
+  {
+    stream << '{';
+    for (std::size_t i = 0; i < size(); ++i)
+    {
+      if (i > 0)
+        stream << ", ";
+      stream << coordinate(i) << ':';
+      if (isRational())
+        stream << rational(i);
+      else
+        stream << real(i);
+    }
+    stream << '}';
+
+    return stream;
+  }
 
   Value operator*(const Vector& a, const Vector& b)
   {

@@ -142,49 +142,50 @@ namespace ipo
   };
 
   /**
-   * \brief Auxiliary method that iterates over the rows.
+   * \brief Auxiliary method that iterates over the bounds as constraints.
    *
-   * Auxiliary method that iterates over the rows of linear and setppc constraints, calling
-   * \p visitor with each of them. It passes the lower bound, the value 1, a pointer to the
-   * variable, a pointer to the coefficient 1, and the upper bound in that order.
+   * Auxiliary method that iterates over the bound constraints of all variables calling \p visitor
+   * with each of them as a constraint.
+   * 
+   * \p ranged Whether to returned ranged rows.
    */
 
-  void SCIPiterateBoundsReal(SCIP* scip,
-    std::function<void(const Constraint& constraint)> visitor)
+  void SCIPiterateBounds(SCIP* scip,
+    const std::unordered_map<SCIP_VAR*, std::size_t>& variablesToCoordinates,
+    std::function<void(Constraint<double>&& constraint)> visitor, bool ranged)
   {
     SCIP_VAR** vars = SCIPgetOrigVars(scip);
-    std::size_t n = SCIPgetNOrigVars(scip);
-    std::vector<std::pair<std::size_t, double>> entries;
-    entries.resize(1);
-    entries.front().second = 1.0;
-    for (std::size_t v = 0; v < n; ++v)
+    int n = SCIPgetNOrigVars(scip);
+    sparse_vector<double> entries;
+    for (int v = 0; v < n; ++v)
     {
-      SCIP_VAR* var = vars[v];
-      entries.front().first = v;
-      visitor(Constraint(Value(SCIPvarGetLbGlobal(var)), Vector(entries),
-        Value(SCIPvarGetUbGlobal(var))));
-    }
-  }
-
-  void SCIPiterateBoundsRational(SCIP* scip,
-    std::function<void(const Constraint& constraint)> visitor)
-  {
-    SCIP_VAR** vars = SCIPgetOrigVars(scip);
-    std::size_t n = SCIPgetNOrigVars(scip);
-    std::vector<std::pair<std::size_t, mpq_class>> entries;
-    entries.resize(1);
-    entries.front().second = 1;
-    for (std::size_t v = 0; v < n; ++v)
-    {
-      SCIP_VAR* var = vars[v];
-      entries.front().first = v;
-      double lower = SCIPvarGetLbGlobal(var);
-      Value lowerValue = SCIPisInfinity(scip, -lower)
-        ? Value(-std::numeric_limits<double>::infinity()) : Value(mpq_class(lower));
-      double upper = SCIPvarGetUbGlobal(var);
-      Value upperValue = SCIPisInfinity(scip, upper)
-        ? Value(std::numeric_limits<double>::infinity()) : Value(mpq_class(upper));
-      visitor(Constraint(lowerValue, Vector(entries), upperValue));
+      double lhs = SCIPvarGetLbOriginal(vars[v]);
+      if (SCIPisInfinity(scip, -lhs))
+        lhs = -std::numeric_limits<double>::infinity();
+      double rhs = SCIPvarGetUbOriginal(vars[v]);
+      if (SCIPisInfinity(scip, rhs))
+        rhs = std::numeric_limits<double>::infinity();
+      if (ranged || SCIPisEQ(scip, lhs, rhs))
+      {
+        entries.clear();
+        entries.push_back(variablesToCoordinates.at(vars[v]), 1.0);
+        visitor(Constraint<double>(lhs, entries, rhs));
+      }
+      else
+      {
+        if (!ipo::isPlusInfinity(rhs))
+        {
+          entries.clear();
+          entries.push_back(variablesToCoordinates.at(vars[v]), 1.0);
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), entries, rhs));
+        }
+        if (!ipo::isMinusInfinity(lhs))
+        {
+          entries.clear();
+          entries.push_back(variablesToCoordinates.at(vars[v]), -1.0);
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), entries, -lhs));
+        }
+      }
     }
   }
 
@@ -194,17 +195,20 @@ namespace ipo
    * Auxiliary method that iterates over the rows of linear and setppc constraints, calling
    * \p visitor with each of them. It passes the lhs, number of nonzeros, variables and
    * coefficients of the nonzeros, and the rhs of each row in that order.
+   *
+   * \p ranged Whether to returned ranged rows.
    */
 
-  void SCIPiterateRowsReal(SCIP* scip,
+  void SCIPiterateRows(SCIP* scip,
     const std::unordered_map<SCIP_VAR*, std::size_t>& variablesToCoordinates,
-    std::function<void(const Constraint& constraint)> visitor)
+    std::function<void(Constraint<double>&& constraint)> visitor, bool ranged)
   {
     SCIP_CONS** conss = SCIPgetConss(scip);
     std::size_t m = SCIPgetNConss(scip);
     std::vector<double> ones;
     ones.resize(SCIPgetNOrigVars(scip), 1.0);
-    std::vector<std::pair<std::size_t, double>> entries;
+    std::vector<std::pair<std::size_t, double>> unsortedEntries;
+    sparse_vector<double> entries;
     for (std::size_t c = 0; c < m; ++c)
     {
       SCIP_CONS* cons = conss[c];
@@ -241,77 +245,48 @@ namespace ipo
       if (SCIPisInfinity(scip, -lhs))
         lhs = -std::numeric_limits<double>::infinity();
 
-      entries.resize(k);
-      for (std::size_t i = 0; i < k; ++i)
-        entries[i] = std::pair<std::size_t, double>(variablesToCoordinates.at(vars[i]), vals[i]);
-      visitor(Constraint(Value(lhs), Vector(entries), Value(rhs)));
-    }
-  }
-
-  void SCIPiterateRowsRational(SCIP* scip,
-    const std::unordered_map<SCIP_VAR*, std::size_t>& variablesToCoordinates,
-    std::function<void(const Constraint& constraint)> visitor)
-  {
-    SCIP_CONS** conss = SCIPgetConss(scip);
-    std::size_t m = SCIPgetNConss(scip);
-    std::vector<double> ones;
-    ones.resize(SCIPgetNOrigVars(scip), 1.0);
-    std::vector<std::pair<std::size_t, mpq_class>> entries;
-    for (std::size_t c = 0; c < m; ++c)
-    {
-      SCIP_CONS* cons = conss[c];
-      SCIP_CONSHDLR* conshdlr = SCIPconsGetHdlr(cons);
-      std::size_t k = 0;
-      SCIP_VAR** vars = nullptr;
-      double* vals = nullptr;
-      double lhs = -std::numeric_limits<double>::infinity();
-      double rhs = std::numeric_limits<double>::infinity();
-      const std::string name = SCIPconshdlrGetName(conshdlr);
-      if (name == "linear")
+      if (ranged || SCIPisEQ(scip, lhs, rhs))
       {
-        k = SCIPgetNVarsLinear(scip, cons);
-        vars = SCIPgetVarsLinear(scip, cons);
-        vals = SCIPgetValsLinear(scip, cons);
-        lhs = SCIPgetLhsLinear(scip, cons);
-        rhs = SCIPgetRhsLinear(scip, cons);
-      }
-      else if (name == "setppc")
-      {
-        k = SCIPgetNVarsSetppc(scip, cons);
-        vars = SCIPgetVarsSetppc(scip, cons);
-        vals = &ones[0];
-        lhs = SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_PACKING ? 0.0 : 1.0;
-        rhs = SCIPgetTypeSetppc(scip, cons) == SCIP_SETPPCTYPE_COVERING ? SCIPinfinity(scip) : 1.0;
+        unsortedEntries.clear();
+        for (std::size_t i = 0; i < k; ++i)
+          unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
+        visitor(Constraint<double>(lhs, sparse_vector<double>(std::move(unsortedEntries)), rhs));
       }
       else
       {
-        throw std::runtime_error("SCIP oracles do not implement constraint type <" + name + ">.");
+        if (!ipo::isPlusInfinity(rhs))
+        {
+          unsortedEntries.clear();
+          for (std::size_t i = 0; i < k; ++i)
+            unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(),
+            sparse_vector<double>(std::move(unsortedEntries)), rhs));
+        }
+        if (!ipo::isMinusInfinity(lhs))
+        {
+          unsortedEntries.clear();
+          for (std::size_t i = 0; i < k; ++i)
+            unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), -vals[i]));
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(),
+            sparse_vector<double>(std::move(unsortedEntries)), -lhs));
+        }
       }
-
-      Value valLhs = SCIPisInfinity(scip, rhs) ? plusInfinity() : Value(mpq_class(lhs));
-      Value valRhs = SCIPisInfinity(scip, -lhs) ? minusInfinity() : Value(mpq_class(rhs));
-
-      entries.resize(k);
-      for (std::size_t i = 0; i < k; ++i)
-        entries[i] = std::pair<std::size_t, mpq_class>(variablesToCoordinates.at(vars[i]), mpq_class(vals[i]));
-      std::sort(entries.begin(), entries.end());
-      Vector vector(entries, true);
-      visitor(Constraint(valLhs, vector, valRhs));
     }
   }
 
   SCIPSolver::SCIPSolver(SCIP* scip)
-    : _scip(scip), _currentFace(Value(), Vector(), Value())
+    : _scip(scip), _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
   {
+    SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
     initialize();
   }
 
   SCIPSolver::SCIPSolver(const std::string& fileName)
-    : _currentFace(Value(), Vector(), Value())
+    : _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
-//     SCIP_CALL_EXC(SCIPsetIntParam(_scip, "display/verblevel", 0) );
+    SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
     SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), NULL) );
 
     initialize();
@@ -337,42 +312,38 @@ namespace ipo
 
     _name = SCIPgetProbName(_scip);
     _space = std::make_shared<Space>(variableNames);
-    
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
     std::vector<bool> integrality(n);
+    std::vector<std::pair<double, double>> bounds(n);
     for (std::size_t i = 0; i < n; ++i)
+    {
       integrality[i] = SCIPvarGetType(vars[i]) != SCIP_VARTYPE_CONTINUOUS;
+      bounds[i].first = SCIPvarGetLbOriginal(vars[i]);
+      if (SCIPisInfinity(_scip, -bounds[i].first))
+        bounds[i].first = -std::numeric_limits<double>::infinity();
+      bounds[i].second = SCIPvarGetUbOriginal(vars[i]);
+      if (SCIPisInfinity(_scip, bounds[i].second))
+        bounds[i].second = std::numeric_limits<double>::infinity();
+    }
 
-    // Extract all constraints from the MIP.
-    std::vector<Constraint> constraints;
+    _extender = std::make_shared<RationalMIPExtender>(integrality, bounds);
 
     struct Visitor
     {
-      std::vector<Constraint>* constraints;
-
-      void operator()(const Constraint& constraint)
+      std::shared_ptr<RationalMIPExtender> extender;
+      
+      void operator()(const Constraint<double>& constraint)
       {
-        constraints->push_back(constraint);
+        extender->addConstraint(constraint);
       }
     };
 
-    Visitor visitor = { &constraints };
-
-    SCIPiterateBoundsRational(_scip, visitor);
-    SCIPiterateRowsRational(_scip, _variablesToCoordinates, visitor);
-    
-    _makeRationalSolver = new MakeRationalSolver(integrality, constraints);
-
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+    Visitor visitor = { _extender };
+    SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
   }
 
   SCIPSolver::~SCIPSolver()
   {
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    delete _makeRationalSolver;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
-
     for (auto& iter : _faceConstraints)
     {
       if (iter.second != nullptr)
@@ -441,107 +412,88 @@ namespace ipo
 // 
 // #endif
 
-  void SCIPSolver::setFace(const Constraint& face)
+  void SCIPSolver::setFace(std::shared_ptr<Constraint<double>> face)
   {
     if (face == _currentFace)
       return;
-    
 
     // Remove from SCIP.
-    SCIP_CONS* currentCons = _currentFace.isAlwaysSatisfied() ? nullptr 
+    SCIP_CONS* currentCons = _currentFace->isAlwaysSatisfied() ? nullptr 
       : _faceConstraints.at(_currentFace);
     if (currentCons != nullptr)
       SCIP_CALL_EXC( SCIPdelCons(_scip, currentCons) );
 
-#if defined(IPO_WITH_GMP) && defined (IPO_WITH_SOPLEX)
-    // Remove from makeRational.
-    if (currentCons != nullptr)
+    if (!face->isAlwaysSatisfied())
     {
-      _makeRationalSolver->removeLastRow();
-    }
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+      // Create face constraint if it does not exist.
 
-    // Create face constraint if it does not exist.
-
-    auto found = _faceConstraints.find(face);
-    SCIP_CONS* cons = nullptr;
-    if (found == _faceConstraints.end())
-    {
-      // Add it to SCIP.
-      char consName[16];
-      SCIPsnprintf(consName, 16, "face#%d", _faceConstraints.size());
-      std::vector<SCIP_VAR*> vars;
-      std::vector<double> coefficients;
-      vars.resize(face.vector.size());
-      coefficients.resize(face.vector.size());
-      for (std::size_t i = 0; i < vars.size(); ++i)
+      auto found = _faceConstraints.find(face);
+      SCIP_CONS* cons = nullptr;
+      if (found == _faceConstraints.end())
       {
-        vars[i] = _variables[face.vector.coordinate(i)];
-        coefficients[i] = face.vector.real(i);
+        // Add it to SCIP.
+        char consName[16];
+        SCIPsnprintf(consName, 16, "face#%d", _faceConstraints.size());
+        std::vector<SCIP_VAR*> vars;
+        std::vector<double> coefficients;
+        vars.resize(face->vector().size());
+        coefficients.resize(face->vector().size());
+        for (const auto& iter : face->vector())
+        {
+          vars.push_back(_variables[iter.first]);
+          coefficients.push_back(iter.second);
+        }
+        double lhs = face->lhs() == -std::numeric_limits<double>::infinity() ? -SCIPinfinity(_scip) : face->lhs();
+        double rhs = face->rhs() == std::numeric_limits<double>::infinity() ? SCIPinfinity(_scip) : face->rhs();
+        SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
+          &coefficients[0], lhs, rhs));
+        _faceConstraints.insert(std::make_pair(face, cons));
       }
-      double lhs = face.lhs.isMinusInfinity() ? -SCIPinfinity(_scip) : face.lhs.real;
-      double rhs = face.rhs.isPlusInfinity() ? SCIPinfinity(_scip) : face.rhs.real;
-      SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, face.vector.size(), &vars[0],
-        &coefficients[0], lhs, rhs));
-      _faceConstraints.insert(std::make_pair(face, cons));
+      else
+        cons = found->second;
+
+      // Add to SCIP.
+      if (cons != nullptr)
+        SCIP_CALL_EXC( SCIPaddCons(_scip, cons) );
     }
-    else
-      cons = found->second;
-
-    // Add to SCIP.
-    if (cons != nullptr)
-      SCIP_CALL_EXC( SCIPaddCons(_scip, cons) );
-
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    // Add to makeRational.
-    if (cons != nullptr)
-      _makeRationalSolver->addRow(face);
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
     _currentFace = face;
   }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+// #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+// 
+//   void SCIPSolver::makeRational(OptimizationOracle::Result& result,
+//     const mpq_class* objectiveVector)
+//   {
+//     _makeRationalSolver->setObjective(objectiveVector);
+//     _makeRationalSolver->solve(result);
+//   }
+// 
+//   void SCIPSolver::makeRational(OptimizationOracle::Result& result, const double* objectiveVector)
+//   {
+//     _makeRationalSolver->setObjective(objectiveVector);
+//     _makeRationalSolver->solve(result);
+//   }
+// 
+// #endif
 
-  void SCIPSolver::makeRational(OptimizationOracle::Result& result,
-    const mpq_class* objectiveVector)
-  {
-    _makeRationalSolver->setObjective(objectiveVector);
-    _makeRationalSolver->solve(result);
-  }
-
-  void SCIPSolver::makeRational(OptimizationOracle::Result& result, const double* objectiveVector)
-  {
-    _makeRationalSolver->setObjective(objectiveVector);
-    _makeRationalSolver->solve(result);
-  }
-
-#endif
-
-  SCIPOptimizationOracle::SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
-    Constraint face)
-    : OptimizationOracle(solver->name()), _solver(solver), _face(face)
+  SCIPOptimizationOracleDouble::SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+    std::shared_ptr<Constraint<double>> face)
+    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
   }
 
-  SCIPOptimizationOracle::~SCIPOptimizationOracle()
+  SCIPOptimizationOracleDouble::~SCIPOptimizationOracleDouble()
   {
 
   }
 
-  bool SCIPOptimizationOracle::isExact() const
+  OptimizationOracle<double>::Result SCIPOptimizationOracleDouble::maximize(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query)
   {
-#if defined(IPO_WITH_SOPLEX) && defined(IPO_WITH_GMP)
-    return true;
-#else
-    return false;
-#endif /* IPO_WITH_SOPLEX */
-  }
+    OptimizationOracle<double>::Result result;
 
-  void SCIPOptimizationOracle::maximize(const double* objectiveVector, const Query& query,
-    Result& result)
-  {
     _solver->setFace(_face);
 
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
@@ -572,16 +524,15 @@ namespace ipo
       bool hasRay = SCIPhasPrimalRay(_solver->_scip);
       if (hasRay)
       {
-        std::vector<std::pair<std::size_t, double>> entries;
-        result.dualBound = plusInfinity();
+        sparse_vector<double> entries;
+        result.dualBound = std::numeric_limits<double>::infinity();
         for (std::size_t i = 0; i < n; ++i)
         {
           double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
           if (!SCIPisZero(_solver->_scip, y))
-            entries.push_back(std::make_pair(i, y));
+            entries.push_back(i, y);
         }
-        result.rays.push_back(OptimizationOracle::Result::Ray(
-          Vector(entries)));
+        result.rays.push_back(OptimizationOracle::Result::Ray(entries));
         break;
       }
 
@@ -597,7 +548,7 @@ namespace ipo
       {
         result.dualBound = SCIPgetDualbound(_solver->_scip);
         SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
-        std::vector<std::pair<std::size_t, double>> entries;
+        sparse_vector<double> entries;
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
           SCIP_SOL* sol = solutions[solIndex];
@@ -606,32 +557,32 @@ namespace ipo
           {
             double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
             if (!SCIPisZero(_solver->_scip, x))
-              entries.push_back(std::make_pair(i, x));
+              entries.push_back(i, x);
           }
-          result.points.push_back(OptimizationOracle::Result::Point(Vector(entries),
-            Value(SCIPgetSolOrigObj(_solver->_scip, sol))));
+          result.points.push_back(OptimizationOracle<double>::Result::Point(entries,
+            SCIPgetSolOrigObj(_solver->_scip, sol)));
         }
         break;
       }
       else if (status == SCIP_STATUS_INFEASIBLE)
       {
         assert(numSolutions == 0);
-        result.dualBound = minusInfinity();
+        result.dualBound = -std::numeric_limits<double>::infinity();
         break;
       }
       else if (status == SCIP_STATUS_UNBOUNDED)
       {
-        result.dualBound = plusInfinity();
+        result.dualBound = std::numeric_limits<double>::infinity();
         if (SCIPhasPrimalRay(_solver->_scip))
         {
-          std::vector<std::pair<std::size_t, double>> entries;
+          sparse_vector<double> entries;
           for (std::size_t i = 0; i < n; ++i)
           {
             double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
             if (!SCIPisZero(_solver->_scip, y))
-              entries.push_back(std::make_pair(i, y));
+              entries.push_back(i, y);
           }
-          result.rays.push_back(Vector(entries));
+          result.rays.push_back(OptimizationOracle<double>::Result::Ray(entries));
           break;
         }
       }
@@ -654,61 +605,29 @@ namespace ipo
     SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
     SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip, oldObjectiveLimit) );
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", oldSolutionLimit) );
-    
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    if (query.rational)
-      _solver->makeRational(result, objectiveVector);
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
-    
-    result.sortPoints();
-  }
-
-#ifdef IPO_WITH_GMP
-
-  void SCIPOptimizationOracle::maximize(const mpq_class* objectiveVector,
-    const OptimizationOracle::Query& query, OptimizationOracle::Result& result)
-  {
-    // Create floating-point approximation of objective vector.
-    double* approximateObjectiveVector = new double[space()->dimension()];
-    for (std::size_t i = 0; i < space()->dimension(); ++i)
-      approximateObjectiveVector[i] = objectiveVector[i].get_d();
-
-#if defined(IPO_WITH_SOPLEX)
-    if (query.rational)
-    {
-      OptimizationOracle::Query noRationalQuery = query;
-      noRationalQuery.rational = false;
-      this->maximize(approximateObjectiveVector, noRationalQuery, result);
-      this->_solver->makeRational(result, objectiveVector);
-    }
-    else
-#endif /* IPO_WITH_SOPLEX */
-    {
-      this->maximize(approximateObjectiveVector, query, result);
-    }
-
-    delete[] approximateObjectiveVector;
 
     result.sortPoints();
+
+    return result;
   }
 
-#endif /* IPO_WITH_GMP */
-
-  SCIPSeparationOracle::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
-    Constraint face)
+  SCIPSeparationOracleDouble::SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+    std::shared_ptr<Constraint<double>> face)
     : SeparationOracle(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
   }
 
-  SCIPSeparationOracle::~SCIPSeparationOracle()
+  SCIPSeparationOracleDouble::~SCIPSeparationOracleDouble()
   {
 
   }
 
-  bool SCIPSeparationOracle::separate(const double* vector, bool isPoint, const Query& query,
-    Result& result)
+  SeparationOracle<double>::Result SCIPSeparationOracleDouble::separate(const double* vector, bool isPoint,
+      const SeparationOracle<double>::Query& query)
   {
+    SeparationOracle<double>::Result result;
+
     _solver->setFace(_face);
 
     struct Visitor
@@ -716,12 +635,12 @@ namespace ipo
       std::shared_ptr<SCIPSolver> solver;
       const double* vector;
       bool isPoint;
-      const SCIPSeparationOracle::Query& query;
-      SCIPSeparationOracle::Result& result;
+      const SCIPSeparationOracleDouble::Query& query;
+      SCIPSeparationOracleDouble::Result& result;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
-      void operator()(const Constraint& constraint)
+      void operator()(const Constraint<double>& constraint)
       {
         // Did we reach a limit?
         if (result.hitTimeLimit || result.constraints.size() == query.maxNumInequalities)
@@ -739,18 +658,16 @@ namespace ipo
         }
 
         // Set lhs/rhs to 0 if we are separating a ray.
-        double rhs = constraint.rhs.real;
+        double rhs = constraint.rhs();
         if (!isPoint && rhs < std::numeric_limits<double>::infinity())
           rhs = 0.0;
-        double lhs = constraint.lhs.real;
+        double lhs = constraint.lhs();
         if (!isPoint && lhs > -std::numeric_limits<double>::infinity())
           lhs = 0.0;
 
         double activity = 0.0;
-        for (std::size_t i = 0; i < constraint.vector.size(); ++i)
-        {
-          activity += vector[constraint.vector.coordinate(i)] * constraint.vector.real(i);
-        }
+        for (const auto& iter : constraint.vector())
+          activity += vector[iter.first] * iter.second;
 
         if (!SCIPisFeasLE(solver->_scip, activity, rhs)
           || !SCIPisFeasGE(solver->_scip, activity, lhs))
@@ -763,100 +680,10 @@ namespace ipo
     Visitor visitor = { _solver, vector, isPoint, query, result, 0,
         std::chrono::system_clock::now() };
 
-#if defined(IPO_WITH_GMP)
-    if (query.rational)
-    {
-      SCIPiterateBoundsRational(_solver->_scip, visitor);
-      SCIPiterateRowsRational(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-    }
-    else
-    {
-      SCIPiterateBoundsReal(_solver->_scip, visitor);
-      SCIPiterateRowsReal(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-    }
-#else
-    SCIPiterateBoundsReal(_solver->_scip, visitor);
-    SCIPiterateRowsReal(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-#endif /* IPO_WITH_GMP */
+    SCIPiterateBounds(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
+    SCIPiterateRows(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
 
-    return !result.constraints.empty();
+    return result;
   }
-
-#if defined(IPO_WITH_GMP)
-
-  bool SCIPSeparationOracle::separate(const mpq_class* vector, bool isPoint, const Query& query,
-    Result& result)
-  {
-    _solver->setFace(_face);
-
-    struct Visitor
-    {
-      std::shared_ptr<SCIPSolver> solver;
-      const mpq_class* vector;
-      bool isPoint;
-      const SCIPSeparationOracle::Query& query;
-      SCIPSeparationOracle::Result& result;
-      std::size_t iteration;
-      std::chrono::time_point<std::chrono::system_clock> started;
-
-      void operator()(const Constraint& constraint)
-      {
-        // Did we reach a limit?
-        if (result.hitTimeLimit || result.constraints.size() == query.maxNumInequalities)
-          return;
-
-        iteration = (iteration + 1) % SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY;
-        if (iteration == 0)
-        {
-          std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
-          if (duration.count() > query.timeLimit)
-          {
-            result.hitTimeLimit = true;
-            return;
-          }
-        }
-
-        // Set lhs/rhs to 0 if we are separating a ray.
-        double rhs = constraint.rhs.real;
-        if (!isPoint && rhs < std::numeric_limits<double>::infinity())
-          rhs = 0.0;
-        double lhs = constraint.lhs.real;
-        if (!isPoint && lhs > -std::numeric_limits<double>::infinity())
-          lhs = 0.0;
-
-        mpq_class activity = 0;
-        for (std::size_t i = 0; i < constraint.vector.size(); ++i)
-        {
-          activity += vector[constraint.vector.coordinate(i)] * constraint.vector.real(i);
-        }
-
-        if (activity < lhs || activity > rhs)
-          result.constraints.push_back(constraint);
-      }
-    };
-
-    Visitor visitor = { _solver, vector, isPoint, query, result, 0,
-        std::chrono::system_clock::now() };
-
-#if defined(IPO_WITH_GMP)
-    if (query.rational)
-    {
-      SCIPiterateBoundsRational(_solver->_scip, visitor);
-      SCIPiterateRowsRational(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-    }
-    else
-    {
-      SCIPiterateBoundsReal(_solver->_scip, visitor);
-      SCIPiterateRowsReal(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-    }
-#else
-    SCIPiterateBoundsReal(_solver->_scip, visitor);
-    SCIPiterateRowsReal(_solver->_scip, _solver->_variablesToCoordinates, visitor);
-#endif /* IPO_WITH_GMP */
-
-    return !result.constraints.empty();
-  }
-
-#endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */

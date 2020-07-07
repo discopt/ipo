@@ -1,7 +1,8 @@
 #pragma once
 
 #include <ipo/config.hpp>
-#include <ipo/data.hpp>
+#include <ipo/sparse_vector.hpp>
+
 #include "lu.hpp"
 
 namespace ipo
@@ -28,10 +29,8 @@ namespace ipo
       return _basisIndexToColumn.size();
     }
 
-    void add(const Vector& row, const T& last, std::size_t newBasicColumn)
+    void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn)
     {
-      row.checkConsistency();
-      
       // Add column to basis.
       assert(newBasicColumn < _columns.size());
       assert(_columns[newBasicColumn].basisIndex == std::numeric_limits<std::size_t>::max());
@@ -40,11 +39,11 @@ namespace ipo
 
       // Copy part of new row to basis matrix.
       std::vector<T> newRow(rank(), T(0));
-      for (std::size_t i = 0; i < row.size(); ++i)
+      for (const auto& iter : row)
       {
-        std::size_t basisIndex = _columns[row.coordinate(i)].basisIndex;
+        std::size_t basisIndex = _columns[iter.first].basisIndex;
         if (basisIndex < std::numeric_limits<std::size_t>::max())
-          row.get(i, newRow[basisIndex]);
+          newRow[basisIndex] = iter.second;
       }
       if (last != 0 && _columns.back().basisIndex != std::numeric_limits<std::size_t>::max())
         newRow[_columns.back().basisIndex] = last;
@@ -58,12 +57,12 @@ namespace ipo
       _lu.extend(&newRow[0], &newColumn[0], newRow.back());
 
       // Add the row.
-      for (std::size_t i = 0; i < row.size(); ++i)
+      for (const auto& iter : row)
       {
-        ColumnData& colulmnData = _columns[row.coordinate(i)];
+        ColumnData& colulmnData = _columns[iter.first];
         colulmnData.rows.push_back(_basisIndexToColumn.size() - 1);
         colulmnData.entries.push_back(T(0));
-        row.get(i, colulmnData.entries.back());
+        colulmnData.entries.back() = iter.second;
       }
     }
 

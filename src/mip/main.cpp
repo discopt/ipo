@@ -1,30 +1,8 @@
-
 #include <iostream>
 #include <sstream>
 
-// #ifdef NDEBUG
-//   #undef NDEBUG
-//   #include <scip/scip.h>
-//   #include <scip/scipdefplugins.h>
-//   #include <scip/cons_linear.h>
-//   #define NDEBUG
-// #else
-//   #include <scip/scip.h>
-//   #include <scip/scipdefplugins.h>
-//   #include <scip/cons_linear.h>
-// #endif
-// 
-// #include <ipo/exactscip_oracle.h>
-// #include <ipo/scip_oracle.h>
-// #include <ipo/scip_exception.h>
-// #include <ipo/affine_hull.h>
-// #include <ipo/facets.h>
-// #include <ipo/cache_oracle.h>
-// #include <ipo/statistics_oracle.h>
-// #include <ipo/min_norm_2d.h>
-// 
-// using namespace ipo;
-// using namespace soplex;
+#include <ipo/oracles_scip.hpp>
+#include <ipo/ipo.hpp>
 
 int printUsage(const std::string& program)
 {
@@ -45,57 +23,67 @@ int printUsage(const std::string& program)
 
 int main(int argc, char** argv)
 {
-  // Parameters
+  auto scip = std::make_shared<ipo::SCIPSolver>(argv[1]);
+  auto opt = scip->getOptimizationOracleRational();
+  auto poly = std::make_shared<ipo::Polyhedron<ipo::rational, ipo::RationalIsZero>>(opt,
+    ipo::RationalIsZero());
 
-#ifdef IPO_WITH_EXACT_SCIP
-  bool exactUse = false;
-#endif /* IPO_WITH_EXACT_SCIP */
-  bool affineHullDebug = false;
-  bool affineHullStats = false;
-  bool printEquations = false;
-  bool separationDebug = false;
-  bool separationStats = false;
-  std::size_t numIterations = 100;
-  std::string fileName = "";
-
-  for (int i = 1; i < argc; ++i)
-  {
-    std::string arg = argv[i];
-    if (arg == "-ad" || arg == "--affinehull-debug")
-      affineHullDebug = true;
-#ifdef IPO_WITH_EXACT_SCIP
-    else if (arg == "-x" || arg == "--exact")
-      exactUse = true;
-#endif /* IPO_WITH_EXACT_SCIP */
-    else if (arg == "-e" || arg == "--equations")
-      printEquations = true;
-    else if (arg == "-as" || arg == "--affinehull-stats")
-      affineHullStats = true;
-    else if (arg == "-d" || arg == "--debug")
-      separationDebug = true;
-    else if (arg == "-s" || arg == "--stats")
-      separationStats = true;
-    else if ((arg == "-i" || arg == "--iterations") && (i + 1 < argc))
-    {
-      std::stringstream str(argv[i+1]);
-      str >> numIterations;
-      ++i;
-    }
-    else if (arg == "-h" || arg == "--help")
-      return printUsage(argv[0]);
-    else if (fileName.empty())
-      fileName = arg;
-    else
-    {
-      std::cout << "Two non-option arguments \"" << fileName << "\" and \"" << arg << "\".\n\n";
-      return printUsage(argv[0]);
-    }
-  }
-  if (fileName.empty())
-  {
-    std::cout << "Missing non-option arguments.\n\n";
-    return printUsage(argv[0]);
-  }
+  std::vector<sparse_vector<ipo::rational>> innerPoints, innerRays;
+  std::vector<ipo::Constraint<ipo::rational>> outerEquations;
+  
+  ipo::affineHull(poly, innerPoints, innerRays, outerEquations);
+  
+//   // Parameters
+// 
+// #ifdef IPO_WITH_EXACT_SCIP
+//   bool exactUse = false;
+// #endif /* IPO_WITH_EXACT_SCIP */
+//   bool affineHullDebug = false;
+//   bool affineHullStats = false;
+//   bool printEquations = false;
+//   bool separationDebug = false;
+//   bool separationStats = false;
+//   std::size_t numIterations = 100;
+//   std::string fileName = "";
+// 
+//   for (int i = 1; i < argc; ++i)
+//   {
+//     std::string arg = argv[i];
+//     if (arg == "-ad" || arg == "--affinehull-debug")
+//       affineHullDebug = true;
+// #ifdef IPO_WITH_EXACT_SCIP
+//     else if (arg == "-x" || arg == "--exact")
+//       exactUse = true;
+// #endif /* IPO_WITH_EXACT_SCIP */
+//     else if (arg == "-e" || arg == "--equations")
+//       printEquations = true;
+//     else if (arg == "-as" || arg == "--affinehull-stats")
+//       affineHullStats = true;
+//     else if (arg == "-d" || arg == "--debug")
+//       separationDebug = true;
+//     else if (arg == "-s" || arg == "--stats")
+//       separationStats = true;
+//     else if ((arg == "-i" || arg == "--iterations") && (i + 1 < argc))
+//     {
+//       std::stringstream str(argv[i+1]);
+//       str >> numIterations;
+//       ++i;
+//     }
+//     else if (arg == "-h" || arg == "--help")
+//       return printUsage(argv[0]);
+//     else if (fileName.empty())
+//       fileName = arg;
+//     else
+//     {
+//       std::cout << "Two non-option arguments \"" << fileName << "\" and \"" << arg << "\".\n\n";
+//       return printUsage(argv[0]);
+//     }
+//   }
+//   if (fileName.empty())
+//   {
+//     std::cout << "Missing non-option arguments.\n\n";
+//     return printUsage(argv[0]);
+//   }
 
   // Read instance and create MixedIntegerSet.
 

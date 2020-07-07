@@ -9,7 +9,6 @@ endif()
 # Target for the googletest.
 add_executable(ipo_gtest
   test_affine_complement.cpp
-  test_data.cpp
   test_lu.cpp
   test_main.cpp
   test_redundancy.cpp

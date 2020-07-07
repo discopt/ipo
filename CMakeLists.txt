@@ -30,8 +30,9 @@ endif()
 # Target for the IPO library.
 add_library(ipo
    src/ipo/affine_hull.cpp
-   src/ipo/oracles.cpp
-   src/ipo/polyhedron.cpp
+   src/ipo/constraint.cpp
+   src/ipo/oracles_mip.cpp
+   src/ipo/rational.cpp
    src/ipo/space.cpp
    src/ipo/data.cpp
 )
@@ -46,9 +47,6 @@ else()
 endif()
 set(IPO_WITH_SOPLEX ${SOPLEX_FOUND})
 if(SOPLEX_FOUND)
-  target_sources(ipo
-    PRIVATE src/ipo/make_rational_soplex.cpp
-  )
   target_link_libraries(ipo
     PRIVATE libsoplex
   )

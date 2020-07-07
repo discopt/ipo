@@ -5,7 +5,7 @@
 
 #ifdef IPO_WITH_SCIP
 
-#include <ipo/oracles.hpp>
+#include <ipo/oracles_mip.hpp>
 #include <unordered_map>
 
 // This is necessary due to a bug in SCIP. Whether some functionality is in a macro or not depends
@@ -18,16 +18,18 @@
   #include <scip/scip.h>
 #endif
 
-#ifdef IPO_WITH_SOPLEX
-#include <ipo/make_rational_soplex.hpp>
-#endif
-
 namespace ipo
 {
   // Forward declarations.
 
-  class SCIPOptimizationOracle;
-  class SCIPSeparationOracle;
+  class SCIPOptimizationOracleDouble;
+  class SCIPSeparationOracleDouble;
+
+#if defined(IPO_WITH_GMP)
+  typedef RationalMIPExtendedOptimizationOracle SCIPOptimizationOracleRational;
+  
+  typedef RationalMIPExtendedSeparationOracle SCIPSeparationOracleRational;
+#endif /* IPO_WITH_GMP */
 
   /**
    * \brief A SCIP solver instance.
@@ -100,9 +102,10 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracle> getOptimizationOracle()
+    inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble()
     {
-      return getOptimizationOracle(alwaysSatisfiedConstraint());
+      return getOptimizationOracleDouble(
+        std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()));
     }
 
     /**
@@ -110,19 +113,49 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracle> getOptimizationOracle(Constraint face)
+    inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble(
+      std::shared_ptr<Constraint<double>> face)
     {
-      return std::make_shared<SCIPOptimizationOracle>(shared_from_this(), face);
+      return std::make_shared<SCIPOptimizationOracleDouble>(shared_from_this(), face);
     }
+
+#if defined(IPO_WITH_GMP)
+
+    /**
+     * \brief Returns an optimization oracle for the polyhedron.
+     */
+
+    IPO_EXPORT
+    inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational()
+    {
+      return getOptimizationOracleRational(
+        std::make_shared<Constraint<rational>>(alwaysSatisfiedConstraint<rational>()));
+    }
+
+    /**
+     * \brief Returns an optimization oracle for the requested \p face.
+     */
+
+    IPO_EXPORT
+    inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational(
+      std::shared_ptr<Constraint<rational>> face)
+    {
+      auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
+      auto approximateOracle = getOptimizationOracleDouble(approximateFace);
+      return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
+    }
+
+#endif /* IPO_WITH_GMP */
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracle> getSeparationOracle()
+    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble()
     {
-      return getSeparationOracle(alwaysSatisfiedConstraint());
+      return getSeparationOracleDouble(
+        std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()));
     }
 
     /**
@@ -130,15 +163,43 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracle> getSeparationOracle(Constraint face)
+    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble(std::shared_ptr<Constraint<double>> face)
     {
-      return std::make_shared<SCIPSeparationOracle>(shared_from_this(), face);
+      return std::make_shared<SCIPSeparationOracleDouble>(shared_from_this(), face);
     }
+
+#if defined(IPO_WITH_GMP)
+
+    /**
+     * \brief Returns a separation oracle for the polyhedron.
+     */
+
+    IPO_EXPORT
+    inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational()
+    {
+      return getSeparationOracleRational(
+        std::make_shared<Constraint<rational>>(alwaysSatisfiedConstraint<rational>()));
+    }
+
+    /**
+     * \brief Returns a separation oracle for the \p face.
+     */
+
+    IPO_EXPORT
+    inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational(
+      std::shared_ptr<Constraint<rational>> face)
+    {
+      auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
+      auto approximateOracle = getSeparationOracleDouble(approximateFace);
+      return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
+    }
+
+#endif /* IPO_WITH_GMP */
 
   protected:
 
-    friend SCIPOptimizationOracle;
-    friend SCIPSeparationOracle;
+    friend SCIPOptimizationOracleDouble;
+    friend SCIPSeparationOracleDouble;
 
     /**
      * \brief Initializes the solver data.
@@ -151,14 +212,8 @@ namespace ipo
      */
 
     IPO_EXPORT
-    void setFace(const Constraint& constraint);
+    void setFace(std::shared_ptr<Constraint<double>> face);
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    void makeRational(OptimizationOracle::Result& result, const mpq_class* objectiveVector);
-
-    void makeRational(OptimizationOracle::Result& result, const double* objectiveVector);
-#endif
-    
   protected:
     /// Actual SCIP instance.
     SCIP* _scip;
@@ -169,18 +224,19 @@ namespace ipo
     double* _instanceObjective;
     std::string _name;
     std::shared_ptr<Space> _space;
-    Constraint _currentFace;
-    std::unordered_map<Constraint, SCIP_CONS*, HashConstraint> _faceConstraints;
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    MakeRationalSolver* _makeRationalSolver;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+    std::shared_ptr<Constraint<double>> _currentFace;
+    std::unordered_map<std::shared_ptr<Constraint<double>>, SCIP_CONS*> _faceConstraints;
+
+#if defined(IPO_WITH_GMP)
+    std::shared_ptr<RationalMIPExtender> _extender;
+#endif /* IPO_WITH_GMP */
   };
 
   /**
   * \brief OptimizationOracle based on the SCIP solver.
   */
 
-  class SCIPOptimizationOracle: public OptimizationOracle
+  class SCIPOptimizationOracleDouble: public OptimizationOracle<double>
   {
   public:
 
@@ -192,53 +248,41 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver, Constraint face);
+    SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+      std::shared_ptr<Constraint<double>> face);
 
     /**
      * \brief Destructor.
      */
 
     IPO_EXPORT
-    virtual ~SCIPOptimizationOracle();
+    virtual ~SCIPOptimizationOracleDouble();
 
-    /**
-     * \brief Returns true iff the oracle is exact.
-     *
-     * Returns true iff the oracle is exact, i.e., upon request it can return solutions as exact
-     * rational vectors.
-     */
-
-    IPO_EXPORT
-    bool isExact() const override;
 
     /**
      * \brief Maximize a floating-point objective vector.
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
-     * \param query Structure for query.
-     * \param result Structure for returning the result.
+     * \param query Parameters of query.
+     * \return Optimization result.
      **/
 
-    IPO_EXPORT
-    void maximize(const double* objectiveVector, const Query& query, Result& result) override;
-
-#if defined(IPO_WITH_GMP)
+    virtual OptimizationOracle<double>::Result maximizeDouble(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query) override
+    {
+      return maximize(objectiveVector, query);
+    }
 
     /**
-     * \brief Maximize a rational objective vector.
-     *
-     * Maximize a rational objective vector. The default implementation just converts the
-     * objective vector to a floating-point vector and calls \ref maximize.
+     * \brief Maximize an objective vector of type double.
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
-     * \param query Structure for query.
-     * \param result Structure for returning the result.
+     * \param query Parameters of query.
+     * \return Optimization result.
      **/
 
-    IPO_EXPORT
-    void maximize(const mpq_class* objectiveVector, const Query& query, Result& result) override;
-
-#endif /* IPO_WITH_GMP */
+    virtual OptimizationOracle<double>::Result maximize(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query);
 
   protected:
     friend SCIPSolver;
@@ -246,14 +290,14 @@ namespace ipo
     /// The solver instance
     std::shared_ptr<SCIPSolver> _solver;
     /// The index of the face we are optimizing over.
-    Constraint _face;
+    std::shared_ptr<Constraint<double>> _face;
   };
 
   /**
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
   */
 
-  class SCIPSeparationOracle: public SeparationOracle
+  class SCIPSeparationOracleDouble: public SeparationOracle<double>
   {
   public:
     /**
@@ -264,33 +308,19 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver, Constraint face);
+    SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+      std::shared_ptr<Constraint<double>> face);
 
     /**
      * \brief Destructor.
      */
 
     IPO_EXPORT
-    virtual ~SCIPSeparationOracle();
+    virtual ~SCIPSeparationOracleDouble();
 
+    
     /**
      * \brief Separates a point/ray with floating-point coordinates.
-     *
-     * \param vector Array that maps coordinates to point/ray coordinates.
-     * \param result Structure for returning the result.
-     * \param timeLimit Time limit for this call (in seconds).
-     *
-     * \returns \c true if and only if the point/ray was separated.
-     */
-
-    IPO_EXPORT
-    virtual bool separate(const double* vector, bool isPoint, const SeparationOracle::Query& query,
-      SeparationOracle::Result& result);
-
-#if defined(IPO_WITH_GMP)
-
-    /**
-     * \brief Separates a point/ray with rational coordinates.
      *
      * \param vector Array that maps coordinates to point/ray coordinates.
      * \param query Structure for query.
@@ -300,11 +330,44 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
-    virtual bool separate(const mpq_class* vector, bool isPoint,
-      const SeparationOracle::Query& query, SeparationOracle::Result& result);
+    virtual SeparationOracle<double>::Result separateDouble(const double* vector, bool isPoint,
+      const SeparationOracle<double>::Query& query)
+    {
+      return separate(vector, isPoint, query);
+    }
 
-#endif /* IPO_WITH_GMP */
+    /**
+     * \brief Separates a point/ray of the corresponding type.
+     *
+     * \param vector Array that maps coordinates to point/ray coordinates.
+     * \param query Structure for query.
+     * \param isPoint Whether a point shall be separated.
+     * \param result Structure for returning the result.
+     *
+     * \returns \c true if and only if the point/ray was separated.
+     **/
+
+    virtual SeparationOracle<double>::Result separate(const double* vector, bool isPoint,
+      const SeparationOracle<double>::Query& query);
+
+// #if defined(IPO_WITH_GMP)
+// 
+//     /**
+//      * \brief Separates a point/ray with rational coordinates.
+//      *
+//      * \param vector Array that maps coordinates to point/ray coordinates.
+//      * \param query Structure for query.
+//      * \param isPoint Whether a point shall be separated.
+//      * \param result Structure for returning the result.
+//      *
+//      * \returns \c true if and only if the point/ray was separated.
+//      **/
+// 
+//     IPO_EXPORT
+//     virtual bool separate(const mpq_class* vector, bool isPoint,
+//       const SeparationOracle::Query& query, SeparationOracle::Result& result);
+// 
+// #endif /* IPO_WITH_GMP */
 
   protected:
     friend SCIPSolver;
@@ -312,7 +375,7 @@ namespace ipo
     /// The solver instance
     std::shared_ptr<SCIPSolver> _solver;
     /// The index of the face we are separating for.
-    Constraint _face;
+    std::shared_ptr<Constraint<double>> _face;
   };
 
 } /* namespace ipo */

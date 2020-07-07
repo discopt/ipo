@@ -3,25 +3,27 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 #include <ipo/polyhedron.hpp>
+#include <ipo/rational.hpp>
 
 namespace ipo
 {
-  typedef int AffineHullOptions;
 
-  const int AFFINE_HULL_REAL = 0;
-#if defined(IPO_WITH_GMP)
-  const int AFFINE_HULL_RATIONAL = 1;
-#endif
+  int affineHull(std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
+    std::vector<sparse_vector<double>>& innerPoints,
+    std::vector<sparse_vector<double>>& innerRays,
+    std::vector<Constraint<double>>& outerEquations,
+    const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>(),
+    double timeLimit = std::numeric_limits<double>::infinity());
 
-  int affineHull(std::shared_ptr<Polyhedron> polyhedron, std::vector<Vector>& innerPoints,
-    std::vector<Vector>& innerRays, std::vector<Constraint>& outerEquations,
-    const std::vector<Constraint>& knownEquations = std::vector<Constraint>(),
-    double timeLimit = std::numeric_limits<double>::infinity(),
 #if defined(IPO_WITH_GMP)
-    AffineHullOptions options = AFFINE_HULL_RATIONAL
-#else
-    AffineHullOptions options = AFFINE_HULL_REAL
+
+  int affineHull(std::shared_ptr<Polyhedron<rational, RationalIsZero>> polyhedron,
+    std::vector<sparse_vector<rational>>& innerPoints,
+    std::vector<sparse_vector<rational>>& innerRays,
+    std::vector<Constraint<rational>>& outerEquations,
+    const std::vector<Constraint<rational>>& knownEquations = std::vector<Constraint<rational>>(),
+    double timeLimit = std::numeric_limits<double>::infinity());
+
 #endif /* IPO_WITH_GMP */
-  );
 
 } /* namespace ipo */

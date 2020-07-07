@@ -229,30 +229,4 @@ namespace ipo
     std::vector<std::vector<T>> _upperEntries;
   };
 
-#if defined(IPO_WITH_GMP)
-  struct RationalIsZero
-  {
-    bool operator()(const mpq_class& x) const
-    {
-      return x == 0;
-    }
-  };
-#endif /* IPO_WITH_GMP */
-
-  struct RealIsZero
-  {
-    double epsilon;
-
-    RealIsZero(double eps)
-      : epsilon(eps)
-    {
-
-    }
-
-    bool operator()(double x) const
-    {
-      return fabs(x) < epsilon;
-    }
-  };
-
 } /* namespace ipo */

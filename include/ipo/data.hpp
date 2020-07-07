@@ -5,6 +5,7 @@
 
 #include <cassert>
 #include <vector>
+#include <ostream>
 
 #if defined(IPO_WITH_GMP)
 #include <gmpxx.h>
@@ -12,9 +13,15 @@
 
 namespace ipo
 {
+  typedef double Real;
+
 #ifdef IPO_WITH_GMP
+  typedef mpq_class Rational;
+
   static mpq_class _zero(0);
 #endif /* IPO_WITH_GMP */
+
+  
   
   struct Value
   {
@@ -163,6 +170,8 @@ namespace ipo
 #endif /* IPO_WITH_GMP */
       return Value(this->real - other.real);
     }
+
+    std::ostream& operator<<(std::ostream& stream) const;
   };
 
   Value minusInfinity();
@@ -331,6 +340,8 @@ namespace ipo
     IPO_EXPORT
     mpq_class squaredRationalNorm() const;
 #endif /* IPO_WITH_GMP */
+
+    std::ostream& operator<<(std::ostream& stream) const;
 
     struct Header
     {
