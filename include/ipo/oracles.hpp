@@ -106,30 +106,35 @@ namespace ipo
         T objectiveValue;
         sparse_vector<T> vector;
 
+        IPO_EXPORT
         Point(const sparse_vector<T>& vec)
           : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
         {
 
         }
 
+        IPO_EXPORT
         Point(sparse_vector<T>&& vec)
           : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(std::move(vec))
         {
 
         }
 
+        IPO_EXPORT
         Point(const sparse_vector<T>& vec, const T& value)
           : objectiveValue(value), vector(vec)
         {
 
         }
 
+        IPO_EXPORT
         Point(sparse_vector<T>&& vec, const T& value)
           : objectiveValue(value), vector(std::move(vec))
         {
 
         }
 
+        IPO_EXPORT
         inline bool operator<(const Point& other) const
         {
           return objectiveValue > other.objectiveValue;
@@ -140,12 +145,14 @@ namespace ipo
       {
         sparse_vector<T> vector;
 
+        IPO_EXPORT
         Ray(const sparse_vector<T>& vec)
           : vector(vec)
         {
 
         }
 
+        IPO_EXPORT
         Ray(sparse_vector<T>&& vec)
           : vector(std::move(vec))
         {
@@ -257,6 +264,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual Result maximizeDouble(const double* objectiveVector, const Query& query)
     {
       T* temp = new T[this->space()->dimension()];
@@ -275,6 +283,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual Result maximize(const T* objectiveVector, const Query& query) = 0;
 
   };
@@ -307,19 +316,10 @@ namespace ipo
 
       IPO_EXPORT
       Query()
+        : maxNumInequalities(std::numeric_limits<std::size_t>::max()),
+        timeLimit(std::numeric_limits<double>::infinity())
       {
-        reset();
-      }
 
-      /**
-       * \brief Clears the query data.
-       */
-
-      IPO_EXPORT
-      void reset()
-      {
-        maxNumInequalities = 50;
-        timeLimit = std::numeric_limits<double>::infinity();
       }
     };
 
@@ -434,6 +434,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual Result separateDouble(const double* vector, bool isPoint, const Query& query)
     {
       T* temp = new T[this->space()->dimension()];
@@ -455,6 +456,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual Result separate(const T* vector, bool isPoint, const Query& query) = 0;
 
   };

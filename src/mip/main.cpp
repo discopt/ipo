@@ -28,10 +28,22 @@ int main(int argc, char** argv)
   auto poly = std::make_shared<ipo::Polyhedron<ipo::rational, ipo::RationalIsZero>>(opt,
     ipo::RationalIsZero());
 
+  // Extract known equations from a separation oracle.
+  std::vector<ipo::Constraint<ipo::rational>> knownEquations;
+  ipo::SeparationOracle<ipo::rational>::Query query;
+  auto result = scip->getSeparationOracleRational()->getInitial(query);
+  for (const auto& constraint : result.constraints)
+  {
+    if (constraint.isEquation())
+    {
+      knownEquations.push_back(constraint);
+    }
+  }
+
   std::vector<sparse_vector<ipo::rational>> innerPoints, innerRays;
   std::vector<ipo::Constraint<ipo::rational>> outerEquations;
-  
-  ipo::affineHull(poly, innerPoints, innerRays, outerEquations);
+
+  ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations);
   
 //   // Parameters
 // 

@@ -120,7 +120,9 @@ namespace ipo
 #ifdef IPO_DEBUG_LU
       std::cout << "last diagonal = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU */
+#if !defined(NDEBUG)
       bool invertible = !_isZero(newDiagonal);
+#endif
       assert(invertible);
 
       /* Add the new row to L. */

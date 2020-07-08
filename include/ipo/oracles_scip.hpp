@@ -6,6 +6,7 @@
 #ifdef IPO_WITH_SCIP
 
 #include <ipo/oracles_mip.hpp>
+#include <ipo/constraint.hpp>
 #include <unordered_map>
 
 // This is necessary due to a bug in SCIP. Whether some functionality is in a macro or not depends
@@ -145,7 +146,7 @@ namespace ipo
       return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
     }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP*/
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
@@ -267,6 +268,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual OptimizationOracle<double>::Result maximizeDouble(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query) override
     {
@@ -281,6 +283,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual OptimizationOracle<double>::Result maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query);
 
@@ -318,6 +321,16 @@ namespace ipo
     IPO_EXPORT
     virtual ~SCIPSeparationOracleDouble();
 
+    /**
+     * \brief Returns initially known inequalities.
+     *
+     * \param query Structure for query.
+     * \return Separation result.
+     **/
+
+    IPO_EXPORT
+    SeparationOracle<double>::Result getInitial(const SeparationOracle<double>::Query& query)
+      override;
     
     /**
      * \brief Separates a point/ray with floating-point coordinates.
@@ -330,6 +343,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual SeparationOracle<double>::Result separateDouble(const double* vector, bool isPoint,
       const SeparationOracle<double>::Query& query)
     {
@@ -347,27 +361,9 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual SeparationOracle<double>::Result separate(const double* vector, bool isPoint,
       const SeparationOracle<double>::Query& query);
-
-// #if defined(IPO_WITH_GMP)
-// 
-//     /**
-//      * \brief Separates a point/ray with rational coordinates.
-//      *
-//      * \param vector Array that maps coordinates to point/ray coordinates.
-//      * \param query Structure for query.
-//      * \param isPoint Whether a point shall be separated.
-//      * \param result Structure for returning the result.
-//      *
-//      * \returns \c true if and only if the point/ray was separated.
-//      **/
-// 
-//     IPO_EXPORT
-//     virtual bool separate(const mpq_class* vector, bool isPoint,
-//       const SeparationOracle::Query& query, SeparationOracle::Result& result);
-// 
-// #endif /* IPO_WITH_GMP */
 
   protected:
     friend SCIPSolver;

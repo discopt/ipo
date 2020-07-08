@@ -1,5 +1,7 @@
 #include <ipo/oracles_mip.hpp>
 
+#if defined(IPO_WITH_GMP)
+
 namespace ipo
 {
 
@@ -286,6 +288,11 @@ namespace ipo
     _space = approximateOracle->space();
   }
 
+  RationalMIPExtendedOptimizationOracle::~RationalMIPExtendedOptimizationOracle()
+  {
+
+  }
+
   OptimizationOracle<rational>::Result RationalMIPExtendedOptimizationOracle::maximizeDouble(
     const double* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
@@ -309,6 +316,11 @@ namespace ipo
     _approximateOracle(approximateOracle), _face(face)
   {
     _space = approximateOracle->space();
+  }
+
+  RationalMIPExtendedSeparationOracle::~RationalMIPExtendedSeparationOracle()
+  {
+
   }
 
   SeparationOracle<rational>::Result RationalMIPExtendedSeparationOracle::getInitial(
@@ -357,3 +369,5 @@ namespace ipo
   }
 
 }
+
+#endif /* IPO_WITH_GMP */

@@ -14,6 +14,8 @@ namespace ipo
       return stream << constraint.lhs() << " <= " << constraint.vector() << " <= " << constraint.rhs();
   }
 
+#if defined(IPO_WITH_GMP)
+
   std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint)
   {
     if (constraint.lhs() == -std::numeric_limits<double>::infinity())
@@ -43,5 +45,8 @@ namespace ipo
     return Constraint<rational>(constraint.lhs(), std::move(vector),
       constraint.rhs());
   }
+
+#endif /* IPO_WITH_GMP */
+
 
 }

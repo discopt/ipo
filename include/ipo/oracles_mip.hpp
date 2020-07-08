@@ -6,7 +6,7 @@
 
 #include <memory>
 
-#ifdef IPO_WITH_SOPLEX
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
 #define SOPLEX_WITH_GMP
 #include <soplex.h>
@@ -17,17 +17,24 @@ namespace ipo
   class RationalMIPExtender
   {
   public:
+
+    IPO_EXPORT
     RationalMIPExtender(const std::vector<bool>& integrality,
       const std::vector<std::pair<double, double>>& bounds);
 
+    IPO_EXPORT
     ~RationalMIPExtender();
 
+    IPO_EXPORT
     void addConstraint(const Constraint<rational>& constraint);
 
+    IPO_EXPORT
     void addConstraint(const Constraint<double>& constraint);
 
+    IPO_EXPORT
     void setFace(std::shared_ptr<Constraint<rational>> face);
 
+    IPO_EXPORT
     OptimizationOracle<rational>::Result solve(
       const OptimizationOracle<double>::Result& approximateResult);
 
@@ -39,6 +46,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual OptimizationOracle<rational>::Result maximizeDouble(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const double* objectiveVector,
@@ -52,6 +60,7 @@ namespace ipo
      * \return Optimization result.
      **/
 
+    IPO_EXPORT
     virtual OptimizationOracle<rational>::Result maximize(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const rational* objectiveVector,
@@ -70,13 +79,19 @@ namespace ipo
   class RationalMIPExtendedOptimizationOracle: public OptimizationOracle<rational>
   {
   public:
+    IPO_EXPORT
     RationalMIPExtendedOptimizationOracle(std::shared_ptr<RationalMIPExtender> extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       std::shared_ptr<Constraint<rational>> face);
 
+    IPO_EXPORT
+    virtual ~RationalMIPExtendedOptimizationOracle();
+
+    IPO_EXPORT
     OptimizationOracle<rational>::Result maximizeDouble(const double * objectiveVector,
       const OptimizationOracle<rational>::Query& query) override;
 
+    IPO_EXPORT
     OptimizationOracle<rational>::Result maximize(const rational* objectiveVector,
       const OptimizationOracle<rational>::Query& query) override;
 
@@ -89,9 +104,13 @@ namespace ipo
   class RationalMIPExtendedSeparationOracle: public SeparationOracle<rational>
   {
   public:
+    IPO_EXPORT
     RationalMIPExtendedSeparationOracle(std::shared_ptr<SeparationOracle<double>> approximateOracle,
       std::shared_ptr<Constraint<rational>> face);
-    
+
+    IPO_EXPORT
+    virtual ~RationalMIPExtendedSeparationOracle();
+
     /**
      * \brief Returns initially known inequalities.
      *
@@ -116,6 +135,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual SeparationOracle<rational>::Result separateDouble(const double* vector, bool isPoint,
       const SeparationOracle<rational>::Query& query) override;
 
@@ -130,6 +150,7 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
+    IPO_EXPORT
     virtual SeparationOracle<rational>::Result separate(const rational* vector, bool isPoint,
       const SeparationOracle<rational>::Query& query) override;
 
@@ -140,4 +161,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_WITH_SOPLEX */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */

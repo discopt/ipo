@@ -8,6 +8,7 @@
 namespace ipo
 {
 
+  IPO_EXPORT
   int affineHull(std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
     std::vector<sparse_vector<double>>& innerPoints,
     std::vector<sparse_vector<double>>& innerRays,
@@ -17,6 +18,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
+  IPO_EXPORT
   int affineHull(std::shared_ptr<Polyhedron<rational, RationalIsZero>> polyhedron,
     std::vector<sparse_vector<rational>>& innerPoints,
     std::vector<sparse_vector<rational>>& innerRays,

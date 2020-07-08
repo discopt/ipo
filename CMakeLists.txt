@@ -48,7 +48,7 @@ endif()
 set(IPO_WITH_SOPLEX ${SOPLEX_FOUND})
 if(SOPLEX_FOUND)
   target_link_libraries(ipo
-    PRIVATE libsoplex
+    PRIVATE libsoplex-pic
   )
   # TODO: target_include_directories(ipo ... did not work here.
   include_directories(
@@ -66,6 +66,7 @@ else()
 endif()
 set(IPO_WITH_SCIP ${SCIP_FOUND})
 if(SCIP_FOUND)
+  message(STATUS "SCIP found for include dir ${SCIP_INCLUDE_DIRS}")
   target_sources(ipo
     PRIVATE src/ipo/oracles_scip.cpp
   )

@@ -286,7 +286,6 @@ namespace ipo
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
-    SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
     SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), NULL) );
 
     initialize();
@@ -621,6 +620,51 @@ namespace ipo
   SCIPSeparationOracleDouble::~SCIPSeparationOracleDouble()
   {
 
+  }
+
+  SeparationOracle<double>::Result SCIPSeparationOracleDouble::getInitial(
+    const SeparationOracle<double>::Query& query)
+  {
+    SeparationOracle<double>::Result result;
+
+    if (query.maxNumInequalities > 0 && !_face->isAlwaysSatisfied())
+      result.constraints.push_back(*_face);
+
+    struct Visitor
+    {
+      std::shared_ptr<SCIPSolver> solver;
+      const SCIPSeparationOracleDouble::Query& query;
+      SCIPSeparationOracleDouble::Result& result;
+      std::size_t iteration;
+      std::chrono::time_point<std::chrono::system_clock> started;
+
+      void operator()(const Constraint<double>& constraint)
+      {
+        // Did we reach a limit?
+        if (result.hitTimeLimit || result.constraints.size() == query.maxNumInequalities)
+          return;
+
+        iteration = (iteration + 1) % SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY;
+        if (iteration == 0)
+        {
+          std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+          if (duration.count() > query.timeLimit)
+          {
+            result.hitTimeLimit = true;
+            return;
+          }
+        }
+
+        result.constraints.push_back(constraint);
+      }
+    };
+
+    Visitor visitor = { _solver, query, result, 0, std::chrono::system_clock::now() };
+
+    SCIPiterateBounds(_solver->_scip, _solver->_variablesToCoordinates, visitor, true);
+    SCIPiterateRows(_solver->_scip, _solver->_variablesToCoordinates, visitor, true);
+
+    return result;
   }
 
   SeparationOracle<double>::Result SCIPSeparationOracleDouble::separate(const double* vector, bool isPoint,

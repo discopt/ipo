@@ -269,10 +269,13 @@ namespace ipo
     double _approx;
   };
 
+  IPO_EXPORT
   rational minusInfinity();
 
+  IPO_EXPORT
   rational plusInfinity();
 
+  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const rational& x);
 
   IPO_EXPORT
@@ -301,6 +304,7 @@ namespace ipo
 
   struct RationalIsZero
   {
+    IPO_EXPORT
     bool operator()(const rational& x) const
     {
       return x == 0;
@@ -337,12 +341,14 @@ namespace ipo
   {
     double epsilon;
 
+    IPO_EXPORT
     DoubleIsZero(double eps)
       : epsilon(eps)
     {
 
     }
 
+    IPO_EXPORT
     bool operator()(double x) const
     {
       return fabs(x) < epsilon;

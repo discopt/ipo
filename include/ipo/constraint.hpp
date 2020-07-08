@@ -22,8 +22,10 @@ namespace ipo
       assert(!isPlusInfinity(lhs));
       assert(!isMinusInfinity(rhs));
       assert(!(isMinusInfinity(lhs) && isPlusInfinity(rhs)));
+#if !defined(NDEBUG)
       for (const auto& iter : vector)
         assert(iter.second != 0);
+#endif
     }
 
     IPO_EXPORT
@@ -87,15 +89,13 @@ namespace ipo
     sparse_vector<T> _vector;
     T _rhs;
   };
-  
-  IPO_EXPORT
+
   template <typename T>
   Constraint<T> alwaysSatisfiedConstraint()
   {
     return Constraint<T>(T(-std::numeric_limits<double>::infinity()), sparse_vector<T>(), T(1));
   }
 
-  IPO_EXPORT
   template <typename T>
   Constraint<T> neverSatisfiedConstraint()
   {
@@ -111,16 +111,20 @@ namespace ipo
 //     }
 //   };  
 
+  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint);
 
 #if defined(IPO_WITH_GMP)
 
+  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint);
 
+  IPO_EXPORT
   Constraint<double> constraintToDouble(const Constraint<rational>& constraint);
 
+  IPO_EXPORT
   Constraint<rational> constraintToRational(const Constraint<double>& constraint);
-  
+
 #endif /* IPO_WITH_GMP */
 
 }
