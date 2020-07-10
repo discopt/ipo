@@ -23,27 +23,69 @@ int printUsage(const std::string& program)
 
 int main(int argc, char** argv)
 {
-  auto scip = std::make_shared<ipo::SCIPSolver>(argv[1]);
-  auto opt = scip->getOptimizationOracleRational();
-  auto poly = std::make_shared<ipo::Polyhedron<ipo::rational, ipo::RationalIsZero>>(opt,
-    ipo::RationalIsZero());
-
-  // Extract known equations from a separation oracle.
-  std::vector<ipo::Constraint<ipo::rational>> knownEquations;
-  ipo::SeparationOracle<ipo::rational>::Query query;
-  auto result = scip->getSeparationOracleRational()->getInitial(query);
-  for (const auto& constraint : result.constraints)
+  bool gmp = false;
+  std::string fileName;
+  for (int a = 1; a < argc; ++a)
   {
-    if (constraint.isEquation())
+    const std::string arg = argv[a];
+    if (arg == "-G" || arg == "--gmp")
+      gmp = true;
+    else if (fileName.empty())
+      fileName = arg;
+    else
     {
-      knownEquations.push_back(constraint);
+      std::cerr << "Invalid parameters. Interpreted <" << fileName << "> and <" << arg
+        << "> as instance files." << std::endl;
+      return EXIT_FAILURE;
     }
   }
+  
+  auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
+  if (gmp)
+  {
+    auto opt = scip->getOptimizationOracleRational();
+    auto poly = std::make_shared<ipo::Polyhedron<ipo::rational, ipo::RationalIsZero>>(opt,
+      ipo::RationalIsZero());
 
-  std::vector<sparse_vector<ipo::rational>> innerPoints, innerRays;
-  std::vector<ipo::Constraint<ipo::rational>> outerEquations;
+    // Extract known equations from a separation oracle.
+    std::vector<ipo::Constraint<ipo::rational>> knownEquations;
+    ipo::SeparationOracle<ipo::rational>::Query query;
+    auto result = scip->getSeparationOracleRational()->getInitial(query);
+    for (const auto& constraint : result.constraints)
+    {
+      if (constraint.isEquation())
+        knownEquations.push_back(constraint);
+    }
 
-  ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations);
+    std::vector<sparse_vector<ipo::rational>> innerPoints, innerRays;
+    std::vector<ipo::Constraint<ipo::rational>> outerEquations;
+
+    std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
+    ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+  }
+  else
+  {
+    auto opt = scip->getOptimizationOracleDouble();
+    auto poly = std::make_shared<ipo::Polyhedron<double, ipo::DoubleIsZero>>(opt,
+      ipo::DoubleIsZero(1.0e-9));
+
+    // Extract known equations from a separation oracle.
+    std::vector<ipo::Constraint<double>> knownEquations;
+    ipo::SeparationOracle<double>::Query query;
+    auto result = scip->getSeparationOracleDouble()->getInitial(query);
+    for (const auto& constraint : result.constraints)
+    {
+      if (constraint.isEquation())
+        knownEquations.push_back(constraint);
+    }
+
+    std::vector<sparse_vector<double>> innerPoints, innerRays;
+    std::vector<ipo::Constraint<double>> outerEquations;
+
+    std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
+    ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+  }
+  
   
 //   // Parameters
 // 

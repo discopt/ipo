@@ -223,7 +223,7 @@ namespace ipo
         sparse_vector<rational> point;
         for (std::size_t i = 0; i < _integrality.size(); ++i)
         {
-          if (_coefficients[i] != 0)
+          if (mpq_sgn(_coefficients[i]) != 0)
             point.push_back(i, rational(mpq_class(_coefficients[i])));
         }
         points.push_back(OptimizationOracle<rational>::Result::Point(std::move(point),
@@ -240,7 +240,7 @@ namespace ipo
         sparse_vector<rational> ray;
         for (std::size_t i = 0; i < _integrality.size(); ++i)
         {
-          if (_coefficients[i] != 0)
+          if (mpq_sgn(_coefficients[i]) != 0)
             ray.push_back(i, rational(_coefficients[i]));
         }
         result.rays.push_back(OptimizationOracle<rational>::Result::Ray(std::move(ray)));

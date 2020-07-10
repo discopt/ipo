@@ -160,10 +160,89 @@ public:
       result += (U)(iter.second) * other[iter.first];
     return result;
   }
+  
+  template <typename U>
+  U operator*(const sparse_vector<U>& other) const
+  {
+    U result(0);
+    sparse_vector<T>::const_iterator iter1 = begin();
+    if (iter1 == end())
+      return result;
+    typename sparse_vector<U>::const_iterator iter2 = other.begin();
+    if (iter2 == other.end())
+      return result;
+    while (true)
+    {
+      if (iter1->first < iter2->first)
+      {
+        ++iter1;
+        if (iter1 == end())
+          return result;
+      }
+      else if (iter1->first > iter2->first)
+      {
+        ++iter2;
+        if (iter2 == other.end())
+          return result;
+      }
+      else
+      {
+        assert(iter1->first == iter2->first);
+        result += iter1->second * iter2->second;
+        ++iter1;
+        if (iter1 == end())
+          return result;
+        ++iter2;
+        if (iter2 == end())
+          return result;
+      }
+    }
+    return result;
+  }
 
   friend void swap(sparse_vector<T>& a, sparse_vector<T>& b)
   {
     std::swap(a._data, b._data);
+  }
+
+  std::size_t getInequalIndex(const sparse_vector<T>& other) const
+  {
+    // We first compare the support.
+    
+    sparse_vector<T>::const_iterator iter1 = begin();
+    sparse_vector<T>::const_iterator iter2 = other.begin();
+    while (true)
+    {
+      if (iter1 == end())
+      {
+        if (iter2 == other.end())
+          return std::numeric_limits<std::size_t>::max();
+        else
+          return iter2->first;
+      }
+      else if (iter2 == other.end())
+        return iter1->first;
+      else
+      {
+        ++iter1;
+        ++iter2;
+      }
+    }
+
+    // We now know that they have the same support, so we have to compare values.
+
+    iter1 = begin();
+    iter2 = other.begin();
+    while (iter1 != end())
+    {
+      assert(iter2 != end());
+      assert(iter1->first == iter2->first);
+      if (iter1->second != iter2->second)
+        return iter1->first;
+      ++iter1;
+      ++iter2;
+    }
+    return std::numeric_limits<std::size_t>::max();
   }
 
 protected:

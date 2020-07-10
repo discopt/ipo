@@ -7,6 +7,7 @@
 
 namespace ipo
 {
+  const static int AFFINEHULL_TIMEOUT = -2;
 
   IPO_EXPORT
   int affineHull(std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,

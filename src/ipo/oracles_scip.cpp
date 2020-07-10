@@ -286,6 +286,7 @@ namespace ipo
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
+    SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
     SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), NULL) );
 
     initialize();

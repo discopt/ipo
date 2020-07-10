@@ -45,7 +45,19 @@ namespace ipo
         EQUATION_INVALID;
 
       std::size_t newBasic;
-      return test(constraint, newBasic);
+      T rhs = -constraint.rhs();
+      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic);
+      if (result == EQUATION_REDUNDANT && !_isZero(rhs))
+        return EQUATION_INCONSISTENT;
+      else
+        return result;
+    }
+
+    EquationRedundancy test(const sparse_vector<T>& vector) const
+    {
+      T rhs(0);
+      std::size_t newBasic;
+      return testImplementation(vector, rhs, newBasic);
     }
 
     EquationRedundancy add(const Constraint<T>& constraint)
@@ -61,7 +73,8 @@ namespace ipo
         return EQUATION_INVALID;
 
       std::size_t newBasic;
-      EquationRedundancy result = test(constraint, newBasic);
+      T rhs = -constraint.rhs();
+      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic);
       if (result != EQUATION_INDEPENDENT)
         return result;
 
@@ -87,29 +100,21 @@ namespace ipo
     }
 
   protected:
-//     inline bool isZero(const Value& value, double dummy) const
-//     {
-//       return _isZero(value.real);
-//     }
-// 
-//     inline bool isZero(const Value& value, const mpq_class& dummy) const
-//     {
-//       return _isZero(value.rational);
-//     }
 
-    EquationRedundancy test(const Constraint<T>& constraint, std::size_t& newBasic) const
+    EquationRedundancy testImplementation(const sparse_vector<T>& vector, T& rhs,
+      std::size_t& newBasic) const
     {
       /* Find multipliers such that combined equation agrees with given one on basic variables.
        * To this end, solve Ax = r, where r is the basic part of the constraint vector. */
       std::vector<T> multipliers(_basis.size());
       for (std::size_t b = 0; b < _basis.size(); ++b)
-        multipliers[b] = constraint.vector().find(_basis[b], 0);
+        multipliers[b] = vector.find(_basis[b], 0);
       _lu.solveLeft(&multipliers[0]);
       _lu.solveUpper(&multipliers[0]);
 
       /* Combine equations according to multipliers. */
       std::vector<T> dense(numVariables(), 0);
-      T rhs = 0;
+      rhs = 0;
       for (std::size_t e = 0; e < _equations.size(); ++e)
       {
         for (const auto& iter : _equations[e].vector())
@@ -117,9 +122,8 @@ namespace ipo
         rhs += multipliers[e] * _equations[e].rhs();
       }
       /* Subtract given equation normal. */
-      for (const auto& iter : constraint.vector())
+      for (const auto& iter : vector)
         dense[iter.first] -= iter.second;
-      rhs -= constraint.rhs();
 
 #if defined(IPO_DEBUG_REDUNDANCY)
       for (std::size_t v = 0; v < numVariables(); ++v)
@@ -127,16 +131,24 @@ namespace ipo
       std::cout << "; " << rhs << std::endl;
 #endif /* IPO_DEBUG_REDUNDANCY */
 
+      newBasic = std::numeric_limits<std::size_t>::max();
+      double newBasicValue = 0.0;
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
         if (!_isZero(dense[v]))
         {
-          newBasic = v;
-          return EQUATION_INDEPENDENT;
+          double value = fabs((double)dense[v]);
+          if (value > newBasicValue)
+          {
+            newBasic = v;
+            newBasicValue = value;
+          }
         }
       }
-      newBasic = std::numeric_limits<std::size_t>::max();
-      return _isZero(rhs) ? EQUATION_REDUNDANT : EQUATION_INCONSISTENT;
+      if (newBasic != std::numeric_limits<std::size_t>::max())
+        return EQUATION_INDEPENDENT;
+      else
+        return EQUATION_REDUNDANT;
     }
 
   protected:

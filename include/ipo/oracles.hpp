@@ -77,20 +77,11 @@ namespace ipo
 
       IPO_EXPORT
       Query()
+        : minObjectiveValue(-std::numeric_limits<double>::infinity()),
+        maxNumSolutions(std::numeric_limits<std::size_t>::max()),
+        timeLimit(std::numeric_limits<double>::infinity())
       {
-        reset();
-      }
 
-      /**
-       * \brief Clears the query data.
-       */
-
-      IPO_EXPORT
-      void reset()
-      {
-        maxNumSolutions = 10;
-        minObjectiveValue = std::numeric_limits<double>::infinity();
-        timeLimit = std::numeric_limits<double>::infinity();
       }
 
     };
@@ -192,6 +183,22 @@ namespace ipo
       {
 
       }
+      
+      /**
+       * \brief Move-assignment operator.
+       * 
+       * Move-assignment operator.
+       */
+
+      IPO_EXPORT
+      inline Result& operator=(Result&& other)
+      {
+        points = std::move(other.points);
+        rays = std::move(other.rays);
+        dualBound = std::move(other.dualBound);
+        hitTimeLimit = other.hitTimeLimit;
+        return *this;
+      }
 
       /**
        * \brief Returns \c true if the problem was infeasible.
@@ -242,7 +249,10 @@ namespace ipo
        */
 
       IPO_EXPORT
-      bool checkPointsSorted() const;
+      bool checkPointsSorted() const
+      {
+        return std::is_sorted(points.begin(), points.end());
+      }
     };
 
     /**

@@ -2,11 +2,11 @@
 
 #include <ipo/rational.hpp>
 
-#include <../src/ipo/affine_complement.hpp>
+#include <../src/ipo/affine_hull.cpp>
 
-TEST(LinearAlgebra, AffineComplement)
+TEST(AffineHull, AffineComplement)
 {
-  std::cout << "===== LinearAlgebra::AffineComplement::Double ===== " << std::endl;
+  std::cout << "===== AffineHull::AffineComplement::Double ===== " << std::endl;
   {
     auto ac = ipo::AffineComplement<double, ipo::DoubleIsZero>(4, ipo::DoubleIsZero(1.0e-9));
     ASSERT_EQ(ac.rank(), 0);
@@ -30,7 +30,7 @@ TEST(LinearAlgebra, AffineComplement)
   }
 
 #if defined(IPO_WITH_GMP)
-  std::cout << "===== LinearAlgebra::AffineComplement::Rational ===== " << std::endl;
+  std::cout << "===== AffineHull::AffineComplement::Rational ===== " << std::endl;
   {
     auto ac = ipo::AffineComplement<ipo::rational, ipo::RationalIsZero>(4);
     ASSERT_EQ(ac.rank(), 0);

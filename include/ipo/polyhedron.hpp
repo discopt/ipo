@@ -1,5 +1,7 @@
 #pragma once
 
+#include <iostream>
+
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 #include <ipo/space.hpp>
@@ -72,7 +74,10 @@ namespace ipo
           result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(rayData.vector));
           rayData.lastSuccess = _queryCount;
           if (result.rays.size() >= query.maxNumSolutions)
+          {
+            assert(result.checkPointsSorted());
             return result;
+          }
         }
         else
           break;
@@ -108,6 +113,7 @@ namespace ipo
         pointData.lastSuccess = _queryCount;
       }
 
+      assert(result.checkPointsSorted());
       return result;
     }
 
@@ -155,7 +161,10 @@ namespace ipo
           result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(rayData.vector));
           rayData.lastSuccess = _queryCount;
           if (result.rays.size() >= query.maxNumSolutions)
+          {
+            assert(result.checkPointsSorted());
             return result;
+          }
         }
         else
           break;
@@ -191,6 +200,7 @@ namespace ipo
         pointData.lastSuccess = _queryCount;
       }
 
+      assert(result.checkPointsSorted());
       return result;
     }
 
@@ -238,6 +248,7 @@ namespace ipo
   {
   public:
     Polyhedron(std::shared_ptr<OptimizationOracle<T>> optimizationOracle, IsZero isZero)
+      : _historySize(16)
     {
       auto cache = std::make_shared<CacheOptimizationOracle<T>>(optimizationOracle->space());
       _optimization.push_back(Data<OptimizationOracle<T>>(cache, true));
@@ -274,32 +285,33 @@ namespace ipo
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
      * \param query Structure for query.
-     * \param result Structure for returning the result.
      **/
 
-    void maximizeDouble(const double* objectiveVector,
-      const typename OptimizationOracle<T>::Query& query,
-      typename OptimizationOracle<T>::Result& result)
+    typename OptimizationOracle<T>::Result maximizeDouble(const double* objectiveVector,
+      const typename OptimizationOracle<T>::Query& query)
     {
       tuneOracles();
 
-      result.reset();
+      typename OptimizationOracle<T>::Result result;
       std::size_t lastOracle = 0;
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
         Data<OptimizationOracle<T>>& data = _optimization[lastOracle];
         // Run current oracle.
 
-        std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
-        data.oracle->maximizeDouble(objectiveVector, query, result);
+        std::chrono::time_point<std::chrono::system_clock> started =
+          std::chrono::system_clock::now();
+        result = data.oracle->maximizeDouble(objectiveVector, query, result);
         std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
 
         data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
-          return;
+          return result;
       }
+
+      return result;
     }
 
     /**
@@ -307,16 +319,15 @@ namespace ipo
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
      * \param query Structure for query.
-     * \param result Structure for returning the result.
      **/
 
     IPO_EXPORT
-    void maximize(const T* objectiveVector, const typename OptimizationOracle<T>::Query& query,
-      typename OptimizationOracle<T>::Result& result)
+    typename OptimizationOracle<T>::Result maximize(const T* objectiveVector,
+      const typename OptimizationOracle<T>::Query& query)
     {
       tuneOracles();
 
-      result.reset();
+      typename OptimizationOracle<T>::Result result;
       std::size_t lastOracle = 0;
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
@@ -324,15 +335,17 @@ namespace ipo
         // Run current oracle.
 
         std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
-        data.oracle->maximize(objectiveVector, query, result);
+        result = data.oracle->maximize(objectiveVector, query);
         std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
 
         data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
-          return;
+          return result;
       }
+
+      return result;
     }
 
   protected:
@@ -343,6 +356,8 @@ namespace ipo
       // In case the expected successful running times have changed, we reorder the oracles such that
       // the one with the smallest value is queried first.
 
+      for (std::size_t o = 0; o < _optimization.size(); ++o)
+        std::cout << "tuneOracles' oracle " << o << " is " << _optimization[o].oracle->name() << std::endl;
       if (!std::is_sorted(_optimization.begin(), _optimization.end()))
         std::sort(_optimization.begin(), _optimization.end());
 
@@ -407,7 +422,7 @@ namespace ipo
       bool isCache; /// \c true if this is a cache oracle.
 
       Data(std::shared_ptr<O> o, bool cache = false)
-        : sumRunningTime(0.0), sumSuccess(0), oracle(o), isCache(cache)
+        : sumRunningTime(0.0), sumSuccess(0), priority(0.0), oracle(o), isCache(cache)
       {
         
       }
@@ -426,7 +441,7 @@ namespace ipo
         history.swap(other.history);
         std::swap(isCache, other.isCache);
       }
-      
+
       void updateHistory(double runningTime, bool success, std::size_t historySize)
       {
         history.push_back(QueryStatistics(runningTime, success));

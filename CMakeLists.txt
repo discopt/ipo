@@ -34,7 +34,6 @@ add_library(ipo
    src/ipo/oracles_mip.cpp
    src/ipo/rational.cpp
    src/ipo/space.cpp
-   src/ipo/data.cpp
 )
 
 # SoPlex

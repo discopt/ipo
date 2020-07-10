@@ -157,6 +157,12 @@ namespace ipo
     }
 
     IPO_EXPORT
+    inline bool operator==(double other) const
+    {
+      return _approx == other;
+    }
+
+    IPO_EXPORT
     inline bool operator!=(const rational& other) const
     {
       return !(*this == other);
@@ -172,6 +178,15 @@ namespace ipo
     inline bool operator>=(const rational& other) const
     {
       return !(*this < other);
+    }
+
+    IPO_EXPORT
+    inline rational operator-() const
+    {
+      if (isFinite() && isFinite())
+        return rational(-_approx);
+      else
+        return rational(-_exact);
     }
 
     IPO_EXPORT
@@ -307,7 +322,7 @@ namespace ipo
     IPO_EXPORT
     bool operator()(const rational& x) const
     {
-      return x == 0;
+      return x == 0.0;
     }
   };
   
