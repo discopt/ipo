@@ -1,5 +1,9 @@
 #include <ipo/constraint.hpp>
 
+#include <iostream> // TODO: Debug
+
+#include "reconstruct.hpp"
+
 namespace ipo
 {
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint)
@@ -41,9 +45,20 @@ namespace ipo
   {
     sparse_vector<rational> vector;
     for (const auto& iter : constraint.vector())
-      vector.push_back(iter.first, rational(iter.second));
-    return Constraint<rational>(constraint.lhs(), std::move(vector),
-      constraint.rhs());
+    {
+      std::cout << "[recons " << iter.second << " -> " << reconstruct(iter.second) << "]" << std::flush;
+      vector.push_back(iter.first, rational(reconstruct(iter.second)));
+    }
+    rational lhs, rhs;
+    if (isMinusInfinity(constraint.lhs()))
+      lhs = minusInfinity();
+    else
+      lhs = reconstruct(constraint.lhs());
+    if (isPlusInfinity(constraint.rhs()))
+      rhs = plusInfinity();
+    else
+      rhs = reconstruct(constraint.rhs());
+    return Constraint<rational>(lhs, std::move(vector), rhs);
   }
 
 #endif /* IPO_WITH_GMP */

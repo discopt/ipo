@@ -2,6 +2,8 @@
 
 #if defined(IPO_WITH_GMP)
 
+#include "reconstruct.hpp"
+
 namespace ipo
 {
 
@@ -24,11 +26,15 @@ namespace ipo
     {
       mpq_init(_coefficients[i]);
       mpq_init(_originalLowerBounds[i]);
-      mpq_set_d(_originalLowerBounds[i],
-        isMinusInfinity(bounds[i].first) ? -soplex::infinity : bounds[i].first);
+      if (isMinusInfinity(bounds[i].first))
+        mpq_set_d(_originalLowerBounds[i], -soplex::infinity);
+      else
+        mpq_reconstruct(_originalLowerBounds[i], bounds[i].first);
       mpq_init(_originalUpperBounds[i]);
-      mpq_set_d(_originalUpperBounds[i],
-        isPlusInfinity(bounds[i].second) ? soplex::infinity : bounds[i].second);
+      if (isPlusInfinity(bounds[i].second))
+        mpq_set_d(_originalUpperBounds[i], soplex::infinity);
+      else
+        mpq_reconstruct(_originalUpperBounds[i], bounds[i].second);
     }
 
     _spx.addColsRational(_coefficients, _originalLowerBounds, nullptr, nullptr, nullptr, nullptr,
@@ -81,12 +87,19 @@ namespace ipo
     for (const auto& iter : constraint.vector())
     {
       _indices[i] = iter.first;
-      mpq_set_d(_coefficients[i], iter.second);
+      mpq_class x = reconstruct(iter.second);
+      mpq_set(_coefficients[i], x.get_mpq_t());
       ++i;
     }
 
-    mpq_set_d(rationalLhs, isMinusInfinity(constraint.lhs()) ? -soplex::infinity : constraint.lhs());
-    mpq_set_d(rationalRhs, isPlusInfinity(constraint.rhs()) ? soplex::infinity : constraint.rhs());
+    if (isMinusInfinity(constraint.lhs()))
+      mpq_set_d(rationalLhs, -soplex::infinity);
+    else
+      mpq_reconstruct(rationalLhs, constraint.lhs());
+    if (isPlusInfinity(constraint.rhs()))
+      mpq_set_d(rationalRhs, soplex::infinity);
+    else
+      mpq_reconstruct(rationalRhs, constraint.rhs());
 
     _spx.addRowRational(&rationalLhs, _coefficients, _indices, constraint.vector().size(), &rationalRhs);
 
@@ -216,6 +229,7 @@ namespace ipo
 
       // Solve the LP.
       soplex::SPxSolver::Status status = _spx.solve();
+      _spx.writeFileRational("debug.lp");
 
       if (status == soplex::SPxSolver::OPTIMAL)
       {
@@ -249,7 +263,7 @@ namespace ipo
       {
         std::stringstream ss;
         ss << "Error in MakeRationalSolver::solve: bounded case yields SoPlex status " << status
-          << '.'; 
+          << '.';
         throw std::runtime_error(ss.str());
       }
     }

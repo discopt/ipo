@@ -240,7 +240,7 @@ namespace ipo
       }
       typename OptimizationOracle<T>::Result result = polyhedron->maximize(objective, query);
       std::cout << " yields " << result.points.size() << " points and " << result.rays.size()
-        << " rays.";
+        << " rays." << std::endl;
 
       if (result.isInfeasible())
       {

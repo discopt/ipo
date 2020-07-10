@@ -5,7 +5,7 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
 {
   std::cout << "===== LinearAlgebra::EquationRedundancyCheck::Double ===== " << std::endl;
   {
-    auto red = ipo::EquationRedundancyCheck<double, ipo::DoubleIsZero>(3, ipo::DoubleIsZero(1.0e-9));
+    auto red = ipo::EquationRedundancyCheck<double, ipo::DoubleIsZero>(3, ipo::DoubleIsZero(1.0e-6));
     ASSERT_EQ(red.rank(), 0);
     sparse_vector<double> vector;
 

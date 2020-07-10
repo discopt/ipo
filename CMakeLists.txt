@@ -33,6 +33,7 @@ add_library(ipo
    src/ipo/constraint.cpp
    src/ipo/oracles_mip.cpp
    src/ipo/rational.cpp
+   src/ipo/reconstruct.cpp
    src/ipo/space.cpp
 )
 

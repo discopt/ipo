@@ -1,5 +1,7 @@
 #pragma once
 
+#define IPO_DEBUG_REDUNDANCY
+
 #include <ipo/config.hpp>
 #include <ipo/constraint.hpp>
 #include "lu.hpp"
@@ -63,10 +65,7 @@ namespace ipo
     EquationRedundancy add(const Constraint<T>& constraint)
     {
 #if defined(IPO_DEBUG_REDUNDANCY)
-      std::cout << "EquationRedundancy.add(" << constraint.lhs.real << " <= [";
-      for (std::size_t v = 0; v < numVariables(); ++v)
-        std::cout << (v > 0 ? " " : "") << constraint.vector.findReal(v);
-      std::cout << "] <= " << constraint.rhs.real << std::endl;
+      std::cout << "EquationRedundancy.add(" << constraint << ")." << std::endl;
 #endif /* IPO_DEBUG_REDUNDANCY */
 
       if (!_isZero(constraint.lhs() - constraint.rhs()))
@@ -75,7 +74,9 @@ namespace ipo
       std::size_t newBasic;
       T rhs = -constraint.rhs();
       EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic);
-      if (result != EQUATION_INDEPENDENT)
+      if (result == EQUATION_REDUNDANT && !_isZero(rhs))
+        return EQUATION_INCONSISTENT;
+      else if (result != EQUATION_INDEPENDENT)
         return result;
 
       /* Add the constraint to the equations. */
@@ -114,7 +115,6 @@ namespace ipo
 
       /* Combine equations according to multipliers. */
       std::vector<T> dense(numVariables(), 0);
-      rhs = 0;
       for (std::size_t e = 0; e < _equations.size(); ++e)
       {
         for (const auto& iter : _equations[e].vector())

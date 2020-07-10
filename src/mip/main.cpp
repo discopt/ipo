@@ -41,6 +41,7 @@ int main(int argc, char** argv)
   }
   
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
+  int dimension;
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
@@ -61,7 +62,7 @@ int main(int argc, char** argv)
     std::vector<ipo::Constraint<ipo::rational>> outerEquations;
 
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
   }
   else
   {
@@ -83,8 +84,9 @@ int main(int argc, char** argv)
     std::vector<ipo::Constraint<double>> outerEquations;
 
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
   }
+  std::cout << "The dimension is " << dimension << std::endl;
   
   
 //   // Parameters

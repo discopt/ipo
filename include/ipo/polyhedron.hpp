@@ -356,8 +356,6 @@ namespace ipo
       // In case the expected successful running times have changed, we reorder the oracles such that
       // the one with the smallest value is queried first.
 
-      for (std::size_t o = 0; o < _optimization.size(); ++o)
-        std::cout << "tuneOracles' oracle " << o << " is " << _optimization[o].oracle->name() << std::endl;
       if (!std::is_sorted(_optimization.begin(), _optimization.end()))
         std::sort(_optimization.begin(), _optimization.end());
 
