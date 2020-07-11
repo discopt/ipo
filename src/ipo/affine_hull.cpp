@@ -145,9 +145,9 @@ namespace ipo
   };
 
   static
-  double remainingTime(const std::chrono::time_point<std::chrono::system_clock>& started, double limit)
+  double elapsedTime(const std::chrono::time_point<std::chrono::system_clock>& started)
   {
-    return limit - std::chrono::duration<double>(std::chrono::duration<double>(
+    return std::chrono::duration<double>(std::chrono::duration<double>(
       std::chrono::system_clock::now() - started)).count();
   }
 
@@ -158,6 +158,7 @@ namespace ipo
     const std::vector<Constraint<T>>& knownEquations, IsZero isZero, AffineHullResultCommon& result)
   {
     auto timeStarted = std::chrono::system_clock::now();
+    auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
     result.upperBound = n;
 
@@ -184,7 +185,7 @@ namespace ipo
       std::cout << "Iteration of affine hull computation: " << result.lowerBound
         << " <= dim <= " << result.upperBound << "." << std::endl;
 
-      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
@@ -197,9 +198,11 @@ namespace ipo
         typename OptimizationOracle<T>::Query oracleQuery;
         for (std::size_t v = 0; v < n; ++v)
           objective[v] = 0;
-        oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+        oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
+        timeComponent = std::chrono::system_clock::now();
         typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
           &objective[0], oracleQuery);
+        result.timeOracles += elapsedTime(timeComponent);
 
         if (oracleResult.isUnbounded())
           throw std::runtime_error("maximize(<zero vector>) returned unbounded result.");
@@ -218,21 +221,27 @@ namespace ipo
       std::size_t kernelDirectionColumn = std::numeric_limits<std::size_t>::max();
       while (kernelDirectionVector.empty())
       {
+        timeComponent = std::chrono::system_clock::now();
         kernelDirectionColumn = affineComplement.selectColumn();
         std::cout << "  Column " << kernelDirectionColumn << std::flush;
 
         affineComplement.computeKernelVector(kernelDirectionColumn, kernelDirectionVector);
+        result.timeKernel += elapsedTime(timeComponent);
         assert(!kernelDirectionVector.empty());
 
         std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
 
-        if (remainingTime(timeStarted, query.timeLimit) <= 0)
+        if (elapsedTime(timeStarted) >= query.timeLimit)
         {
           result.dimension = AFFINEHULL_ERROR_TIMEOUT;
           return;
         }
 
-        if (redundancyCheck.test(kernelDirectionVector) == EQUATION_INDEPENDENT)
+        timeComponent = std::chrono::system_clock::now();
+        EquationRedundancy redundancy = redundancyCheck.test(kernelDirectionVector);
+        result.timeEquations += elapsedTime(timeComponent);
+  
+        if (redundancy == EQUATION_INDEPENDENT)
         {
           std::cout << " which is independent of the equations." << std::endl;
           break;
@@ -244,7 +253,7 @@ namespace ipo
           kernelDirectionVector.clear();
         }
 
-        if (remainingTime(timeStarted, query.timeLimit) <= 0)
+        if (elapsedTime(timeStarted) >= query.timeLimit)
         {
           result.dimension = AFFINEHULL_ERROR_TIMEOUT;
           return;
@@ -265,17 +274,21 @@ namespace ipo
         oracleQuery.minObjectiveValue = resultPoints.front() * kernelDirectionVector;
         std::cout << " with common objective value " << (double)oracleQuery.minObjectiveValue;
       }
-      oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+      oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
       if (oracleQuery.timeLimit <= 0)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
       }
+
+      timeComponent = std::chrono::system_clock::now();
       typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
         &objective[0], oracleQuery);
+      result.timeOracles += elapsedTime(timeComponent);
+
       std::cout << " yields " << oracleResult.points.size() << " points and "
         << oracleResult.rays.size() << " rays." << std::endl;
-      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
@@ -290,7 +303,9 @@ namespace ipo
       else if (oracleResult.isUnbounded())
       {
         resultRays.push_back(oracleResult.rays.front().vector);
+        timeComponent = std::chrono::system_clock::now();
         affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        result.timePointsRays += elapsedTime(timeComponent);
         std::cout << "  -> adding a ray." << std::endl;
         ++result.lowerBound;
       }
@@ -301,7 +316,9 @@ namespace ipo
         // Add the maximizer.
 
         resultPoints.push_back(oracleResult.points.front().vector);
+        timeComponent = std::chrono::system_clock::now();
         affineComplement.add(resultPoints.back(), 1, n);
+        result.timePointsRays += elapsedTime(timeComponent);
         ++result.lowerBound;
 
         // If another point has a different objective value, we also add that and continue.
@@ -310,7 +327,9 @@ namespace ipo
           if (!isZero(oracleResult.points[p].objectiveValue - oracleResult.points.front().objectiveValue))
           {
             resultPoints.push_back(oracleResult.points[p].vector);
+            timeComponent = std::chrono::system_clock::now();
             affineComplement.add(resultPoints.back(), 1, kernelDirectionColumn);
+            result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
               << (double)oracleResult.points.front().objectiveValue << " and " 
@@ -336,7 +355,9 @@ namespace ipo
           if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
             resultPoints.push_back(point.vector);
+            timeComponent = std::chrono::system_clock::now();
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
+            result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
               << (double)oracleResult.points.front().objectiveValue << std::endl;
@@ -354,18 +375,21 @@ namespace ipo
         objective[v] *= -1;
       oracleQuery.minObjectiveValue *= -1;
 
-      oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+      oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
       if (oracleQuery.timeLimit <= 0)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
       }
 
+      timeComponent = std::chrono::system_clock::now();
       oracleResult = polyhedron->maximize(&objective[0], oracleQuery);
+      result.timeOracles += elapsedTime(timeComponent);
+
       std::cout << "  Minimization yields " << oracleResult.points.size() << " points and "
         << oracleResult.rays.size() << " rays." << std::endl;
 
-      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
@@ -374,7 +398,11 @@ namespace ipo
       if (oracleResult.isUnbounded())
       {
         resultRays.push_back(oracleResult.rays.front().vector);
+
+        timeComponent = std::chrono::system_clock::now();
         affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        result.timePointsRays += elapsedTime(timeComponent);
+
         ++result.lowerBound;
         std::cout << "  -> adding a ray." << std::endl;
       }
@@ -389,7 +417,10 @@ namespace ipo
           if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
             resultPoints.push_back(point.vector);
+
+            timeComponent = std::chrono::system_clock::now();
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
+            result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
               << (double)oracleResult.points.front().objectiveValue << std::endl;
@@ -405,12 +436,17 @@ namespace ipo
       resultEquations.push_back(Constraint<T>(-oracleQuery.minObjectiveValue, kernelDirectionVector,
         -oracleQuery.minObjectiveValue));
       affineComplement.markEquation(kernelDirectionColumn);
+
+      timeComponent = std::chrono::system_clock::now();
       redundancyCheck.add(resultEquations.back());
+      result.timeEquations += elapsedTime(timeComponent);
+
       --result.upperBound;
       std::cout << "  -> adding an equation." << std::endl;
     }
 
     result.dimension = result.lowerBound;
+    result.timeTotal = elapsedTime(timeStarted);
   }
 
   AffineHullResult<double> affineHull(

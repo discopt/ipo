@@ -69,7 +69,7 @@ int main(int argc, char** argv)
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
-    std::cout << affResult << std::endl;
+    std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
   }
   else
   {
@@ -91,7 +91,7 @@ int main(int argc, char** argv)
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
-    std::cout << affResult << std::endl;
+    std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
   }
  
 
