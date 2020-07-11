@@ -1,4 +1,4 @@
-#include <ipo/ipo.hpp>
+#include <ipo/affine_hull.hpp>
 
 #include "lu.hpp"
 #include "redundancy.hpp"
@@ -7,6 +7,13 @@
 
 namespace ipo
 {
+  AffineHullQuery::AffineHullQuery()
+    : epsilonConstraints(1.0e-9), epsilonSafety(1.0e-6),
+    timeLimit(std::numeric_limits<double>::infinity())
+  {
+
+  }
+  
   template <typename T, typename IsZero>
   class AffineComplement
   {
@@ -145,64 +152,63 @@ namespace ipo
   }
 
   template <typename T, typename IsZero>
-  int affineHullImplementation(std::shared_ptr<Polyhedron<T, IsZero>> polyhedron,
-    std::vector<sparse_vector<T>>& innerPoints,
-    std::vector<sparse_vector<T>>& innerRays,
-    std::vector<Constraint<T>>& outerEquations,
-    const std::vector<Constraint<T>>& knownEquations, double timeLimit, IsZero isZero)
+  void affineHullImplementation(std::shared_ptr<Polyhedron<T, IsZero>> polyhedron,
+    std::vector<sparse_vector<T>>& resultPoints, std::vector<sparse_vector<T>>& resultRays,
+    std::vector<Constraint<T>>& resultEquations, const AffineHullQuery& query,
+    const std::vector<Constraint<T>>& knownEquations, IsZero isZero, AffineHullResultCommon& result)
   {
     auto timeStarted = std::chrono::system_clock::now();
-
     std::size_t n = polyhedron->space()->dimension();
+    result.upperBound = n;
+
     auto redundancyCheck = EquationRedundancyCheck<T, IsZero>(n, isZero);
     for (auto equation : knownEquations)
     {
       if (redundancyCheck.add(equation) == EQUATION_INCONSISTENT)
       {
-        // TODO: By inspecting the multipliers one could in principle find a smaller inconsistent set.
-
-        outerEquations.clear();
-        for (std::size_t e = 0; e < redundancyCheck.rank(); ++e)
-          outerEquations.push_back(redundancyCheck.getEquation(e));
-        outerEquations.push_back(equation);
-        return -1;
+        assert(resultEquations.empty());
+        resultEquations.push_back(neverSatisfiedConstraint<T>());
+        result.upperBound = -1;
+        return;
       }
     }
 
     std::cout << "Initial " << knownEquations.size() << " equations have rank "
       << redundancyCheck.rank() << "." << std::endl;
+    result.upperBound = n - redundancyCheck.rank();
 
     auto affineComplement = AffineComplement<T, IsZero>(n, isZero);
-    int lowerBound = -1;
-    int upperBound = n - redundancyCheck.rank();
-    T* objective = new T[n];
-    while (lowerBound < upperBound)
+    std::vector<T> objective(n);
+    while (result.lowerBound < result.upperBound)
     {
-      std::cout << "Iteration of affine hull computation: " << lowerBound
-        << " <= dim <= " << upperBound << "." << std::endl;
+      std::cout << "Iteration of affine hull computation: " << result.lowerBound
+        << " <= dim <= " << result.upperBound << "." << std::endl;
 
-      if (remainingTime(timeStarted, timeLimit) <= 0)
-        return AFFINEHULL_TIMEOUT;
-
+      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      {
+        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        return;
+      }
 
       // If we have dim(P) rays but no points yet, we solve the feasibility problem.
 
-      if (innerPoints.empty() && int(innerRays.size()) == upperBound)
+      if (resultPoints.empty() && int(resultRays.size()) == result.upperBound)
       {
-        typename OptimizationOracle<T>::Query query;
+        typename OptimizationOracle<T>::Query oracleQuery;
         for (std::size_t v = 0; v < n; ++v)
           objective[v] = 0;
-        query.timeLimit = remainingTime(timeStarted, timeLimit);
-        typename OptimizationOracle<T>::Result result = polyhedron->maximize(objective, query);
+        oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+        typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
+          &objective[0], oracleQuery);
 
-        if (result.isUnbounded())
+        if (oracleResult.isUnbounded())
           throw std::runtime_error("maximize(<zero vector>) returned unbounded result.");
-        else if (result.isFeasible())
+        else if (oracleResult.isFeasible())
         {
           std::cout << "  -> adding last point" << std::endl;
-          innerPoints.push_back(result.points.front().vector);
-          ++lowerBound;
-          return upperBound;
+          resultPoints.push_back(oracleResult.points.front().vector);
+          result.dimension = result.lowerBound = result.upperBound;
+          return;
         }
         else
           throw std::runtime_error("maximize(<zero vector>) returned infeasible after some rays.");
@@ -220,8 +226,11 @@ namespace ipo
 
         std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
 
-        if (remainingTime(timeStarted, timeLimit) <= 0)
-          return AFFINEHULL_TIMEOUT;
+        if (remainingTime(timeStarted, query.timeLimit) <= 0)
+        {
+          result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+          return;
+        }
 
         if (redundancyCheck.test(kernelDirectionVector) == EQUATION_INDEPENDENT)
         {
@@ -235,8 +244,11 @@ namespace ipo
           kernelDirectionVector.clear();
         }
 
-        if (remainingTime(timeStarted, timeLimit) <= 0)
-          return AFFINEHULL_TIMEOUT;
+        if (remainingTime(timeStarted, query.timeLimit) <= 0)
+        {
+          result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+          return;
+        }
       }
 
       // Prepare for maximize kernelDirectionVector.
@@ -247,80 +259,87 @@ namespace ipo
       for (const auto& iter : kernelDirectionVector)
         objective[iter.first] = iter.second;
 
-      typename OptimizationOracle<T>::Query query;
-      if (!innerPoints.empty())
+      typename OptimizationOracle<T>::Query oracleQuery;
+      if (!resultPoints.empty())
       {
-        query.minObjectiveValue = innerPoints.front() * kernelDirectionVector;
-        std::cout << " with common objective value " << (double)query.minObjectiveValue;
+        oracleQuery.minObjectiveValue = resultPoints.front() * kernelDirectionVector;
+        std::cout << " with common objective value " << (double)oracleQuery.minObjectiveValue;
       }
-      query.timeLimit = remainingTime(timeStarted, timeLimit);
-        if (query.timeLimit <= 0)
-          return AFFINEHULL_TIMEOUT;
-      typename OptimizationOracle<T>::Result result = polyhedron->maximize(objective, query);
-      std::cout << " yields " << result.points.size() << " points and " << result.rays.size()
-        << " rays." << std::endl;
-      if (remainingTime(timeStarted, timeLimit) <= 0)
-        return AFFINEHULL_TIMEOUT;
-
-      if (result.isInfeasible())
+      oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+      if (oracleQuery.timeLimit <= 0)
       {
-        outerEquations.clear();
-        outerEquations.push_back(neverSatisfiedConstraint<T>());
+        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        return;
+      }
+      typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
+        &objective[0], oracleQuery);
+      std::cout << " yields " << oracleResult.points.size() << " points and "
+        << oracleResult.rays.size() << " rays." << std::endl;
+      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      {
+        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        return;
+      }
+
+      if (oracleResult.isInfeasible())
+      {
+        resultEquations.clear();
+        resultEquations.push_back(neverSatisfiedConstraint<T>());
         std::cout << "  -> infeasible." << std::endl;
       }
-      else if (result.isUnbounded())
+      else if (oracleResult.isUnbounded())
       {
-        innerRays.push_back(result.rays.front().vector);
-        affineComplement.add(result.rays.front().vector, 0, kernelDirectionColumn);
+        resultRays.push_back(oracleResult.rays.front().vector);
+        affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
         std::cout << "  -> adding a ray." << std::endl;
-        ++lowerBound;
+        ++result.lowerBound;
       }
-      else if (innerPoints.empty())
+      else if (resultPoints.empty())
       {
-        assert(result.isFeasible());
+        assert(oracleResult.isFeasible());
 
         // Add the maximizer.
 
-        innerPoints.push_back(result.points.front().vector);
-        affineComplement.add(innerPoints.back(), 1, n);
-        ++lowerBound;
+        resultPoints.push_back(oracleResult.points.front().vector);
+        affineComplement.add(resultPoints.back(), 1, n);
+        ++result.lowerBound;
 
         // If another point has a different objective value, we also add that and continue.
-        for (std::size_t p = 2; p < result.points.size(); ++p)
+        for (std::size_t p = 2; p < oracleResult.points.size(); ++p)
         {
-          if (!isZero(result.points[p].objectiveValue - result.points.front().objectiveValue))
+          if (!isZero(oracleResult.points[p].objectiveValue - oracleResult.points.front().objectiveValue))
           {
-            innerPoints.push_back(result.points[p].vector);
-            affineComplement.add(innerPoints.back(), 1, kernelDirectionColumn);
-            ++lowerBound;
+            resultPoints.push_back(oracleResult.points[p].vector);
+            affineComplement.add(resultPoints.back(), 1, kernelDirectionColumn);
+            ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
-              << (double)result.points.front().objectiveValue << " and " << (double)result.points[p].objectiveValue
-              << "." << std::endl;
+              << (double)oracleResult.points.front().objectiveValue << " and " 
+              << (double)oracleResult.points[p].objectiveValue << "." << std::endl;
             break;
           }
         }
-        if (innerPoints.size() == 2)
+        if (resultPoints.size() == 2)
           continue;
 
-        query.minObjectiveValue = result.points.front().objectiveValue;
+        oracleQuery.minObjectiveValue = oracleResult.points.front().objectiveValue;
         std::cout << "  -> adding a point with objective value "
-          << (double)result.points.front().objectiveValue << std::endl;
+          << (double)oracleResult.points.front().objectiveValue << std::endl;
       }
       else
       {
-        assert(result.isFeasible());
+        assert(oracleResult.isFeasible());
 
         // Check if some vector has a different objective value.
         bool success = false;
-        for (const auto& point : result.points)
+        for (const auto& point : oracleResult.points)
         {
-          if (point.objectiveValue != query.minObjectiveValue)
+          if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
-            innerPoints.push_back(point.vector);
+            resultPoints.push_back(point.vector);
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
-            ++lowerBound;
+            ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)result.points.front().objectiveValue << std::endl;
+              << (double)oracleResult.points.front().objectiveValue << std::endl;
             success = true;
             break;
           }
@@ -333,41 +352,47 @@ namespace ipo
 
       for (std::size_t v = 0; v < n; ++v)
         objective[v] *= -1;
-      query.minObjectiveValue *= -1;
+      oracleQuery.minObjectiveValue *= -1;
 
-      query.timeLimit = remainingTime(timeStarted, timeLimit);
-      if (query.timeLimit <= 0)
-        return AFFINEHULL_TIMEOUT;
-
-      result = polyhedron->maximize(objective, query);
-      std::cout << "  Minimization yields " << result.points.size() << " points and "
-        << result.rays.size() << " rays." << std::endl;
-
-      if (remainingTime(timeStarted, timeLimit) <= 0)
-        return AFFINEHULL_TIMEOUT;
-
-      if (result.isUnbounded())
+      oracleQuery.timeLimit = remainingTime(timeStarted, query.timeLimit);
+      if (oracleQuery.timeLimit <= 0)
       {
-        innerRays.push_back(result.rays.front().vector);
-        affineComplement.add(result.rays.front().vector, 0, kernelDirectionColumn);
-        ++lowerBound;
+        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        return;
+      }
+
+      oracleResult = polyhedron->maximize(&objective[0], oracleQuery);
+      std::cout << "  Minimization yields " << oracleResult.points.size() << " points and "
+        << oracleResult.rays.size() << " rays." << std::endl;
+
+      if (remainingTime(timeStarted, query.timeLimit) <= 0)
+      {
+        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        return;
+      }
+
+      if (oracleResult.isUnbounded())
+      {
+        resultRays.push_back(oracleResult.rays.front().vector);
+        affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        ++result.lowerBound;
         std::cout << "  -> adding a ray." << std::endl;
       }
       else
       {
-        assert(result.isFeasible());
+        assert(oracleResult.isFeasible());
 
         // Check if some vector has a different objective value.
         bool success = false;
-        for (const auto& point : result.points)
+        for (const auto& point : oracleResult.points)
         {
-          if (!isZero(point.objectiveValue - query.minObjectiveValue))
+          if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
-            innerPoints.push_back(point.vector);
+            resultPoints.push_back(point.vector);
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
-            ++lowerBound;
+            ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)result.points.front().objectiveValue << std::endl;
+              << (double)oracleResult.points.front().objectiveValue << std::endl;
             success = true;
             break;
           }
@@ -377,39 +402,37 @@ namespace ipo
       }
 
       // We have to add an equation.
-      outerEquations.push_back(Constraint<T>(-query.minObjectiveValue, kernelDirectionVector,
-        -query.minObjectiveValue));
+      resultEquations.push_back(Constraint<T>(-oracleQuery.minObjectiveValue, kernelDirectionVector,
+        -oracleQuery.minObjectiveValue));
       affineComplement.markEquation(kernelDirectionColumn);
-      redundancyCheck.add(outerEquations.back());
-      --upperBound;
+      redundancyCheck.add(resultEquations.back());
+      --result.upperBound;
       std::cout << "  -> adding an equation." << std::endl;
     }
 
-    delete[] objective;
-
-    return lowerBound;
+    result.dimension = result.lowerBound;
   }
 
-  int affineHull(std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
-    std::vector<sparse_vector<double>>& innerPoints,
-    std::vector<sparse_vector<double>>& innerRays,
-    std::vector<Constraint<double>>& outerEquations,
-    const std::vector<Constraint<double>>& knownEquations, double timeLimit)
+  AffineHullResult<double> affineHull(
+    std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
+    const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
-    return affineHullImplementation(polyhedron, innerPoints, innerRays, outerEquations,
-      knownEquations, timeLimit, DoubleIsZero(1.0e-9));
+    AffineHullResult<double> result;
+    affineHullImplementation(polyhedron, result.points, result.rays, result.equations, query,
+      knownEquations, DoubleIsZero(1.0e-9), result);
+    return result;
   }
 
 #if defined(IPO_WITH_GMP)
 
-  int affineHull(std::shared_ptr<Polyhedron<rational, RationalIsZero>> polyhedron,
-    std::vector<sparse_vector<rational>>& innerPoints,
-    std::vector<sparse_vector<rational>>& innerRays,
-    std::vector<Constraint<rational>>& outerEquations,
-    const std::vector<Constraint<rational>>& knownEquations, double timeLimit)
+  AffineHullResult<rational> affineHull(
+    std::shared_ptr<Polyhedron<rational, RationalIsZero>> polyhedron,
+    const AffineHullQuery& query, const std::vector<Constraint<rational>>& knownEquations)
   {
-    return affineHullImplementation(polyhedron, innerPoints, innerRays, outerEquations,
-      knownEquations, timeLimit, RationalIsZero());
+    AffineHullResult<rational> result;
+    affineHullImplementation(polyhedron, result.points, result.rays, result.equations, query,
+      knownEquations, RationalIsZero(), result);
+    return result;
   }
 
 #endif /* IPO_WITH_GMP */

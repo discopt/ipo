@@ -1,6 +1,6 @@
 #pragma once
 
-#define IPO_DEBUG_REDUNDANCY
+// #define IPO_DEBUG_REDUNDANCY
 
 #include <ipo/config.hpp>
 #include <ipo/constraint.hpp>

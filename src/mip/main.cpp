@@ -2,7 +2,7 @@
 #include <sstream>
 
 #include <ipo/oracles_scip.hpp>
-#include <ipo/ipo.hpp>
+#include <ipo/affine_hull.hpp>
 
 int printUsage(const std::string& program)
 {
@@ -57,19 +57,19 @@ int main(int argc, char** argv)
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<ipo::rational>> knownEquations;
-    ipo::SeparationOracle<ipo::rational>::Query query;
-    auto result = scip->getSeparationOracleRational()->getInitial(query);
-    for (const auto& constraint : result.constraints)
+    ipo::SeparationOracle<ipo::rational>::Query sepaQuery;
+    auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
+    for (const auto& constraint : sepaResult.constraints)
     {
       if (constraint.isEquation())
         knownEquations.push_back(constraint);
     }
 
-    std::vector<sparse_vector<ipo::rational>> innerPoints, innerRays;
-    std::vector<ipo::Constraint<ipo::rational>> outerEquations;
-
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, timeLimit);
+    ipo::AffineHullQuery affQuery;
+    affQuery.timeLimit = timeLimit;
+    auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
+    std::cout << affResult << std::endl;
   }
   else
   {
@@ -79,25 +79,21 @@ int main(int argc, char** argv)
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<double>> knownEquations;
-    ipo::SeparationOracle<double>::Query query;
-    auto result = scip->getSeparationOracleDouble()->getInitial(query);
-    for (const auto& constraint : result.constraints)
+    ipo::SeparationOracle<double>::Query sepaQuery;
+    auto sepaResult = scip->getSeparationOracleDouble()->getInitial(sepaQuery);
+    for (const auto& constraint : sepaResult.constraints)
     {
       if (constraint.isEquation())
         knownEquations.push_back(constraint);
     }
 
-    std::vector<sparse_vector<double>> innerPoints, innerRays;
-    std::vector<ipo::Constraint<double>> outerEquations;
-
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, timeLimit);
+    ipo::AffineHullQuery affQuery;
+    affQuery.timeLimit = timeLimit;
+    auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
+    std::cout << affResult << std::endl;
   }
-  if (dimension == ipo::AFFINEHULL_TIMEOUT)
-    std::cout << "Time limit reached." << std::endl;
-  else
-    std::cout << "The dimension is " << dimension << std::endl;
-  
+ 
 
 //   // Parameters
 // 
