@@ -20,7 +20,7 @@ namespace ipo
   public:
     AffineComplement(std::size_t numVariables, const IsZero isZero = IsZero())
       : _numVariables(numVariables), _isZero(isZero), _lu(isZero),
-      _columns(numVariables + 1)
+      _columns(numVariables + 1), _lastColumn(0)
     {
       for (ColumnData& columnData : _columns)
       {
@@ -108,18 +108,21 @@ namespace ipo
     std::size_t selectColumn()
     {
       std::size_t bestColumn = std::numeric_limits<std::size_t>::max();
-      for (std::size_t c = 0; c < _columns.size(); ++c)
+      std::size_t c = (_lastColumn + 1) % (_columns.size() - 1);
+      while (c != _lastColumn)
       {
-        if (_columns[c].basisIndex < std::numeric_limits<std::size_t>::max() || _columns[c].definesEquation)
-          continue;
-
-        if (bestColumn == std::numeric_limits<std::size_t>::max())
+        if (_columns[c].basisIndex == std::numeric_limits<std::size_t>::max() 
+          && !_columns[c].definesEquation && (bestColumn == std::numeric_limits<std::size_t>::max() 
+            || _columns[c].entries.size() < _columns[bestColumn].entries.size()))
+        {
           bestColumn = c;
-        else if (c == _columns.size() - 1)
-          break;
-        else if (_columns[c].entries.size() < _columns[bestColumn].entries.size())
-          bestColumn = c;
+        }
+        c = (c+1) % (_columns.size() - 1);
       }
+      if (bestColumn == std::numeric_limits<std::size_t>::max())
+        bestColumn = _columns.size() - 1;
+
+      _lastColumn = bestColumn;
       return bestColumn;
     }
 
@@ -142,6 +145,15 @@ namespace ipo
     IncrementalLUFactorization<T, IsZero> _lu;
     std::vector<ColumnData> _columns;
     std::vector<std::size_t> _basisIndexToColumn;
+
+    /**
+     * \brief The last selected column.
+     *
+     * The last selected column. A kernel vector for a column may change if a new point or ray is
+     * added. To save time for checking whether the selected kernel vector lies in the span of the
+     * equations we prefer columns after the last returned one.
+     */
+    std::size_t _lastColumn;
   };
 
   static
