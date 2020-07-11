@@ -24,12 +24,19 @@ int printUsage(const std::string& program)
 int main(int argc, char** argv)
 {
   bool gmp = false;
+  double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
   for (int a = 1; a < argc; ++a)
   {
     const std::string arg = argv[a];
     if (arg == "-G" || arg == "--gmp")
       gmp = true;
+    else if ((arg == "-T" || arg == "--time") && a+1 < argc)
+    {
+      std::stringstream ss(argv[a+1]);
+      ss >> timeLimit;
+      ++a;
+    }
     else if (fileName.empty())
       fileName = arg;
     else
@@ -39,7 +46,7 @@ int main(int argc, char** argv)
       return EXIT_FAILURE;
     }
   }
-  
+
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
   int dimension;
   if (gmp)
@@ -62,7 +69,7 @@ int main(int argc, char** argv)
     std::vector<ipo::Constraint<ipo::rational>> outerEquations;
 
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, timeLimit);
   }
   else
   {
@@ -84,11 +91,14 @@ int main(int argc, char** argv)
     std::vector<ipo::Constraint<double>> outerEquations;
 
     std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
-    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, 60);
+    dimension = ipo::affineHull(poly, innerPoints, innerRays, outerEquations, knownEquations, timeLimit);
   }
-  std::cout << "The dimension is " << dimension << std::endl;
+  if (dimension == ipo::AFFINEHULL_TIMEOUT)
+    std::cout << "Time limit reached." << std::endl;
+  else
+    std::cout << "The dimension is " << dimension << std::endl;
   
-  
+
 //   // Parameters
 // 
 // #ifdef IPO_WITH_EXACT_SCIP

@@ -14,7 +14,7 @@ public:
   typedef std::pair<key_type, mapped_type> value_type;
   typedef typename std::vector<value_type>::iterator iterator;
   typedef typename std::vector<value_type>::const_iterator const_iterator;
-  
+
   sparse_vector()
   {
 
@@ -34,9 +34,9 @@ public:
 
   ~sparse_vector()
   {
-    
+
   }
-  
+
   sparse_vector<T>& operator=(const sparse_vector<T>& other)
   {
     _data = other._data;
@@ -160,7 +160,7 @@ public:
       result += (U)(iter.second) * other[iter.first];
     return result;
   }
-  
+
   template <typename U>
   U operator*(const sparse_vector<U>& other) const
   {
@@ -208,7 +208,7 @@ public:
   std::size_t getInequalIndex(const sparse_vector<T>& other) const
   {
     // We first compare the support.
-    
+
     sparse_vector<T>::const_iterator iter1 = begin();
     sparse_vector<T>::const_iterator iter2 = other.begin();
     while (true)

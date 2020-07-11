@@ -15,7 +15,7 @@ namespace ipo
   /**
    * \brief Class for an LU factorization.
    */
-  
+
   template <typename T, typename IsZero>
   class IncrementalLUFactorization
   {
@@ -33,17 +33,17 @@ namespace ipo
 
     /**
      * \brief Extends the factorized matrix by one row and one column.
-     * 
+     *
      * Extends the factorized matrix by one row and one column. Suppose we extend the factorization
      * \f$ L \cdot U \f$ to the factorization \f$ L' \cdot U' \f$ of
-     * \f$ \begin{pmatrix} {L \cdot U} & b \\ a^\intercal & \beta \end{pmatrix} \f$. 
+     * \f$ \begin{pmatrix} {L \cdot U} & b \\ a^\intercal & \beta \end{pmatrix} \f$.
      * We compute \f$ L' \coloneqq \begin{pmatrix} L & 0 \\ (U^{-\intercal} a)^\intercal & 1 \end{pmatrix} \f$ and
      * \f$ U' \coloneqq \begin{pmatrix} U & L^{-1} b \\ 0 & \beta - a^\intercal U^{-1} L^{-1} b \end{pmatrix} \f$.
      * One verifies \f$ L' \cdot U' = \begin{pmatrix} L \cdot U & L L^{-1} b \\ a^\intercal U^{-1} U & a^\intercal U^{-1} L^{-1} b
      * + \beta - a^\intercal U^{-1} L^{-1} b \end{pmatrix} = \begin{pmatrix} {L \cdot U} & b \\ a^\intercal & \beta \end{pmatrix} \f$.
-     * 
      *
-     * 
+     *
+     *
      * \param newRow Dense row to be added excluding diagonal entry. Will be modified.
      * \param newColumn Dense column to be added. Will be modified.
      * \param newDiagonal New diagonal entry to be added.
@@ -62,7 +62,7 @@ namespace ipo
         std::cout << (i > 0 ? " " : "") << newColumn[i];
       std::cout << "]" << std::endl;
       std::cout << "  diagonal = " << newDiagonal << std::endl;
-#endif /* IPO_DEBUG_LU */        
+#endif /* IPO_DEBUG_LU */
 
       /* Compute L^{-1} b */
 
@@ -73,7 +73,7 @@ namespace ipo
       for (std::size_t i = 0; i < size(); ++i)
         std::cout << (i > 0 ? " " : "") << newColumn[i];
       std::cout << "]" << std::endl;
-#endif /* IPO_DEBUG_LU */        
+#endif /* IPO_DEBUG_LU */
 
       /* Compute U^{-T} a. The transpose U^T has a row-wise sparse representation.
        * We swipe over U^T from left to right. In step i, we compute x_i as a_i / U_{i,i} and
@@ -188,7 +188,7 @@ namespace ipo
      * \brief Solves Lx = r for x.
      *
      * Solves Lx = r for x.
-     * 
+     *
      * \param vector input vector r and output vector x.
      */
 
@@ -207,7 +207,7 @@ namespace ipo
      * \brief Solves Ux = r for x.
      *
      * Solves Ux = r for x.
-     * 
+     *
      * \param vector input vector r and output vector x.
      */
 

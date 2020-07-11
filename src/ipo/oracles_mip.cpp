@@ -131,7 +131,7 @@ namespace ipo
       mpq_set_d(_coefficients[0], objectiveVector[i]);
       _spx.changeObjRational(i, _coefficients[0]);
     }
-    
+
     // Query
     OptimizationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumSolutions = query.maxNumSolutions;
@@ -199,7 +199,7 @@ namespace ipo
       {
         std::stringstream ss;
         ss << "Error in RationalMIPExtender::solve: Unbounded case yields SoPlex status " << status
-          << '.'; 
+          << '.';
         throw std::runtime_error(ss.str());
       }
     }
@@ -268,7 +268,7 @@ namespace ipo
       }
     }
     result.points.swap(points);
-    
+
     if (!result.rays.empty())
     {
       result.dualBound = plusInfinity();

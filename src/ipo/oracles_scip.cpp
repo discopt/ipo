@@ -146,7 +146,7 @@ namespace ipo
    *
    * Auxiliary method that iterates over the bound constraints of all variables calling \p visitor
    * with each of them as a constraint.
-   * 
+   *
    * \p ranged Whether to returned ranged rows.
    */
 
@@ -331,7 +331,7 @@ namespace ipo
     struct Visitor
     {
       std::shared_ptr<RationalMIPExtender> extender;
-      
+
       void operator()(const Constraint<double>& constraint)
       {
         extender->addConstraint(constraint);
@@ -358,7 +358,7 @@ namespace ipo
 //   {
 //     _faces.push_back(FaceData());
 //     FaceData& faceData = _faces.back();
-// 
+//
 //     // Add it to SCIP.
 //     char consName[16];
 //     SCIPsnprintf(consName, 16, "face%d", _faces.size() - 1);
@@ -368,7 +368,7 @@ namespace ipo
 //       vars[i] = _variables[coordinates[i]];
 //     SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &faceData.constraint, consName, numNonzeros,
 //       &vars[0], &coefficients[0], -SCIPinfinity(_scip), rhs));
-// 
+//
 //     faceData.numNonzeros = numNonzeros;
 //     faceData.coordinates = new std::size_t[numNonzeros];
 //     faceData.coefficients = new double[numNonzeros];
@@ -385,31 +385,31 @@ namespace ipo
 //       faceData.rationalCoefficients[i] = coefficients[i];
 // #endif /* IPO_WITH_GMP */
 //     }
-// 
+//
 //     return _faces.size() - 1;
 //   }
-// 
+//
 // #if defined(IPO_WITH_GMP)
-// 
+//
 //   SCIPSolver::Face SCIPSolver::addFace(std::size_t numNonzeros, std::size_t* coordinates,
 //     mpq_class* coefficients, const mpq_class& rhs)
 //   {
 //     double* approxCoefficients = new double[numNonzeros];
 //     double approxRhs = rhs.get_d();
-// 
+//
 //     for (std::size_t i = 0; i < numNonzeros; ++i)
 //       approxCoefficients[i] = coefficients[i].get_d();
-// 
+//
 //     Face face = addFace(numNonzeros, coordinates, approxCoefficients, approxRhs);
 //     _faces.back().rationalRhs = rhs;
 //     for (std::size_t i = 0; i < numNonzeros; ++i)
 //       _faces.back().rationalCoefficients[i] = coefficients[i];
-// 
+//
 //     delete[] approxCoefficients;
-// 
+//
 //     return face;
 //   }
-// 
+//
 // #endif
 
   void SCIPSolver::setFace(std::shared_ptr<Constraint<double>> face)
@@ -418,7 +418,7 @@ namespace ipo
       return;
 
     // Remove from SCIP.
-    SCIP_CONS* currentCons = _currentFace->isAlwaysSatisfied() ? nullptr 
+    SCIP_CONS* currentCons = _currentFace->isAlwaysSatisfied() ? nullptr
       : _faceConstraints.at(_currentFace);
     if (currentCons != nullptr)
       SCIP_CALL_EXC( SCIPdelCons(_scip, currentCons) );
@@ -461,20 +461,20 @@ namespace ipo
   }
 
 // #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-// 
+//
 //   void SCIPSolver::makeRational(OptimizationOracle::Result& result,
 //     const mpq_class* objectiveVector)
 //   {
 //     _makeRationalSolver->setObjective(objectiveVector);
 //     _makeRationalSolver->solve(result);
 //   }
-// 
+//
 //   void SCIPSolver::makeRational(OptimizationOracle::Result& result, const double* objectiveVector)
 //   {
 //     _makeRationalSolver->setObjective(objectiveVector);
 //     _makeRationalSolver->solve(result);
 //   }
-// 
+//
 // #endif
 
   SCIPOptimizationOracleDouble::SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,

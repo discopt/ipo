@@ -14,7 +14,7 @@
 
 namespace ipo
 {
-  
+
 #if defined(IPO_WITH_GMP)
 
   struct rational
@@ -325,9 +325,9 @@ namespace ipo
       return x == 0.0;
     }
   };
-  
-#endif /* IPO_WITH_GMP */  
-  
+
+#endif /* IPO_WITH_GMP */
+
   IPO_EXPORT
   inline bool isPlusInfinity(double x)
   {

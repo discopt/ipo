@@ -15,7 +15,7 @@ namespace ipo
     EQUATION_INCONSISTENT,
     EQUATION_INVALID
   };
-  
+
   template <typename T, typename IsZero>
   class EquationRedundancyCheck
   {

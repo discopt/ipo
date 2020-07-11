@@ -35,7 +35,7 @@ namespace ipo
     void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn)
     {
 //       std::cout << "Adding row " << row << " with last = " << last << " for column " << newBasicColumn << std::endl;
-      
+
       // Add column to basis.
       assert(newBasicColumn < _columns.size());
       assert(_columns[newBasicColumn].basisIndex == std::numeric_limits<std::size_t>::max());
@@ -137,6 +137,13 @@ namespace ipo
     std::vector<std::size_t> _basisIndexToColumn;
   };
 
+  static
+  double remainingTime(const std::chrono::time_point<std::chrono::system_clock>& started, double limit)
+  {
+    return limit - std::chrono::duration<double>(std::chrono::duration<double>(
+      std::chrono::system_clock::now() - started)).count();
+  }
+
   template <typename T, typename IsZero>
   int affineHullImplementation(std::shared_ptr<Polyhedron<T, IsZero>> polyhedron,
     std::vector<sparse_vector<T>>& innerPoints,
@@ -144,8 +151,8 @@ namespace ipo
     std::vector<Constraint<T>>& outerEquations,
     const std::vector<Constraint<T>>& knownEquations, double timeLimit, IsZero isZero)
   {
-    auto timeStart = std::chrono::system_clock::now();
-    
+    auto timeStarted = std::chrono::system_clock::now();
+
     std::size_t n = polyhedron->space()->dimension();
     auto redundancyCheck = EquationRedundancyCheck<T, IsZero>(n, isZero);
     for (auto equation : knownEquations)
@@ -160,9 +167,6 @@ namespace ipo
         outerEquations.push_back(equation);
         return -1;
       }
-
-      if (std::chrono::duration<double>(std::chrono::system_clock::now() - timeStart).count() > timeLimit)
-        return AFFINEHULL_TIMEOUT;
     }
 
     std::cout << "Initial " << knownEquations.size() << " equations have rank "
@@ -177,6 +181,10 @@ namespace ipo
       std::cout << "Iteration of affine hull computation: " << lowerBound
         << " <= dim <= " << upperBound << "." << std::endl;
 
+      if (remainingTime(timeStarted, timeLimit) <= 0)
+        return AFFINEHULL_TIMEOUT;
+
+
       // If we have dim(P) rays but no points yet, we solve the feasibility problem.
 
       if (innerPoints.empty() && int(innerRays.size()) == upperBound)
@@ -184,8 +192,9 @@ namespace ipo
         typename OptimizationOracle<T>::Query query;
         for (std::size_t v = 0; v < n; ++v)
           objective[v] = 0;
+        query.timeLimit = remainingTime(timeStarted, timeLimit);
         typename OptimizationOracle<T>::Result result = polyhedron->maximize(objective, query);
-  
+
         if (result.isUnbounded())
           throw std::runtime_error("maximize(<zero vector>) returned unbounded result.");
         else if (result.isFeasible())
@@ -211,6 +220,9 @@ namespace ipo
 
         std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
 
+        if (remainingTime(timeStarted, timeLimit) <= 0)
+          return AFFINEHULL_TIMEOUT;
+
         if (redundancyCheck.test(kernelDirectionVector) == EQUATION_INDEPENDENT)
         {
           std::cout << " which is independent of the equations." << std::endl;
@@ -222,6 +234,9 @@ namespace ipo
           affineComplement.markEquation(kernelDirectionColumn);
           kernelDirectionVector.clear();
         }
+
+        if (remainingTime(timeStarted, timeLimit) <= 0)
+          return AFFINEHULL_TIMEOUT;
       }
 
       // Prepare for maximize kernelDirectionVector.
@@ -238,9 +253,14 @@ namespace ipo
         query.minObjectiveValue = innerPoints.front() * kernelDirectionVector;
         std::cout << " with common objective value " << (double)query.minObjectiveValue;
       }
+      query.timeLimit = remainingTime(timeStarted, timeLimit);
+        if (query.timeLimit <= 0)
+          return AFFINEHULL_TIMEOUT;
       typename OptimizationOracle<T>::Result result = polyhedron->maximize(objective, query);
       std::cout << " yields " << result.points.size() << " points and " << result.rays.size()
         << " rays." << std::endl;
+      if (remainingTime(timeStarted, timeLimit) <= 0)
+        return AFFINEHULL_TIMEOUT;
 
       if (result.isInfeasible())
       {
@@ -273,7 +293,7 @@ namespace ipo
             innerPoints.push_back(result.points[p].vector);
             affineComplement.add(innerPoints.back(), 1, kernelDirectionColumn);
             ++lowerBound;
-            std::cout << "  -> adding two points with objective values " 
+            std::cout << "  -> adding two points with objective values "
               << (double)result.points.front().objectiveValue << " and " << (double)result.points[p].objectiveValue
               << "." << std::endl;
             break;
@@ -281,9 +301,9 @@ namespace ipo
         }
         if (innerPoints.size() == 2)
           continue;
-  
+
         query.minObjectiveValue = result.points.front().objectiveValue;
-        std::cout << "  -> adding a point with objective value " 
+        std::cout << "  -> adding a point with objective value "
           << (double)result.points.front().objectiveValue << std::endl;
       }
       else
@@ -299,7 +319,7 @@ namespace ipo
             innerPoints.push_back(point.vector);
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
             ++lowerBound;
-            std::cout << "  -> adding a point with objective value " 
+            std::cout << "  -> adding a point with objective value "
               << (double)result.points.front().objectiveValue << std::endl;
             success = true;
             break;
@@ -315,9 +335,17 @@ namespace ipo
         objective[v] *= -1;
       query.minObjectiveValue *= -1;
 
+      query.timeLimit = remainingTime(timeStarted, timeLimit);
+      if (query.timeLimit <= 0)
+        return AFFINEHULL_TIMEOUT;
+
       result = polyhedron->maximize(objective, query);
       std::cout << "  Minimization yields " << result.points.size() << " points and "
         << result.rays.size() << " rays." << std::endl;
+
+      if (remainingTime(timeStarted, timeLimit) <= 0)
+        return AFFINEHULL_TIMEOUT;
+
       if (result.isUnbounded())
       {
         innerRays.push_back(result.rays.front().vector);
@@ -338,7 +366,7 @@ namespace ipo
             innerPoints.push_back(point.vector);
             affineComplement.add(point.vector, 1, kernelDirectionColumn);
             ++lowerBound;
-            std::cout << "  -> adding a point with objective value " 
+            std::cout << "  -> adding a point with objective value "
               << (double)result.points.front().objectiveValue << std::endl;
             success = true;
             break;
@@ -361,7 +389,7 @@ namespace ipo
 
     return lowerBound;
   }
-  
+
   int affineHull(std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
     std::vector<sparse_vector<double>>& innerPoints,
     std::vector<sparse_vector<double>>& innerRays,

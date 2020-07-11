@@ -102,15 +102,6 @@ namespace ipo
     return Constraint<T>(T(-std::numeric_limits<double>::infinity()), sparse_vector<T>(), T(-1));
   }
 
-//   struct HashConstraint
-//   {
-//     std::size_t operator() (const Constraint& constraint) const
-//     {
-//       HashVector hash;
-//       return hash(constraint.vector);
-//     }
-//   };  
-
   IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint);
 

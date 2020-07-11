@@ -28,7 +28,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
   typedef RationalMIPExtendedOptimizationOracle SCIPOptimizationOracleRational;
-  
+
   typedef RationalMIPExtendedSeparationOracle SCIPSeparationOracleRational;
 #endif /* IPO_WITH_GMP */
 
@@ -331,7 +331,7 @@ namespace ipo
     IPO_EXPORT
     SeparationOracle<double>::Result getInitial(const SeparationOracle<double>::Query& query)
       override;
-    
+
     /**
      * \brief Separates a point/ray with floating-point coordinates.
      *

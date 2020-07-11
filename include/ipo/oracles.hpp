@@ -151,7 +151,7 @@ namespace ipo
         }
       };
 
-      
+
       /// Array with objective values and vectors of all points.
       std::vector<Point> points;
       /// Array with all rays.
@@ -183,10 +183,10 @@ namespace ipo
       {
 
       }
-      
+
       /**
        * \brief Move-assignment operator.
-       * 
+       *
        * Move-assignment operator.
        */
 
@@ -232,7 +232,7 @@ namespace ipo
 
       /**
        * \brief Sorts the points by decreasing objective value.
-       * 
+       *
        * Sorts the points by decreasing objective value.
        */
 
@@ -244,7 +244,7 @@ namespace ipo
 
       /**
        * \brief Checks that points are sorted by decreasing objective value.
-       * 
+       *
        * Checks that points are sorted by decreasing objective value.
        */
 
@@ -352,7 +352,7 @@ namespace ipo
       Result()
         : hitTimeLimit(false)
       {
-        
+
       }
 
       /**
@@ -368,7 +368,7 @@ namespace ipo
 
       /**
        * \brief Move-assignment operator.
-       * 
+       *
        * Move-assignment operator.
        */
 
@@ -382,7 +382,7 @@ namespace ipo
 
       /**
        * \brief Assignment operator.
-       * 
+       *
        * Assignment operator.
        */
 
@@ -395,7 +395,7 @@ namespace ipo
       }
 
       /**
-       * \brief Returns the number of generated constraints. 
+       * \brief Returns the number of generated constraints.
        */
 
       IPO_EXPORT

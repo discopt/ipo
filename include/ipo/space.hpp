@@ -14,7 +14,7 @@ namespace ipo
 {
   /**
    * \brief Ambient space of certain dimension.
-   * 
+   *
    * Ambient space of certain dimension. Manages variable names.
    */
 
@@ -23,7 +23,7 @@ namespace ipo
   public:
     /**
      * \brief Constructs a space of dimension 0.
-     * 
+     *
      * Constructs a space of dimension 0. Use \ref addVariable to add variables.
      */
 
@@ -84,18 +84,18 @@ namespace ipo
     /**
      * \brief Prints a floating-point vector to \p stream.
      *
-     * Prints a floating-point vector to given \p stream, using stored variable names. Nonzeros are 
+     * Prints a floating-point vector to given \p stream, using stored variable names. Nonzeros are
      * delimited by a comma.
      */
 
     IPO_EXPORT
     void printVector(std::ostream& stream, std::size_t numNonzeros,
         std::size_t* nonzeroCoordinates, double* nonzeroValues) const;
-    
+
     /**
      * \brief Prints a floating-point vector into a string.
      *
-     * Prints a floating-point vector into a string, using stored variable names. Nonzeros are 
+     * Prints a floating-point vector into a string, using stored variable names. Nonzeros are
      * delimited by a comma.
      */
 
@@ -129,7 +129,7 @@ namespace ipo
     /**
      * \brief Prints a rational vector to \p stream.
      *
-     * Prints a rational vector to given \p stream, using stored variable names. Nonzeros are 
+     * Prints a rational vector to given \p stream, using stored variable names. Nonzeros are
      * delimited by a comma.
      */
 
@@ -140,7 +140,7 @@ namespace ipo
     /**
      * \brief Prints a rational vector into a string.
      *
-     * Prints a rational vector into a string, using stored variable names. Nonzeros are 
+     * Prints a rational vector into a string, using stored variable names. Nonzeros are
      * delimited by a comma.
      */
 

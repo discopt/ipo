@@ -35,7 +35,7 @@ namespace ipo
     {
       typename OptimizationOracle<T>::Result result;
       ++_queryCount;
-      
+
       // Compute norm of objective vector.
       double objectiveNormalization = 0.0;
       for (std::size_t v = 0; v < this->space()->dimension(); ++v)
@@ -68,7 +68,7 @@ namespace ipo
         for (const auto& iter : rayData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
         product *= rayData.normalization;
-        
+
         if (product > epsilon)
         {
           result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(rayData.vector));
@@ -97,7 +97,7 @@ namespace ipo
       std::sort(_points.begin(), _points.end());
 
       // Add best points as longs as they have sufficiently positive product.
-      
+
       double threshold = query.minObjectiveValue;
       epsilon = objectiveNormalization * _normalizedPointEpsilon;
       for (auto& pointData : _points)
@@ -105,7 +105,7 @@ namespace ipo
         T product = 0.0;
         for (const auto& iter : pointData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
-        
+
         if (product <= threshold)
           break;
         result.points.push_back(typename OptimizationOracle<T>::Result::Point(pointData.vector,
@@ -122,7 +122,7 @@ namespace ipo
     {
       typename OptimizationOracle<T>::Result result;
       ++_queryCount;
-      
+
       // Compute norm of objective vector.
       double objectiveNormalization = 0.0;
       for (std::size_t v = 0; v < this->space()->dimension(); ++v)
@@ -155,7 +155,7 @@ namespace ipo
         for (const auto& iter : rayData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
         product *= rayData.normalization;
-        
+
         if (product > epsilon)
         {
           result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(rayData.vector));
@@ -184,7 +184,7 @@ namespace ipo
       std::sort(_points.begin(), _points.end());
 
       // Add best points as longs as they have sufficiently positive product.
-      
+
       double threshold = query.minObjectiveValue;
       epsilon = objectiveNormalization * _normalizedPointEpsilon;
       for (auto& pointData : _points)
@@ -192,7 +192,7 @@ namespace ipo
         T product = 0.0;
         for (const auto& iter : pointData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
-        
+
         if (product <= threshold)
           break;
         result.points.push_back(typename OptimizationOracle<T>::Result::Point(pointData.vector,
@@ -422,7 +422,7 @@ namespace ipo
       Data(std::shared_ptr<O> o, bool cache = false)
         : sumRunningTime(0.0), sumSuccess(0), priority(0.0), oracle(o), isCache(cache)
       {
-        
+
       }
 
       bool operator<(const Data<O>& other) const
@@ -460,7 +460,7 @@ namespace ipo
         // We always add a bonus of +1 to the number of successful runs. This avoids division by 0
         // and gives some advantage to unsuccessful oracles that do not require too much time.
 
-        priority = sumRunningTime / (sumSuccess + 1); 
+        priority = sumRunningTime / (sumSuccess + 1);
       }
     };
 
