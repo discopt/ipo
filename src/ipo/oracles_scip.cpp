@@ -500,11 +500,9 @@ namespace ipo
       query.timeLimit == std::numeric_limits<double>::infinity() ? SCIPinfinity(_solver->_scip)
       : query.timeLimit) );
 
-    double oldObjectiveLimit = SCIPgetObjlimit(_solver->_scip);
-    int oldSolutionLimit;
-    SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "limits/solutions", &oldSolutionLimit) );
+    SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", query.maxNumSolutions) );
     SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip,
-      query.minObjectiveValue > -std::numeric_limits<double>::infinity() ? query.minObjectiveValue
+      isMinusInfinity(query.minObjectiveValue) ? query.minObjectiveValue
       : -SCIPinfinity(_solver->_scip) ) );
 
     std::size_t n = space()->dimension();
@@ -533,6 +531,10 @@ namespace ipo
             entries.push_back(i, y);
         }
         result.rays.push_back(OptimizationOracle::Result::Ray(entries));
+        if (result.primalBound > std::numeric_limits<double>::infinity())
+          result.primalBound = std::numeric_limits<double>::infinity();
+        else
+          checkFeasibility(objectiveVector, result);
         break;
       }
 
@@ -552,22 +554,28 @@ namespace ipo
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
           SCIP_SOL* sol = solutions[solIndex];
-          entries.clear();
-          for (std::size_t i = 0; i < n; ++i)
+          double objectiveValue = SCIPgetSolOrigObj(_solver->_scip, sol);
+          if (objectiveValue > query.minObjectiveValue)
           {
-            double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-            if (!SCIPisZero(_solver->_scip, x))
-              entries.push_back(i, x);
+            entries.clear();
+            for (std::size_t i = 0; i < n; ++i)
+            {
+              double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+              if (!SCIPisZero(_solver->_scip, x))
+                entries.push_back(i, x);
+            }
+            result.points.push_back(OptimizationOracle<double>::Result::Point(std::move(entries),
+              objectiveValue));
           }
-          result.points.push_back(OptimizationOracle<double>::Result::Point(entries,
-            SCIPgetSolOrigObj(_solver->_scip, sol)));
         }
+        result.primalBound = SCIPgetPrimalbound(_solver->_scip);
         break;
       }
       else if (status == SCIP_STATUS_INFEASIBLE)
       {
         assert(numSolutions == 0);
         result.dualBound = -std::numeric_limits<double>::infinity();
+        result.primalBound = -std::numeric_limits<double>::infinity();
         break;
       }
       else if (status == SCIP_STATUS_UNBOUNDED)
@@ -583,6 +591,10 @@ namespace ipo
               entries.push_back(i, y);
           }
           result.rays.push_back(OptimizationOracle<double>::Result::Ray(entries));
+          if (result.primalBound > std::numeric_limits<double>::infinity())
+            result.primalBound = std::numeric_limits<double>::infinity();
+          else
+            checkFeasibility(objectiveVector, result);
           break;
         }
       }
@@ -603,12 +615,47 @@ namespace ipo
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", oldMaxRounds) );
     SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
     SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
-    SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip, oldObjectiveLimit) );
-    SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", oldSolutionLimit) );
 
     result.sortPoints();
 
     return result;
+  }
+
+  void SCIPOptimizationOracleDouble::checkFeasibility(const double* objective,
+    OptimizationOracle<double>::Result& result)
+  {
+    assert(false);
+
+    std::size_t n = space()->dimension();
+
+    for (std::size_t i = 0; i < n; ++i)
+      SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
+
+    SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+    
+    if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
+    {
+      SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
+      sparse_vector<double> entries;
+      double objectiveValue = 0.0;
+      for (std::size_t i = 0; i < n; ++i)
+      {
+        double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+        if (!SCIPisZero(_solver->_scip, x))
+        {
+          entries.push_back(i, x);
+          objectiveValue =+ objective[i] * x;
+        }
+      }
+      result.points.push_back(OptimizationOracle<double>::Result::Point(entries, objectiveValue)); 
+    }
+    else
+    {
+      result.rays.clear();
+      result.primalBound = -std::numeric_limits<double>::infinity();
+    }
+    SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+    SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
   }
 
   SCIPSeparationOracleDouble::SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,

@@ -1,6 +1,6 @@
 #include <ipo/constraint.hpp>
 
-#include <iostream> // TODO: Debug
+// #include <iostream> // TODO: Debug
 
 #include "reconstruct.hpp"
 
@@ -45,10 +45,7 @@ namespace ipo
   {
     sparse_vector<rational> vector;
     for (const auto& iter : constraint.vector())
-    {
-      std::cout << "[recons " << iter.second << " -> " << reconstruct(iter.second) << "]" << std::flush;
       vector.push_back(iter.first, rational(reconstruct(iter.second)));
-    }
     rational lhs, rhs;
     if (isMinusInfinity(constraint.lhs()))
       lhs = minusInfinity();

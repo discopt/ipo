@@ -125,20 +125,86 @@ namespace ipo
     const double* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
   {
-    // Set objective for LP.
+    std::vector<rational> exactObjectiveVector(_integrality.size());
+    for (std::size_t i = 0; i < _integrality.size(); ++i)
+      exactObjectiveVector[i] = objectiveVector[i];
+
+    return maximize(approximateOracle, &exactObjectiveVector[0], query);
+  }
+
+  void RationalMIPExtender::setZeroObjective()
+  {
+    mpq_set_d(_coefficients[0], 0.0);
+    for (std::size_t i = 0; i < _integrality.size(); ++i)
+      _spx.changeObjRational(i, _coefficients[0]);
+  }
+
+  void RationalMIPExtender::prepareRay()
+  {
+    // Restore all integral columns to their original bounds.
+    for (std::size_t v = 0; v < _integrality.size(); ++v)
+    {
+      if (_integrality[v])
+        _spx.changeBoundsRational(v, _originalLowerBounds[v], _originalUpperBounds[v]);
+    }
+  }
+
+  void RationalMIPExtender::extractRay(OptimizationOracle<rational>::Result& result)
+  {
+    _spx.getPrimalRayRational(_coefficients, _integrality.size());
+    sparse_vector<rational> ray;
     for (std::size_t i = 0; i < _integrality.size(); ++i)
     {
-      mpq_set_d(_coefficients[0], objectiveVector[i]);
-      _spx.changeObjRational(i, _coefficients[0]);
+      if (_coefficients[i] != 0)
+        ray.push_back(i, rational(_coefficients[i]));
+    }
+    result.rays.push_back(OptimizationOracle<rational>::Result::Ray(std::move(ray)));
+  }
+
+  void RationalMIPExtender::preparePoint(
+    const OptimizationOracle<double>::Result::Point& approximatePoint)
+  {
+    // First, fix all integral columns to zero.
+    for (std::size_t v = 0; v < _integrality.size(); ++v)
+    {
+      if (_integrality[v])
+      {
+        mpq_set_si(_coefficients[0], 0, 1);
+        _spx.changeBoundsRational(v, _coefficients[0], _coefficients[0]);
+      }
     }
 
-    // Query
-    OptimizationOracle<double>::Query approximateQuery;
-    approximateQuery.maxNumSolutions = query.maxNumSolutions;
-    approximateQuery.minObjectiveValue = query.minObjectiveValue.approximation();
-    approximateQuery.timeLimit = query.timeLimit;
-
-    return solve(approximateOracle->maximize(objectiveVector, approximateQuery));
+    // Now go through the current solution vector and fix the integral variables.
+    for (const auto& iter : approximatePoint.vector)
+    {
+      if (_integrality[iter.first])
+      {
+        mpq_set_d(_coefficients[0], round(iter.second));
+        _spx.changeBoundsRational(iter.first, _coefficients[0], _coefficients[0]);
+      }
+    }
+  }
+  
+  void RationalMIPExtender::extractPoint(OptimizationOracle<rational>::Result& result,
+    const rational* objectiveVector)
+  {
+    _spx.getPrimalRational(_coefficients, _integrality.size());
+    sparse_vector<rational> point;
+    rational objectiveValue = 0;
+    for (std::size_t i = 0; i < _integrality.size(); ++i)
+    {
+      if (mpq_sgn(_coefficients[i]) != 0)
+      {
+        rational x(mpq_class(_coefficients[i]));
+        point.push_back(i, x);
+        if (objectiveVector)
+          objectiveValue += objectiveVector[i] * x;
+      }
+    }
+    if (!objectiveVector)
+      objectiveValue = rational(*_spx.objValueRational().getMpqPtr());
+    result.points.push_back(OptimizationOracle<rational>::Result::Point(std::move(point),
+      objectiveValue));
   }
 
   OptimizationOracle<rational>::Result RationalMIPExtender::maximize(
@@ -146,144 +212,141 @@ namespace ipo
     const rational* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
   {
-    std::vector<double> temp(_integrality.size());
-
-    // Set objective for LP.
-    for (std::size_t i = 0; i < _integrality.size(); ++i)
-    {
-      mpq_set(_coefficients[0], objectiveVector[i].get_mpq_t());
-      _spx.changeObjRational(i, _coefficients[0]);
-      temp[i] = objectiveVector[i].approximation();
-    }
-
-    // Query
+    std::vector<double> approximateObjectiveVector(_integrality.size());
+    for (std::size_t v = 0; v < _integrality.size(); ++v)
+      approximateObjectiveVector[v] = (double)objectiveVector[v];
 
     OptimizationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumSolutions = query.maxNumSolutions;
     approximateQuery.minObjectiveValue = query.minObjectiveValue.approximation();
     approximateQuery.timeLimit = query.timeLimit;
-
-    return solve(approximateOracle->maximize(&temp[0], approximateQuery));
-  }
-
-  OptimizationOracle<rational>::Result RationalMIPExtender::solve(
-    const OptimizationOracle<double>::Result& approximateResult)
-  {
+    
+    OptimizationOracle<double>::Result approximateResult = approximateOracle->maximize(
+      &approximateObjectiveVector[0], approximateQuery);
+    
     OptimizationOracle<rational>::Result result;
+    result.hitTimeLimit = approximateResult.hitTimeLimit;
+    result.dualBound = approximateResult.dualBound;
 
-    if (!approximateResult.rays.empty())
+    // Set LP objective.
+    for (std::size_t i = 0; i < _integrality.size(); ++i)
     {
-      // Restore all integral columns to their original bounds.
-      for (std::size_t v = 0; v < _integrality.size(); ++v)
-      {
-        if (_integrality[v])
-          _spx.changeBoundsRational(v, _originalLowerBounds[v], _originalUpperBounds[v]);
-      }
-
-      // Solve the LP.
+      mpq_set(_coefficients[0], objectiveVector[i].get_mpq_t());
+      _spx.changeObjRational(i, _coefficients[0]);
+    }
+    
+    if (approximateResult.isInfeasible())
+      result.primalBound = minusInfinity();
+    else if (approximateResult.isUnbounded())
+    {
+      prepareRay();
       soplex::SPxSolver::Status status = _spx.solve();
 
+      // Convert the ray by computing one for the LP relaxation.
       if (status == soplex::SPxSolver::UNBOUNDED)
       {
-        _spx.getPrimalRayRational(_coefficients, _integrality.size());
-        sparse_vector<rational> ray;
-        for (std::size_t i = 0; i < _integrality.size(); ++i)
-        {
-          if (_coefficients[i] != 0)
-            ray.push_back(i, rational(_coefficients[i]));
-        }
-        result.rays.clear();
-        result.rays.push_back(OptimizationOracle<rational>::Result::Ray(std::move(ray)));
+        extractRay(result);
+        result.primalBound = plusInfinity();
       }
       else
       {
         std::stringstream ss;
-        ss << "Error in RationalMIPExtender::solve: Unbounded case yields SoPlex status " << status
-          << '.';
+        ss << "Error in RationalMIPExtender::solve. Unbounded approximate oracle with ray LP status "
+          << status << '.';
         throw std::runtime_error(ss.str());
       }
-    }
 
-    std::vector<OptimizationOracle<rational>::Result::Point> points;
-    for (const auto& point : approximateResult.points)
-    {
-      // First, fix all integral columns to zero.
-      for (std::size_t v = 0; v < _integrality.size(); ++v)
+      // Also convert all points but without objective function.
+      if (!approximateResult.points.empty())
       {
-        if (_integrality[v])
+        setZeroObjective();
+
+        for (const auto& point : approximateResult.points)
         {
-          mpq_set_si(_coefficients[0], 0, 1);
-          _spx.changeBoundsRational(v, _coefficients[0], _coefficients[0]);
-        }
-      }
+          preparePoint(point);
+          soplex::SPxSolver::Status status = _spx.solve();
 
-      // Now go through the current solution vector and fix the integral variables.
-      for (const auto& iter : point.vector)
-      {
-        if (_integrality[iter.first])
-        {
-          mpq_set_d(_coefficients[0], round(iter.second));
-          _spx.changeBoundsRational(iter.first, _coefficients[0], _coefficients[0]);
+          if (status == soplex::SPxSolver::OPTIMAL)
+            extractPoint(result, objectiveVector);
+          else
+          {
+            std::stringstream ss;
+            ss << "Error in RationalMIPExtender::solve. Unbounded approximate oracle with point LP status "
+              << status << '.';
+            throw std::runtime_error(ss.str());
+          }
         }
-      }
-
-      // Solve the LP.
-      soplex::SPxSolver::Status status = _spx.solve();
-      _spx.writeFileRational("debug.lp");
-
-      if (status == soplex::SPxSolver::OPTIMAL)
-      {
-        _spx.getPrimalRational(_coefficients, _integrality.size());
-        sparse_vector<rational> point;
-        for (std::size_t i = 0; i < _integrality.size(); ++i)
-        {
-          if (mpq_sgn(_coefficients[i]) != 0)
-            point.push_back(i, rational(mpq_class(_coefficients[i])));
-        }
-        points.push_back(OptimizationOracle<rational>::Result::Point(std::move(point),
-          rational(*_spx.objValueRational().getMpqPtr())));
-      }
-      else if (status == soplex::SPxSolver::UNBOUNDED)
-      {
-        // If we have a ray already, then we ignore this point.
-        if (!result.rays.empty())
-          continue;
-
-        // Otherwise, create a ray.
-        _spx.getPrimalRayRational(_coefficients, _integrality.size());
-        sparse_vector<rational> ray;
-        for (std::size_t i = 0; i < _integrality.size(); ++i)
-        {
-          if (mpq_sgn(_coefficients[i]) != 0)
-            ray.push_back(i, rational(_coefficients[i]));
-        }
-        result.rays.push_back(OptimizationOracle<rational>::Result::Ray(std::move(ray)));
-      }
-      else
-      {
-        std::stringstream ss;
-        ss << "Error in MakeRationalSolver::solve: bounded case yields SoPlex status " << status
-          << '.';
-        throw std::runtime_error(ss.str());
       }
     }
-    result.points.swap(points);
-
-    if (!result.rays.empty())
-    {
-      result.dualBound = plusInfinity();
-    }
-    else if (result.points.empty())
-      result.dualBound = minusInfinity();
     else
     {
-      result.dualBound = approximateResult.dualBound;
-      for (const auto& point : result.points)
+      assert(result.rays.empty());
+
+      result.primalBound = minusInfinity();
+      for (const auto& point : approximateResult.points)
       {
-        if (point.objectiveValue > result.dualBound)
-          result.dualBound = point.objectiveValue;
+        preparePoint(point);
+        soplex::SPxSolver::Status status = _spx.solve();
+
+        if (status == soplex::SPxSolver::OPTIMAL)
+        {
+          extractPoint(result, nullptr);
+          const rational& value = result.points.back().objectiveValue;
+          if (value > result.dualBound)
+            result.dualBound = value;
+          if (value > result.primalBound)
+            result.primalBound = value;
+        }
+        else if (status == soplex::SPxSolver::UNBOUNDED)
+        {
+          if (!result.rays.empty())
+            continue;
+
+          extractRay(result);
+          result.primalBound = plusInfinity();
+          result.dualBound = plusInfinity();
+        }
+        else if (status != soplex::SPxSolver::INFEASIBLE)
+        {
+          std::stringstream ss;
+            ss << "Error in RationalMIPExtender::solve. Optimal approximate oracle with point LP status "
+                << status << '.';
+            throw std::runtime_error(ss.str());
+        }
+      }
+
+      if (isMinusInfinity(result.primalBound)
+        && approximateResult.primalBound == approximateQuery.minObjectiveValue)
+      {
+        result.primalBound = query.minObjectiveValue;
       }
     }
+//     result.points.swap(points);
+// 
+//     if (approximateResult.isUnbounded())
+//     {
+//       result.dualBound = plusInfinity();
+//       result.primalBound = plusInfinity();
+//     }
+//     else if (approximateResult.isInfeasible())
+//     {
+//       result.dualBound = minusInfinity();
+//       result.primalBound = minusInfinity();
+//     }
+//     else
+//     {
+//       result.primalBound = minusInfinity();
+//       result.dualBound = approximateResult.dualBound;
+//       for (const auto& point : result.points)
+//       {
+//         if (point.objectiveValue > result.dualBound)
+//           result.dualBound = point.objectiveValue;
+//         if (point.objectiveValue > result.primalBound)
+//           result.primalBound = point.objectiveValue;
+//       }
+//       if (isMinusInfinity(result.primalBound))
+//         result.primalBound = query.minObjectiveValue;
+//     }
 
     return result;
   }

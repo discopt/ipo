@@ -64,7 +64,12 @@ namespace ipo
 
     struct Query
     {
-      /// The caller will only use points having at least this value.
+      /**
+       * \brief Strict lower bound on objective value of returned points.
+       * 
+       * Strict lower bound on objective value of returned points. The oracle must not return points
+       * with a value less than or equal to this number.
+       */
       T minObjectiveValue;
       /// Maximum number of solutions to return.
       std::size_t maxNumSolutions;
@@ -151,13 +156,14 @@ namespace ipo
         }
       };
 
-
+      /// Lower bound on the optimum.
+      T primalBound;
+      /// Upper bound on the optimum.
+      T dualBound;
       /// Array with objective values and vectors of all points.
       std::vector<Point> points;
       /// Array with all rays.
       std::vector<Ray> rays;
-      /// Upper bound on the optimal solution value.
-      T dualBound;
       /// Whether the time limit was reached.
       bool hitTimeLimit;
 
@@ -167,7 +173,8 @@ namespace ipo
 
       IPO_EXPORT
       Result()
-        : dualBound(std::numeric_limits<double>::infinity()), hitTimeLimit(false)
+        : primalBound(-std::numeric_limits<double>::infinity()),
+        dualBound(std::numeric_limits<double>::infinity()), hitTimeLimit(false)
       {
 
       }
@@ -178,7 +185,8 @@ namespace ipo
 
       IPO_EXPORT
       Result(Result&& other)
-        : points(std::move(other.points)), rays(std::move(other.rays)), dualBound(other.dualBound),
+        : primalBound(other.primalBound), dualBound(other.dualBound),
+        points(std::move(other.points)), rays(std::move(other.rays)), 
         hitTimeLimit(other.hitTimeLimit)
       {
 
@@ -193,9 +201,10 @@ namespace ipo
       IPO_EXPORT
       inline Result& operator=(Result&& other)
       {
+        primalBound = std::move(other.primalBound);
+        dualBound = std::move(other.dualBound);
         points = std::move(other.points);
         rays = std::move(other.rays);
-        dualBound = std::move(other.dualBound);
         hitTimeLimit = other.hitTimeLimit;
         return *this;
       }
@@ -207,17 +216,17 @@ namespace ipo
       IPO_EXPORT
       inline bool isInfeasible() const
       {
-        return points.empty() && rays.empty();
+        return isMinusInfinity(primalBound);
       }
 
       /**
-       * \brief Returns \c true if a point was found.
+       * \brief Returns \c true if the polyhedron is non-empty.
        */
 
       IPO_EXPORT
       inline bool isFeasible() const
       {
-        return !points.empty();
+        return isFinite(primalBound);
       }
 
       /**
@@ -227,7 +236,7 @@ namespace ipo
       IPO_EXPORT
       inline bool isUnbounded() const
       {
-        return !rays.empty();
+        return isPlusInfinity(primalBound);
       }
 
       /**

@@ -34,10 +34,6 @@ namespace ipo
     IPO_EXPORT
     void setFace(std::shared_ptr<Constraint<rational>> face);
 
-    IPO_EXPORT
-    OptimizationOracle<rational>::Result solve(
-      const OptimizationOracle<double>::Result& approximateResult);
-
     /**
      * \brief Maximize a floating-point objective vector.
      *
@@ -65,6 +61,19 @@ namespace ipo
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const rational* objectiveVector,
       const OptimizationOracle<rational>::Query& query);
+
+  private:
+    void setZeroObjective();
+
+    void prepareRay();
+
+    void extractRay(OptimizationOracle<rational>::Result& result);
+
+    void preparePoint(
+      const OptimizationOracle<double>::Result::Point& approximatePoint);
+
+    void extractPoint(OptimizationOracle<rational>::Result& result,
+      const rational* objectiveVector);
 
   protected:
     soplex::SoPlex _spx;

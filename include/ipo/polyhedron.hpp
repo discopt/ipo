@@ -214,6 +214,7 @@ namespace ipo
     struct Data
     {
       double product;
+      double hash;
       sparse_vector<T> vector; /// The cached point/ray.
       std::size_t lastSuccess; /// Largest query number at which this vector was returned.
       double normalization; /// Inverse of Euclidean norm of vector.
@@ -247,11 +248,20 @@ namespace ipo
   class Polyhedron: public std::enable_shared_from_this<Polyhedron<T, IsZero>>
   {
   public:
+    Polyhedron() = delete;
+
+    Polyhedron(std::shared_ptr<Space> space, IsZero isZero)
+      : _space(space), _historySize(16)
+    {
+
+    }
+
     Polyhedron(std::shared_ptr<OptimizationOracle<T>> optimizationOracle, IsZero isZero)
       : _historySize(16)
     {
-      auto cache = std::make_shared<CacheOptimizationOracle<T>>(optimizationOracle->space());
-      _optimization.push_back(Data<OptimizationOracle<T>>(cache, true));
+      _space = optimizationOracle->space();
+      _cacheOptimization = std::make_shared<CacheOptimizationOracle<T>>(_space);
+      _optimization.push_back(Data<OptimizationOracle<T>>(_cacheOptimization, true));
       _optimization.push_back(Data<OptimizationOracle<T>>(optimizationOracle));
     }
 
@@ -273,11 +283,7 @@ namespace ipo
     IPO_EXPORT
     std::shared_ptr<Space> space() const
     {
-      if (!_optimization.empty())
-        return _optimization.front().oracle->space();
-      if (!_separation.empty())
-        return _separation.front().oracle->space();
-      return std::shared_ptr<Space>();
+      return _space;
     }
 
     /**
@@ -293,18 +299,18 @@ namespace ipo
       tuneOracles();
 
       typename OptimizationOracle<T>::Result result;
-      std::size_t lastOracle = 0;
-      for (; lastOracle < _optimization.size(); ++lastOracle)
+      for (std::size_t o = 0; o < _optimization.size(); ++o)
       {
-        Data<OptimizationOracle<T>>& data = _optimization[lastOracle];
+        Data<OptimizationOracle<T>>& data = _optimization[o];
+
         // Run current oracle.
 
-        std::chrono::time_point<std::chrono::system_clock> started =
+        std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
-        result = data.oracle->maximizeDouble(objectiveVector, query, result);
-        std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+        result = data.oracle->maximizeDouble(objectiveVector, query);
+        double elapsed = (std::chrono::system_clock::now() - timeStarted).count();
 
-        data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
+        data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
@@ -332,7 +338,10 @@ namespace ipo
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
         Data<OptimizationOracle<T>>& data = _optimization[lastOracle];
+
         // Run current oracle.
+        
+        std::cout << "Calling oracle <" << data.oracle->name() << ">." << std::endl;
 
         std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
         result = data.oracle->maximize(objectiveVector, query);
@@ -464,6 +473,8 @@ namespace ipo
       }
     };
 
+    std::shared_ptr<Space> _space;
+    std::shared_ptr<CacheOptimizationOracle<T>> _cacheOptimization;
     std::vector<Data<OptimizationOracle<T>>> _optimization;
     std::vector<Data<SeparationOracle<T>>> _separation;
     double _normalizedRayEpsilon;
