@@ -7,9 +7,11 @@
 #include <ipo/space.hpp>
 #include <ipo/oracles.hpp>
 
+#include <map>
 #include <chrono>
 #include <memory>
 #include <deque>
+#include <random>
 
 namespace ipo
 {
@@ -253,7 +255,7 @@ namespace ipo
     Polyhedron(std::shared_ptr<Space> space, IsZero isZero)
       : _space(space), _historySize(16)
     {
-
+      initialize();
     }
 
     Polyhedron(std::shared_ptr<OptimizationOracle<T>> optimizationOracle, IsZero isZero)
@@ -263,17 +265,40 @@ namespace ipo
       _cacheOptimization = std::make_shared<CacheOptimizationOracle<T>>(_space);
       _optimization.push_back(Data<OptimizationOracle<T>>(_cacheOptimization, true));
       _optimization.push_back(Data<OptimizationOracle<T>>(optimizationOracle));
+      initialize();
     }
 
     Polyhedron(std::shared_ptr<SeparationOracle<T>> separationOracle)
       : _historySize(16)
     {
       _separation.push_back(Data<SeparationOracle<T>>(separationOracle));
+      initialize();
+    }
+
+    void initialize()
+    {
+      // To find duplicates of points or rays, we need a random vector.
+
+      std::default_random_engine generator;
+      std::normal_distribution<double> distribution;
+      _hashVector = new double[_space->dimension()];
+      double squaredNorm = 0.0;
+      while (squaredNorm < 1.0e-3)
+      {
+        for (std::size_t v = 0; v < _space->dimension(); ++v)
+        {
+          double x = distribution(generator);
+          _hashVector[v] = x;
+          squaredNorm += x*x;
+        }
+      }
+      for (std::size_t v = 0; v < _space->dimension(); ++v)
+        _hashVector[v] /= squaredNorm;
     }
 
     ~Polyhedron()
     {
-
+      delete[] _hashVector;
     }
 
     /**
@@ -473,6 +498,18 @@ namespace ipo
       }
     };
 
+    struct CachedVector
+    {
+      sparse_vector<T> vector;
+      T product;
+      double hash;
+    };
+    
+    friend CacheOptimizationOracle<T>;
+
+    double* _hashVector;
+    std::map<double, CachedVector> _cachedPoints;
+    std::map<double, CachedVector> _cachedRays;
     std::shared_ptr<Space> _space;
     std::shared_ptr<CacheOptimizationOracle<T>> _cacheOptimization;
     std::vector<Data<OptimizationOracle<T>>> _optimization;
