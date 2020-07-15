@@ -37,6 +37,7 @@ TEST(Oracles, SCIP)
 
     double obj[] = {1.0, 1.0};
     ipo::OptimizationOracle<double>::Query query;
+    std::cout << "oracle->maximize()" << std::endl;
     auto result = oracle->maximize(obj, query);
     ASSERT_TRUE(result.isUnbounded());
     ASSERT_TRUE(ipo::isPlusInfinity(result.dualBound));

@@ -354,65 +354,6 @@ namespace ipo
     SCIPfree(&_scip);
   }
 
-//   SCIPSolver::Face SCIPSolver::addFace(std::size_t numNonzeros, std::size_t* coordinates,
-//     double* coefficients, double rhs)
-//   {
-//     _faces.push_back(FaceData());
-//     FaceData& faceData = _faces.back();
-//
-//     // Add it to SCIP.
-//     char consName[16];
-//     SCIPsnprintf(consName, 16, "face%d", _faces.size() - 1);
-//     std::vector<SCIP_VAR*> vars;
-//     vars.resize(numNonzeros);
-//     for (std::size_t i = 0; i < numNonzeros; ++i)
-//       vars[i] = _variables[coordinates[i]];
-//     SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &faceData.constraint, consName, numNonzeros,
-//       &vars[0], &coefficients[0], -SCIPinfinity(_scip), rhs));
-//
-//     faceData.numNonzeros = numNonzeros;
-//     faceData.coordinates = new std::size_t[numNonzeros];
-//     faceData.coefficients = new double[numNonzeros];
-//     faceData.rhs = rhs;
-// #if defined(IPO_WITH_GMP)
-//     faceData.rationalCoefficients = new mpq_class[numNonzeros];
-//     faceData.rationalRhs = rhs;
-// #endif /* IPO_WITH_GMP */
-//     for (std::size_t i = 0; i < numNonzeros; ++i)
-//     {
-//       faceData.coordinates[i] = coordinates[i];
-//       faceData.coefficients[i] = coefficients[i];
-// #if defined(IPO_WITH_GMP)
-//       faceData.rationalCoefficients[i] = coefficients[i];
-// #endif /* IPO_WITH_GMP */
-//     }
-//
-//     return _faces.size() - 1;
-//   }
-//
-// #if defined(IPO_WITH_GMP)
-//
-//   SCIPSolver::Face SCIPSolver::addFace(std::size_t numNonzeros, std::size_t* coordinates,
-//     mpq_class* coefficients, const mpq_class& rhs)
-//   {
-//     double* approxCoefficients = new double[numNonzeros];
-//     double approxRhs = rhs.get_d();
-//
-//     for (std::size_t i = 0; i < numNonzeros; ++i)
-//       approxCoefficients[i] = coefficients[i].get_d();
-//
-//     Face face = addFace(numNonzeros, coordinates, approxCoefficients, approxRhs);
-//     _faces.back().rationalRhs = rhs;
-//     for (std::size_t i = 0; i < numNonzeros; ++i)
-//       _faces.back().rationalCoefficients[i] = coefficients[i];
-//
-//     delete[] approxCoefficients;
-//
-//     return face;
-//   }
-//
-// #endif
-
   void SCIPSolver::setFace(std::shared_ptr<Constraint<double>> face)
   {
     if (face == _currentFace)
@@ -532,10 +473,6 @@ namespace ipo
             vector->push_back(i, y);
         }
         result.rays.push_back(OptimizationOracle::Result::Ray(vector));
-        if (result.primalBound > std::numeric_limits<double>::infinity())
-          result.primalBound = std::numeric_limits<double>::infinity();
-        else
-          checkFeasibility(objectiveVector, result);
         break;
       }
 
@@ -591,11 +528,6 @@ namespace ipo
               vector->push_back(i, y);
           }
           result.rays.push_back(OptimizationOracle<double>::Result::Ray(vector));
-          if (result.primalBound > std::numeric_limits<double>::infinity())
-            result.primalBound = std::numeric_limits<double>::infinity();
-          else
-            checkFeasibility(objectiveVector, result);
-          break;
         }
       }
       else if (attempt == 2)
@@ -616,46 +548,47 @@ namespace ipo
     SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
     SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
 
+    if (!result.rays.empty() && result.points.empty())
+    {
+      result.primalBound = std::numeric_limits<double>::infinity();
+      if (query.minObjectiveValue == -std::numeric_limits<double>::infinity())
+      {
+        // We have to check feasibility.
+        
+        for (std::size_t i = 0; i < n; ++i)
+          SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
+
+        SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+
+        if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
+        {
+          SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
+          auto vector = std::make_shared<sparse_vector<double>>();
+          double objectiveValue = 0.0;
+          for (std::size_t i = 0; i < n; ++i)
+          {
+            double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+            if (!SCIPisZero(_solver->_scip, x))
+            {
+              vector->push_back(i, x);
+              objectiveValue =+ objectiveVector[i] * x;
+            }
+          }
+          result.points.push_back(OptimizationOracle<double>::Result::Point(vector, objectiveValue)); 
+        }
+        else
+        {
+          result.rays.clear();
+          result.primalBound = -std::numeric_limits<double>::infinity();
+        }
+        SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+        SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+      }
+    }
+
     result.sortPoints();
 
     return result;
-  }
-
-  void SCIPOptimizationOracleDouble::checkFeasibility(const double* objective,
-    OptimizationOracle<double>::Result& result)
-  {
-    assert(false);
-
-    std::size_t n = space()->dimension();
-
-    for (std::size_t i = 0; i < n; ++i)
-      SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
-
-    SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
-    
-    if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
-    {
-      SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
-      auto vector = std::make_shared<sparse_vector<double>>();
-      double objectiveValue = 0.0;
-      for (std::size_t i = 0; i < n; ++i)
-      {
-        double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-        if (!SCIPisZero(_solver->_scip, x))
-        {
-          vector->push_back(i, x);
-          objectiveValue =+ objective[i] * x;
-        }
-      }
-      result.points.push_back(OptimizationOracle<double>::Result::Point(vector, objectiveValue)); 
-    }
-    else
-    {
-      result.rays.clear();
-      result.primalBound = -std::numeric_limits<double>::infinity();
-    }
-    SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
-    SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
   }
 
   SCIPSeparationOracleDouble::SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,

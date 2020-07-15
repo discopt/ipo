@@ -286,9 +286,6 @@ namespace ipo
     virtual OptimizationOracle<double>::Result maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query);
 
-  private:
-    void checkFeasibility(const double* objective, OptimizationOracle<double>::Result& result);
-
   protected:
     friend SCIPSolver;
 
