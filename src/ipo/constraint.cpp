@@ -34,18 +34,18 @@ namespace ipo
 
   Constraint<double> constraintToDouble(const Constraint<rational>& constraint)
   {
-    sparse_vector<double> vector;
+    auto vector = std::make_shared<sparse_vector<double>>();
     for (const auto& iter : constraint.vector())
-      vector.push_back(iter.first, iter.second.approximation());
-    return Constraint<double>(constraint.lhs().approximation(), std::move(vector),
+      vector->push_back(iter.first, iter.second.approximation());
+    return Constraint<double>(constraint.lhs().approximation(), vector,
       constraint.rhs().approximation());
   }
 
   Constraint<rational> constraintToRational(const Constraint<double>& constraint)
   {
-    sparse_vector<rational> vector;
+    auto vector = std::make_shared<sparse_vector<rational>>();
     for (const auto& iter : constraint.vector())
-      vector.push_back(iter.first, rational(reconstruct(iter.second)));
+      vector->push_back(iter.first, rational(reconstruct(iter.second)));
     rational lhs, rhs;
     if (isMinusInfinity(constraint.lhs()))
       lhs = minusInfinity();
@@ -55,7 +55,7 @@ namespace ipo
       rhs = plusInfinity();
     else
       rhs = reconstruct(constraint.rhs());
-    return Constraint<rational>(lhs, std::move(vector), rhs);
+    return Constraint<rational>(lhs, vector, rhs);
   }
 
 #endif /* IPO_WITH_GMP */

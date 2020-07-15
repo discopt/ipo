@@ -3,10 +3,12 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#include <limits>
-#include <ostream>
 #include <ipo/sparse_vector.hpp>
 #include <ipo/rational.hpp>
+
+#include <memory>
+#include <limits>
+#include <ostream>
 
 namespace ipo
 {
@@ -16,27 +18,20 @@ namespace ipo
   {
   public:
     IPO_EXPORT
-    Constraint(const T& lhs, const sparse_vector<T>& vector, const T& rhs)
+    Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>>& vector, const T& rhs)
       : _lhs(lhs), _vector(vector), _rhs(rhs)
     {
       assert(!isPlusInfinity(lhs));
       assert(!isMinusInfinity(rhs));
       assert(!(isMinusInfinity(lhs) && isPlusInfinity(rhs)));
 #if !defined(NDEBUG)
-      for (const auto& iter : vector)
+      for (const auto& iter : *vector)
         assert(iter.second != 0);
 #endif
     }
 
     IPO_EXPORT
-    Constraint(const T& lhs, sparse_vector<T>&& vector, const T& rhs)
-      : _lhs(lhs), _vector(std::move(vector)), _rhs(rhs)
-    {
-
-    }
-
-    IPO_EXPORT
-    Constraint(T&& lhs, sparse_vector<T>&& vector, T&& rhs)
+    Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>>& vector, T&& rhs)
       : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(std::move(rhs))
     {
 
@@ -57,6 +52,12 @@ namespace ipo
     IPO_EXPORT
     const sparse_vector<T>& vector() const
     {
+      return *_vector;
+    }
+
+    IPO_EXPORT
+    std::shared_ptr<sparse_vector<T>> sharedVector()
+    {
       return _vector;
     }
 
@@ -75,31 +76,33 @@ namespace ipo
     IPO_EXPORT
     bool isAlwaysSatisfied() const
     {
-      return _vector.empty() && _lhs <= 0 && _rhs >= 0;
+      return _vector->empty() && _lhs <= 0 && _rhs >= 0;
     }
 
     IPO_EXPORT
     bool isNeverSatisfied() const
     {
-      return (_vector.empty() && (_lhs > 0 || _rhs < 0)) || (_lhs > _rhs);
+      return (_vector->empty() && (_lhs > 0 || _rhs < 0)) || (_lhs > _rhs);
     }
 
   protected:
     T _lhs;
-    sparse_vector<T> _vector;
+    std::shared_ptr<sparse_vector<T>> _vector;
     T _rhs;
   };
 
   template <typename T>
   Constraint<T> alwaysSatisfiedConstraint()
   {
-    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), sparse_vector<T>(), T(1));
+    auto zero = std::make_shared<sparse_vector<T>>();
+    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), zero, T(1));
   }
 
   template <typename T>
   Constraint<T> neverSatisfiedConstraint()
   {
-    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), sparse_vector<T>(), T(-1));
+    auto zero = std::make_shared<sparse_vector<T>>();
+    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), zero, T(-1));
   }
 
   IPO_EXPORT

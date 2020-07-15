@@ -167,23 +167,23 @@ namespace ipo
         rhs = std::numeric_limits<double>::infinity();
       if (ranged || SCIPisEQ(scip, lhs, rhs))
       {
-        entries.clear();
-        entries.push_back(variablesToCoordinates.at(vars[v]), 1.0);
-        visitor(Constraint<double>(lhs, entries, rhs));
+        auto vector = std::make_shared<sparse_vector<double>>();
+        vector->push_back(variablesToCoordinates.at(vars[v]), 1.0);
+        visitor(Constraint<double>(lhs, vector, rhs));
       }
       else
       {
         if (!ipo::isPlusInfinity(rhs))
         {
-          entries.clear();
-          entries.push_back(variablesToCoordinates.at(vars[v]), 1.0);
-          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), entries, rhs));
+          auto vector = std::make_shared<sparse_vector<double>>();
+          vector->push_back(variablesToCoordinates.at(vars[v]), 1.0);
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), vector, rhs));
         }
         if (!ipo::isMinusInfinity(lhs))
         {
-          entries.clear();
-          entries.push_back(variablesToCoordinates.at(vars[v]), -1.0);
-          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), entries, -lhs));
+          auto vector = std::make_shared<sparse_vector<double>>();
+          vector->push_back(variablesToCoordinates.at(vars[v]), -1.0);
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), vector, -lhs));
         }
       }
     }
@@ -250,7 +250,8 @@ namespace ipo
         unsortedEntries.clear();
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-        visitor(Constraint<double>(lhs, sparse_vector<double>(std::move(unsortedEntries)), rhs));
+        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+        visitor(Constraint<double>(lhs, vector, rhs));
       }
       else
       {
@@ -259,16 +260,16 @@ namespace ipo
           unsortedEntries.clear();
           for (std::size_t i = 0; i < k; ++i)
             unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(),
-            sparse_vector<double>(std::move(unsortedEntries)), rhs));
+          auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), vector, rhs));
         }
         if (!ipo::isMinusInfinity(lhs))
         {
           unsortedEntries.clear();
           for (std::size_t i = 0; i < k; ++i)
             unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), -vals[i]));
-          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(),
-            sparse_vector<double>(std::move(unsortedEntries)), -lhs));
+          auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+          visitor(Constraint<double>(-std::numeric_limits<double>::infinity(), vector, -lhs));
         }
       }
     }

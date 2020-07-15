@@ -446,9 +446,11 @@ namespace ipo
         if (success)
           continue;
       }
+      
+      auto vector = std::make_shared<sparse_vector<T>>(std::move(kernelDirectionVector));
 
       // We have to add an equation.
-      resultEquations.push_back(Constraint<T>(-oracleQuery.minObjectiveValue, kernelDirectionVector,
+      resultEquations.push_back(Constraint<T>(-oracleQuery.minObjectiveValue, vector,
         -oracleQuery.minObjectiveValue));
       affineComplement.markEquation(kernelDirectionColumn);
 
