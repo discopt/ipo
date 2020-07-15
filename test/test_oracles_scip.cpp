@@ -41,10 +41,10 @@ TEST(Oracles, SCIP)
     ASSERT_TRUE(result.isUnbounded());
     ASSERT_TRUE(ipo::isPlusInfinity(result.dualBound));
     ASSERT_FALSE(result.rays.empty());
-    ASSERT_EQ(result.rays[0].vector.size(), 2);
-    ASSERT_EQ(result.rays[0].vector.begin()->first, 0);
-    ASSERT_EQ((result.rays[0].vector.begin()+1)->first, 1);
-    ASSERT_NEAR(result.rays[0].vector.begin()->second / (result.rays[0].vector.begin()+1)->second,
+    ASSERT_EQ(result.rays[0].vector->size(), 2);
+    ASSERT_EQ(result.rays[0].vector->begin()->first, 0);
+    ASSERT_EQ((result.rays[0].vector->begin()+1)->first, 1);
+    ASSERT_NEAR(result.rays[0].vector->begin()->second / (result.rays[0].vector->begin()+1)->second,
       0.5, 1.0e-9);
   }
 
@@ -178,10 +178,10 @@ TEST(Oracles, SCIP)
     ASSERT_TRUE(result.isUnbounded());
     ASSERT_TRUE(ipo::isPlusInfinity(result.dualBound));
     ASSERT_FALSE(result.rays.empty());
-    ASSERT_EQ(result.rays[0].vector.size(), 2);
-    ASSERT_EQ(result.rays[0].vector.begin()->first, 0);
-    ASSERT_EQ((result.rays[0].vector.begin()+1)->first, 1);
-    ASSERT_EQ(result.rays[0].vector.begin()->second / (result.rays[0].vector.begin()+1)->second,
+    ASSERT_EQ(result.rays[0].vector->size(), 2);
+    ASSERT_EQ(result.rays[0].vector->begin()->first, 0);
+    ASSERT_EQ((result.rays[0].vector->begin()+1)->first, 1);
+    ASSERT_EQ(result.rays[0].vector->begin()->second / (result.rays[0].vector->begin()+1)->second,
       ipo::rational(1, 2));
   }
 

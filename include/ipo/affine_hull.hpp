@@ -46,8 +46,8 @@ namespace ipo
   template <typename T>
   struct AffineHullResult: public AffineHullResultCommon
   {
-    std::vector<sparse_vector<T>> points; /// Points of inner description.
-    std::vector<sparse_vector<T>> rays; /// Rays of inner description.
+    std::vector<std::shared_ptr<sparse_vector<T>>> points; /// Points of inner description.
+    std::vector<std::shared_ptr<sparse_vector<T>>> rays; /// Rays of inner description.
     std::vector<Constraint<T>> equations; /// Linearly independent equations.
 
     IPO_EXPORT

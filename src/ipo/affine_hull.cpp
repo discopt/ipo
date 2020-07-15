@@ -165,7 +165,8 @@ namespace ipo
 
   template <typename T, typename IsZero>
   void affineHullImplementation(std::shared_ptr<Polyhedron<T, IsZero>> polyhedron,
-    std::vector<sparse_vector<T>>& resultPoints, std::vector<sparse_vector<T>>& resultRays,
+    std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
+    std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays,
     std::vector<Constraint<T>>& resultEquations, const AffineHullQuery& query,
     const std::vector<Constraint<T>>& knownEquations, IsZero isZero, AffineHullResultCommon& result)
   {
@@ -283,7 +284,7 @@ namespace ipo
       typename OptimizationOracle<T>::Query oracleQuery;
       if (!resultPoints.empty())
       {
-        oracleQuery.minObjectiveValue = resultPoints.front() * kernelDirectionVector;
+        oracleQuery.minObjectiveValue = *resultPoints.front() * kernelDirectionVector;
         std::cout << " with common objective value " << (double)oracleQuery.minObjectiveValue;
       }
       oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
@@ -317,7 +318,7 @@ namespace ipo
       {
         resultRays.push_back(oracleResult.rays.front().vector);
         timeComponent = std::chrono::system_clock::now();
-        affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResult.rays.front().vector, 0, kernelDirectionColumn);
         result.timePointsRays += elapsedTime(timeComponent);
         std::cout << "  -> adding a ray." << std::endl;
         ++result.lowerBound;
@@ -330,7 +331,7 @@ namespace ipo
 
         resultPoints.push_back(oracleResult.points.front().vector);
         timeComponent = std::chrono::system_clock::now();
-        affineComplement.add(resultPoints.back(), 1, n);
+        affineComplement.add(*resultPoints.back(), 1, n);
         result.timePointsRays += elapsedTime(timeComponent);
         ++result.lowerBound;
 
@@ -341,7 +342,7 @@ namespace ipo
           {
             resultPoints.push_back(oracleResult.points[p].vector);
             timeComponent = std::chrono::system_clock::now();
-            affineComplement.add(resultPoints.back(), 1, kernelDirectionColumn);
+            affineComplement.add(*resultPoints.back(), 1, kernelDirectionColumn);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
@@ -369,7 +370,7 @@ namespace ipo
           {
             resultPoints.push_back(point.vector);
             timeComponent = std::chrono::system_clock::now();
-            affineComplement.add(point.vector, 1, kernelDirectionColumn);
+            affineComplement.add(*point.vector, 1, kernelDirectionColumn);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
@@ -414,7 +415,7 @@ namespace ipo
         resultRays.push_back(oracleResult.rays.front().vector);
 
         timeComponent = std::chrono::system_clock::now();
-        affineComplement.add(oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResult.rays.front().vector, 0, kernelDirectionColumn);
         result.timePointsRays += elapsedTime(timeComponent);
 
         ++result.lowerBound;
@@ -433,7 +434,7 @@ namespace ipo
             resultPoints.push_back(point.vector);
 
             timeComponent = std::chrono::system_clock::now();
-            affineComplement.add(point.vector, 1, kernelDirectionColumn);
+            affineComplement.add(*point.vector, 1, kernelDirectionColumn);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "

@@ -522,15 +522,15 @@ namespace ipo
       bool hasRay = SCIPhasPrimalRay(_solver->_scip);
       if (hasRay)
       {
-        sparse_vector<double> entries;
+        auto vector = std::make_shared<sparse_vector<double>>();
         result.dualBound = std::numeric_limits<double>::infinity();
         for (std::size_t i = 0; i < n; ++i)
         {
           double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
           if (!SCIPisZero(_solver->_scip, y))
-            entries.push_back(i, y);
+            vector->push_back(i, y);
         }
-        result.rays.push_back(OptimizationOracle::Result::Ray(entries));
+        result.rays.push_back(OptimizationOracle::Result::Ray(vector));
         if (result.primalBound > std::numeric_limits<double>::infinity())
           result.primalBound = std::numeric_limits<double>::infinity();
         else
@@ -550,21 +550,20 @@ namespace ipo
       {
         result.dualBound = SCIPgetDualbound(_solver->_scip);
         SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
-        sparse_vector<double> entries;
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
           SCIP_SOL* sol = solutions[solIndex];
           double objectiveValue = SCIPgetSolOrigObj(_solver->_scip, sol);
+          auto vector = std::make_shared<sparse_vector<double>>();
           if (objectiveValue > query.minObjectiveValue)
           {
-            entries.clear();
             for (std::size_t i = 0; i < n; ++i)
             {
               double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
               if (!SCIPisZero(_solver->_scip, x))
-                entries.push_back(i, x);
+                vector->push_back(i, x);
             }
-            result.points.push_back(OptimizationOracle<double>::Result::Point(std::move(entries),
+            result.points.push_back(OptimizationOracle<double>::Result::Point(vector,
               objectiveValue));
           }
         }
@@ -583,14 +582,14 @@ namespace ipo
         result.dualBound = std::numeric_limits<double>::infinity();
         if (SCIPhasPrimalRay(_solver->_scip))
         {
-          sparse_vector<double> entries;
+          auto vector = std::make_shared<sparse_vector<double>>();
           for (std::size_t i = 0; i < n; ++i)
           {
             double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
             if (!SCIPisZero(_solver->_scip, y))
-              entries.push_back(i, y);
+              vector->push_back(i, y);
           }
-          result.rays.push_back(OptimizationOracle<double>::Result::Ray(entries));
+          result.rays.push_back(OptimizationOracle<double>::Result::Ray(vector));
           if (result.primalBound > std::numeric_limits<double>::infinity())
             result.primalBound = std::numeric_limits<double>::infinity();
           else
@@ -636,18 +635,18 @@ namespace ipo
     if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
     {
       SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
-      sparse_vector<double> entries;
+      auto vector = std::make_shared<sparse_vector<double>>();
       double objectiveValue = 0.0;
       for (std::size_t i = 0; i < n; ++i)
       {
         double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
         if (!SCIPisZero(_solver->_scip, x))
         {
-          entries.push_back(i, x);
+          vector->push_back(i, x);
           objectiveValue =+ objective[i] * x;
         }
       }
-      result.points.push_back(OptimizationOracle<double>::Result::Point(entries, objectiveValue)); 
+      result.points.push_back(OptimizationOracle<double>::Result::Point(vector, objectiveValue)); 
     }
     else
     {

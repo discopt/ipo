@@ -100,32 +100,18 @@ namespace ipo
       struct Point
       {
         T objectiveValue;
-        sparse_vector<T> vector;
+        std::shared_ptr<sparse_vector<T>> vector;
 
         IPO_EXPORT
-        Point(const sparse_vector<T>& vec)
+        Point(std::shared_ptr<sparse_vector<T>> vec)
           : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
         {
 
         }
 
         IPO_EXPORT
-        Point(sparse_vector<T>&& vec)
-          : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(std::move(vec))
-        {
-
-        }
-
-        IPO_EXPORT
-        Point(const sparse_vector<T>& vec, const T& value)
+        Point(std::shared_ptr<sparse_vector<T>> vec, const T& value)
           : objectiveValue(value), vector(vec)
-        {
-
-        }
-
-        IPO_EXPORT
-        Point(sparse_vector<T>&& vec, const T& value)
-          : objectiveValue(value), vector(std::move(vec))
         {
 
         }
@@ -139,21 +125,15 @@ namespace ipo
 
       struct Ray
       {
-        sparse_vector<T> vector;
+        std::shared_ptr<sparse_vector<T>> vector;
 
         IPO_EXPORT
-        Ray(const sparse_vector<T>& vec)
+        Ray(std::shared_ptr<sparse_vector<T>> vec)
           : vector(vec)
         {
 
         }
 
-        IPO_EXPORT
-        Ray(sparse_vector<T>&& vec)
-          : vector(std::move(vec))
-        {
-
-        }
       };
 
       /// Lower bound on the optimum.

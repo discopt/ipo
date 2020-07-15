@@ -53,7 +53,7 @@ namespace ipo
       for (auto& rayData : _rays)
       {
         rayData.product = 0.0;
-        for (const auto& iter : rayData.vector)
+        for (const auto& iter : *rayData.vector)
           rayData.product += double(objectiveVector[iter.first]) * double(iter.second);
         rayData.product *= rayData.normalization;
       }
@@ -67,7 +67,7 @@ namespace ipo
       for (auto& rayData : _rays)
       {
         T product = 0.0;
-        for (const auto& iter : rayData.vector)
+        for (const auto& iter : *rayData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
         product *= rayData.normalization;
 
@@ -90,7 +90,7 @@ namespace ipo
       for (auto& pointData : _points)
       {
         pointData.product = 0.0;
-        for (const auto& iter : pointData.vector)
+        for (const auto& iter : *pointData.vector)
           pointData.product += double(objectiveVector[iter.first]) * double(iter.second);
       }
 
@@ -105,7 +105,7 @@ namespace ipo
       for (auto& pointData : _points)
       {
         T product = 0.0;
-        for (const auto& iter : pointData.vector)
+        for (const auto& iter : *pointData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
 
         if (product <= threshold)
@@ -140,7 +140,7 @@ namespace ipo
       for (auto& rayData : _rays)
       {
         rayData.product = 0.0;
-        for (const auto& iter : rayData.vector)
+        for (const auto& iter : *rayData.vector)
           rayData.product += double(objectiveVector[iter.first]) * double(iter.second);
         rayData.product *= rayData.normalization;
       }
@@ -154,7 +154,7 @@ namespace ipo
       for (auto& rayData : _rays)
       {
         T product = 0.0;
-        for (const auto& iter : rayData.vector)
+        for (const auto& iter : *rayData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
         product *= rayData.normalization;
 
@@ -177,7 +177,7 @@ namespace ipo
       for (auto& pointData : _points)
       {
         pointData.product = 0.0;
-        for (const auto& iter : pointData.vector)
+        for (const auto& iter : *pointData.vector)
           pointData.product += double(objectiveVector[iter.first]) * double(iter.second);
       }
 
@@ -192,7 +192,7 @@ namespace ipo
       for (auto& pointData : _points)
       {
         T product = 0.0;
-        for (const auto& iter : pointData.vector)
+        for (const auto& iter : *pointData.vector)
           product += double(objectiveVector[iter.first]) * double(iter.second);
 
         if (product <= threshold)
@@ -217,7 +217,7 @@ namespace ipo
     {
       double product;
       double hash;
-      sparse_vector<T> vector; /// The cached point/ray.
+      std::shared_ptr<sparse_vector<T>> vector; /// The cached point/ray.
       std::size_t lastSuccess; /// Largest query number at which this vector was returned.
       double normalization; /// Inverse of Euclidean norm of vector.
 

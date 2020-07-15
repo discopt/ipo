@@ -152,13 +152,13 @@ namespace ipo
   void RationalMIPExtender::extractRay(OptimizationOracle<rational>::Result& result)
   {
     _spx.getPrimalRayRational(_coefficients, _integrality.size());
-    sparse_vector<rational> ray;
+    auto ray = std::make_shared<sparse_vector<rational>>();
     for (std::size_t i = 0; i < _integrality.size(); ++i)
     {
       if (_coefficients[i] != 0)
-        ray.push_back(i, rational(_coefficients[i]));
+        ray->push_back(i, rational(_coefficients[i]));
     }
-    result.rays.push_back(OptimizationOracle<rational>::Result::Ray(std::move(ray)));
+    result.rays.push_back(OptimizationOracle<rational>::Result::Ray(ray));
   }
 
   void RationalMIPExtender::preparePoint(
@@ -175,7 +175,7 @@ namespace ipo
     }
 
     // Now go through the current solution vector and fix the integral variables.
-    for (const auto& iter : approximatePoint.vector)
+    for (const auto& iter : *approximatePoint.vector)
     {
       if (_integrality[iter.first])
       {
@@ -189,22 +189,21 @@ namespace ipo
     const rational* objectiveVector)
   {
     _spx.getPrimalRational(_coefficients, _integrality.size());
-    sparse_vector<rational> point;
+    auto point = std::make_shared<sparse_vector<rational>>();
     rational objectiveValue = 0;
     for (std::size_t i = 0; i < _integrality.size(); ++i)
     {
       if (mpq_sgn(_coefficients[i]) != 0)
       {
         rational x(mpq_class(_coefficients[i]));
-        point.push_back(i, x);
+        point->push_back(i, x);
         if (objectiveVector)
           objectiveValue += objectiveVector[i] * x;
       }
     }
     if (!objectiveVector)
       objectiveValue = rational(*_spx.objValueRational().getMpqPtr());
-    result.points.push_back(OptimizationOracle<rational>::Result::Point(std::move(point),
-      objectiveValue));
+    result.points.push_back(OptimizationOracle<rational>::Result::Point(point, objectiveValue));
   }
 
   OptimizationOracle<rational>::Result RationalMIPExtender::maximize(
