@@ -193,7 +193,7 @@ public:
         if (iter1 == end())
           return result;
         ++iter2;
-        if (iter2 == end())
+        if (iter2 == other.end())
           return result;
       }
     }
