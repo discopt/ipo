@@ -4,6 +4,7 @@
 #include <vector>
 #include <cassert>
 #include <algorithm>
+#include <cmath>
 
 template <class T>
 class sparse_vector
@@ -265,3 +266,73 @@ std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
   return stream << ']';
 }
 
+template <typename U, typename T>
+double squaredEuclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
+{
+  double result = 0.0;
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  typename sparse_vector<T>::const_iterator ib = b.begin();
+  if (ia != a.end() && ib != b.end())
+  {
+    while (true)
+    {
+      if (ia->first < ib->first)
+      {
+        double x = double(ia->second);
+        result += x*x;
+        ++ia;
+        if (ia == a.end())
+          break;
+      }
+      else if (ia->first > ib->first)
+      {
+        double x = double(ib->second);
+        result += x*x;
+        ++ib;
+        if (ib == b.end())
+          break;
+      }
+      else
+      {
+        double x = double(ia->second - ib->second);
+        result += x*x;
+        ++ia;
+        ++ib;
+        if (ia == a.end() || ib == b.end())
+          break;
+      }
+    }
+  }
+  for (; ia != a.end(); ++ia)
+  {
+    double x = double(ia->second);
+    result += x*x;
+  }
+  for (; ib != b.end(); ++ib)
+  {
+    double x = double(ib->second);
+    result += x*x;
+  }
+  return result;
+}
+
+template <typename U, typename T>
+double euclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
+{
+  return sqrt(squaredEuclideanDistance(a, b));
+}
+
+template <typename T>
+T squaredEuclideanNorm(const sparse_vector<T>& vector)
+{
+  T result = 0.0;
+  for (const auto& iter : vector)
+    result += iter.second * iter.second;
+  return result;
+}
+
+template <typename T>
+double euclideanNorm(const sparse_vector<T>& vector)
+{
+  return sqrt(double(squaredEuclideanNorm(vector)));
+}

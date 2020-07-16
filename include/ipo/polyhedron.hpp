@@ -157,8 +157,6 @@ namespace ipo
       const typename OptimizationOracle<T>::Query& query) override
     {
       typename OptimizationOracle<T>::Result result;
-      return result;
-
       ++_queryCount;
 
       // Compute norm of objective vector.
@@ -272,7 +270,6 @@ namespace ipo
       return result;
     }
 
-
   protected:
     Polyhedron<T>* _polyhedron;
     std::size_t _queryCount;
@@ -285,13 +282,12 @@ namespace ipo
     Polyhedron() = delete;
 
     Polyhedron(std::shared_ptr<Space> space)
-      : _space(space), _historySize(16)
+      : _space(space)
     {
       initialize();
     }
 
     Polyhedron(std::shared_ptr<OptimizationOracle<T>> optimizationOracle)
-      : _historySize(16)
     {
       _space = optimizationOracle->space();
       _cacheOptimization = std::make_shared<CacheOptimizationOracle<T>>(this);
@@ -301,9 +297,9 @@ namespace ipo
     }
 
     Polyhedron(std::shared_ptr<SeparationOracle<T>> separationOracle)
-      : _historySize(16)
     {
       _separation.push_back(Data<SeparationOracle<T>>(separationOracle));
+      _space = separationOracle->space();
       initialize();
     }
 
@@ -326,7 +322,10 @@ namespace ipo
       }
       for (std::size_t v = 0; v < _space->dimension(); ++v)
         _hashVector[v] /= squaredNorm;
-      _hashEpsilon = 1.0e-9;
+      _squaredDuplicateEpsilon = 1.0e-12;
+
+      _historySize = 256;
+      _maxCacheSize = std::numeric_limits<std::size_t>::max();
     }
 
     ~Polyhedron()
@@ -366,9 +365,13 @@ namespace ipo
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
         result = data.oracle->maximizeDouble(objectiveVector, query);
-        double elapsed = (std::chrono::system_clock::now() - timeStarted).count();
+        double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
+        std::cout << "Oracle " << data.oracle->name() << " used on average "
+          << (data.sumRunningTime / data.history.size()) << "s in the last " << data.history.size()
+          << " queries of which " << data.sumSuccess << " were successful." << std::endl;
+
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
@@ -401,69 +404,27 @@ namespace ipo
 
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
 
-        std::chrono::time_point<std::chrono::system_clock> started = std::chrono::system_clock::now();
+        std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
         result = data.oracle->maximize(objectiveVector, query);
-        std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+        double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
-        data.updateHistory(duration.count(), !result.isInfeasible(), _historySize);
+        data.updateHistory(elapsed, result.isUnbounded() || result.isFeasible() || result.isInfeasible(), _historySize);
+        std::cout << "Oracle " << data.oracle->name() << " used on average "
+          << (data.sumRunningTime / data.history.size()) << "s in the last " << data.history.size()
+          << " queries of which " << data.sumSuccess << " were successful." << std::endl;
 
         // If the current oracle found a ray or a point, we stop.
         if (result.isUnbounded() || result.isFeasible() || result.isInfeasible())
         {
           if (!data.isCache)
           {
-            // We add all points to the cache.
+            // We add points / rays to the cache.
+
+            for (auto& ray : result.rays)
+              addToCache(_rays, _hashToRayIndex, _rayProducts, ray.vector);
 
             for (auto& point : result.points)
-            {
-              std::shared_ptr<sparse_vector<T>> vector = point.vector;
-              
-              std::cout << "Checking " << *vector << " for duplicate." << std::endl;
-              
-              double inverseNorm = 0.0;
-              for (auto& iter : *vector)
-              {
-                double x = iter.second;
-                inverseNorm += x*x;
-              }
-              if (inverseNorm > 0.0)
-                inverseNorm = 1.0 / sqrt(inverseNorm);
-              else
-                inverseNorm = 1.0;
-              double hash = *vector * _hashVector;
-              auto afterIter = _hashToPointIndex.lower_bound(hash);
-              double afterDist = std::numeric_limits<double>::infinity();
-              if (afterIter != _hashToPointIndex.end())
-                afterDist = afterIter->first - hash;
-              auto beforeIter = afterIter;
-              double beforeDist = std::numeric_limits<double>::infinity();
-              if (afterIter != _hashToPointIndex.begin())
-              {
-                --beforeIter;
-                beforeDist = hash - beforeIter->first;
-              }
-              if (beforeDist < afterDist && beforeDist * inverseNorm <= _hashEpsilon)
-              {
-                std::cout << "The before iterator is close enough with distance " << beforeDist << "." << std::endl;
-                std::cout << "Replacing " << *vector << " by " << *_points[beforeIter->second].vector << std::endl;
-                point.vector = _points[beforeIter->second].vector;
-                // TODO: Recompute objective value.
-              }
-              else if (afterDist <= beforeDist && afterDist * inverseNorm <= _hashEpsilon)
-              {
-                std::cout << "The after iterator is close enough with distance " << afterDist << "." << std::endl;
-                std::cout << "Replacing " << *vector << " by " << *_points[afterIter->second].vector << std::endl;
-                point.vector = _points[afterIter->second].vector;
-                // TODO: Recompute objective value.
-              }
-              else
-              {
-                std::cout << "No iterator is close enough." << std::endl;
-                _hashToPointIndex.insert(afterIter, std::make_pair(hash, _points.size()));
-                _pointProducts.push_back(ProductVector(_points.size()));
-                _points.push_back(CachedVector(point.vector, hash, inverseNorm));
-              }
-            }
+              addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
           }
 
           return result;
@@ -475,14 +436,85 @@ namespace ipo
 
   protected:
 
-    IPO_EXPORT
+    struct CachedVector
+    {
+      std::shared_ptr<sparse_vector<T>> vector; /// The cached point/ray.
+      double hash; /// The scalar product with the random vector used for hashing.
+      std::size_t lastSuccess; /// Largest query number at which this vector was returned.
+      double inverseNorm; /// Inverse of Euclidean norm of vector.
+
+      CachedVector(std::shared_ptr<sparse_vector<T>> vec, double hsh)
+        : vector(vec), hash(hsh), lastSuccess(0)
+      {
+        inverseNorm = euclideanNorm(*vec);
+        if (inverseNorm > 0.0)
+          inverseNorm = 1.0 / inverseNorm;
+      }
+    };
+
+    struct ProductVector
+    {
+      std::size_t vectorIndex;
+      double product;
+
+      ProductVector(std::size_t index)
+        : vectorIndex(index), product(0)
+      {
+
+      }
+
+      bool operator<(const ProductVector& other) const
+      {
+        return product > other.product;
+      }
+    };
+
+    void addToCache(std::vector<CachedVector>& vectors, std::map<double, std::size_t>& hashToIndex,
+      std::vector<ProductVector>& products, std::shared_ptr<sparse_vector<T>>& vector)
+    {
+      double hash = *vector * _hashVector;
+      auto afterIter = hashToIndex.lower_bound(hash);
+      double afterDist = std::numeric_limits<double>::infinity();
+      if (afterIter != hashToIndex.end())
+        afterDist = afterIter->first - hash;
+      auto beforeIter = afterIter;
+      double beforeDist = std::numeric_limits<double>::infinity();
+      if (afterIter != hashToIndex.begin())
+      {
+        --beforeIter;
+        beforeDist = hash - beforeIter->first;
+      }
+      std::cout << afterDist << "," << beforeDist << std::endl;
+      if (beforeDist < afterDist && squaredEuclideanDistance(
+        *vector, *vectors[beforeIter->second].vector) < _squaredDuplicateEpsilon)
+      {
+        vector = vectors[beforeIter->second].vector;
+        // TODO: Recompute objective value.
+      }
+      else if (afterDist <= beforeDist && std::isfinite(afterDist) && squaredEuclideanDistance(
+        *vector, *vectors[afterIter->second].vector) < _squaredDuplicateEpsilon)
+      {
+        vector = vectors[afterIter->second].vector;
+        // TODO: Recompute objective value.
+      }
+      else
+      {
+        hashToIndex.insert(afterIter, std::make_pair(hash, vectors.size()));
+        products.push_back(ProductVector(vectors.size()));
+        vectors.push_back(CachedVector(vector, hash));
+      }
+    }
+
     void sortOptimizationOracles()
     {
       // In case the expected successful running times have changed, we reorder the oracles such that
       // the one with the smallest value is queried first.
 
-      if (!std::is_sorted(_optimization.begin(), _optimization.end()))
-        std::sort(_optimization.begin(), _optimization.end());
+      std::sort(_optimization.begin(), _optimization.end());
+
+      // The cache oracle should not be the last one.
+      if (_optimization.size() > 1 && _optimization.back().isCache)
+        std::swap(_optimization[_optimization.size() - 2], _optimization[_optimization.size() - 1]);
 
       if (_optimization.size() > 1)
       {
@@ -506,22 +538,27 @@ namespace ipo
 
         if (cacheOracle < std::numeric_limits<std::size_t>::max())
         {
-          // If the expected running time of cache oracle is at least that of the slowest oracle, then
-          // we have to reduce the cache size.
+          // If the expected running time of cache oracle is at least half of the slowest oracle,
+          // then we reduce the cache size.
 
           double cacheRunningTime = _optimization[cacheOracle].sumRunningTime
             / _optimization[cacheOracle].history.size();
-          if (cacheRunningTime >= maxRunningTime)
-          {
-            auto oracle = dynamic_cast<CacheOptimizationOracle<T>&>(
-              *_optimization[cacheOracle].oracle);
-//             oracle.reduceCacheSize();
-          }
+          if (cacheRunningTime >= 0.5 * maxRunningTime)
+            reduceCacheSize();
         }
       }
     }
 
   protected:
+
+    void reduceCacheSize()
+    {
+      std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size())
+        << " of " << _maxCacheSize << std::endl;
+
+      assert(false);
+    }
+
     struct QueryStatistics
     {
       double runningTime;
@@ -589,37 +626,6 @@ namespace ipo
       }
     };
 
-    struct CachedVector
-    {
-      std::shared_ptr<sparse_vector<T>> vector; /// The cached point/ray.
-      double hash; /// The scalar product with the random vector used for hashing.
-      std::size_t lastSuccess; /// Largest query number at which this vector was returned.
-      double inverseNorm; /// Inverse of Euclidean norm of vector.
-
-      CachedVector(std::shared_ptr<sparse_vector<T>> vec, double hsh, double inorm)
-        : vector(vec), hash(hsh), lastSuccess(0), inverseNorm(inorm)
-      {
-
-      }
-    };
-
-    struct ProductVector
-    {
-      std::size_t vectorIndex;
-      double product;
-
-      ProductVector(std::size_t index)
-        : vectorIndex(index), product(0)
-      {
-
-      }
-
-      bool operator<(const ProductVector& other) const
-      {
-        return product > other.product;
-      }
-    };
-
     friend CacheOptimizationOracle<T>;
 
     std::shared_ptr<Space> _space;
@@ -633,10 +639,14 @@ namespace ipo
     std::vector<CachedVector> _rays;
     std::map<double, std::size_t> _hashToRayIndex;
     std::vector<ProductVector> _rayProducts;
-    double _hashEpsilon;
+    /**
+     * \brief Square of Euclidean distance above which points/rays are considered as different.
+     */
+    double _squaredDuplicateEpsilon;
     double _normalizedRayEpsilon;
     double _normalizedPointEpsilon;
     std::size_t _historySize;
+    std::size_t _maxCacheSize;
   };
 
 } /* namespace ipo */
