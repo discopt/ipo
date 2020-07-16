@@ -352,6 +352,14 @@ namespace ipo
     return std::isfinite(x);
   }
 
+  IPO_EXPORT
+  inline rational operator*(double a, const rational& b)
+  {
+    if (std::isfinite(a) && b.isFinite())
+      return rational(a * b.get_mpq_class());
+    return rational(a * double(b));
+  }
+
   struct DoubleIsZero
   {
     double epsilon;

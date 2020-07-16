@@ -23,7 +23,7 @@ namespace ipo
       const std::vector<std::pair<double, double>>& bounds);
 
     IPO_EXPORT
-    ~RationalMIPExtender();
+    virtual ~RationalMIPExtender();
 
     IPO_EXPORT
     void addConstraint(const Constraint<rational>& constraint);
@@ -89,7 +89,7 @@ namespace ipo
   {
   public:
     IPO_EXPORT
-    RationalMIPExtendedOptimizationOracle(std::shared_ptr<RationalMIPExtender> extender,
+    RationalMIPExtendedOptimizationOracle(RationalMIPExtender* extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       std::shared_ptr<Constraint<rational>> face);
 
@@ -105,7 +105,7 @@ namespace ipo
       const OptimizationOracle<rational>::Query& query) override;
 
   protected:
-    std::shared_ptr<RationalMIPExtender> _extender;
+    RationalMIPExtender* _extender;
     std::shared_ptr<OptimizationOracle<double>> _approximateOracle;
     std::shared_ptr<Constraint<rational>> _face;
   };

@@ -153,8 +153,8 @@ namespace ipo
 
       IPO_EXPORT
       Result()
-        : primalBound(-std::numeric_limits<double>::infinity()),
-        dualBound(std::numeric_limits<double>::infinity()), hitTimeLimit(false)
+        : primalBound(std::numeric_limits<double>::signaling_NaN()),
+        dualBound(std::numeric_limits<double>::signaling_NaN()), hitTimeLimit(false)
       {
 
       }

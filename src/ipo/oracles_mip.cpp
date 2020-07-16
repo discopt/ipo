@@ -52,6 +52,7 @@ namespace ipo
     delete[] _coefficients;
     delete[] _originalLowerBounds;
     delete[] _originalUpperBounds;
+    delete[] _indices;
   }
 
   void RationalMIPExtender::addConstraint(const Constraint<rational>& constraint)
@@ -351,7 +352,7 @@ namespace ipo
   }
 
   RationalMIPExtendedOptimizationOracle::RationalMIPExtendedOptimizationOracle(
-    std::shared_ptr<RationalMIPExtender> extender,
+    RationalMIPExtender* extender,
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     std::shared_ptr<Constraint<rational>> face)
     : OptimizationOracle<rational>("Rational " + approximateOracle->name()), _extender(extender),

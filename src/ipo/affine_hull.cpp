@@ -164,7 +164,7 @@ namespace ipo
   }
 
   template <typename T, typename IsZero>
-  void affineHullImplementation(std::shared_ptr<Polyhedron<T, IsZero>> polyhedron,
+  void affineHullImplementation(std::shared_ptr<Polyhedron<T>> polyhedron,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays,
     std::vector<Constraint<T>>& resultEquations, const AffineHullQuery& query,
@@ -467,7 +467,7 @@ namespace ipo
   }
 
   AffineHullResult<double> affineHull(
-    std::shared_ptr<Polyhedron<double, DoubleIsZero>> polyhedron,
+    std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
     AffineHullResult<double> result;
@@ -479,7 +479,7 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
 
   AffineHullResult<rational> affineHull(
-    std::shared_ptr<Polyhedron<rational, RationalIsZero>> polyhedron,
+    std::shared_ptr<Polyhedron<rational>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<rational>>& knownEquations)
   {
     AffineHullResult<rational> result;

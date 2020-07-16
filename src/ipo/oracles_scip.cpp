@@ -327,11 +327,11 @@ namespace ipo
         bounds[i].second = std::numeric_limits<double>::infinity();
     }
 
-    _extender = std::make_shared<RationalMIPExtender>(integrality, bounds);
+    _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
     {
-      std::shared_ptr<RationalMIPExtender> extender;
+      RationalMIPExtender* extender;
 
       void operator()(const Constraint<double>& constraint)
       {
@@ -345,6 +345,9 @@ namespace ipo
 
   SCIPSolver::~SCIPSolver()
   {
+    delete[] _instanceObjective;
+    delete _extender;
+
     for (auto& iter : _faceConstraints)
     {
       if (iter.second != nullptr)

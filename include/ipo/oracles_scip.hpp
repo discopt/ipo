@@ -229,7 +229,7 @@ namespace ipo
     std::unordered_map<std::shared_ptr<Constraint<double>>, SCIP_CONS*> _faceConstraints;
 
 #if defined(IPO_WITH_GMP)
-    std::shared_ptr<RationalMIPExtender> _extender;
+    RationalMIPExtender* _extender;
 #endif /* IPO_WITH_GMP */
   };
 

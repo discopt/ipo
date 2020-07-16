@@ -52,8 +52,7 @@ int main(int argc, char** argv)
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
-    auto poly = std::make_shared<ipo::Polyhedron<ipo::rational, ipo::RationalIsZero>>(opt,
-      ipo::RationalIsZero());
+    auto poly = std::make_shared<ipo::Polyhedron<ipo::rational>>(opt);
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<ipo::rational>> knownEquations;
@@ -74,8 +73,7 @@ int main(int argc, char** argv)
   else
   {
     auto opt = scip->getOptimizationOracleDouble();
-    auto poly = std::make_shared<ipo::Polyhedron<double, ipo::DoubleIsZero>>(opt,
-      ipo::DoubleIsZero(1.0e-9));
+    auto poly = std::make_shared<ipo::Polyhedron<double>>(opt);
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<double>> knownEquations;
