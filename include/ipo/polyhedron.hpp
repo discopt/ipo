@@ -368,9 +368,9 @@ namespace ipo
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
-        std::cout << "Oracle " << data.oracle->name() << " used on average "
-          << (data.sumRunningTime / data.history.size()) << "s in the last " << data.history.size()
-          << " queries of which " << data.sumSuccess << " were successful." << std::endl;
+        std::cout << "Oracle " << data.oracle->name() << " took "
+          << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
+          << " queries " << data.sumSuccess << " of which were successful." << std::endl;
 
 
         // If the current oracle found a ray or a point, we stop.
@@ -409,9 +409,9 @@ namespace ipo
         double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, result.isUnbounded() || result.isFeasible() || result.isInfeasible(), _historySize);
-        std::cout << "Oracle " << data.oracle->name() << " used on average "
-          << (data.sumRunningTime / data.history.size()) << "s in the last " << data.history.size()
-          << " queries of which " << data.sumSuccess << " were successful." << std::endl;
+        std::cout << "Oracle " << data.oracle->name() << " took "
+          << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
+          << " queries " << data.sumSuccess << " of which were successful." << std::endl;
 
         // If the current oracle found a ray or a point, we stop.
         if (result.isUnbounded() || result.isFeasible() || result.isInfeasible())
@@ -484,7 +484,6 @@ namespace ipo
         --beforeIter;
         beforeDist = hash - beforeIter->first;
       }
-      std::cout << afterDist << "," << beforeDist << std::endl;
       if (beforeDist < afterDist && squaredEuclideanDistance(
         *vector, *vectors[beforeIter->second].vector) < _squaredDuplicateEpsilon)
       {

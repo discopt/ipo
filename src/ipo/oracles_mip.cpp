@@ -1,6 +1,8 @@
 #include <ipo/oracles_mip.hpp>
 
-#if defined(IPO_WITH_GMP)
+#define IPO_DEBUG_ORACLES_MIP // Uncomment to debug this file.
+
+#if defined (IPO_WITH_GMP)
 
 #include "reconstruct.hpp"
 
@@ -223,7 +225,11 @@ namespace ipo
     
     OptimizationOracle<double>::Result approximateResult = approximateOracle->maximize(
       &approximateObjectiveVector[0], approximateQuery);
-    
+
+#if defined(IPO_DEBUG_ORACLES_MIP)
+    std::cout << "RationalMIPExtender::maximize. Approx. result: " << approximateResult << std::endl;
+#endif /* IPO_DEBUG_ORACLES_MIP */
+
     OptimizationOracle<rational>::Result result;
     result.hitTimeLimit = approximateResult.hitTimeLimit;
     result.dualBound = approximateResult.dualBound;
@@ -234,7 +240,7 @@ namespace ipo
       mpq_set(_coefficients[0], objectiveVector[i].get_mpq_t());
       _spx.changeObjRational(i, _coefficients[0]);
     }
-    
+
     if (approximateResult.isInfeasible())
       result.primalBound = minusInfinity();
     else if (approximateResult.isUnbounded())
@@ -251,7 +257,7 @@ namespace ipo
       else
       {
         std::stringstream ss;
-        ss << "Error in RationalMIPExtender::solve. Unbounded approximate oracle with ray LP status "
+        ss << "Error in RationalMIPExtender::maximize. Unbounded approximate oracle with ray LP status "
           << status << '.';
         throw std::runtime_error(ss.str());
       }
@@ -271,7 +277,7 @@ namespace ipo
           else
           {
             std::stringstream ss;
-            ss << "Error in RationalMIPExtender::solve. Unbounded approximate oracle with point LP status "
+            ss << "Error in RationalMIPExtender::maximize. Unbounded approximate oracle with point LP status "
               << status << '.';
             throw std::runtime_error(ss.str());
           }
@@ -282,7 +288,7 @@ namespace ipo
     {
       assert(result.rays.empty());
 
-      result.primalBound = minusInfinity();
+      result.primalBound = query.minObjectiveValue;
       for (const auto& point : approximateResult.points)
       {
         preparePoint(point);
@@ -309,7 +315,7 @@ namespace ipo
         else if (status != soplex::SPxSolver::INFEASIBLE)
         {
           std::stringstream ss;
-            ss << "Error in RationalMIPExtender::solve. Optimal approximate oracle with point LP status "
+            ss << "Error in RationalMIPExtender::maximize. Optimal approximate oracle with point LP status "
                 << status << '.';
             throw std::runtime_error(ss.str());
         }
@@ -321,32 +327,10 @@ namespace ipo
         result.primalBound = query.minObjectiveValue;
       }
     }
-//     result.points.swap(points);
-// 
-//     if (approximateResult.isUnbounded())
-//     {
-//       result.dualBound = plusInfinity();
-//       result.primalBound = plusInfinity();
-//     }
-//     else if (approximateResult.isInfeasible())
-//     {
-//       result.dualBound = minusInfinity();
-//       result.primalBound = minusInfinity();
-//     }
-//     else
-//     {
-//       result.primalBound = minusInfinity();
-//       result.dualBound = approximateResult.dualBound;
-//       for (const auto& point : result.points)
-//       {
-//         if (point.objectiveValue > result.dualBound)
-//           result.dualBound = point.objectiveValue;
-//         if (point.objectiveValue > result.primalBound)
-//           result.primalBound = point.objectiveValue;
-//       }
-//       if (isMinusInfinity(result.primalBound))
-//         result.primalBound = query.minObjectiveValue;
-//     }
+
+#if defined(IPO_DEBUG_ORACLES_MIP)
+    std::cout << "RationalMIPExtender::maximize. Exact result: " << result << std::endl;
+#endif /* IPO_DEBUG_ORACLES_MIP */
 
     return result;
   }

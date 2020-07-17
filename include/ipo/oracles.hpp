@@ -460,4 +460,32 @@ namespace ipo
 
   };
 
+  IPO_EXPORT
+  inline std::ostream& operator<<(std::ostream& stream, OptimizationOracle<double>::Result& result)
+  {
+    stream << "{" << result.points.size() << " points, " << result.rays.size() << " rays, "
+      << double(result.primalBound) << " <= opt <= " << double(result.dualBound);
+    if (result.isUnbounded())
+      stream << ", unbounded";
+    if (result.isInfeasible())
+      stream << ", infeasible";
+    if (result.isFeasible())
+      stream << ", feasible";
+    return stream << "}";
+  }
+
+  IPO_EXPORT
+  inline std::ostream& operator<<(std::ostream& stream, OptimizationOracle<ipo::rational>::Result& result)
+  {
+    stream << "{" << result.points.size() << " points, " << result.rays.size() << " rays, "
+      << double(result.primalBound) << " <= opt <= " << double(result.dualBound);
+    if (result.isUnbounded())
+      stream << ", unbounded";
+    if (result.isInfeasible())
+      stream << ", infeasible";
+    if (result.isFeasible())
+      stream << ", feasible";
+    return stream << "}";
+  }
+
 } /* namespace ipo */

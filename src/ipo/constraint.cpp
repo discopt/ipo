@@ -1,7 +1,5 @@
 #include <ipo/constraint.hpp>
 
-// #include <iostream> // TODO: Debug
-
 #include "reconstruct.hpp"
 
 namespace ipo

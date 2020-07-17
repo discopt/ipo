@@ -300,8 +300,8 @@ namespace ipo
       result.timeOracles += elapsedTime(timeComponent);
 
       std::cout << " yields " << oracleResult.points.size() << " points and "
-        << oracleResult.rays.size() << " rays with optimum in [" << oracleResult.primalBound << ","
-        << oracleResult.dualBound << "]" << std::endl;
+        << oracleResult.rays.size() << " rays with optimum in [" << double(oracleResult.primalBound) << ","
+        << double(oracleResult.dualBound) << "]" << std::endl;
       if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
