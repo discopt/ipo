@@ -1,5 +1,8 @@
 #pragma once
 
+// #define IPO_DEBUG_LU_CHECK // Uncomment to enable dense checking of LU computations.
+// #define IPO_DEBUG_LU_PRINT // Uncomment to print activity.
+
 #include <ipo/config.hpp>
 
 #include <vector>
@@ -51,29 +54,25 @@ namespace ipo
 
     void extend(T* newRow, T* newColumn, T newDiagonal)
     {
-#ifdef IPO_DEBUG_LU
-      std::cout << "IncrementalLUFactorization::extend" << std::endl;
-      std::cout << "  row = [";
-      for (std::size_t i = 0; i < size(); ++i)
-        std::cout << (i > 0 ? " " : "") << newRow[i];
-      std::cout << "]" << std::endl;
-      std::cout << "  column = [";
-      for (std::size_t i = 0; i < size(); ++i)
-        std::cout << (i > 0 ? " " : "") << newColumn[i];
-      std::cout << "]" << std::endl;
-      std::cout << "  diagonal = " << newDiagonal << std::endl;
-#endif /* IPO_DEBUG_LU */
+#if defined(IPO_DEBUG_LU_CHECK)
+      for (std::size_t r = 0; r < size(); ++r)
+        _debugDenseMatrix[r].push_back(newColumn[r]);
+      _debugDenseMatrix.push_back(std::vector<T>());
+      for (std::size_t c = 0; c < size(); ++c)
+        _debugDenseMatrix.back().push_back(newRow[c]);
+      _debugDenseMatrix.back().push_back(newDiagonal);
+#endif /* IPO_DEBUG_LU_CHECK */
 
       /* Compute L^{-1} b */
 
       solveLeft(newColumn);
 
-#ifdef IPO_DEBUG_LU
+#if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "L^{-1}b = [";
       for (std::size_t i = 0; i < size(); ++i)
         std::cout << (i > 0 ? " " : "") << newColumn[i];
       std::cout << "]" << std::endl;
-#endif /* IPO_DEBUG_LU */
+#endif /* IPO_DEBUG_LU_PRINT */
 
       /* Compute U^{-T} a. The transpose U^T has a row-wise sparse representation.
        * We swipe over U^T from left to right. In step i, we compute x_i as a_i / U_{i,i} and
@@ -81,9 +80,9 @@ namespace ipo
        * of a.
        */
 
-#ifdef IPO_DEBUG_LU
+#if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "U^{-T}a = [";
-#endif /* IPO_DEBUG_LU */
+#endif /* IPO_DEBUG_LU_PRINT */
 
       std::vector<std::size_t> positions(size(), 0);
       for (std::size_t i = 0; i < size(); ++i)
@@ -92,9 +91,9 @@ namespace ipo
         assert(p_i == _upperRows[i].size() - 1);
         assert(_upperRows[i][p_i] == i);
         const T& x_i = newRow[i] /= _upperEntries[i][p_i];
-#ifdef IPO_DEBUG_LU
+#if defined(IPO_DEBUG_LU_PRINT)
         std::cout << (i > 0 ? " " : "") << x_i << std::flush;
-#endif /* IPO_DEBUG_LU */
+#endif /* IPO_DEBUG_LU_PRINT */
         for (std::size_t j = i+1; j < size(); ++j)
         {
           std::size_t p_j = positions[j];
@@ -107,9 +106,9 @@ namespace ipo
           }
         }
       }
-#ifdef IPO_DEBUG_LU
+#if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "]" << std::endl;
-#endif /* IPO_DEBUG_LU */
+#endif /* IPO_DEBUG_LU_PRINT */
 
       /* Cache size since we change it. */
       const std::size_t n = size();
@@ -117,9 +116,9 @@ namespace ipo
       /* Subtract the dot product of the new row and new column from the new diagonal. */
       for (std::size_t i = 0; i < n; ++i)
         newDiagonal -= newRow[i] * newColumn[i];
-#ifdef IPO_DEBUG_LU
+#if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "last diagonal = " << newDiagonal << std::endl;
-#endif /* IPO_DEBUG_LU */
+#endif /* IPO_DEBUG_LU_PRINT */
 #if !defined(NDEBUG)
       bool invertible = !_isZero(newDiagonal);
 #endif
@@ -160,28 +159,93 @@ namespace ipo
 
       assert(size() == n+1);
 
-#ifdef IPO_DEBUG_LU
-      std::vector<std::vector<T>> dump(size());
+#if defined(IPO_DEBUG_LU_CHECK)
+
+      // Dense versions of L and U.
+
+      _debugDenseLeft.resize(size());
+      _debugDenseUpper.resize(size());
+      std::vector<std::vector<T>> _debugProduct(size());
       for (std::size_t r = 0; r < size(); ++r)
-        dump[r] = std::vector<T>(size(), 0);
+      {
+        _debugDenseLeft[r] = std::vector<T>(size(), 0);
+        _debugDenseUpper[r] = std::vector<T>(size(), 0);
+        _debugProduct[r] = std::vector<T>(size(), 0);
+      }
       for (std::size_t c = 0; c < size(); ++c)
       {
         for (std::size_t p = 0; p < _leftRows[c].size(); ++p)
-          dump[_leftRows[c][p]][c] = _leftEntries[c][p];
+          _debugDenseLeft[_leftRows[c][p]][c] = _leftEntries[c][p];
       }
       for (std::size_t c = 0; c < size(); ++c)
       {
         for (std::size_t p = 0; p < _upperRows[c].size(); ++p)
-          dump[_upperRows[c][p]][c] = _upperEntries[c][p];
+          _debugDenseUpper[_upperRows[c][p]][c] = _upperEntries[c][p];
       }
-      std::cout << "Combined L and U matrix:\n";
+
       for (std::size_t r = 0; r < size(); ++r)
       {
         for (std::size_t c = 0; c < size(); ++c)
-          std::cout << " " << dump[r][c];
-        std::cout << std::endl;
+        {
+          for (std::size_t k = 0; k < size(); ++k)
+            _debugProduct[r][c] += _debugDenseLeft[r][k] * _debugDenseUpper[k][c];
+        }
       }
-#endif /* IPO_DEBUG_LU */
+
+      // Check if factorized matrix is equal to the product.
+
+      bool failure = false;
+      for (std::size_t r = 0; r < size(); ++r)
+      {
+        for (std::size_t c = 0; c < size(); ++c)
+        {
+          if (fabs(double(_debugDenseMatrix[r][c] - _debugProduct[r][c])) > 1.0e-9)
+            failure = true;
+        }
+      }
+      if (failure)
+      {
+        std::cout << "L*U is not equal to the factorized matrix." << std::endl;
+        std::cout << "Matrix:\n";
+        for (std::size_t r = 0; r < size(); ++r)
+        {
+          for (std::size_t c = 0; c < size(); ++c)
+            std::cout << " " << _debugDenseMatrix[r][c];
+          std::cout << std::endl;
+        }
+        std::cout << "L:\n";
+        for (std::size_t r = 0; r < size(); ++r)
+        {
+          for (std::size_t c = 0; c < size(); ++c)
+            std::cout << " " << _debugDenseLeft[r][c];
+          std::cout << std::endl;
+        }
+        std::cout << "U:\n";
+        for (std::size_t r = 0; r < size(); ++r)
+        {
+          for (std::size_t c = 0; c < size(); ++c)
+            std::cout << " " << _debugDenseUpper[r][c];
+          std::cout << std::endl;
+        }
+        std::cout << "L*U:\n";
+        for (std::size_t r = 0; r < size(); ++r)
+        {
+          for (std::size_t c = 0; c < size(); ++c)
+            std::cout << " " << _debugProduct[r][c];
+          std::cout << std::endl;
+        }
+        std::cout << "A-L*U:\n";
+        for (std::size_t r = 0; r < size(); ++r)
+        {
+          for (std::size_t c = 0; c < size(); ++c)
+          {
+            std::cout << " " << (_debugDenseMatrix[r][c] - _debugProduct[r][c]);
+          }
+          std::cout << std::endl;
+        }
+      }
+
+#endif /* IPO_DEBUG_LU_CHECK */
     }
 
     /**
@@ -229,6 +293,11 @@ namespace ipo
     std::vector<std::vector<T>> _leftEntries;
     std::vector<std::vector<std::size_t>> _upperRows;
     std::vector<std::vector<T>> _upperEntries;
+#if defined(IPO_DEBUG_LU_CHECK)
+    std::vector<std::vector<T>> _debugDenseLeft;
+    std::vector<std::vector<T>> _debugDenseUpper;
+    std::vector<std::vector<T>> _debugDenseMatrix;
+#endif /* IPO_DEBUG_LU_CHECK */
   };
 
 } /* namespace ipo */

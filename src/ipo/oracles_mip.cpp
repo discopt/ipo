@@ -1,6 +1,6 @@
 #include <ipo/oracles_mip.hpp>
 
-#define IPO_DEBUG_ORACLES_MIP // Uncomment to debug this file.
+// #define IPO_DEBUG_ORACLES_MIP // Uncomment to debug this file.
 
 #if defined (IPO_WITH_GMP)
 

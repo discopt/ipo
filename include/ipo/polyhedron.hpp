@@ -1,5 +1,7 @@
 #pragma once
 
+// #define IPO_DEBUG_POLYHEDRON // Uncomment to debug this file.
+
 #include <iostream>
 
 #include <ipo/config.hpp>
@@ -255,12 +257,16 @@ namespace ipo
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
       {
-        T product = 0.0;
-        for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
-          product += objectiveVector[iter.first] * iter.second;
-
-        if (product <= threshold || result.points.size() >= maxNumPoints)
+        if (result.points.size() >= maxNumPoints)
           break;
+        if (std::isfinite(threshold))
+        {
+          T product(0.0);
+          for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
+            product += objectiveVector[iter.first] * iter.second;
+          if (double(product) <= threshold)
+            break;
+        }
         result.points.push_back(typename OptimizationOracle<T>::Result::Point(
           _polyhedron->_points[pointProduct.vectorIndex].vector, pointProduct.product));
         _polyhedron->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
@@ -326,6 +332,8 @@ namespace ipo
 
       _historySize = 256;
       _maxCacheSize = std::numeric_limits<std::size_t>::max();
+      _normalizedPointEpsilon = 1.0e-9;
+      _normalizedRayEpsilon = 1.0e-9;
     }
 
     ~Polyhedron()
@@ -362,16 +370,21 @@ namespace ipo
 
         // Run current oracle.
 
+#if defined (IPO_DEBUG_POLYHEDRON)
+        std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
+#endif /* IPO_DEBUG_POLYHEDRON */
+
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
         result = data.oracle->maximizeDouble(objectiveVector, query);
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
+#if defined (IPO_DEBUG_POLYHEDRON)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful." << std::endl;
-
+#endif /* IPO_DEBUG_POLYHEDRON */
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
@@ -402,16 +415,21 @@ namespace ipo
 
         // Run current oracle.
 
+#if defined (IPO_DEBUG_POLYHEDRON)
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
+#endif /* IPO_DEBUG_POLYHEDRON */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
         result = data.oracle->maximize(objectiveVector, query);
         double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, result.isUnbounded() || result.isFeasible() || result.isInfeasible(), _historySize);
+
+#if defined (IPO_DEBUG_POLYHEDRON)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful." << std::endl;
+#endif /* IPO_DEBUG_POLYHEDRON */
 
         // If the current oracle found a ray or a point, we stop.
         if (result.isUnbounded() || result.isFeasible() || result.isInfeasible())
