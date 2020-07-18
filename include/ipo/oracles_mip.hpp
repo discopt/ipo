@@ -76,6 +76,7 @@ namespace ipo
       const rational* objectiveVector);
 
   protected:
+    bool _hasContinuous;
     soplex::SoPlex _spx;
     std::vector<bool> _integrality;
     int* _indices;

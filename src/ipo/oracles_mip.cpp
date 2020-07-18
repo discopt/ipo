@@ -14,6 +14,13 @@ namespace ipo
     : _integrality(integrality), _currentFace(std::make_shared<ipo::Constraint<rational>>(
     ipo::alwaysSatisfiedConstraint<rational>()))
   {
+    _hasContinuous = false;
+    for (bool isIntegral : _integrality)
+      _hasContinuous = _hasContinuous || !isIntegral;
+
+//     if (!_hasContinuous)
+//       throw std::runtime_error("Pure IP!");
+
     _spx.setIntParam(soplex::SoPlex::OBJSENSE, soplex::SoPlex::OBJSENSE_MAXIMIZE);
     _spx.setIntParam(soplex::SoPlex::SYNCMODE, soplex::SoPlex::SYNCMODE_AUTO);
     _spx.setRealParam(soplex::SoPlex::FEASTOL, 0.0);

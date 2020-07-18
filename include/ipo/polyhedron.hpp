@@ -1,6 +1,6 @@
 #pragma once
 
-// #define IPO_DEBUG_POLYHEDRON // Uncomment to debug this file.
+#define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
 
 #include <iostream>
 
@@ -370,9 +370,9 @@ namespace ipo
 
         // Run current oracle.
 
-#if defined (IPO_DEBUG_POLYHEDRON)
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON */
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
@@ -380,11 +380,11 @@ namespace ipo
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
-#if defined (IPO_DEBUG_POLYHEDRON)
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON */
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
         if (!result.isInfeasible())
@@ -415,9 +415,9 @@ namespace ipo
 
         // Run current oracle.
 
-#if defined (IPO_DEBUG_POLYHEDRON)
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON */
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
         result = data.oracle->maximize(objectiveVector, query);
@@ -425,11 +425,11 @@ namespace ipo
 
         data.updateHistory(elapsed, result.isUnbounded() || result.isFeasible() || result.isInfeasible(), _historySize);
 
-#if defined (IPO_DEBUG_POLYHEDRON)
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON */
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
         if (result.isUnbounded() || result.isFeasible() || result.isInfeasible())
@@ -570,9 +570,10 @@ namespace ipo
 
     void reduceCacheSize()
     {
+#if defined(IPO_DEBUG_POLYHEDRON_PRINT)
       std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size())
         << " of " << _maxCacheSize << std::endl;
-
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
       assert(false);
     }
 
