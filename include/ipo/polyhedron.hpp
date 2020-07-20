@@ -30,10 +30,10 @@ namespace ipo
       this->_space = polyhedron->space();
     }
 
-    virtual typename OptimizationOracle<T>::Result maximizeDouble(const double* objectiveVector,
+    virtual typename OptimizationOracle<T>::Response maximizeDouble(const double* objectiveVector,
       const typename OptimizationOracle<T>::Query& query) override
     {
-      typename OptimizationOracle<T>::Result result;
+      typename OptimizationOracle<T>::Response response;
       ++_queryCount;
 
       // Compute norm of objective vector.
@@ -81,11 +81,12 @@ namespace ipo
 
         if (product > epsilon)
         {
-          result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(
+          response.outcome = OPTIMIZATION_UNBOUNDED;
+          response.rays.push_back(typename OptimizationOracle<T>::Response::Ray(
             _polyhedron->_rays[rayProduct.vectorIndex].vector));
           _polyhedron->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
-          if (result.rays.size() >= query.maxNumSolutions)
-            return result;
+          if (response.rays.size() >= query.maxNumSolutions)
+            return response;
         }
         else
         {
@@ -94,12 +95,8 @@ namespace ipo
         }
       }
 
-      if (!result.rays.empty())
-      {
-        result.primalBound = std::numeric_limits<double>::infinity();
-        result.dualBound = std::numeric_limits<double>::signaling_NaN();
-        return result;
-      }
+      if (!response.rays.empty())
+        return response;
 
       // Compute scalar product with each point.
 
@@ -113,7 +110,7 @@ namespace ipo
 
       // Sort points according to product.
 
-      std::size_t maxNumPoints = query.maxNumSolutions - result.rays.size();
+      std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
       if (maxNumPoints < _polyhedron->_pointProducts.size())
       {
         std::nth_element(_polyhedron->_pointProducts.begin(),
@@ -139,26 +136,27 @@ namespace ipo
         if (product <= threshold)
           break;
 
-        result.points.push_back(typename OptimizationOracle<T>::Result::Point(
+        response.points.push_back(typename OptimizationOracle<T>::Response::Point(
           _polyhedron->_points[pointProduct.vectorIndex].vector, pointProduct.product));
         _polyhedron->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
-        if (result.points.size() >= maxNumPoints)
+        if (response.points.size() >= maxNumPoints)
           break;
       }
 
-      if (!result.points.empty())
+      if (!response.points.empty())
       {
-        result.sortPoints();
-        result.primalBound = result.points.front().objectiveValue;
+        response.sortPoints();
+        response.primalBound = response.points.front().objectiveValue;
+        response.outcome == OPTIMIZATION_FEASIBLE;
       }
 
-      return result;
+      return response;
     }
 
-    virtual typename OptimizationOracle<T>::Result maximize(const T* objectiveVector,
+    virtual typename OptimizationOracle<T>::Response maximize(const T* objectiveVector,
       const typename OptimizationOracle<T>::Query& query) override
     {
-      typename OptimizationOracle<T>::Result result;
+      typename OptimizationOracle<T>::Response response;
       ++_queryCount;
 
       // Compute norm of objective vector.
@@ -206,11 +204,12 @@ namespace ipo
 
         if (product > epsilon)
         {
-          result.rays.push_back(typename OptimizationOracle<T>::Result::Ray(
+          response.outcome = OPTIMIZATION_UNBOUNDED;
+          response.rays.push_back(typename OptimizationOracle<T>::Response::Ray(
             _polyhedron->_rays[rayProduct.vectorIndex].vector));
           _polyhedron->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
-          if (result.rays.size() >= query.maxNumSolutions)
-            return result;
+          if (response.rays.size() >= query.maxNumSolutions)
+            return response;
         }
         else
         {
@@ -219,12 +218,8 @@ namespace ipo
         }
       }
 
-      if (!result.rays.empty())
-      {
-        result.primalBound = std::numeric_limits<double>::infinity();
-        result.dualBound = std::numeric_limits<double>::signaling_NaN();
-        return result;
-      }
+      if (!response.rays.empty())
+        return response;
 
       // Compute scalar product with each point.
 
@@ -238,7 +233,7 @@ namespace ipo
 
       // Sort points according to product.
 
-      std::size_t maxNumPoints = query.maxNumSolutions - result.rays.size();
+      std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
       if (maxNumPoints < _polyhedron->_pointProducts.size())
       {
         std::nth_element(_polyhedron->_pointProducts.begin(),
@@ -257,7 +252,7 @@ namespace ipo
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
       {
-        if (result.points.size() >= maxNumPoints)
+        if (response.points.size() >= maxNumPoints)
           break;
         if (std::isfinite(threshold))
         {
@@ -267,13 +262,19 @@ namespace ipo
           if (double(product) <= threshold)
             break;
         }
-        result.points.push_back(typename OptimizationOracle<T>::Result::Point(
+        response.points.push_back(typename OptimizationOracle<T>::Response::Point(
           _polyhedron->_points[pointProduct.vectorIndex].vector, pointProduct.product));
         _polyhedron->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
       }
 
-      assert(result.checkPointsSorted());
-      return result;
+      if (!response.points.empty())
+      {
+        response.primalBound = response.points.front().objectiveValue;
+        response.outcome == OPTIMIZATION_FEASIBLE;
+      }
+
+      assert(response.checkPointsSorted());
+      return response;
     }
 
   protected:
@@ -358,12 +359,12 @@ namespace ipo
      * \param query Structure for query.
      **/
 
-    typename OptimizationOracle<T>::Result maximizeDouble(const double* objectiveVector,
+    typename OptimizationOracle<T>::Response maximizeDouble(const double* objectiveVector,
       const typename OptimizationOracle<T>::Query& query)
     {
       sortOptimizationOracles();
 
-      typename OptimizationOracle<T>::Result result;
+      typename OptimizationOracle<T>::Response response;
       for (std::size_t o = 0; o < _optimization.size(); ++o)
       {
         Data<OptimizationOracle<T>>& data = _optimization[o];
@@ -376,10 +377,10 @@ namespace ipo
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
-        result = data.oracle->maximizeDouble(objectiveVector, query);
+        response = data.oracle->maximizeDouble(objectiveVector, query);
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
-        data.updateHistory(elapsed, !result.isInfeasible(), _historySize);
+        data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
 #if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
@@ -387,11 +388,11 @@ namespace ipo
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
-        if (!result.isInfeasible())
-          return result;
+        if (response.wasSuccessful())
+          return response;
       }
 
-      return result;
+      return response;
     }
 
     /**
@@ -402,12 +403,12 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    typename OptimizationOracle<T>::Result maximize(const T* objectiveVector,
+    typename OptimizationOracle<T>::Response maximize(const T* objectiveVector,
       const typename OptimizationOracle<T>::Query& query)
     {
       sortOptimizationOracles();
 
-      typename OptimizationOracle<T>::Result result;
+      typename OptimizationOracle<T>::Response response;
       std::size_t lastOracle = 0;
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
@@ -420,10 +421,10 @@ namespace ipo
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
-        result = data.oracle->maximize(objectiveVector, query);
+        response = data.oracle->maximize(objectiveVector, query);
         double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
-        data.updateHistory(elapsed, result.isUnbounded() || result.isFeasible() || result.isInfeasible(), _historySize);
+        data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
 
 #if defined (IPO_DEBUG_POLYHEDRON_PRINT)
         std::cout << "Oracle " << data.oracle->name() << " took "
@@ -432,24 +433,24 @@ namespace ipo
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
-        if (result.isUnbounded() || result.isFeasible() || result.isInfeasible())
+        if (response.wasSuccessful())
         {
           if (!data.isCache)
           {
             // We add points / rays to the cache.
 
-            for (auto& ray : result.rays)
+            for (auto& ray : response.rays)
               addToCache(_rays, _hashToRayIndex, _rayProducts, ray.vector);
 
-            for (auto& point : result.points)
+            for (auto& point : response.points)
               addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
           }
 
-          return result;
+          return response;
         }
       }
 
-      return result;
+      return response;
     }
 
   protected:
@@ -574,7 +575,6 @@ namespace ipo
       std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size())
         << " of " << _maxCacheSize << std::endl;
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
-      assert(false);
     }
 
     struct QueryStatistics

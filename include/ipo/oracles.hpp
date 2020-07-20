@@ -27,6 +27,7 @@ namespace ipo
     Oracle(const std::string& name)
       : _name(name), _space(nullptr)
     {
+
     }
 
     /**
@@ -54,6 +55,15 @@ namespace ipo
     std::shared_ptr<Space> _space;
   };
 
+  enum OptimizationOutcome
+  {
+    OPTIMIZATION_TIMEOUT = -1,
+    OPTIMIZATION_FOUNDNOTHING= 0,
+    OPTIMIZATION_UNBOUNDED = 1,
+    OPTIMIZATION_INFEASIBLE = 2,
+    OPTIMIZATION_FEASIBLE = 3
+  };
+
   template <typename T>
   class OptimizationOracle: public Oracle<T>
   {
@@ -64,6 +74,7 @@ namespace ipo
 
     struct Query
     {
+      bool hasMinObjectiveValue;
       /**
        * \brief Strict lower bound on objective value of returned points.
        * 
@@ -82,7 +93,7 @@ namespace ipo
 
       IPO_EXPORT
       Query()
-        : minObjectiveValue(-std::numeric_limits<double>::infinity()),
+        : hasMinObjectiveValue(false), minObjectiveValue(0),
         maxNumSolutions(std::numeric_limits<std::size_t>::max()),
         timeLimit(std::numeric_limits<double>::infinity())
       {
@@ -95,7 +106,7 @@ namespace ipo
      * \brief Structure for storing the query result.
      **/
 
-    struct Result
+    struct Response
     {
       struct Point
       {
@@ -136,8 +147,12 @@ namespace ipo
 
       };
 
+      /// Outcome of query.
+      OptimizationOutcome outcome;
       /// Lower bound on the optimum.
       T primalBound;
+      /// Whether we know a finite upper bound.
+      bool hasDualBound;
       /// Upper bound on the optimum.
       T dualBound;
       /// Array with objective values and vectors of all points.
@@ -152,9 +167,9 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Result()
-        : primalBound(std::numeric_limits<double>::signaling_NaN()),
-        dualBound(std::numeric_limits<double>::signaling_NaN()), hitTimeLimit(false)
+      Response()
+        : outcome(OPTIMIZATION_FOUNDNOTHING), primalBound(0), hasDualBound(false), dualBound(0),
+        hitTimeLimit(false)
       {
 
       }
@@ -164,8 +179,9 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Result(Result&& other)
-        : primalBound(other.primalBound), dualBound(other.dualBound),
+      Response(Response&& other)
+        : outcome(other.outcome), primalBound(std::move(other.primalBound)),
+        hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)),
         points(std::move(other.points)), rays(std::move(other.rays)), 
         hitTimeLimit(other.hitTimeLimit)
       {
@@ -179,9 +195,11 @@ namespace ipo
        */
 
       IPO_EXPORT
-      inline Result& operator=(Result&& other)
+      inline Response& operator=(Response&& other)
       {
+        outcome = other.outcome;
         primalBound = std::move(other.primalBound);
+        hasDualBound = other.hasDualBound;
         dualBound = std::move(other.dualBound);
         points = std::move(other.points);
         rays = std::move(other.rays);
@@ -189,34 +207,11 @@ namespace ipo
         return *this;
       }
 
-      /**
-       * \brief Returns \c true if the problem was infeasible.
-       */
-
       IPO_EXPORT
-      inline bool isInfeasible() const
+      inline bool wasSuccessful() const
       {
-        return isMinusInfinity(primalBound);
-      }
-
-      /**
-       * \brief Returns \c true if the polyhedron is non-empty.
-       */
-
-      IPO_EXPORT
-      inline bool isFeasible() const
-      {
-        return isFinite(primalBound);
-      }
-
-      /**
-       * \brief Returns \c true if the problem was unbounded.
-       */
-
-      IPO_EXPORT
-      inline bool isUnbounded() const
-      {
-        return isPlusInfinity(primalBound);
+        return outcome == OPTIMIZATION_INFEASIBLE || outcome == OPTIMIZATION_UNBOUNDED
+          || outcome == OPTIMIZATION_FEASIBLE;
       }
 
       /**
@@ -264,14 +259,12 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result maximizeDouble(const double* objectiveVector, const Query& query)
+    virtual Response maximizeDouble(const double* objectiveVector, const Query& query)
     {
-      T* temp = new T[this->space()->dimension()];
+      std::vector<T> tempObjectiveVector(this->space()->dimension());
       for (std::size_t i = 0; i < this->space()->dimension(); ++i)
-        temp[i] = objectiveVector[i];
-      Result result(maximize(temp, query));
-      delete[] temp;
-      return result;
+        tempObjectiveVector[i] = objectiveVector[i];
+      return maximize(&tempObjectiveVector[0], query);
     }
 
     /**
@@ -283,7 +276,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result maximize(const T* objectiveVector, const Query& query) = 0;
+    virtual Response maximize(const T* objectiveVector, const Query& query) = 0;
 
   };
 
@@ -326,7 +319,7 @@ namespace ipo
      * \brief Structure for storing the query result.
      **/
 
-    struct Result
+    struct Response
     {
       /// Array with constraints.
       std::vector<Constraint<T>> constraints;
@@ -338,7 +331,7 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Result()
+      Response()
         : hitTimeLimit(false)
       {
 
@@ -349,7 +342,7 @@ namespace ipo
        */
 
       IPO_EXPORT
-      Result(Result&& other)
+      Response(Response&& other)
         : constraints(std::move(other.constraints)), hitTimeLimit(other.hitTimeLimit)
       {
 
@@ -362,7 +355,7 @@ namespace ipo
        */
 
       IPO_EXPORT
-      inline Result& operator=(Result&& other)
+      inline Response& operator=(Response&& other)
       {
         constraints = std::move(other.constraints);
         hitTimeLimit = other.hitTimeLimit;
@@ -376,7 +369,7 @@ namespace ipo
        */
 
       IPO_EXPORT
-      inline Result& operator=(const Result& other)
+      inline Response& operator=(const Response& other)
       {
         constraints = other.constraints;
         hitTimeLimit = other.hitTimeLimit;
@@ -414,9 +407,9 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result getInitial(const Query& query)
+    virtual Response getInitial(const Query& query)
     {
-      return Result();
+      return Response();
     }
 
     /**
@@ -434,14 +427,12 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result separateDouble(const double* vector, bool isPoint, const Query& query)
+    virtual Response separateDouble(const double* vector, bool isPoint, const Query& query)
     {
-      T* temp = new T[this->space()->dimension()];
+      std::vector<T> tempVector(this->space()->dimension());
       for (std::size_t i = 0; i < this->space()->dimension(); ++i)
-        temp[i] = vector[i];
-      Result result(std::move(separate(temp, isPoint, query)));
-      delete[] temp;
-      return result;
+        tempVector[i] = vector[i];
+      return separate(&tempVector[0], isPoint, query);
     }
 
     /**
@@ -456,36 +447,62 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result separate(const T* vector, bool isPoint, const Query& query) = 0;
+    virtual Response separate(const T* vector, bool isPoint, const Query& query) = 0;
 
   };
 
   IPO_EXPORT
-  inline std::ostream& operator<<(std::ostream& stream, OptimizationOracle<double>::Result& result)
+  inline std::ostream& operator<<(std::ostream& stream,
+    OptimizationOracle<double>::Response& response)
   {
-    stream << "{" << result.points.size() << " points, " << result.rays.size() << " rays, "
-      << double(result.primalBound) << " <= opt <= " << double(result.dualBound);
-    if (result.isUnbounded())
-      stream << ", unbounded";
-    if (result.isInfeasible())
-      stream << ", infeasible";
-    if (result.isFeasible())
-      stream << ", feasible";
-    return stream << "}";
+    switch(response.outcome)
+    {
+    case OPTIMIZATION_TIMEOUT:
+      return stream << "{timeout error}";
+    case OPTIMIZATION_FOUNDNOTHING:
+      return stream << "{found nothing}";
+    case OPTIMIZATION_UNBOUNDED:
+      return stream << "{unbounded, " << response.rays.size() << " rays, " << response.points.size()
+        << " points}";
+    case OPTIMIZATION_INFEASIBLE:
+      return stream << "{infeasible}";
+    case OPTIMIZATION_FEASIBLE:
+      assert(response.rays.empty());
+      stream << "{feasible, " << response.rays.size() << " rays, " << response.points.size()
+        << " points, " << double(response.primalBound) << " <= OPT";
+      if (response.hasDualBound)
+        stream << " <= " << double(response.dualBound);
+      return stream << "}";
+    default:
+      return stream << "{unknown error}";
+    }
   }
 
   IPO_EXPORT
-  inline std::ostream& operator<<(std::ostream& stream, OptimizationOracle<ipo::rational>::Result& result)
+  inline std::ostream& operator<<(std::ostream& stream,
+    OptimizationOracle<ipo::rational>::Response& response)
   {
-    stream << "{" << result.points.size() << " points, " << result.rays.size() << " rays, "
-      << double(result.primalBound) << " <= opt <= " << double(result.dualBound);
-    if (result.isUnbounded())
-      stream << ", unbounded";
-    if (result.isInfeasible())
-      stream << ", infeasible";
-    if (result.isFeasible())
-      stream << ", feasible";
-    return stream << "}";
+    switch(response.outcome)
+    {
+    case OPTIMIZATION_TIMEOUT:
+      return stream << "{timeout error}";
+    case OPTIMIZATION_FOUNDNOTHING:
+      return stream << "{found nothing}";
+    case OPTIMIZATION_UNBOUNDED:
+      return stream << "{unbounded, " << response.rays.size() << " rays, " << response.points.size()
+        << " points}";
+    case OPTIMIZATION_INFEASIBLE:
+      return stream << "{infeasible}";
+    case OPTIMIZATION_FEASIBLE:
+      assert(response.rays.empty());
+      stream << "{feasible, " << response.rays.size() << " rays, " << response.points.size()
+        << " points, " << double(response.primalBound) << " <= OPT";
+      if (response.hasDualBound)
+        stream << " <= " << double(response.dualBound);
+      return stream << "}";
+    default:
+      return stream << "{unknown error}";
+    }
   }
 
 } /* namespace ipo */

@@ -38,14 +38,14 @@ TEST(Oracles, SCIP)
     double obj[] = {1.0, 1.0};
     ipo::OptimizationOracle<double>::Query query;
     std::cout << "oracle->maximize()" << std::endl;
-    auto result = oracle->maximize(obj, query);
-    ASSERT_TRUE(result.isUnbounded());
-    ASSERT_TRUE(ipo::isPlusInfinity(result.dualBound));
-    ASSERT_FALSE(result.rays.empty());
-    ASSERT_EQ(result.rays[0].vector->size(), 2);
-    ASSERT_EQ(result.rays[0].vector->begin()->first, 0);
-    ASSERT_EQ((result.rays[0].vector->begin()+1)->first, 1);
-    ASSERT_NEAR(result.rays[0].vector->begin()->second / (result.rays[0].vector->begin()+1)->second,
+    auto response = oracle->maximize(obj, query);
+    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_UNBOUNDED);
+    ASSERT_FALSE(response.hasDualBound);
+    ASSERT_FALSE(response.rays.empty());
+    ASSERT_EQ(response.rays[0].vector->size(), 2);
+    ASSERT_EQ(response.rays[0].vector->begin()->first, 0);
+    ASSERT_EQ((response.rays[0].vector->begin()+1)->first, 1);
+    ASSERT_NEAR(response.rays[0].vector->begin()->second / (response.rays[0].vector->begin()+1)->second,
       0.5, 1.0e-9);
   }
 
@@ -79,10 +79,9 @@ TEST(Oracles, SCIP)
 
     double obj[] = { 1.0, 2.0 };
     ipo::OptimizationOracle<double>::Query query;
-    auto result = oracle->maximize(obj, query);
-    ASSERT_FALSE(result.isUnbounded());
-    ASSERT_FALSE(result.isFeasible());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.dualBound));
+    auto response = oracle->maximize(obj, query);
+    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_INFEASIBLE);
+    ASSERT_FALSE(response.hasDualBound);
   }
 
   std::cout << "===== Oracles::SCIP::Double::Separate ===== " << std::endl;
@@ -115,30 +114,30 @@ TEST(Oracles, SCIP)
 
     double vector[] = { 1.0, 1.0 };
     ipo::SeparationOracle<double>::Query query;
-    auto result = oracle->separate(vector, true, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_NEAR(result.constraints[0].rhs(), 1.5, 1.0e-9);
+    auto response = oracle->separate(vector, true, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_NEAR(response.constraints[0].rhs(), 1.5, 1.0e-9);
 
     vector[0] = 0.5;
     vector[1] = 0.5;
-    result = oracle->separate(vector, true, query);
-    ASSERT_TRUE(result.constraints.empty());
+    response = oracle->separate(vector, true, query);
+    ASSERT_TRUE(response.constraints.empty());
 
-    result = oracle->separate(vector, false, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_TRUE(fabs(result.constraints[0].rhs() - 1.2) < 1.0e-9
-      || fabs(result.constraints[0].rhs() - 1.4) < 1.0e-9
-      || fabs(result.constraints[0].rhs() - 1.5) < 1.0e-9
+    response = oracle->separate(vector, false, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_TRUE(fabs(response.constraints[0].rhs() - 1.2) < 1.0e-9
+      || fabs(response.constraints[0].rhs() - 1.4) < 1.0e-9
+      || fabs(response.constraints[0].rhs() - 1.5) < 1.0e-9
     );
 
     vector[0] = 2.0;
     vector[1] = -2.0;
-    result = oracle->separate(vector, true, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_NEAR(result.constraints[0].rhs(), 1.2, 1.0e-9);
+    response = oracle->separate(vector, true, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_NEAR(response.constraints[0].rhs(), 1.2, 1.0e-9);
   }
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
@@ -175,14 +174,14 @@ TEST(Oracles, SCIP)
 
     ipo::rational obj[] = {1.0, 1.0};
     ipo::OptimizationOracle<ipo::rational>::Query query;
-    auto result = oracle->maximize(obj, query);
-    ASSERT_TRUE(result.isUnbounded());
-    ASSERT_TRUE(ipo::isPlusInfinity(result.dualBound));
-    ASSERT_FALSE(result.rays.empty());
-    ASSERT_EQ(result.rays[0].vector->size(), 2);
-    ASSERT_EQ(result.rays[0].vector->begin()->first, 0);
-    ASSERT_EQ((result.rays[0].vector->begin()+1)->first, 1);
-    ASSERT_EQ(result.rays[0].vector->begin()->second / (result.rays[0].vector->begin()+1)->second,
+    auto response = oracle->maximize(obj, query);
+    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_UNBOUNDED);
+    ASSERT_FALSE(response.hasDualBound);
+    ASSERT_FALSE(response.rays.empty());
+    ASSERT_EQ(response.rays[0].vector->size(), 2);
+    ASSERT_EQ(response.rays[0].vector->begin()->first, 0);
+    ASSERT_EQ((response.rays[0].vector->begin()+1)->first, 1);
+    ASSERT_EQ(response.rays[0].vector->begin()->second / (response.rays[0].vector->begin()+1)->second,
       ipo::rational(1, 2));
   }
 
@@ -216,10 +215,9 @@ TEST(Oracles, SCIP)
 
     ipo::rational obj[] = { 1, 2 };
     ipo::OptimizationOracle<ipo::rational>::Query query;
-    auto result = oracle->maximize(obj, query);
-    ASSERT_FALSE(result.isUnbounded());
-    ASSERT_FALSE(result.isFeasible());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.dualBound));
+    auto response = oracle->maximize(obj, query);
+    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_INFEASIBLE);
+    ASSERT_FALSE(response.hasDualBound);
   }
 
   std::cout << "===== Oracles::SCIP::Rational::Separate ===== " << std::endl;
@@ -252,27 +250,27 @@ TEST(Oracles, SCIP)
 
     ipo::rational vector[] = { 20, 20 };
     ipo::SeparationOracle<ipo::rational>::Query query;
-    auto result = oracle->separate(vector, true, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_EQ(result.constraints[0].rhs(), ipo::rational(2));
+    auto response = oracle->separate(vector, true, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 
     vector[0] = 0.5;
     vector[1] = 0.5;
-    result = oracle->separate(vector, true, query);
-    ASSERT_TRUE(result.constraints.empty());
+    response = oracle->separate(vector, true, query);
+    ASSERT_TRUE(response.constraints.empty());
 
-    result = oracle->separate(vector, false, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_EQ(result.constraints[0].rhs(), ipo::rational(2));
+    response = oracle->separate(vector, false, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 
     vector[0] = 3.0;
     vector[1] = -3.0;
-      result = oracle->separate(vector, true, query);
-    ASSERT_FALSE(result.constraints.empty());
-    ASSERT_TRUE(ipo::isMinusInfinity(result.constraints[0].lhs()));
-    ASSERT_EQ(result.constraints[0].rhs(), ipo::rational(2));
+    response = oracle->separate(vector, true, query);
+    ASSERT_FALSE(response.constraints.empty());
+    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
   }
 
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */

@@ -12,27 +12,75 @@
 
 namespace ipo
 {
+  enum ConstraintType
+  {
+    EQUATION,
+    LESS_OR_EQUAL,
+    GREATER_OR_EQUAL,
+    RANGED
+  };
 
   template <typename T>
   class Constraint
   {
   public:
     IPO_EXPORT
-    Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>>& vector, const T& rhs)
-      : _lhs(lhs), _vector(vector), _rhs(rhs)
+    Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>> vector, const T& rhs,
+      ConstraintType type)
+      : _lhs(lhs), _vector(vector), _rhs(rhs), _type(type)
     {
-      assert(!isPlusInfinity(lhs));
-      assert(!isMinusInfinity(rhs));
-      assert(!(isMinusInfinity(lhs) && isPlusInfinity(rhs)));
-#if !defined(NDEBUG)
-      for (const auto& iter : *vector)
-        assert(iter.second != 0);
-#endif
+      assert(_type != RANGED || lhs <= rhs);
+      assert(_type != EQUATION || lhs == rhs);
     }
 
     IPO_EXPORT
-    Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>>& vector, T&& rhs)
-      : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(std::move(rhs))
+    Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector, T&& rhs, ConstraintType type)
+      : _lhs(std::move(lhs)), _vector(vector), _rhs(std::move(rhs)), _type(type)
+    {
+      assert(_type != RANGED || lhs <= rhs);
+      assert(_type != EQUATION || lhs == rhs);
+    }
+
+    IPO_EXPORT
+    Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>> vector, const T& rhs)
+      : _lhs(lhs), _vector(vector), _rhs(rhs), _type(lhs == rhs ? EQUATION : RANGED)
+    {
+      assert(lhs <= rhs);
+    }
+
+    IPO_EXPORT
+    Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector, T&& rhs)
+      : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(std::move(rhs)),
+      _type(lhs == rhs ? EQUATION : RANGED)
+    {
+      assert(lhs <= rhs);
+    }
+
+    IPO_EXPORT
+    Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>> vector)
+      : _lhs(lhs), _vector(vector), _rhs(0), _type(GREATER_OR_EQUAL)
+    {
+
+    }
+
+    IPO_EXPORT
+    Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector)
+      : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(0),
+      _type(GREATER_OR_EQUAL)
+    {
+
+    }
+
+    IPO_EXPORT
+    Constraint(std::shared_ptr<sparse_vector<T>> vector, const T& rhs)
+      : _lhs(0), _vector(vector), _rhs(rhs), _type(LESS_OR_EQUAL)
+    {
+
+    }
+
+    IPO_EXPORT
+    Constraint(std::shared_ptr<sparse_vector<T>> vector, T&& rhs)
+      : _lhs(0), _vector(std::move(vector)), _rhs(std::move(rhs)), _type(LESS_OR_EQUAL)
     {
 
     }
@@ -62,6 +110,12 @@ namespace ipo
     }
 
     IPO_EXPORT
+    ConstraintType type() const
+    {
+      return _type;
+    }
+
+    IPO_EXPORT
     const T& rhs() const
     {
       return _rhs;
@@ -71,6 +125,18 @@ namespace ipo
     bool isEquation() const
     {
       return _lhs == _rhs;
+    }
+
+    IPO_EXPORT
+    bool hasLhs() const
+    {
+      return _type != LESS_OR_EQUAL;
+    }
+
+    IPO_EXPORT
+    bool hasRhs() const
+    {
+      return _type != GREATER_OR_EQUAL;
     }
 
     IPO_EXPORT
@@ -89,20 +155,21 @@ namespace ipo
     T _lhs;
     std::shared_ptr<sparse_vector<T>> _vector;
     T _rhs;
+    ConstraintType _type;
   };
 
   template <typename T>
   Constraint<T> alwaysSatisfiedConstraint()
   {
     auto zero = std::make_shared<sparse_vector<T>>();
-    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), zero, T(1));
+    return Constraint<T>(zero, T(1));
   }
 
   template <typename T>
   Constraint<T> neverSatisfiedConstraint()
   {
     auto zero = std::make_shared<sparse_vector<T>>();
-    return Constraint<T>(T(-std::numeric_limits<double>::infinity()), zero, T(-1));
+    return Constraint<T>(zero, T(-1));
   }
 
   IPO_EXPORT

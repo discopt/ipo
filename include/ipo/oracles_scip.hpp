@@ -268,7 +268,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual OptimizationOracle<double>::Result maximizeDouble(const double* objectiveVector,
+    virtual OptimizationOracle<double>::Response maximizeDouble(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query) override
     {
       return maximize(objectiveVector, query);
@@ -283,7 +283,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual OptimizationOracle<double>::Result maximize(const double* objectiveVector,
+    virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query);
 
   protected:
@@ -328,7 +328,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    SeparationOracle<double>::Result getInitial(const SeparationOracle<double>::Query& query)
+    SeparationOracle<double>::Response getInitial(const SeparationOracle<double>::Query& query)
       override;
 
     /**
@@ -343,7 +343,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<double>::Result separateDouble(const double* vector, bool isPoint,
+    virtual SeparationOracle<double>::Response separateDouble(const double* vector, bool isPoint,
       const SeparationOracle<double>::Query& query)
     {
       return separate(vector, isPoint, query);
@@ -361,7 +361,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<double>::Result separate(const double* vector, bool isPoint,
+    virtual SeparationOracle<double>::Response separate(const double* vector, bool isPoint,
       const SeparationOracle<double>::Query& query);
 
   protected:

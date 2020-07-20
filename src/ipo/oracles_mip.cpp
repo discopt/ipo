@@ -35,12 +35,12 @@ namespace ipo
     {
       mpq_init(_coefficients[i]);
       mpq_init(_originalLowerBounds[i]);
-      if (isMinusInfinity(bounds[i].first))
+      if (bounds[i].first == -std::numeric_limits<double>::infinity())
         mpq_set_d(_originalLowerBounds[i], -soplex::infinity);
       else
         mpq_reconstruct(_originalLowerBounds[i], bounds[i].first);
       mpq_init(_originalUpperBounds[i]);
-      if (isPlusInfinity(bounds[i].second))
+      if (bounds[i].second == std::numeric_limits<double>::infinity())
         mpq_set_d(_originalUpperBounds[i], soplex::infinity);
       else
         mpq_reconstruct(_originalUpperBounds[i], bounds[i].second);
@@ -102,11 +102,11 @@ namespace ipo
       ++i;
     }
 
-    if (isMinusInfinity(constraint.lhs()))
+    if (constraint.type() == LESS_OR_EQUAL)
       mpq_set_d(rationalLhs, -soplex::infinity);
     else
       mpq_reconstruct(rationalLhs, constraint.lhs());
-    if (isPlusInfinity(constraint.rhs()))
+    if (constraint.type() == GREATER_OR_EQUAL)
       mpq_set_d(rationalRhs, soplex::infinity);
     else
       mpq_reconstruct(rationalRhs, constraint.rhs());
@@ -130,7 +130,7 @@ namespace ipo
     }
   }
 
-  OptimizationOracle<rational>::Result RationalMIPExtender::maximizeDouble(
+  OptimizationOracle<rational>::Response RationalMIPExtender::maximizeDouble(
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const double* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
@@ -159,7 +159,7 @@ namespace ipo
     }
   }
 
-  void RationalMIPExtender::extractRay(OptimizationOracle<rational>::Result& result)
+  void RationalMIPExtender::extractRay(OptimizationOracle<rational>::Response& result)
   {
     _spx.getPrimalRayRational(_coefficients, _integrality.size());
     auto ray = std::make_shared<sparse_vector<rational>>();
@@ -168,11 +168,11 @@ namespace ipo
       if (_coefficients[i] != 0)
         ray->push_back(i, rational(_coefficients[i]));
     }
-    result.rays.push_back(OptimizationOracle<rational>::Result::Ray(ray));
+    result.rays.push_back(OptimizationOracle<rational>::Response::Ray(ray));
   }
 
   void RationalMIPExtender::preparePoint(
-    const OptimizationOracle<double>::Result::Point& approximatePoint)
+    const OptimizationOracle<double>::Response::Point& approximatePoint)
   {
     // First, fix all integral columns to zero.
     for (std::size_t v = 0; v < _integrality.size(); ++v)
@@ -195,7 +195,7 @@ namespace ipo
     }
   }
   
-  void RationalMIPExtender::extractPoint(OptimizationOracle<rational>::Result& result,
+  void RationalMIPExtender::extractPoint(OptimizationOracle<rational>::Response& result,
     const rational* objectiveVector)
   {
     _spx.getPrimalRational(_coefficients, _integrality.size());
@@ -213,10 +213,10 @@ namespace ipo
     }
     if (!objectiveVector)
       objectiveValue = rational(*_spx.objValueRational().getMpqPtr());
-    result.points.push_back(OptimizationOracle<rational>::Result::Point(point, objectiveValue));
+    result.points.push_back(OptimizationOracle<rational>::Response::Point(point, objectiveValue));
   }
 
-  OptimizationOracle<rational>::Result RationalMIPExtender::maximize(
+  OptimizationOracle<rational>::Response RationalMIPExtender::maximize(
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const rational* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
@@ -230,16 +230,18 @@ namespace ipo
     approximateQuery.minObjectiveValue = query.minObjectiveValue.approximation();
     approximateQuery.timeLimit = query.timeLimit;
     
-    OptimizationOracle<double>::Result approximateResult = approximateOracle->maximize(
+    OptimizationOracle<double>::Response approximateResponse = approximateOracle->maximize(
       &approximateObjectiveVector[0], approximateQuery);
 
 #if defined(IPO_DEBUG_ORACLES_MIP)
-    std::cout << "RationalMIPExtender::maximize. Approx. result: " << approximateResult << std::endl;
+    std::cout << "RationalMIPExtender::maximize. Approx. response: " << approximateResponse
+      << std::endl;
 #endif /* IPO_DEBUG_ORACLES_MIP */
 
-    OptimizationOracle<rational>::Result result;
-    result.hitTimeLimit = approximateResult.hitTimeLimit;
-    result.dualBound = approximateResult.dualBound;
+    OptimizationOracle<rational>::Response response;
+    response.hitTimeLimit = approximateResponse.hitTimeLimit;
+    response.hasDualBound = approximateResponse.hasDualBound;
+    response.dualBound = approximateResponse.dualBound;
 
     // Set LP objective.
     for (std::size_t i = 0; i < _integrality.size(); ++i)
@@ -248,9 +250,9 @@ namespace ipo
       _spx.changeObjRational(i, _coefficients[0]);
     }
 
-    if (approximateResult.isInfeasible())
-      result.primalBound = minusInfinity();
-    else if (approximateResult.isUnbounded())
+    if (approximateResponse.outcome == OPTIMIZATION_INFEASIBLE)
+      response.outcome = OPTIMIZATION_INFEASIBLE;
+    else if (approximateResponse.outcome == OPTIMIZATION_UNBOUNDED)
     {
       prepareRay();
       soplex::SPxSolver::Status status = _spx.solve();
@@ -258,8 +260,8 @@ namespace ipo
       // Convert the ray by computing one for the LP relaxation.
       if (status == soplex::SPxSolver::UNBOUNDED)
       {
-        extractRay(result);
-        result.primalBound = plusInfinity();
+        extractRay(response);
+        response.outcome = OPTIMIZATION_UNBOUNDED;
       }
       else
       {
@@ -270,17 +272,17 @@ namespace ipo
       }
 
       // Also convert all points but without objective function.
-      if (!approximateResult.points.empty())
+      if (!approximateResponse.points.empty())
       {
         setZeroObjective();
 
-        for (const auto& point : approximateResult.points)
+        for (const auto& point : approximateResponse.points)
         {
           preparePoint(point);
           soplex::SPxSolver::Status status = _spx.solve();
 
           if (status == soplex::SPxSolver::OPTIMAL)
-            extractPoint(result, objectiveVector);
+            extractPoint(response, objectiveVector);
           else
           {
             std::stringstream ss;
@@ -293,31 +295,32 @@ namespace ipo
     }
     else
     {
-      assert(result.rays.empty());
+      assert(response.rays.empty());
 
-      result.primalBound = query.minObjectiveValue;
-      for (const auto& point : approximateResult.points)
+      response.outcome = approximateResponse.outcome;
+      response.primalBound = query.minObjectiveValue;
+      for (const auto& point : approximateResponse.points)
       {
         preparePoint(point);
         soplex::SPxSolver::Status status = _spx.solve();
 
         if (status == soplex::SPxSolver::OPTIMAL)
         {
-          extractPoint(result, nullptr);
-          const rational& value = result.points.back().objectiveValue;
-          if (value > result.dualBound)
-            result.dualBound = value;
-          if (value > result.primalBound)
-            result.primalBound = value;
+          extractPoint(response, nullptr);
+          const rational& value = response.points.back().objectiveValue;
+          if (response.hasDualBound && value > response.dualBound)
+            response.dualBound = value;
+          if (response.outcome == OPTIMIZATION_FEASIBLE && value > response.primalBound)
+            response.primalBound = value;
         }
         else if (status == soplex::SPxSolver::UNBOUNDED)
         {
-          if (!result.rays.empty())
+          if (!response.rays.empty())
             continue;
 
-          extractRay(result);
-          result.primalBound = plusInfinity();
-          result.dualBound = plusInfinity();
+          extractRay(response);
+          response.outcome = OPTIMIZATION_UNBOUNDED;
+          response.primalBound = 0;
         }
         else if (status != soplex::SPxSolver::INFEASIBLE)
         {
@@ -328,18 +331,19 @@ namespace ipo
         }
       }
 
-      if (isMinusInfinity(result.primalBound)
-        && approximateResult.primalBound == approximateQuery.minObjectiveValue)
+      if (response.outcome == OPTIMIZATION_FEASIBLE
+        && approximateResponse.outcome == OPTIMIZATION_FEASIBLE
+        && approximateResponse.primalBound == approximateQuery.minObjectiveValue)
       {
-        result.primalBound = query.minObjectiveValue;
+        response.primalBound = query.minObjectiveValue;
       }
     }
 
 #if defined(IPO_DEBUG_ORACLES_MIP)
-    std::cout << "RationalMIPExtender::maximize. Exact result: " << result << std::endl;
+    std::cout << "RationalMIPExtender::maximize. Exact response: " << response << std::endl;
 #endif /* IPO_DEBUG_ORACLES_MIP */
 
-    return result;
+    return response;
   }
 
   RationalMIPExtendedOptimizationOracle::RationalMIPExtendedOptimizationOracle(
@@ -361,7 +365,7 @@ namespace ipo
 
   }
 
-  OptimizationOracle<rational>::Result RationalMIPExtendedOptimizationOracle::maximizeDouble(
+  OptimizationOracle<rational>::Response RationalMIPExtendedOptimizationOracle::maximizeDouble(
     const double* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
   {
@@ -369,7 +373,7 @@ namespace ipo
     return _extender->maximizeDouble(_approximateOracle, objectiveVector, query);
   }
 
-  OptimizationOracle<rational>::Result RationalMIPExtendedOptimizationOracle::maximize(
+  OptimizationOracle<rational>::Response RationalMIPExtendedOptimizationOracle::maximize(
     const rational* objectiveVector,
     const OptimizationOracle<rational>::Query& query)
   {
@@ -391,49 +395,47 @@ namespace ipo
 
   }
 
-  SeparationOracle<rational>::Result RationalMIPExtendedSeparationOracle::getInitial(
+  SeparationOracle<rational>::Response RationalMIPExtendedSeparationOracle::getInitial(
     const SeparationOracle<rational>::Query& query)
   {
     SeparationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumInequalities = query.maxNumInequalities;
     approximateQuery.timeLimit = query.timeLimit;
 
-    auto approximateResult = _approximateOracle->getInitial(approximateQuery);
-    SeparationOracle<rational>::Result result;
-    result.constraints.reserve(approximateResult.numConstraints());
-    result.hitTimeLimit = approximateResult.hitTimeLimit;
-    for (const auto& constraint : approximateResult.constraints)
-      result.constraints.push_back( constraintToRational(constraint) );
+    auto approximateResponse = _approximateOracle->getInitial(approximateQuery);
+    SeparationOracle<rational>::Response response;
+    response.constraints.reserve(approximateResponse.numConstraints());
+    response.hitTimeLimit = approximateResponse.hitTimeLimit;
+    for (const auto& constraint : approximateResponse.constraints)
+      response.constraints.push_back( constraintToRational(constraint) );
 
-    return result;
+    return response;
   }
 
-  SeparationOracle<rational>::Result RationalMIPExtendedSeparationOracle::separateDouble(
+  SeparationOracle<rational>::Response RationalMIPExtendedSeparationOracle::separateDouble(
     const double* vector, bool isPoint, const SeparationOracle<rational>::Query& query)
   {
     SeparationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumInequalities = query.maxNumInequalities;
     approximateQuery.timeLimit = query.timeLimit;
 
-    auto approximateResult = _approximateOracle->separateDouble(vector, isPoint, approximateQuery);
-    SeparationOracle<rational>::Result result;
-    result.constraints.reserve(approximateResult.numConstraints());
-    result.hitTimeLimit = approximateResult.hitTimeLimit;
-    for (const auto& constraint : approximateResult.constraints)
-      result.constraints.push_back( constraintToRational(constraint) );
+    auto approximateResponse = _approximateOracle->separateDouble(vector, isPoint, approximateQuery);
+    SeparationOracle<rational>::Response response;
+    response.constraints.reserve(approximateResponse.numConstraints());
+    response.hitTimeLimit = approximateResponse.hitTimeLimit;
+    for (const auto& constraint : approximateResponse.constraints)
+      response.constraints.push_back( constraintToRational(constraint) );
 
-    return result;
+    return response;
   }
 
-  SeparationOracle<rational>::Result RationalMIPExtendedSeparationOracle::separate(
+  SeparationOracle<rational>::Response RationalMIPExtendedSeparationOracle::separate(
     const rational* vector, bool isPoint, const SeparationOracle<rational>::Query& query)
   {
-    double* temp = new double[space()->dimension()];
+    std::vector<double> tempVector(space()->dimension());
     for (std::size_t v = 0; v < space()->dimension(); ++v)
-      temp[v] = vector[v].approximation();
-    auto result = separateDouble(temp, isPoint, query);
-    delete[] temp;
-    return result;
+      tempVector[v] = vector[v].approximation();
+    return separateDouble(&tempVector[0], isPoint, query);
   }
 
 }

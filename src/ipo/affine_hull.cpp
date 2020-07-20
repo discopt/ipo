@@ -294,16 +294,16 @@ namespace ipo
           objective[v] = 0;
         oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
         timeComponent = std::chrono::system_clock::now();
-        typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
+        typename OptimizationOracle<T>::Response oracleResponse = polyhedron->maximize(
           &objective[0], oracleQuery);
         result.timeOracles += elapsedTime(timeComponent);
 
-        if (oracleResult.isUnbounded())
+        if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
           throw std::runtime_error("maximize(<zero vector>) returned unbounded result.");
-        else if (oracleResult.isFeasible())
+        else if (oracleResponse.outcome == OPTIMIZATION_FEASIBLE)
         {
           std::cout << "  -> adding last point" << std::endl;
-          resultPoints.push_back(oracleResult.points.front().vector);
+          resultPoints.push_back(oracleResponse.points.front().vector);
           result.dimension = result.lowerBound = result.upperBound;
           return;
         }
@@ -376,45 +376,49 @@ namespace ipo
       }
 
       timeComponent = std::chrono::system_clock::now();
-      typename OptimizationOracle<T>::Result oracleResult = polyhedron->maximize(
+      typename OptimizationOracle<T>::Response oracleResponse = polyhedron->maximize(
         &objective[0], oracleQuery);
       result.timeOracles += elapsedTime(timeComponent);
 
-      std::cout << " yields " << oracleResult.points.size() << " points and "
-        << oracleResult.rays.size() << " rays with optimum in [" << double(oracleResult.primalBound) << ","
-        << double(oracleResult.dualBound) << "]" << std::endl;
+      std::cout << " yields " << oracleResponse << std::endl;
       if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
         return;
       }
 
-      if (oracleResult.isInfeasible())
+      if (oracleResponse.outcome == OPTIMIZATION_INFEASIBLE)
       {
         resultEquations.clear();
         resultEquations.push_back(neverSatisfiedConstraint<T>());
         std::cout << "  -> infeasible." << std::endl;
       }
-      else if (oracleResult.isUnbounded())
+      else if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
       {
-        resultRays.push_back(oracleResult.rays.front().vector);
+        resultRays.push_back(oracleResponse.rays.front().vector);
         timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
-        affineComplement._debugAdd(*oracleResult.rays.front().vector, 0, kernelDirectionColumn,
+        affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-        affineComplement.add(*oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn);
         result.timePointsRays += elapsedTime(timeComponent);
         std::cout << "  -> adding a ray." << std::endl;
         ++result.lowerBound;
       }
       else if (resultPoints.empty())
       {
-        assert(oracleResult.isFeasible());
+        assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
+        if (oracleResponse.points.empty())
+        {
+          throw std::runtime_error(
+            "Detected invalid oracle behavior: responded with feasible polyhedron but no points (no minObjectiveValue given).");
+        }
+        assert(!oracleResponse.points.empty());
 
         // Add the maximizer.
 
-        resultPoints.push_back(oracleResult.points.front().vector);
+        resultPoints.push_back(oracleResponse.points.front().vector);
         timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
         affineComplement._debugAdd(*resultPoints.back(), 1, n, objective);
@@ -424,11 +428,12 @@ namespace ipo
         ++result.lowerBound;
 
         // If another point has a different objective value, we also add that and continue.
-        for (std::size_t p = 2; p < oracleResult.points.size(); ++p)
+        for (std::size_t p = 2; p < oracleResponse.points.size(); ++p)
         {
-          if (!isZero(oracleResult.points[p].objectiveValue - oracleResult.points.front().objectiveValue))
+          if (!isZero(oracleResponse.points[p].objectiveValue
+            - oracleResponse.points.front().objectiveValue))
           {
-            resultPoints.push_back(oracleResult.points[p].vector);
+            resultPoints.push_back(oracleResponse.points[p].vector);
             timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
             affineComplement._debugAdd(*resultPoints.back(), 1, kernelDirectionColumn, objective);
@@ -437,25 +442,25 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
-              << (double)oracleResult.points.front().objectiveValue << " and " 
-              << (double)oracleResult.points[p].objectiveValue << "." << std::endl;
+              << (double)oracleResponse.points.front().objectiveValue << " and " 
+              << (double)oracleResponse.points[p].objectiveValue << "." << std::endl;
             break;
           }
         }
         if (resultPoints.size() == 2)
           continue;
 
-        oracleQuery.minObjectiveValue = oracleResult.points.front().objectiveValue;
+        oracleQuery.minObjectiveValue = oracleResponse.points.front().objectiveValue;
         std::cout << "  -> adding a point with objective value "
-          << (double)oracleResult.points.front().objectiveValue << std::endl;
+          << (double)oracleResponse.points.front().objectiveValue << std::endl;
       }
       else
       {
-        assert(oracleResult.isFeasible());
+        assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
 
         // Check if some vector has a different objective value.
         bool success = false;
-        for (const auto& point : oracleResult.points)
+        for (const auto& point : oracleResponse.points)
         {
           if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
@@ -468,7 +473,7 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)oracleResult.points.front().objectiveValue << std::endl;
+              << (double)oracleResponse.points.front().objectiveValue << std::endl;
             success = true;
             break;
           }
@@ -491,12 +496,10 @@ namespace ipo
       }
 
       timeComponent = std::chrono::system_clock::now();
-      oracleResult = polyhedron->maximize(&objective[0], oracleQuery);
+      oracleResponse = polyhedron->maximize(&objective[0], oracleQuery);
       result.timeOracles += elapsedTime(timeComponent);
 
-      std::cout << "  Minimization yields " << oracleResult.points.size() << " points and "
-        << oracleResult.rays.size() << " rays with optimum in [" << oracleResult.primalBound << ","
-        << oracleResult.dualBound << "]" << std::endl;
+      std::cout << "  Minimization yields " << oracleResponse << "." << std::endl;
 
       if (elapsedTime(timeStarted) >= query.timeLimit)
       {
@@ -504,16 +507,16 @@ namespace ipo
         return;
       }
 
-      if (oracleResult.isUnbounded())
+      if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
       {
-        resultRays.push_back(oracleResult.rays.front().vector);
+        resultRays.push_back(oracleResponse.rays.front().vector);
 
         timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
-        affineComplement._debugAdd(*oracleResult.rays.front().vector, 0, kernelDirectionColumn,
+        affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-        affineComplement.add(*oracleResult.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn);
         result.timePointsRays += elapsedTime(timeComponent);
 
         ++result.lowerBound;
@@ -521,11 +524,11 @@ namespace ipo
       }
       else
       {
-        assert(oracleResult.isFeasible());
+        assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
 
         // Check if some vector has a different objective value.
         bool success = false;
-        for (const auto& point : oracleResult.points)
+        for (const auto& point : oracleResponse.points)
         {
           if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
           {
@@ -538,7 +541,7 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)oracleResult.points.front().objectiveValue << std::endl;
+              << (double)oracleResponse.points.front().objectiveValue << std::endl;
             success = true;
             break;
           }

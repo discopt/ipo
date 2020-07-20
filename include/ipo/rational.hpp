@@ -38,6 +38,7 @@ namespace ipo
     rational(double value)
       : _approx(value)
     {
+      assert(std::isfinite(value));
       if (std::isfinite(value))
         _exact = value;
     }
@@ -117,24 +118,24 @@ namespace ipo
       return std::isnan(_approx);
     }
 
-    IPO_EXPORT
-    inline bool isPlusInfinity() const
-    {
-      return _approx == std::numeric_limits<double>::infinity();
-    }
-
-    IPO_EXPORT inline bool isMinusInfinity() const
-    {
-      return _approx == -std::numeric_limits<double>::infinity();
-    }
+//     IPO_EXPORT
+//     inline bool isPlusInfinity() const
+//     {
+//       return _approx == std::numeric_limits<double>::infinity();
+//     }
+// 
+//     IPO_EXPORT inline bool isMinusInfinity() const
+//     {
+//       return _approx == -std::numeric_limits<double>::infinity();
+//     }
 
     IPO_EXPORT
     inline bool operator<(const rational& other) const
     {
-      if (isPlusInfinity() || other.isMinusInfinity())
-        return false;
-      if (isMinusInfinity() || other.isPlusInfinity())
-        return true;
+//       if (isPlusInfinity() || other.isMinusInfinity())
+//         return false;
+//       if (isMinusInfinity() || other.isPlusInfinity())
+//         return true;
       if (_approx != other._approx)
         return _approx < other._approx;
       else
@@ -293,17 +294,17 @@ namespace ipo
   IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const rational& x);
 
-  IPO_EXPORT
-  inline bool isPlusInfinity(const rational& x)
-  {
-    return x.isPlusInfinity();
-  }
+//   IPO_EXPORT
+//   inline bool isPlusInfinity(const rational& x)
+//   {
+//     return x.isPlusInfinity();
+//   }
 
-  IPO_EXPORT
-  inline bool isMinusInfinity(const rational& x)
-  {
-    return x.isMinusInfinity();
-  }
+//   IPO_EXPORT
+//   inline bool isMinusInfinity(const rational& x)
+//   {
+//     return x.isMinusInfinity();
+//   }
 
   IPO_EXPORT
   inline bool isNAN(const rational& x)
@@ -311,11 +312,11 @@ namespace ipo
     return x.isNAN();
   }
 
-  IPO_EXPORT
-  inline bool isFinite(const rational& x)
-  {
-    return x.isFinite();
-  }
+//   IPO_EXPORT
+//   inline bool isFinite(const rational& x)
+//   {
+//     return x.isFinite();
+//   }
 
   struct RationalIsZero
   {
@@ -328,23 +329,23 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
-  IPO_EXPORT
-  inline bool isPlusInfinity(double x)
-  {
-    return x == std::numeric_limits<double>::infinity();
-  }
-
-  IPO_EXPORT
-  inline bool isMinusInfinity(double x)
-  {
-    return x == -std::numeric_limits<double>::infinity();
-  }
-
-  IPO_EXPORT
-  inline bool isNAN(double x)
-  {
-    return std::isnan(x);
-  }
+//   IPO_EXPORT
+//   inline bool isPlusInfinity(double x)
+//   {
+//     return x == std::numeric_limits<double>::infinity();
+//   }
+// 
+//   IPO_EXPORT
+//   inline bool isMinusInfinity(double x)
+//   {
+//     return x == -std::numeric_limits<double>::infinity();
+//   }
+// 
+//   IPO_EXPORT
+//   inline bool isNAN(double x)
+//   {
+//     return std::isnan(x);
+//   }
 
   IPO_EXPORT
   inline bool isFinite(double x)

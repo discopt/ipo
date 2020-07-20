@@ -43,7 +43,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual OptimizationOracle<rational>::Result maximizeDouble(
+    virtual OptimizationOracle<rational>::Response maximizeDouble(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const double* objectiveVector,
       const OptimizationOracle<rational>::Query& query);
@@ -57,7 +57,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual OptimizationOracle<rational>::Result maximize(
+    virtual OptimizationOracle<rational>::Response maximize(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const rational* objectiveVector,
       const OptimizationOracle<rational>::Query& query);
@@ -67,12 +67,12 @@ namespace ipo
 
     void prepareRay();
 
-    void extractRay(OptimizationOracle<rational>::Result& result);
+    void extractRay(OptimizationOracle<rational>::Response& result);
 
     void preparePoint(
-      const OptimizationOracle<double>::Result::Point& approximatePoint);
+      const OptimizationOracle<double>::Response::Point& approximatePoint);
 
-    void extractPoint(OptimizationOracle<rational>::Result& result,
+    void extractPoint(OptimizationOracle<rational>::Response& result,
       const rational* objectiveVector);
 
   protected:
@@ -98,11 +98,11 @@ namespace ipo
     virtual ~RationalMIPExtendedOptimizationOracle();
 
     IPO_EXPORT
-    OptimizationOracle<rational>::Result maximizeDouble(const double * objectiveVector,
+    OptimizationOracle<rational>::Response maximizeDouble(const double * objectiveVector,
       const OptimizationOracle<rational>::Query& query) override;
 
     IPO_EXPORT
-    OptimizationOracle<rational>::Result maximize(const rational* objectiveVector,
+    OptimizationOracle<rational>::Response maximize(const rational* objectiveVector,
       const OptimizationOracle<rational>::Query& query) override;
 
   protected:
@@ -129,7 +129,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Result getInitial(const Query& query);
+    virtual Response getInitial(const Query& query);
 
     /**
      * \brief Separates a point/ray with floating-point coordinates.
@@ -146,7 +146,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<rational>::Result separateDouble(const double* vector, bool isPoint,
+    virtual SeparationOracle<rational>::Response separateDouble(const double* vector, bool isPoint,
       const SeparationOracle<rational>::Query& query) override;
 
     /**
@@ -161,7 +161,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<rational>::Result separate(const rational* vector, bool isPoint,
+    virtual SeparationOracle<rational>::Response separate(const rational* vector, bool isPoint,
       const SeparationOracle<rational>::Query& query) override;
 
   protected:

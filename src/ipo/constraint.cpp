@@ -6,28 +6,40 @@ namespace ipo
 {
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint)
   {
-    if (constraint.lhs() == -std::numeric_limits<double>::infinity())
-      return stream << constraint.vector() << " <= " << constraint.rhs();
-    else if (constraint.rhs() == std::numeric_limits<double>::infinity())
-      return stream << constraint.vector() << " >= " << constraint.lhs();
-    else if (constraint.isEquation())
+    switch (constraint.type())
+    {
+    case EQUATION:
       return stream << constraint.vector() << " == " << constraint.rhs();
-    else
-      return stream << constraint.lhs() << " <= " << constraint.vector() << " <= " << constraint.rhs();
+    case LESS_OR_EQUAL:
+      return stream << constraint.vector() << " <= " << constraint.rhs();
+    case GREATER_OR_EQUAL:
+      return stream << constraint.vector() << " >= " << constraint.lhs();
+    case RANGED:
+      return stream << constraint.lhs() << " <= " << constraint.vector() << " <= "
+        << constraint.rhs();
+    default:
+      return stream << "<Invalid constraint type>";
+    }
   }
 
 #if defined(IPO_WITH_GMP)
 
   std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint)
   {
-    if (constraint.lhs() == -std::numeric_limits<double>::infinity())
-      return stream << constraint.vector() << " <= " << constraint.rhs();
-    else if (constraint.rhs() == std::numeric_limits<double>::infinity())
-      return stream << constraint.vector() << " >= " << constraint.lhs();
-    else if (constraint.isEquation())
+    switch (constraint.type())
+    {
+    case EQUATION:
       return stream << constraint.vector() << " == " << constraint.rhs();
-    else
-      return stream << constraint.lhs() << " <= " << constraint.vector() << " <= " << constraint.rhs();
+    case LESS_OR_EQUAL:
+      return stream << constraint.vector() << " <= " << constraint.rhs();
+    case GREATER_OR_EQUAL:
+      return stream << constraint.vector() << " >= " << constraint.lhs();
+    case RANGED:
+      return stream << constraint.lhs() << " <= " << constraint.vector() << " <= "
+        << constraint.rhs();
+    default:
+      return stream << "<Invalid constraint type>";
+    }
   }
 
   Constraint<double> constraintToDouble(const Constraint<rational>& constraint)
@@ -36,7 +48,7 @@ namespace ipo
     for (const auto& iter : constraint.vector())
       vector->push_back(iter.first, iter.second.approximation());
     return Constraint<double>(constraint.lhs().approximation(), vector,
-      constraint.rhs().approximation());
+      constraint.rhs().approximation(), constraint.type());
   }
 
   Constraint<rational> constraintToRational(const Constraint<double>& constraint)
@@ -44,16 +56,8 @@ namespace ipo
     auto vector = std::make_shared<sparse_vector<rational>>();
     for (const auto& iter : constraint.vector())
       vector->push_back(iter.first, rational(reconstruct(iter.second)));
-    rational lhs, rhs;
-    if (isMinusInfinity(constraint.lhs()))
-      lhs = minusInfinity();
-    else
-      lhs = reconstruct(constraint.lhs());
-    if (isPlusInfinity(constraint.rhs()))
-      rhs = plusInfinity();
-    else
-      rhs = reconstruct(constraint.rhs());
-    return Constraint<rational>(lhs, vector, rhs);
+    return Constraint<rational>(reconstruct(constraint.lhs()), vector, constraint.rhs(),
+      constraint.type());
   }
 
 #endif /* IPO_WITH_GMP */
