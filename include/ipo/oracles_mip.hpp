@@ -76,7 +76,6 @@ namespace ipo
       const mpq_class* objectiveVector);
 
   protected:
-    bool _hasContinuous;
     soplex::SoPlex _spx;
     std::vector<bool> _integrality;
     int* _indices;

@@ -13,15 +13,19 @@ namespace ipo
   {
     double epsilon;
 
+    IPO_EXPORT
     DoubleIsZero(double eps);
 
+    IPO_EXPORT
     bool operator()(double value) const;
   };
 
   struct RationalIsZero
   {
+    IPO_EXPORT
     RationalIsZero() = default;
 
+    IPO_EXPORT
     bool operator()(const mpq_class& x) const
     {
       return x == 0;

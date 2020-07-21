@@ -685,7 +685,7 @@ namespace ipo
         else if (isPoint)
           lhs = constraint.lhs();
         else
-          rhs = 0.0;
+          lhs = 0.0;
         if (!constraint.hasRhs())
           rhs = std::numeric_limits<double>::infinity();
         else if (isPoint)
