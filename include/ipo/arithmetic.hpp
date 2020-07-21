@@ -20,6 +20,7 @@ namespace ipo
     bool operator()(double value) const;
   };
 
+#if defined(IPO_WITH_GMP)
   struct RationalIsZero
   {
     IPO_EXPORT
@@ -31,17 +32,17 @@ namespace ipo
       return x == 0;
     }
   };
+#endif /* IPO_WITH_GMP */
 
   IPO_EXPORT
-  inline
-  double toDouble(double x)
+  inline double toDouble(double x)
   {
     return x;
   }
 
+#if defined(IPO_WITH_GMP)
   IPO_EXPORT
-  inline
-  double toDouble(const mpq_class& x)
+  inline double toDouble(const mpq_class& x)
   {
     return x.get_d();
   }
@@ -49,5 +50,20 @@ namespace ipo
   void mpq_reconstruct(mpq_t& result, double x, double maxError = 1.0e-12);
 
   mpq_class reconstruct(double x, double maxError = 1.0e-12);
-    
+
+  class IntegralScaler
+  {
+  public:
+    IntegralScaler();
+
+    void operator()(const mpq_class& x);
+
+    const mpq_class& factor() const;
+
+  private:
+    mpq_class _factor;
+  };
+
+#endif /* IPO_WITH_GMP */
+  
 }

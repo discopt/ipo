@@ -3,6 +3,7 @@
 #include <cassert>
 #include <functional>
 #include <chrono>
+#include <sstream>
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -335,6 +336,7 @@ namespace ipo
         bounds[i].second = std::numeric_limits<double>::infinity();
     }
 
+#if defined(IPO_WITH_GMP)
     _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
@@ -349,12 +351,17 @@ namespace ipo
 
     Visitor visitor = { _extender };
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
+#endif /* IPO_WITH_GMP */
+
   }
 
   SCIPSolver::~SCIPSolver()
   {
     delete[] _instanceObjective;
+
+#if defined(IPO_WITH_GMP)
     delete _extender;
+#endif /* IPO_WITH_GMP */
 
     for (auto& iter : _faceConstraints)
     {
@@ -526,7 +533,7 @@ namespace ipo
       }
       else if (attempt == 2)
       {
-        std::stringstream ss;
+        std::ostringstream ss;
         ss << "SCIPOptimizationOracle: unhandled SCIP status code " << status << ".";
         throw std::runtime_error(ss.str());
       }
@@ -675,8 +682,6 @@ namespace ipo
             return;
           }
         }
-
-        std::cout << "Checking constraint " << constraint << std::endl;
 
         // Set lhs/rhs to 0 if we are separating a ray.
         double lhs, rhs;

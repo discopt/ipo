@@ -6,9 +6,8 @@
 #include <vector>
 #include <string>
 
-#ifdef IPO_WITH_GMP
-#include <gmpxx.h>
-#endif
+#include <ipo/sparse_vector.hpp>
+#include <ipo/constraint.hpp>
 
 namespace ipo
 {
@@ -89,86 +88,105 @@ namespace ipo
      */
 
     IPO_EXPORT
-    void printVector(std::ostream& stream, std::size_t numNonzeros,
-        std::size_t* nonzeroCoordinates, double* nonzeroValues) const;
-
-    /**
-     * \brief Prints a floating-point vector into a string.
-     *
-     * Prints a floating-point vector into a string, using stored variable names. Nonzeros are
-     * delimited by a comma.
-     */
+    void printVector(std::ostream& str, const sparse_vector<double>& vector,
+      bool rounded = false) const;
 
     IPO_EXPORT
-    std::string vectorToString(std::size_t numNonzeros, std::size_t* nonzeroCoordinates,
-      double* nonzeroValues) const;
-
-    /**
-     * \brief Prints a floating-point linear form to \p stream.
-     *
-     * Prints a floating-point linear form to given \p stream, using stored variable names.
-     * Nonzeros are delimited by a comma.
-     */
+    inline void printVector(std::ostream& str,
+      const std::shared_ptr<sparse_vector<double>>& vector, bool rounded = false) const
+    {
+      return printVector(str, *vector, rounded);
+    }
 
     IPO_EXPORT
-    void printLinearForm(std::ostream& stream, std::size_t numNonzeros,
-      std::size_t* nonzeroColumns, double* nonzeroValues) const;
-
-    /**
-     * \brief Prints a floating-point linear form into a string.
-     *
-     * Prints a floating-point linear form into a string, using stored variable names. Nonzeros
-     * are delimited by a comma.
-     */
+    std::string printVector(const sparse_vector<double>& vector, bool rounded = false) const;
 
     IPO_EXPORT
-    std::string linearFormToString(std::size_t numNonzeros, std::size_t* nonzeroCoordinates,
-      double* nonzeroValues) const;
+    inline std::string printVector(const std::shared_ptr<sparse_vector<double>>& vector,
+      bool rounded = false) const
+    {
+      return printVector(*vector, rounded);
+    }
+
+    IPO_EXPORT
+    void printLinearForm(std::ostream& str, const sparse_vector<double>& vector,
+      bool rounded = false) const;
+
+    IPO_EXPORT
+    void printLinearForm(std::ostream& str,
+      const std::shared_ptr<sparse_vector<double>>& vector, bool rounded = false) const
+    {
+      return printLinearForm(str, *vector, rounded);
+    }
+
+    IPO_EXPORT
+    std::string printLinearForm(const sparse_vector<double>& vector, bool rounded = false) const;
+
+    IPO_EXPORT
+    inline std::string printLinearForm(const std::shared_ptr<sparse_vector<double>>& vector,
+      bool rounded = false) const
+    {
+      return printLinearForm(*vector, rounded);
+    }
+
+    IPO_EXPORT
+    void printConstraint(std::ostream& str, const Constraint<double>& constraint,
+      bool rounded = false) const;
+
+    IPO_EXPORT
+    std::string printConstraint(const Constraint<double>& constraint, bool rounded = false) const;
 
 #if defined(IPO_WITH_GMP)
-    /**
-     * \brief Prints a rational vector to \p stream.
-     *
-     * Prints a rational vector to given \p stream, using stored variable names. Nonzeros are
-     * delimited by a comma.
-     */
+    
+    IPO_EXPORT
+    void printVector(std::ostream& str, const sparse_vector<mpq_class>& vector,
+      bool rounded = false) const;
 
     IPO_EXPORT
-    void printVector(std::ostream& stream, std::size_t numNonzeros,
-      std::size_t* nonzeroCoordinates, mpq_class* nonzeroValues) const;
-
-    /**
-     * \brief Prints a rational vector into a string.
-     *
-     * Prints a rational vector into a string, using stored variable names. Nonzeros are
-     * delimited by a comma.
-     */
+    inline void printVector(std::ostream& str,
+      const std::shared_ptr<sparse_vector<mpq_class>>& vector, bool rounded = false) const
+    {
+      return printVector(str, *vector, rounded);
+    }
 
     IPO_EXPORT
-    std::string vectorToString(std::size_t numNonzeros, std::size_t* nonzeroCoordinates,
-      mpq_class* nonzeroValues) const;
-
-    /**
-     * \brief Prints a rational linear form to \p stream.
-     *
-     * Prints a rational linear form to given \p stream, using stored variable names.
-     * Nonzeros are delimited by a comma.
-     */
+    std::string printVector(const sparse_vector<mpq_class>& vector, bool rounded = false) const;
 
     IPO_EXPORT
-    void printLinearForm(std::ostream& stream, std::size_t numNonzeros,
-      std::size_t* nonzeroCoordinates, mpq_class* nonzeroValues) const;
-
-    /**
-     * \brief Prints a rational linear form into a string.
-     *
-     * Prints a rational linear form into a string, using stored variable names. Nonzeros
-     * are delimited by a comma.
-     */
+    inline std::string printVector(const std::shared_ptr<sparse_vector<mpq_class>>& vector,
+      bool rounded = false) const
+    {
+      return printVector(*vector, rounded);
+    }
 
     IPO_EXPORT
-    std::string linearFormToString(std::size_t numNonzeros, std::size_t* nonzeroCoordinates,
-      mpq_class* nonzeroValues) const;
+    void printLinearForm(std::ostream& str, const sparse_vector<mpq_class>& vector,
+      bool rounded = false) const;
+
+    IPO_EXPORT
+    inline void printLinearForm(std::ostream& str,
+      const std::shared_ptr<sparse_vector<mpq_class>>& vector, bool rounded = false) const
+    {
+      return printLinearForm(str, *vector, rounded);
+    }
+
+    IPO_EXPORT
+    std::string printLinearForm(const sparse_vector<mpq_class>& vector, bool rounded = false) const;
+
+    IPO_EXPORT
+    inline std::string printLinearForm(const std::shared_ptr<sparse_vector<mpq_class>>& vector,
+      bool rounded = false) const
+    {
+      return printLinearForm(*vector, rounded);
+    }
+
+    IPO_EXPORT
+    void printConstraint(std::ostream& str, const Constraint<mpq_class>& constraint,
+      bool rounded = false) const;
+
+    IPO_EXPORT
+    std::string printConstraint(const Constraint<mpq_class>& constraint,
+      bool rounded = false) const;
 
 #endif /* IPO_WITH_GMP */
 

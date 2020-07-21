@@ -15,6 +15,7 @@ namespace ipo
     return fabs(value) < epsilon;
   }
 
+#if defined(IPO_WITH_GMP)
 
   void mpq_reconstruct(mpq_t& result, double x, double maxError)
   {
@@ -84,4 +85,24 @@ namespace ipo
 
     return approx;
   }
+
+  IntegralScaler::IntegralScaler()
+    : _factor(1, 1)
+  {
+
+  }
+
+  void IntegralScaler::operator()(const mpq_class& x)
+  {
+    mpz_gcd(_factor.get_den_mpz_t(), _factor.get_den_mpz_t(), x.get_num_mpz_t());
+    mpz_lcm(_factor.get_num_mpz_t(), _factor.get_num_mpz_t(), x.get_den_mpz_t());
+  }
+
+  const mpq_class& IntegralScaler::factor() const
+  {
+    return _factor;
+  }
+
+#endif /* IPO_WITH_GMP */
+
 }

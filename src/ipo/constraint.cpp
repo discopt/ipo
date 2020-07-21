@@ -62,5 +62,52 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
+  void scaleIntegral(Constraint<double>& constraint)
+  {
+
+  }
+
+#if defined(IPO_WITH_GMP)
+
+  void scaleIntegral(Constraint<mpq_class>& constraint)
+  {
+    int positiveNegative = 0;
+    IntegralScaler scaler;
+    for (const auto& iter : constraint.vector())
+    {
+      scaler(iter.second);
+      if (sgn(iter.second) > 0)
+        ++positiveNegative;
+      else
+        --positiveNegative;
+    }
+
+    if (scaler.factor() == 1 && positiveNegative >= 0)
+      return;
+
+    mpq_class factor = scaler.factor();
+    if (positiveNegative < 0)
+      factor *= -1;
+
+    // Change types and swap lhs/rhs if we negate.
+    if (sgn(factor) < 0 && constraint._type != EQUATION)
+    {
+      std::swap(constraint._lhs, constraint._rhs);
+      if (constraint._type == LESS_OR_EQUAL)
+        constraint._type = GREATER_OR_EQUAL;
+      else if (constraint._type == GREATER_OR_EQUAL)
+        constraint._type = LESS_OR_EQUAL;
+    }
+
+    // Scale numbers.
+    constraint._lhs *= factor;
+    constraint._rhs *= factor;
+    sparse_vector<mpq_class> vector;
+    for (const auto& iter : constraint.vector())
+      vector.push_back(iter.first, iter.second * factor);
+    constraint._vector = std::make_shared<sparse_vector<mpq_class>>(std::move(vector));
+  }
+
+#endif /* IPO_WITH_GMP */
 
 }

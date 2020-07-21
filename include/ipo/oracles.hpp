@@ -477,6 +477,8 @@ namespace ipo
     }
   }
 
+#if defined(IPO_WITH_GMP)
+
   IPO_EXPORT
   inline std::ostream& operator<<(std::ostream& stream,
     OptimizationOracle<mpq_class>::Response& response)
@@ -503,5 +505,7 @@ namespace ipo
       return stream << "{unknown error}";
     }
   }
+
+#endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */

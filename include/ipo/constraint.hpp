@@ -95,6 +95,18 @@ namespace ipo
     }
 
     IPO_EXPORT
+    inline bool operator==(const Constraint<T>& other) const
+    {
+      if (_vector != other._vector || _type != other._type)
+        return false;
+      if (hasLhs() && _lhs != other._lhs)
+        return false;
+      if (hasRhs() && _rhs != other._rhs)
+        return false;
+      return true;
+    }
+
+    IPO_EXPORT
     const T& lhs() const
     {
       return _lhs;
@@ -125,12 +137,6 @@ namespace ipo
     }
 
     IPO_EXPORT
-    bool isEquation() const
-    {
-      return _lhs == _rhs;
-    }
-
-    IPO_EXPORT
     bool hasLhs() const
     {
       return _type != LESS_OR_EQUAL;
@@ -153,6 +159,12 @@ namespace ipo
     {
       return (_vector->empty() && (_lhs > 0 || _rhs < 0)) || (_lhs > _rhs);
     }
+
+    friend void scaleIntegral(Constraint<double>&);
+
+#if defined(IPO_WITH_GMP)
+    friend void scaleIntegral(Constraint<mpq_class>&);
+#endif /* IPO_WITH_GMP */
 
   protected:
     T _lhs;
@@ -191,4 +203,13 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
+  IPO_EXPORT
+  void scaleIntegral(Constraint<double>& constraint);
+
+#if defined(IPO_WITH_GMP)
+
+  IPO_EXPORT
+  void scaleIntegral(Constraint<mpq_class>& constraint);
+
+#endif /* IPO_WITH_GMP */
 }

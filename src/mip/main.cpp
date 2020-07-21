@@ -8,35 +8,43 @@ int printUsage(const std::string& program)
 {
   std::cout << program << " [OPTIONS] MODEL\n";
   std::cout << "Options:\n";
-#ifdef IPO_WITH_EXACT_SCIP
-  std::cout << " -x  Use ExactSCIP.\n";
-#endif /* IPO_WITH_EXACT_SCIP */
-  std::cout << " -e  Print equations from affine-hull computation.\n";
-  std::cout << " -ad Debug affine-hull computation.\n";
-  std::cout << " -as Print statistics for affine-hull computation.\n";
-  std::cout << " -d  Debug facet separation.\n";
-  std::cout << " -s  Print statistics for facet separation.\n";
-  std::cout << " -h  Show this help and exit.\n";
+#if defined(IPO_WITH_GMP)
+  std::cout << " --gmp|-g        Use exact arithmetic (GMP).\n";
+#endif /* IPO_WITH_GMP */
+  std::cout << " --new-equations Print new equations.\n";
+  std::cout << " --help|-h       Show this help and exit.\n";
   std::cout << std::flush;
   return EXIT_FAILURE;
 }
 
 int main(int argc, char** argv)
 {
+#if defined(IPO_WITH_GMP)
   bool gmp = false;
+#endif /* IPO_WITH_GMP */
   double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
+  bool printEquations = false;
   for (int a = 1; a < argc; ++a)
   {
     const std::string arg = argv[a];
-    if (arg == "-G" || arg == "--gmp")
+    if (arg == "-H" || arg == "-h" || arg == "--help")
+    {
+      printUsage(argv[0]);
+      return EXIT_SUCCESS;
+    }
+#if defined(IPO_WITH_GMP)
+    else if (arg == "-G" || arg == "-g" || arg == "--gmp")
       gmp = true;
-    else if ((arg == "-T" || arg == "--time") && a+1 < argc)
+#endif /* IPO_WITH_GMP */
+    else if ((arg == "-T" || arg == "-t" || arg == "--time") && a+1 < argc)
     {
       std::stringstream ss(argv[a+1]);
       ss >> timeLimit;
       ++a;
     }
+    else if (arg == "--print-equations")
+      printEquations = true;
     else if (fileName.empty())
       fileName = arg;
     else
@@ -48,7 +56,7 @@ int main(int argc, char** argv)
   }
 
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
-  int dimension;
+#if defined(IPO_WITH_GMP)
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
@@ -60,17 +68,37 @@ int main(int argc, char** argv)
     auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
-      if (constraint.isEquation())
+      if (constraint.type() == ipo::EQUATION)
         knownEquations.push_back(constraint);
     }
 
-    std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
+    std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
+    if (printEquations)
+    {
+      for (auto& equation : affResult.equations)
+      {
+        bool isKnown = false;
+        for (const auto& knownEquation : knownEquations)
+        {
+          if (knownEquation == equation)
+          {
+            isKnown = true;
+            break;
+          }
+        }
+        if (!isKnown)
+          scaleIntegral(equation);
+        std::cout << (isKnown ? "Known " : "New ") << "equation "
+          << poly->space()->printConstraint(equation, true) << std::endl;
+      }
+    }
   }
   else
+#endif /* IPO_WITH_GMP */
   {
     auto opt = scip->getOptimizationOracleDouble();
     auto poly = std::make_shared<ipo::Polyhedron<double>>(opt);
@@ -81,15 +109,34 @@ int main(int argc, char** argv)
     auto sepaResult = scip->getSeparationOracleDouble()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
-      if (constraint.isEquation())
+      if (constraint.type() == ipo::EQUATION)
         knownEquations.push_back(constraint);
     }
 
-    std::cout << "Starting affine hull computation in dimension " << scip->space()->dimension() << std::endl;
+    std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
+    if (printEquations)
+    {
+      for (auto& equation : affResult.equations)
+      {
+        bool isKnown = false;
+        for (const auto& knownEquation : knownEquations)
+        {
+          if (knownEquation == equation)
+          {
+            isKnown = true;
+            break;
+          }
+        }
+        if (!isKnown)
+          scaleIntegral(equation);
+        std::cout << (isKnown ? "Known " : "New ") << "equation "
+          << poly->space()->printConstraint(equation, true) << std::endl;
+      }
+    }
   }
  
 

@@ -1,7 +1,7 @@
 #include <ipo/affine_hull.hpp>
 
-// #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
+#define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
+#define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #if defined(IPO_DEBUG_AFFINE_HULL)
 #include <sstream>
@@ -261,13 +261,16 @@ namespace ipo
     auto redundancyCheck = EquationRedundancyCheck<T, IsZero>(n, isZero);
     for (auto equation : knownEquations)
     {
-      if (redundancyCheck.add(equation) == EQUATION_INCONSISTENT)
+      EquationRedundancy redundancy = redundancyCheck.add(equation);
+      if (redundancy == EQUATION_INCONSISTENT)
       {
-        assert(resultEquations.empty());
+        resultEquations.clear();
         resultEquations.push_back(neverSatisfiedConstraint<T>());
         result.upperBound = -1;
         return;
       }
+      else if (redundancy == EQUATION_INDEPENDENT)
+        resultEquations.push_back(equation);
     }
 
     std::cout << "Initial " << knownEquations.size() << " equations have rank "
