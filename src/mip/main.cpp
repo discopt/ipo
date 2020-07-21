@@ -52,11 +52,11 @@ int main(int argc, char** argv)
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
-    auto poly = std::make_shared<ipo::Polyhedron<ipo::rational>>(opt);
+    auto poly = std::make_shared<ipo::Polyhedron<mpq_class>>(opt);
 
     // Extract known equations from a separation oracle.
-    std::vector<ipo::Constraint<ipo::rational>> knownEquations;
-    ipo::SeparationOracle<ipo::rational>::Query sepaQuery;
+    std::vector<ipo::Constraint<mpq_class>> knownEquations;
+    ipo::SeparationOracle<mpq_class>::Query sepaQuery;
     auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {

@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 
-#include <ipo/rational.hpp>
+#include <ipo/arithmetic.hpp>
 
 #include <../src/ipo/lu.hpp>
 
@@ -58,7 +58,7 @@ TEST(LinearAlgebra, LU)
 #if defined(IPO_WITH_GMP)
   std::cout << "===== LinearAlgebra::IncrementalLUFactorization::Rational ===== " << std::endl;
   {
-    auto lu = ipo::IncrementalLUFactorization<ipo::rational, ipo::RationalIsZero>(ipo::RationalIsZero());
+    auto lu = ipo::IncrementalLUFactorization<mpq_class, ipo::RationalIsZero>(ipo::RationalIsZero());
 
     /* Test matrix: 
     *  1 2 3
@@ -66,8 +66,8 @@ TEST(LinearAlgebra, LU)
     *  7 8 0
     */
     
-    std::vector<ipo::rational> row(3);
-    std::vector<ipo::rational> column(3);
+    std::vector<mpq_class> row(3);
+    std::vector<mpq_class> column(3);
     lu.extend(&row[0], &column[0], 1);
     row[0] = 4;
     column[0] = 2;

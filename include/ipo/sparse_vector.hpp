@@ -6,6 +6,8 @@
 #include <algorithm>
 #include <cmath>
 
+#include <ipo/arithmetic.hpp>
+
 template <class T>
 class sparse_vector
 {
@@ -154,15 +156,6 @@ public:
   }
 
   template <typename U>
-  U operator*(const U* other) const
-  {
-    U result(0);
-    for (auto& iter : *this)
-      result += (U)(iter.second) * other[iter.first];
-    return result;
-  }
-
-  template <typename U>
   U operator*(const sparse_vector<U>& other) const
   {
     U result(0);
@@ -250,6 +243,24 @@ protected:
   std::vector<value_type> _data;
 };
 
+template <typename T, typename U>
+U operator*(const sparse_vector<T>& a, const U* b)
+{
+  U result(0);
+  for (auto& iter : a)
+    result += (U)(iter.second) * b[iter.first];
+  return result;
+}
+
+template <typename T>
+double operator*(const sparse_vector<T>& a, const double* b)
+{
+  double result(0);
+  for (auto& iter : a)
+    result += ipo::toDouble(iter.second) * b[iter.first];
+  return result;
+}
+
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
 {
@@ -267,72 +278,76 @@ std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
 }
 
 template <typename U, typename T>
-double squaredEuclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
-{
-  double result = 0.0;
-  typename sparse_vector<T>::const_iterator ia = a.begin();
-  typename sparse_vector<T>::const_iterator ib = b.begin();
-  if (ia != a.end() && ib != b.end())
+  double squaredEuclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
   {
-    while (true)
+    double result = 0.0;
+    typename sparse_vector<T>::const_iterator ia = a.begin();
+    typename sparse_vector<T>::const_iterator ib = b.begin();
+    if (ia != a.end() && ib != b.end())
     {
-      if (ia->first < ib->first)
+      while (true)
       {
-        double x = double(ia->second);
-        result += x*x;
-        ++ia;
-        if (ia == a.end())
-          break;
-      }
-      else if (ia->first > ib->first)
-      {
-        double x = double(ib->second);
-        result += x*x;
-        ++ib;
-        if (ib == b.end())
-          break;
-      }
-      else
-      {
-        double x = double(ia->second - ib->second);
-        result += x*x;
-        ++ia;
-        ++ib;
-        if (ia == a.end() || ib == b.end())
-          break;
+        if (ia->first < ib->first)
+        {
+          double x = ipo::toDouble(ia->second);
+          result += x*x;
+          ++ia;
+          if (ia == a.end())
+            break;
+        }
+        else if (ia->first > ib->first)
+        {
+          double x = ipo::toDouble(ib->second);
+          result += x*x;
+          ++ib;
+          if (ib == b.end())
+            break;
+        }
+        else
+        {
+          double x = ipo::toDouble(ia->second - ib->second);
+          result += x*x;
+          ++ia;
+          ++ib;
+          if (ia == a.end() || ib == b.end())
+            break;
+        }
       }
     }
+    for (; ia != a.end(); ++ia)
+    {
+      double x = ipo::toDouble(ia->second);
+      result += x*x;
+    }
+    for (; ib != b.end(); ++ib)
+    {
+      double x = ipo::toDouble(ib->second);
+      result += x*x;
+    }
+    return result;
   }
-  for (; ia != a.end(); ++ia)
+
+  template <typename U, typename T>
+  double euclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
   {
-    double x = double(ia->second);
-    result += x*x;
+    return sqrt(squaredEuclideanDistance(a, b));
   }
-  for (; ib != b.end(); ++ib)
+
+  template <typename T>
+  double squaredEuclideanNorm(const sparse_vector<T>& vector)
   {
-    double x = double(ib->second);
-    result += x*x;
+    double result = 0.0;
+    for (const auto& iter : vector)
+    {
+      double x = ipo::toDouble(iter.second);
+      result += x*x;
+    }
+    return result;
   }
-  return result;
-}
 
-template <typename U, typename T>
-double euclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
-{
-  return sqrt(squaredEuclideanDistance(a, b));
-}
+  template <typename T>
+  double euclideanNorm(const sparse_vector<T>& vector)
+  {
+    return sqrt(squaredEuclideanNorm(vector));
+  }
 
-template <typename T>
-T squaredEuclideanNorm(const sparse_vector<T>& vector)
-{
-  T result = 0.0;
-  for (const auto& iter : vector)
-    result += iter.second * iter.second;
-  return result;
-}
-
-template <typename T>
-double euclideanNorm(const sparse_vector<T>& vector)
-{
-  return sqrt(double(squaredEuclideanNorm(vector)));
-}

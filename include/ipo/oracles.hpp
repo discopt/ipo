@@ -4,7 +4,6 @@
 #include <ipo/export.hpp>
 #include <ipo/space.hpp>
 #include <ipo/sparse_vector.hpp>
-#include <ipo/rational.hpp>
 #include <ipo/constraint.hpp>
 
 #include <memory>
@@ -480,7 +479,7 @@ namespace ipo
 
   IPO_EXPORT
   inline std::ostream& operator<<(std::ostream& stream,
-    OptimizationOracle<ipo::rational>::Response& response)
+    OptimizationOracle<mpq_class>::Response& response)
   {
     switch(response.outcome)
     {
@@ -496,9 +495,9 @@ namespace ipo
     case OPTIMIZATION_FEASIBLE:
       assert(response.rays.empty());
       stream << "{feasible, " << response.rays.size() << " rays, " << response.points.size()
-        << " points, " << double(response.primalBound) << " <= OPT";
+        << " points, " << response.primalBound.get_d() << " <= OPT";
       if (response.hasDualBound)
-        stream << " <= " << double(response.dualBound);
+        stream << " <= " << response.dualBound.get_d();
       return stream << "}";
     default:
       return stream << "{unknown error}";

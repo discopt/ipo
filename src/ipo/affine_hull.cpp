@@ -9,6 +9,8 @@
 #include <iomanip>
 #endif /* IPO_DEBUG_AFFINE_HULL */
 
+#include <ipo/arithmetic.hpp>
+
 #include "lu.hpp"
 #include "redundancy.hpp"
 
@@ -366,7 +368,7 @@ namespace ipo
       if (!resultPoints.empty())
       {
         oracleQuery.minObjectiveValue = *resultPoints.front() * kernelDirectionVector;
-        std::cout << " with common objective value " << (double)oracleQuery.minObjectiveValue;
+        std::cout << " with common objective value " << toDouble(oracleQuery.minObjectiveValue);
       }
       oracleQuery.timeLimit = query.timeLimit - elapsedTime(timeStarted);
       if (oracleQuery.timeLimit <= 0)
@@ -442,8 +444,8 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
-              << (double)oracleResponse.points.front().objectiveValue << " and " 
-              << (double)oracleResponse.points[p].objectiveValue << "." << std::endl;
+              << toDouble(oracleResponse.points.front().objectiveValue) << " and " 
+              << toDouble(oracleResponse.points[p].objectiveValue) << "." << std::endl;
             break;
           }
         }
@@ -452,7 +454,7 @@ namespace ipo
 
         oracleQuery.minObjectiveValue = oracleResponse.points.front().objectiveValue;
         std::cout << "  -> adding a point with objective value "
-          << (double)oracleResponse.points.front().objectiveValue << std::endl;
+          << toDouble(oracleResponse.points.front().objectiveValue) << std::endl;
       }
       else
       {
@@ -473,7 +475,7 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)oracleResponse.points.front().objectiveValue << std::endl;
+              << toDouble(oracleResponse.points.front().objectiveValue) << std::endl;
             success = true;
             break;
           }
@@ -541,7 +543,7 @@ namespace ipo
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
-              << (double)oracleResponse.points.front().objectiveValue << std::endl;
+              << toDouble(oracleResponse.points.front().objectiveValue) << std::endl;
             success = true;
             break;
           }
@@ -581,11 +583,11 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  AffineHullResult<rational> affineHull(
-    std::shared_ptr<Polyhedron<rational>> polyhedron,
-    const AffineHullQuery& query, const std::vector<Constraint<rational>>& knownEquations)
+  AffineHullResult<mpq_class> affineHull(
+    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+    const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
-    AffineHullResult<rational> result;
+    AffineHullResult<mpq_class> result;
     affineHullImplementation(polyhedron, result.points, result.rays, result.equations, query,
       knownEquations, RationalIsZero(), result);
     return result;

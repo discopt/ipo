@@ -1,11 +1,21 @@
-#include "reconstruct.hpp"
-
-// #include <iostream> // DEBUG
+#include <ipo/arithmetic.hpp>
 
 #include <cmath>
 
 namespace ipo
 {
+  DoubleIsZero::DoubleIsZero(double eps)
+    : epsilon(eps)
+  {
+
+  }
+
+  bool DoubleIsZero::operator()(double value) const
+  {
+    return fabs(value) < epsilon;
+  }
+
+
   void mpq_reconstruct(mpq_t& result, double x, double maxError)
   {
     mpq_class approx = reconstruct(x, maxError);

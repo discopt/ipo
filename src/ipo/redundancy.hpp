@@ -137,7 +137,7 @@ namespace ipo
       {
         if (!_isZero(dense[v]))
         {
-          double value = fabs((double)dense[v]);
+          double value = fabs(toDouble(dense[v]));
           if (value > newBasicValue)
           {
             newBasic = v;

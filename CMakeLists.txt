@@ -29,12 +29,11 @@ endif()
 
 # Target for the IPO library.
 add_library(ipo
-   src/ipo/affine_hull.cpp
-   src/ipo/constraint.cpp
-   src/ipo/oracles_mip.cpp
-   src/ipo/rational.cpp
-   src/ipo/reconstruct.cpp
-   src/ipo/space.cpp
+  src/ipo/affine_hull.cpp
+  src/ipo/arithmetic.cpp
+  src/ipo/constraint.cpp
+  src/ipo/oracles_mip.cpp
+  src/ipo/space.cpp
 )
 
 # SoPlex

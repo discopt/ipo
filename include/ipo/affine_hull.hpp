@@ -109,10 +109,10 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
 
   IPO_EXPORT
-  AffineHullResult<rational> affineHull(
-    std::shared_ptr<Polyhedron<rational>> polyhedron,
+  AffineHullResult<mpq_class> affineHull(
+    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query,
-    const std::vector<Constraint<rational>>& knownEquations = std::vector<Constraint<rational>>());
+    const std::vector<Constraint<mpq_class>>& knownEquations = std::vector<Constraint<mpq_class>>());
 
 #endif /* IPO_WITH_GMP */
 

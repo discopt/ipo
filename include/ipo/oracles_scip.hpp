@@ -130,7 +130,7 @@ namespace ipo
     inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational()
     {
       return getOptimizationOracleRational(
-        std::make_shared<Constraint<rational>>(alwaysSatisfiedConstraint<rational>()));
+        std::make_shared<Constraint<mpq_class>>(alwaysSatisfiedConstraint<mpq_class>()));
     }
 
     /**
@@ -139,7 +139,7 @@ namespace ipo
 
     IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational(
-      std::shared_ptr<Constraint<rational>> face)
+      std::shared_ptr<Constraint<mpq_class>> face)
     {
       auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
       auto approximateOracle = getOptimizationOracleDouble(approximateFace);
@@ -179,7 +179,7 @@ namespace ipo
     inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational()
     {
       return getSeparationOracleRational(
-        std::make_shared<Constraint<rational>>(alwaysSatisfiedConstraint<rational>()));
+        std::make_shared<Constraint<mpq_class>>(alwaysSatisfiedConstraint<mpq_class>()));
     }
 
     /**
@@ -188,7 +188,7 @@ namespace ipo
 
     IPO_EXPORT
     inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational(
-      std::shared_ptr<Constraint<rational>> face)
+      std::shared_ptr<Constraint<mpq_class>> face)
     {
       auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
       auto approximateOracle = getSeparationOracleDouble(approximateFace);

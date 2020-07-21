@@ -1,6 +1,6 @@
 #include <ipo/constraint.hpp>
 
-#include "reconstruct.hpp"
+#include <ipo/arithmetic.hpp>
 
 namespace ipo
 {
@@ -24,7 +24,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint)
+  std::ostream& operator<<(std::ostream& stream, const Constraint<mpq_class>& constraint)
   {
     switch (constraint.type())
     {
@@ -42,21 +42,21 @@ namespace ipo
     }
   }
 
-  Constraint<double> constraintToDouble(const Constraint<rational>& constraint)
+  Constraint<double> constraintToDouble(const Constraint<mpq_class>& constraint)
   {
     auto vector = std::make_shared<sparse_vector<double>>();
     for (const auto& iter : constraint.vector())
-      vector->push_back(iter.first, iter.second.approximation());
-    return Constraint<double>(constraint.lhs().approximation(), vector,
-      constraint.rhs().approximation(), constraint.type());
+      vector->push_back(iter.first, iter.second.get_d());
+    return Constraint<double>(constraint.lhs().get_d(), vector,
+      constraint.rhs().get_d(), constraint.type());
   }
 
-  Constraint<rational> constraintToRational(const Constraint<double>& constraint)
+  Constraint<mpq_class> constraintToRational(const Constraint<double>& constraint)
   {
-    auto vector = std::make_shared<sparse_vector<rational>>();
+    auto vector = std::make_shared<sparse_vector<mpq_class>>();
     for (const auto& iter : constraint.vector())
-      vector->push_back(iter.first, rational(reconstruct(iter.second)));
-    return Constraint<rational>(reconstruct(constraint.lhs()), vector, constraint.rhs(),
+      vector->push_back(iter.first, reconstruct(iter.second));
+    return Constraint<mpq_class>(reconstruct(constraint.lhs()), vector, constraint.rhs(),
       constraint.type());
   }
 

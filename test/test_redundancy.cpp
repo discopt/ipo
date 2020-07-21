@@ -1,4 +1,7 @@
 #include <gtest/gtest.h>
+
+#include <ipo/arithmetic.hpp>
+
 #include <../src/ipo/redundancy.hpp>
 
 TEST(LinearAlgebra, EquationRedundancyCheck)
@@ -56,50 +59,50 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
 #if defined(IPO_WITH_GMP)
   std::cout << "===== LinearAlgebra::EquationRedundancyCheck::Rational ===== " << std::endl;
   {
-    auto red = ipo::EquationRedundancyCheck<ipo::rational, ipo::RationalIsZero>(3, ipo::RationalIsZero());
+    auto red = ipo::EquationRedundancyCheck<mpq_class, ipo::RationalIsZero>(3, ipo::RationalIsZero());
     ASSERT_EQ(red.rank(), 0);
 
-    auto vector = std::make_shared<sparse_vector<ipo::rational>>();
+    auto vector = std::make_shared<sparse_vector<mpq_class>>();
     vector->push_back(0, 1);
     vector->push_back(1, 2);
     vector->push_back(2, 3);
-    auto eq1 = ipo::Constraint<ipo::rational>(ipo::rational(1), vector, ipo::rational(1));
+    auto eq1 = ipo::Constraint<mpq_class>(mpq_class(1), vector, mpq_class(1));
     ASSERT_EQ(red.test(eq1), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.add(eq1), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.rank(), 1);
 
-    vector = std::make_shared<sparse_vector<ipo::rational>>();
+    vector = std::make_shared<sparse_vector<mpq_class>>();
     vector->push_back(0, 1);
     vector->push_back(1, 2);
     vector->push_back(2, 4);
-    auto eq2 = ipo::Constraint<ipo::rational>(ipo::rational(1), vector, ipo::rational(1));
+    auto eq2 = ipo::Constraint<mpq_class>(mpq_class(1), vector, mpq_class(1));
     ASSERT_EQ(red.test(eq2), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.add(eq2), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.rank(), 2);
 
-    vector = std::make_shared<sparse_vector<ipo::rational>>();
+    vector = std::make_shared<sparse_vector<mpq_class>>();
     vector->push_back(0, -3);
     vector->push_back(1, -6);
     vector->push_back(2, -10);
-    auto eq3 = ipo::Constraint<ipo::rational>(ipo::rational(-3), vector, ipo::rational(-3));
+    auto eq3 = ipo::Constraint<mpq_class>(mpq_class(-3), vector, mpq_class(-3));
     ASSERT_EQ(red.test(eq3), ipo::EQUATION_REDUNDANT);
     ASSERT_EQ(red.add(eq3), ipo::EQUATION_REDUNDANT);
     ASSERT_EQ(red.rank(), 2);
 
-    vector = std::make_shared<sparse_vector<ipo::rational>>();
+    vector = std::make_shared<sparse_vector<mpq_class>>();
     vector->push_back(0, -3);
     vector->push_back(1, -6);
     vector->push_back(2, -10);
-    auto eq4 = ipo::Constraint<ipo::rational>(ipo::rational(0), vector, ipo::rational(0));
+    auto eq4 = ipo::Constraint<mpq_class>(mpq_class(0), vector, mpq_class(0));
     ASSERT_EQ(red.test(eq4), ipo::EQUATION_INCONSISTENT);
     ASSERT_EQ(red.add(eq4), ipo::EQUATION_INCONSISTENT);
     ASSERT_EQ(red.rank(), 2);
 
-    vector = std::make_shared<sparse_vector<ipo::rational>>();
+    vector = std::make_shared<sparse_vector<mpq_class>>();
     vector->push_back(0, -3);
     vector->push_back(1, -5);
     vector->push_back(2, -10);
-    auto eq5 = ipo::Constraint<ipo::rational>(ipo::rational(0), vector, ipo::rational(0));
+    auto eq5 = ipo::Constraint<mpq_class>(mpq_class(0), vector, mpq_class(0));
     ASSERT_EQ(red.test(eq5), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.add(eq5), ipo::EQUATION_INDEPENDENT);
     ASSERT_EQ(red.rank(), 3);

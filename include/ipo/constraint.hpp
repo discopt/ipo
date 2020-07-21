@@ -4,11 +4,14 @@
 #include <ipo/export.hpp>
 
 #include <ipo/sparse_vector.hpp>
-#include <ipo/rational.hpp>
 
 #include <memory>
 #include <limits>
 #include <ostream>
+
+#if defined(IPO_WITH_GMP)
+#include <gmpxx.h>
+#endif /* IPO_WITH_GMP */
 
 namespace ipo
 {
@@ -178,13 +181,13 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint);
+  std::ostream& operator<<(std::ostream& stream, const Constraint<mpq_class>& constraint);
 
   IPO_EXPORT
-  Constraint<double> constraintToDouble(const Constraint<rational>& constraint);
+  Constraint<double> constraintToDouble(const Constraint<mpq_class>& constraint);
 
   IPO_EXPORT
-  Constraint<rational> constraintToRational(const Constraint<double>& constraint);
+  Constraint<mpq_class> constraintToRational(const Constraint<double>& constraint);
 
 #endif /* IPO_WITH_GMP */
 

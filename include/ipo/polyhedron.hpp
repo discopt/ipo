@@ -6,6 +6,7 @@
 
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
+#include <ipo/arithmetic.hpp>
 #include <ipo/space.hpp>
 #include <ipo/oracles.hpp>
 
@@ -52,7 +53,7 @@ namespace ipo
       {
         rayProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_rays[rayProduct.vectorIndex].vector)
-          rayProduct.product += objectiveVector[iter.first] * double(iter.second);
+          rayProduct.product += objectiveVector[iter.first] * toDouble(iter.second);
         rayProduct.product *= _polyhedron->_rays[rayProduct.vectorIndex].inverseNorm;
       }
 
@@ -104,7 +105,7 @@ namespace ipo
       {
         pointProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
-          pointProduct.product += objectiveVector[iter.first] * double(iter.second);
+          pointProduct.product += objectiveVector[iter.first] * toDouble(iter.second);
         pointProduct.product *= _polyhedron->_points[pointProduct.vectorIndex].inverseNorm;
       }
 
@@ -124,7 +125,7 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
-      double threshold = query.minObjectiveValue;
+      double threshold = toDouble(query.minObjectiveValue);
       if (std::isfinite(threshold))
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
@@ -163,7 +164,7 @@ namespace ipo
       double objectiveNormalization = 0.0;
       for (std::size_t v = 0; v < this->space()->dimension(); ++v)
       {
-        double x = double(objectiveVector[v]);
+        double x = toDouble(objectiveVector[v]);
         objectiveNormalization += x*x;
       }
       objectiveNormalization = sqrt(objectiveNormalization);
@@ -175,7 +176,7 @@ namespace ipo
       {
         rayProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_rays[rayProduct.vectorIndex].vector)
-          rayProduct.product += double(objectiveVector[iter.first]) * double(iter.second);
+          rayProduct.product += toDouble(objectiveVector[iter.first]) * toDouble(iter.second);
         rayProduct.product *= _polyhedron->_rays[rayProduct.vectorIndex].inverseNorm;
       }
 
@@ -227,7 +228,7 @@ namespace ipo
       {
         pointProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
-          pointProduct.product += double(objectiveVector[iter.first]) * double(iter.second);
+          pointProduct.product += toDouble(objectiveVector[iter.first]) * toDouble(iter.second);
         pointProduct.product *= _polyhedron->_points[pointProduct.vectorIndex].inverseNorm;
       }
 
@@ -247,7 +248,7 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
-      double threshold = double(query.minObjectiveValue);
+      double threshold = toDouble(query.minObjectiveValue);
       if (std::isfinite(threshold))
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
@@ -259,7 +260,7 @@ namespace ipo
           T product(0.0);
           for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
             product += objectiveVector[iter.first] * iter.second;
-          if (double(product) <= threshold)
+          if (toDouble(product) <= threshold)
             break;
         }
         response.points.push_back(typename OptimizationOracle<T>::Response::Point(
