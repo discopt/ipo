@@ -18,19 +18,20 @@
 
 namespace ipo
 {
-  AffineHullQuery::AffineHullQuery()
-    : epsilonConstraints(1.0e-9), epsilonSafety(1.0e-6),
-    timeLimit(std::numeric_limits<double>::infinity())
+  AffineHullQuery::AffineHullQuery(bool exact)
+    : epsilonConstraints(exact ? 0.0 : 1.0e-9), epsilonSafety(exact ? 0.0 : 1.0e-6),
+    epsilonFactorization(exact ? 0.0 : 1.0e-12), epsilonCoefficient(exact ? 0.0 : 1.0e-12),
+    hybrid(true), timeLimit(std::numeric_limits<double>::infinity())
   {
 
   }
   
-  template <typename T, typename IsZero>
+  template <typename T>
   class AffineComplement
   {
   public:
-    AffineComplement(std::size_t numVariables, const IsZero isZero = IsZero())
-      : _numVariables(numVariables), _isZero(isZero), _lu(isZero),
+    AffineComplement(std::size_t numVariables)
+      : _numVariables(numVariables), _lu(),
       _columns(numVariables + 1), _lastColumn(0)
     {
       for (ColumnData& columnData : _columns)
@@ -112,7 +113,8 @@ namespace ipo
     }
 #endif /* IPO_DEBUG_AFFINE_HULL */
 
-    void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn)
+    void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
+      double epsilonFactorization)
     {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "\nAffineComplement::add(row=" << row << ", last=" << last << ", newBasicColumn="
@@ -142,7 +144,7 @@ namespace ipo
         newColumn[_columns[newBasicColumn].rows[i]] = _columns[newBasicColumn].entries[i];
 
       // Update LU decomposition.
-      _lu.extend(&newRow[0], &newColumn[0], newRow.back());
+      _lu.extend(&newRow[0], &newColumn[0], newRow.back(), epsilonFactorization);
 
       // Add the row.
       for (const auto& iter : row)
@@ -158,7 +160,8 @@ namespace ipo
         columnData.definesEquation = false;
     }
 
-    void computeKernelVector(std::size_t column, sparse_vector<T>& vector)
+    void computeKernelVector(std::size_t column, sparse_vector<T>& vector,
+      double epsilonCoefficient)
     {
       std::vector<T> rhs(rank(), T(0));
       const ColumnData& columnData = _columns[column];
@@ -174,7 +177,7 @@ namespace ipo
         if (c == column)
           vector.push_back(c, T(-1));
         else if (_columns[c].basisIndex < std::numeric_limits<std::size_t>::max()
-          && !_isZero(rhs[_columns[c].basisIndex]))
+          && fabs(toDouble(rhs[_columns[c].basisIndex])) > epsilonCoefficient)
         {
           vector.push_back(c, rhs[_columns[c].basisIndex]);
         }
@@ -224,8 +227,7 @@ namespace ipo
     };
 
     std::size_t _numVariables;
-    IsZero _isZero;
-    IncrementalLUFactorization<T, IsZero> _lu;
+    IncrementalLUFactorization<T> _lu;
     std::vector<ColumnData> _columns;
     std::vector<std::size_t> _basisIndexToColumn;
 
@@ -246,22 +248,23 @@ namespace ipo
       std::chrono::system_clock::now() - started)).count();
   }
 
-  template <typename T, typename IsZero>
-  void affineHullImplementation(std::shared_ptr<Polyhedron<T>> polyhedron,
+  template <typename T>
+  void affineHullPure(std::shared_ptr<Polyhedron<T>> polyhedron,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays,
     std::vector<Constraint<T>>& resultEquations, const AffineHullQuery& query,
-    const std::vector<Constraint<T>>& knownEquations, IsZero isZero, AffineHullResultCommon& result)
+    const std::vector<Constraint<T>>& knownEquations, AffineHullResultCommon& result)
   {
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
     result.upperBound = n;
 
-    auto redundancyCheck = EquationRedundancyCheck<T, IsZero>(n, isZero);
+    auto redundancyCheck = EquationRedundancyCheck<T>(n);
     for (auto equation : knownEquations)
     {
-      EquationRedundancy redundancy = redundancyCheck.add(equation);
+      EquationRedundancy redundancy = redundancyCheck.add(equation, query.epsilonConstraints,
+        query.epsilonFactorization, query.epsilonCoefficient);
       if (redundancy == EQUATION_INCONSISTENT)
       {
         resultEquations.clear();
@@ -277,7 +280,7 @@ namespace ipo
       << redundancyCheck.rank() << "." << std::endl;
     result.upperBound = n - redundancyCheck.rank();
 
-    auto affineComplement = AffineComplement<T, IsZero>(n, isZero);
+    auto affineComplement = AffineComplement<T>(n);
     std::vector<T> objective(n);
     while (result.lowerBound < result.upperBound)
     {
@@ -317,6 +320,7 @@ namespace ipo
       }
 
       sparse_vector<T> kernelDirectionVector;
+      double kernelDirectionNorm;
       std::size_t kernelDirectionColumn = std::numeric_limits<std::size_t>::max();
       while (kernelDirectionVector.empty())
       {
@@ -324,12 +328,15 @@ namespace ipo
         kernelDirectionColumn = affineComplement.selectColumn();
 //         std::cout << "  Column " << kernelDirectionColumn << std::flush;
 
-        affineComplement.computeKernelVector(kernelDirectionColumn, kernelDirectionVector);
+        affineComplement.computeKernelVector(kernelDirectionColumn, kernelDirectionVector,
+          query.epsilonCoefficient);
         result.timeKernel += elapsedTime(timeComponent);
         assert(!kernelDirectionVector.empty());
 
+        kernelDirectionNorm = euclideanNorm(kernelDirectionVector);
 //         std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
 
+        
         if (elapsedTime(timeStarted) >= query.timeLimit)
         {
           result.dimension = AFFINEHULL_ERROR_TIMEOUT;
@@ -337,7 +344,8 @@ namespace ipo
         }
 
         timeComponent = std::chrono::system_clock::now();
-        EquationRedundancy redundancy = redundancyCheck.test(kernelDirectionVector);
+        EquationRedundancy redundancy = redundancyCheck.test(kernelDirectionVector,
+          query.epsilonCoefficient);
         result.timeEquations += elapsedTime(timeComponent);
   
         if (redundancy == EQUATION_INDEPENDENT)
@@ -406,7 +414,8 @@ namespace ipo
         affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
+          query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
         std::cout << "  -> adding a ray." << std::endl;
         ++result.lowerBound;
@@ -428,22 +437,25 @@ namespace ipo
 #if defined(IPO_DEBUG_AFFINE_HULL)
         affineComplement._debugAdd(*resultPoints.back(), 1, n, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-        affineComplement.add(*resultPoints.back(), 1, n);
+        affineComplement.add(*resultPoints.back(), 1, n, query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
         ++result.lowerBound;
 
         // If another point has a different objective value, we also add that and continue.
         for (std::size_t p = 2; p < oracleResponse.points.size(); ++p)
         {
-          if (!isZero(oracleResponse.points[p].objectiveValue
-            - oracleResponse.points.front().objectiveValue))
+          double difference = fabs(toDouble(oracleResponse.points[p].objectiveValue
+            - oracleResponse.points.front().objectiveValue));
+          difference /= kernelDirectionNorm;
+          if (difference > query.epsilonConstraints)
           {
             resultPoints.push_back(oracleResponse.points[p].vector);
             timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
             affineComplement._debugAdd(*resultPoints.back(), 1, kernelDirectionColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-            affineComplement.add(*resultPoints.back(), 1, kernelDirectionColumn);
+            affineComplement.add(*resultPoints.back(), 1, kernelDirectionColumn,
+              query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding two points with objective values "
@@ -467,14 +479,17 @@ namespace ipo
         bool success = false;
         for (const auto& point : oracleResponse.points)
         {
-          if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
+          double difference = fabs(toDouble(point.objectiveValue - oracleQuery.minObjectiveValue));
+          difference /= kernelDirectionNorm;
+          if (difference > query.epsilonConstraints)
           {
             resultPoints.push_back(point.vector);
             timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
             affineComplement._debugAdd(*point.vector, 1, kernelDirectionColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-            affineComplement.add(*point.vector, 1, kernelDirectionColumn);
+            affineComplement.add(*point.vector, 1, kernelDirectionColumn,
+              query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
@@ -521,7 +536,8 @@ namespace ipo
         affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn);
+        affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
+          query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
 
         ++result.lowerBound;
@@ -535,14 +551,17 @@ namespace ipo
         bool success = false;
         for (const auto& point : oracleResponse.points)
         {
-          if (!isZero(point.objectiveValue - oracleQuery.minObjectiveValue))
+          double difference = fabs(toDouble(point.objectiveValue - oracleQuery.minObjectiveValue));
+          difference /= kernelDirectionNorm;
+          if (difference > query.epsilonConstraints)
           {
             resultPoints.push_back(point.vector);
             timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL)
             affineComplement._debugAdd(*point.vector, 1, kernelDirectionColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL */
-            affineComplement.add(*point.vector, 1, kernelDirectionColumn);
+            affineComplement.add(*point.vector, 1, kernelDirectionColumn,
+              query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
             ++result.lowerBound;
             std::cout << "  -> adding a point with objective value "
@@ -563,7 +582,8 @@ namespace ipo
       affineComplement.markEquation(kernelDirectionColumn);
 
       timeComponent = std::chrono::system_clock::now();
-      redundancyCheck.add(resultEquations.back());
+      redundancyCheck.add(resultEquations.back(), query.epsilonConstraints,
+        query.epsilonFactorization, query.epsilonCoefficient);
       result.timeEquations += elapsedTime(timeComponent);
 
       --result.upperBound;
@@ -579,8 +599,8 @@ namespace ipo
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
     AffineHullResult<double> result;
-    affineHullImplementation(polyhedron, result.points, result.rays, result.equations, query,
-      knownEquations, DoubleIsZero(1.0e-9), result);
+    affineHullPure(polyhedron, result.points, result.rays, result.equations, query,
+      knownEquations, result);
     return result;
   }
 
@@ -590,9 +610,15 @@ namespace ipo
     std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
+    if (query.epsilonConstraints != 0.0 || query.epsilonCoefficient != 0.0
+      || query.epsilonFactorization != 0.0 || query.epsilonSafety != 0.0)
+    {
+      throw std::runtime_error(
+        "affineHull() for rational polyhedron requires all epsilons equal to zero.");
+    }
     AffineHullResult<mpq_class> result;
-    affineHullImplementation(polyhedron, result.points, result.rays, result.equations, query,
-      knownEquations, RationalIsZero(), result);
+    affineHullPure(polyhedron, result.points, result.rays, result.equations, query,
+      knownEquations, result);
     return result;
   }
 

@@ -16,12 +16,12 @@ namespace ipo
     EQUATION_INVALID
   };
 
-  template <typename T, typename IsZero>
+  template <typename T>
   class EquationRedundancyCheck
   {
   public:
-    EquationRedundancyCheck(std::size_t numVariables, const IsZero isZero = IsZero())
-      : _numVariables(numVariables), _isZero(isZero), _lu(isZero)
+    EquationRedundancyCheck(std::size_t numVariables)
+      : _numVariables(numVariables), _lu()
     {
 
     }
@@ -41,40 +41,46 @@ namespace ipo
       return _equations[e];
     }
 
-    EquationRedundancy test(const Constraint<T>& constraint) const
+    EquationRedundancy test(const Constraint<T>& constraint, double epsilonConstraint,
+      double epsilonCoefficient, double* pNorm = NULL) const
     {
-      if (!_isZero(constraint.lhs() - constraint.rhs()))
+      if (constraint.lhs() != constraint.rhs())
         EQUATION_INVALID;
 
       std::size_t newBasic;
+      double norm = pNorm ? *pNorm : euclideanNorm(constraint.vector());
       T rhs = -constraint.rhs();
-      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic);
-      if (result == EQUATION_REDUNDANT && !_isZero(rhs))
+      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
+        epsilonCoefficient);
+      if (result == EQUATION_REDUNDANT && fabs(toDouble(rhs)) > epsilonConstraint * norm)
         return EQUATION_INCONSISTENT;
       else
         return result;
     }
 
-    EquationRedundancy test(const sparse_vector<T>& vector) const
+    EquationRedundancy test(const sparse_vector<T>& vector, double epsilonCoefficient) const
     {
       T rhs(0);
       std::size_t newBasic;
-      return testImplementation(vector, rhs, newBasic);
+      return testImplementation(vector, rhs, newBasic, epsilonCoefficient);
     }
 
-    EquationRedundancy add(const Constraint<T>& constraint)
+    EquationRedundancy add(const Constraint<T>& constraint, double epsilonConstraint,
+      double epsilonFactorization, double epsilonCoefficient, double* pNorm = NULL)
     {
 #if defined(IPO_DEBUG_REDUNDANCY)
       std::cout << "EquationRedundancy.add(" << constraint << ")." << std::endl;
 #endif /* IPO_DEBUG_REDUNDANCY */
 
-      if (!_isZero(constraint.lhs() - constraint.rhs()))
+      if (constraint.lhs() != constraint.rhs())
         return EQUATION_INVALID;
 
+      double norm = pNorm ? *pNorm : euclideanNorm(constraint.vector());
       std::size_t newBasic;
       T rhs = -constraint.rhs();
-      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic);
-      if (result == EQUATION_REDUNDANT && !_isZero(rhs))
+      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
+        epsilonCoefficient);
+      if (result == EQUATION_REDUNDANT && fabs(toDouble(rhs)) > epsilonConstraint * norm)
         return EQUATION_INCONSISTENT;
       else if (result != EQUATION_INDEPENDENT)
         return result;
@@ -95,7 +101,7 @@ namespace ipo
         basisColumn[b] = constraint.vector().find(_basis[b], 0);
       }
 
-      _lu.extend(&basisRow[0], &basisColumn[0], basisColumn.back());
+      _lu.extend(&basisRow[0], &basisColumn[0], basisColumn.back(), epsilonFactorization);
 
       return result;
     }
@@ -103,7 +109,7 @@ namespace ipo
   protected:
 
     EquationRedundancy testImplementation(const sparse_vector<T>& vector, T& rhs,
-      std::size_t& newBasic) const
+      std::size_t& newBasic, double epsilonCoefficient) const
     {
       /* Find multipliers such that combined equation agrees with given one on basic variables.
        * To this end, solve Ax = r, where r is the basic part of the constraint vector. */
@@ -135,7 +141,7 @@ namespace ipo
       double newBasicValue = 0.0;
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
-        if (!_isZero(dense[v]))
+        if (fabs(toDouble(dense[v])) > epsilonCoefficient)
         {
           double value = fabs(toDouble(dense[v]));
           if (value > newBasicValue)
@@ -153,8 +159,7 @@ namespace ipo
 
   protected:
     std::size_t _numVariables;
-    IsZero _isZero;
-    IncrementalLUFactorization<T, IsZero> _lu;
+    IncrementalLUFactorization<T> _lu;
     std::vector<std::size_t> _basis;
     std::vector<Constraint<T>> _equations;
   };

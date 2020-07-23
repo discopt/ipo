@@ -73,7 +73,7 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery;
+    ipo::AffineHullQuery affQuery(true);
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
@@ -114,7 +114,7 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery;
+    ipo::AffineHullQuery affQuery(false);
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;

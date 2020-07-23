@@ -19,12 +19,11 @@ namespace ipo
    * \brief Class for an LU factorization.
    */
 
-  template <typename T, typename IsZero>
+  template <typename T>
   class IncrementalLUFactorization
   {
   public:
-    IncrementalLUFactorization(const IsZero isZero)
-      : _isZero(isZero)
+    IncrementalLUFactorization()
     {
 
     }
@@ -45,14 +44,14 @@ namespace ipo
      * One verifies \f$ L' \cdot U' = \begin{pmatrix} L \cdot U & L L^{-1} b \\ a^\intercal U^{-1} U & a^\intercal U^{-1} L^{-1} b
      * + \beta - a^\intercal U^{-1} L^{-1} b \end{pmatrix} = \begin{pmatrix} {L \cdot U} & b \\ a^\intercal & \beta \end{pmatrix} \f$.
      *
-     *
-     *
      * \param newRow Dense row to be added excluding diagonal entry. Will be modified.
      * \param newColumn Dense column to be added. Will be modified.
      * \param newDiagonal New diagonal entry to be added.
+     * \param zeroEpsilon Tolerance for when an entry shall be considered zero.
+     * \return Whether the matrix is regular. If it is singular, the factorization is not modified.
      */
 
-    void extend(T* newRow, T* newColumn, T newDiagonal)
+    bool extend(T* newRow, T* newColumn, T newDiagonal, double epsilonEntry)
     {
 #if defined(IPO_DEBUG_LU_CHECK)
       for (std::size_t r = 0; r < size(); ++r)
@@ -119,19 +118,24 @@ namespace ipo
 #if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "last diagonal = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU_PRINT */
-#if !defined(NDEBUG)
-      bool invertible = !_isZero(newDiagonal);
-#endif
-      assert(invertible);
+      if (fabs(toDouble(newDiagonal)) <= epsilonEntry)
+      {
+#if defined(IPO_DEBUG_LU_CHECK)
+      for (std::size_t r = 0; r < size(); ++r)
+        _debugDenseMatrix[r].pop_back();s
+      _debugDenseMatrix.pop_back();
+#endif /* IPO_DEBUG_LU_CHECK */
+        return false;
+      }
 
       /* Add the new row to L. */
       for (std::size_t i = 0; i < n; ++i)
       {
-        if (_isZero(newRow[i]))
-          continue;
-
-        _leftRows[i].push_back(n);
-        _leftEntries[i].push_back(newRow[i]);
+        if (fabs(toDouble(newRow[i])) > epsilonEntry)
+        {
+          _leftRows[i].push_back(n);
+          _leftEntries[i].push_back(newRow[i]);
+        }
       }
 
       /* Add a new column with a 1 to L. */
@@ -145,17 +149,14 @@ namespace ipo
       std::vector<T>& lastColumnEntries = _upperEntries.back();
       for (std::size_t i = 0; i < n; ++i)
       {
-        if (_isZero(newColumn[i]))
-          continue;
-
-        lastColumnRows.push_back(i);
-        lastColumnEntries.push_back(newColumn[i]);
+        if (fabs(toDouble(newColumn[i])) > epsilonEntry)
+        {
+          lastColumnRows.push_back(i);
+          lastColumnEntries.push_back(newColumn[i]);
+        }
       }
-      if (!_isZero(newDiagonal))
-      {
-        lastColumnRows.push_back(n);
-        lastColumnEntries.push_back(newDiagonal);
-      }
+      lastColumnRows.push_back(n);
+      lastColumnEntries.push_back(newDiagonal);
 
       assert(size() == n+1);
 
@@ -246,6 +247,7 @@ namespace ipo
       }
 
 #endif /* IPO_DEBUG_LU_CHECK */
+      return true;
     }
 
     /**
@@ -288,7 +290,6 @@ namespace ipo
     }
 
   protected:
-    const IsZero _isZero;
     std::vector<std::vector<std::size_t>> _leftRows;
     std::vector<std::vector<T>> _leftEntries;
     std::vector<std::vector<std::size_t>> _upperRows;

@@ -8,8 +8,7 @@ TEST(LinearAlgebra, LU)
 {
   std::cout << "===== LinearAlgebra::IncrementalLUFactorization::Double ===== " << std::endl;
   {
-    auto isZero = ipo::DoubleIsZero(1.0e-9);
-    auto lu = ipo::IncrementalLUFactorization<double, ipo::DoubleIsZero>(isZero);
+    auto lu = ipo::IncrementalLUFactorization<double>();
 
     /* Test matrix: 
     *  1 2 3
@@ -19,15 +18,15 @@ TEST(LinearAlgebra, LU)
     
     std::vector<double> row(3);
     std::vector<double> column(3);
-    lu.extend(&row[0], &column[0], 1);
+    lu.extend(&row[0], &column[0], 1, 1.0e-12);
     row[0] = 4;
     column[0] = 2;
-    lu.extend(&row[0], &column[0], 5);
+    lu.extend(&row[0], &column[0], 5, 1.0e-12);
     row[0] = 7;
     row[1] = 8;
     column[0] = 3;
     column[1] = 6;
-    lu.extend(&row[0], &column[0], 0);
+    lu.extend(&row[0], &column[0], 0, 1.0e-12);
 
     column[0] = 1;
     column[1] = 0;
@@ -58,7 +57,7 @@ TEST(LinearAlgebra, LU)
 #if defined(IPO_WITH_GMP)
   std::cout << "===== LinearAlgebra::IncrementalLUFactorization::Rational ===== " << std::endl;
   {
-    auto lu = ipo::IncrementalLUFactorization<mpq_class, ipo::RationalIsZero>(ipo::RationalIsZero());
+    auto lu = ipo::IncrementalLUFactorization<mpq_class>();
 
     /* Test matrix: 
     *  1 2 3
@@ -68,15 +67,15 @@ TEST(LinearAlgebra, LU)
     
     std::vector<mpq_class> row(3);
     std::vector<mpq_class> column(3);
-    lu.extend(&row[0], &column[0], 1);
+    lu.extend(&row[0], &column[0], 1, 0.0);
     row[0] = 4;
     column[0] = 2;
-    lu.extend(&row[0], &column[0], 5);
+    lu.extend(&row[0], &column[0], 5, 0.0);
     row[0] = 7;
     row[1] = 8;
     column[0] = 3;
     column[1] = 6;
-    lu.extend(&row[0], &column[0], 0);
+    lu.extend(&row[0], &column[0], 0, 0.0);
 
     column[0] = 1;
     column[1] = 0;

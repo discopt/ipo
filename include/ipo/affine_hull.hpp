@@ -22,10 +22,22 @@ namespace ipo
      * issues are likely and thus we try whether minimization gives a better result.
      */
     double epsilonSafety;
+    /**
+     * \brief Smallest value for the LU factorization.
+     */
+    double epsilonFactorization;
+    /**
+     * \brief Vector entries smaller than this are considered to be zero.
+     */
+    double epsilonCoefficient;
+    /**
+     * \brief Use hybridization with floating-point arithmetic for rational polyhedra.
+     */
+    bool hybrid;
     double timeLimit; /// Time limit in seconds.
 
     IPO_EXPORT
-    AffineHullQuery();
+    AffineHullQuery(bool exact);
   };
 
   const static int AFFINEHULL_ERROR_RUNNING = -2;
