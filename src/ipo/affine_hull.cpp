@@ -1,13 +1,7 @@
 #include <ipo/affine_hull.hpp>
 
-#define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-#define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
-
-#if defined(IPO_DEBUG_AFFINE_HULL)
-#include <sstream>
-#include <fstream>
-#include <iomanip>
-#endif /* IPO_DEBUG_AFFINE_HULL */
+// #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
+// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #include <ipo/arithmetic.hpp>
 
@@ -79,7 +73,7 @@ namespace ipo
         T prod = 0;
         for (std::size_t v = 0; v < numVariables(); ++v)
           prod += (_debugDensePoints[p][v] - _debugDensePoints[0][v]) * kernelVector[v];
-        if (fabs(double(prod)) > 1.0e-12)
+        if (fabs(toDouble(prod)) > 1.0e-12)
           ++countNonzeroProducts;
       }
       for (std::size_t r = 0; r < _debugDenseRays.size(); ++r)
@@ -87,7 +81,7 @@ namespace ipo
         T prod = 0;
         for (std::size_t v = 0; v < numVariables(); ++v)
           prod += _debugDenseRays[r][v] * kernelVector[v];
-        if (fabs(double(prod)) > 1.0e-12)
+        if (fabs(toDouble(prod)) > 1.0e-12)
           ++countNonzeroProducts;
       }
 
@@ -98,7 +92,7 @@ namespace ipo
           T prod = 0;
           for (std::size_t v = 0; v < numVariables(); ++v)
             prod += (_debugDensePoints[p][v] - _debugDensePoints[0][v]) * kernelVector[v];
-          if (fabs(double(prod)) > 1.0e-12)
+          if (fabs(toDouble(prod)) > 1.0e-12)
             std::cout << "Product for point " << p << "-0 is " << prod << std::endl;
         }
         for (std::size_t r = 0; r < _debugDenseRays.size(); ++r)
@@ -106,12 +100,12 @@ namespace ipo
           T prod = 0;
           for (std::size_t v = 0; v < numVariables(); ++v)
             prod += _debugDenseRays[r][v] * kernelVector[v];
-          if (fabs(double(prod)) > 1.0e-12)
+          if (fabs(toDouble(prod)) > 1.0e-12)
             std::cout << "Product for ray " << r << " is " << prod << std::endl;
         }
       }
     }
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
 
     void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
       double epsilonFactorization)
@@ -326,7 +320,9 @@ namespace ipo
       {
         timeComponent = std::chrono::system_clock::now();
         kernelDirectionColumn = affineComplement.selectColumn();
-//         std::cout << "  Column " << kernelDirectionColumn << std::flush;
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+        std::cout << "  Column " << kernelDirectionColumn << std::flush;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
         affineComplement.computeKernelVector(kernelDirectionColumn, kernelDirectionVector,
           query.epsilonCoefficient);
@@ -334,8 +330,9 @@ namespace ipo
         assert(!kernelDirectionVector.empty());
 
         kernelDirectionNorm = euclideanNorm(kernelDirectionVector);
-//         std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
-
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+        std::cout << " has kernel vector " << kernelDirectionVector << std::flush;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
         
         if (elapsedTime(timeStarted) >= query.timeLimit)
         {
@@ -350,12 +347,16 @@ namespace ipo
   
         if (redundancy == EQUATION_INDEPENDENT)
         {
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
           std::cout << " which is independent of the equations." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
           break;
         }
         else
         {
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
           std::cout << " which is in the span of the equations." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
           affineComplement.markEquation(kernelDirectionColumn);
           kernelDirectionVector.clear();
         }
@@ -410,10 +411,10 @@ namespace ipo
       {
         resultRays.push_back(oracleResponse.rays.front().vector);
         timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
         affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
         affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
@@ -434,9 +435,9 @@ namespace ipo
 
         resultPoints.push_back(oracleResponse.points.front().vector);
         timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
         affineComplement._debugAdd(*resultPoints.back(), 1, n, objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
         affineComplement.add(*resultPoints.back(), 1, n, query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
         ++result.lowerBound;
@@ -451,9 +452,9 @@ namespace ipo
           {
             resultPoints.push_back(oracleResponse.points[p].vector);
             timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
             affineComplement._debugAdd(*resultPoints.back(), 1, kernelDirectionColumn, objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
             affineComplement.add(*resultPoints.back(), 1, kernelDirectionColumn,
               query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
@@ -485,9 +486,9 @@ namespace ipo
           {
             resultPoints.push_back(point.vector);
             timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
             affineComplement._debugAdd(*point.vector, 1, kernelDirectionColumn, objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
             affineComplement.add(*point.vector, 1, kernelDirectionColumn,
               query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
@@ -532,10 +533,10 @@ namespace ipo
         resultRays.push_back(oracleResponse.rays.front().vector);
 
         timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
         affineComplement._debugAdd(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
         affineComplement.add(*oracleResponse.rays.front().vector, 0, kernelDirectionColumn,
           query.epsilonFactorization);
         result.timePointsRays += elapsedTime(timeComponent);
@@ -557,9 +558,9 @@ namespace ipo
           {
             resultPoints.push_back(point.vector);
             timeComponent = std::chrono::system_clock::now();
-#if defined(IPO_DEBUG_AFFINE_HULL)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
             affineComplement._debugAdd(*point.vector, 1, kernelDirectionColumn, objective);
-#endif /* IPO_DEBUG_AFFINE_HULL */
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
             affineComplement.add(*point.vector, 1, kernelDirectionColumn,
               query.epsilonFactorization);
             result.timePointsRays += elapsedTime(timeComponent);
