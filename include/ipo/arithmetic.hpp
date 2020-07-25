@@ -7,49 +7,46 @@
 #include <gmpxx.h>
 #endif /* IPO_WITH_GMP */
 
+template <typename To, typename From>
+To convertNumber(const From& from)
+{
+  return To::unimplemented;
+}
+
+template<>
+inline double convertNumber<double>(const double& from)
+{
+  return from;
+}
+
+#if defined(IPO_WITH_GMP)
+
+template<>
+inline mpq_class convertNumber<mpq_class>(const mpq_class& x)
+{
+  return x;
+}
+
+template<>
+inline double convertNumber<double>(const mpq_class& x)
+{
+  return x.get_d();
+}
+
+IPO_EXPORT
+mpq_class reconstructRational(double x, double maxError = 1.0e-15);
+
+IPO_EXPORT
+void reconstructRational(mpq_ptr result, double x, double maxError = 1.0e-15);
+
+template<>
+inline mpq_class convertNumber<mpq_class>(const double& x)
+{
+  return reconstructRational(x);
+}
+
 namespace ipo
 {
-  struct DoubleIsZero
-  {
-    double epsilon;
-
-    IPO_EXPORT
-    DoubleIsZero(double eps);
-
-    IPO_EXPORT
-    bool operator()(double value) const;
-  };
-
-#if defined(IPO_WITH_GMP)
-  struct RationalIsZero
-  {
-    IPO_EXPORT
-    RationalIsZero() = default;
-
-    IPO_EXPORT
-    bool operator()(const mpq_class& x) const
-    {
-      return x == 0;
-    }
-  };
-#endif /* IPO_WITH_GMP */
-
-  IPO_EXPORT
-  inline double toDouble(double x)
-  {
-    return x;
-  }
-
-#if defined(IPO_WITH_GMP)
-  IPO_EXPORT
-  inline double toDouble(const mpq_class& x)
-  {
-    return x.get_d();
-  }
-
-  void mpq_reconstruct(mpq_t& result, double x, double maxError = 1.0e-12);
-
-  mpq_class reconstruct(double x, double maxError = 1.0e-12);
 
   class IntegralScaler
   {
@@ -64,6 +61,7 @@ namespace ipo
     mpq_class _factor;
   };
 
-#endif /* IPO_WITH_GMP */
-  
 }
+
+#endif /* IPO_WITH_GMP */
+

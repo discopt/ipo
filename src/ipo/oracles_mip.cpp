@@ -31,12 +31,14 @@ namespace ipo
       if (bounds[i].first == -std::numeric_limits<double>::infinity())
         mpq_set_d(_originalLowerBounds[i], -soplex::infinity);
       else
-        mpq_reconstruct(_originalLowerBounds[i], bounds[i].first);
+      {
+        reconstructRational(_originalLowerBounds[i], bounds[i].first);
+      }
       mpq_init(_originalUpperBounds[i]);
       if (bounds[i].second == std::numeric_limits<double>::infinity())
         mpq_set_d(_originalUpperBounds[i], soplex::infinity);
       else
-        mpq_reconstruct(_originalUpperBounds[i], bounds[i].second);
+        reconstructRational(_originalUpperBounds[i], bounds[i].second);
     }
 
     _spx.addColsRational(_coefficients, _originalLowerBounds, nullptr, nullptr, nullptr, nullptr,
@@ -96,19 +98,18 @@ namespace ipo
     for (const auto& iter : constraint.vector())
     {
       _indices[i] = iter.first;
-      mpq_class x = reconstruct(iter.second);
-      mpq_set(_coefficients[i], x.get_mpq_t());
+      reconstructRational(_coefficients[i], iter.second);
       ++i;
     }
 
     if (constraint.type() == LESS_OR_EQUAL)
       mpq_set_d(rationalLhs, -soplex::infinity);
     else
-      mpq_reconstruct(rationalLhs, constraint.lhs());
+      reconstructRational(rationalLhs, constraint.lhs());
     if (constraint.type() == GREATER_OR_EQUAL)
       mpq_set_d(rationalRhs, soplex::infinity);
     else
-      mpq_reconstruct(rationalRhs, constraint.rhs());
+      reconstructRational(rationalRhs, constraint.rhs());
 
     _spx.addRowRational(&rationalLhs, _coefficients, _indices, constraint.vector().size(), &rationalRhs);
 
@@ -406,7 +407,7 @@ namespace ipo
     response.constraints.reserve(approximateResponse.numConstraints());
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
     for (const auto& constraint : approximateResponse.constraints)
-      response.constraints.push_back( constraintToRational(constraint) );
+      response.constraints.push_back( convertConstraint<mpq_class>(constraint) );
 
     return response;
   }
@@ -423,7 +424,7 @@ namespace ipo
     response.constraints.reserve(approximateResponse.numConstraints());
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
     for (const auto& constraint : approximateResponse.constraints)
-      response.constraints.push_back( constraintToRational(constraint) );
+      response.constraints.push_back( convertConstraint<mpq_class>(constraint) );
 
     return response;
   }

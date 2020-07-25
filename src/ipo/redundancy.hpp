@@ -52,7 +52,7 @@ namespace ipo
       T rhs = -constraint.rhs();
       EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
         epsilonCoefficient);
-      if (result == EQUATION_REDUNDANT && fabs(toDouble(rhs)) > epsilonConstraint * norm)
+      if (result == EQUATION_REDUNDANT && fabs(convertNumber<double>(rhs)) > epsilonConstraint * norm)
         return EQUATION_INCONSISTENT;
       else
         return result;
@@ -80,7 +80,7 @@ namespace ipo
       T rhs = -constraint.rhs();
       EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
         epsilonCoefficient);
-      if (result == EQUATION_REDUNDANT && fabs(toDouble(rhs)) > epsilonConstraint * norm)
+      if (result == EQUATION_REDUNDANT && fabs(convertNumber<double>(rhs)) > epsilonConstraint * norm)
         return EQUATION_INCONSISTENT;
       else if (result != EQUATION_INDEPENDENT)
         return result;
@@ -141,9 +141,9 @@ namespace ipo
       double newBasicValue = 0.0;
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
-        if (fabs(toDouble(dense[v])) > epsilonCoefficient)
+        if (fabs(convertNumber<double>(dense[v])) > epsilonCoefficient)
         {
-          double value = fabs(toDouble(dense[v]));
+          double value = fabs(convertNumber<double>(dense[v]));
           if (value > newBasicValue)
           {
             newBasic = v;

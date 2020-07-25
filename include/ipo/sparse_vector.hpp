@@ -52,7 +52,7 @@ public:
     return *this;
   }
 
-  sparse_vector(std::vector<value_type>&& other)
+  sparse_vector(std::vector<value_type>&& other, bool sort)
     : _data(std::move(other))
   {
     struct Less
@@ -63,7 +63,8 @@ public:
       }
     };
 
-    std::sort(_data.begin(), _data.end(), Less());
+    if (sort)
+      std::sort(_data.begin(), _data.end(), Less());
   }
 
   std::size_t size() const
@@ -155,45 +156,6 @@ public:
     return (iter != end()) ? iter->second : backup;
   }
 
-  template <typename U>
-  U operator*(const sparse_vector<U>& other) const
-  {
-    U result(0);
-    sparse_vector<T>::const_iterator iter1 = begin();
-    if (iter1 == end())
-      return result;
-    typename sparse_vector<U>::const_iterator iter2 = other.begin();
-    if (iter2 == other.end())
-      return result;
-    while (true)
-    {
-      if (iter1->first < iter2->first)
-      {
-        ++iter1;
-        if (iter1 == end())
-          return result;
-      }
-      else if (iter1->first > iter2->first)
-      {
-        ++iter2;
-        if (iter2 == other.end())
-          return result;
-      }
-      else
-      {
-        assert(iter1->first == iter2->first);
-        result += iter1->second * iter2->second;
-        ++iter1;
-        if (iter1 == end())
-          return result;
-        ++iter2;
-        if (iter2 == other.end())
-          return result;
-      }
-    }
-    return result;
-  }
-
   friend void swap(sparse_vector<T>& a, sparse_vector<T>& b)
   {
     std::swap(a._data, b._data);
@@ -243,21 +205,60 @@ protected:
   std::vector<value_type> _data;
 };
 
-template <typename T, typename U>
-U operator*(const sparse_vector<T>& a, const U* b)
+template <typename T,typename U>
+T operator*(const sparse_vector<T>& a, const sparse_vector<U>& b)
 {
-  U result(0);
-  for (auto& iter : a)
-    result += (U)(iter.second) * b[iter.first];
+  T result(0);
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  if (ia == a.end())
+    return result;
+  typename sparse_vector<U>::const_iterator ib = b.begin();
+  if (ib == b.end())
+    return result;
+  while (true)
+  {
+    if (ia->first < ib->first)
+    {
+      ++ia;
+      if (ia == a.end())
+        return result;
+    }
+    else if (ia->first > ib->first)
+    {
+      ++ib;
+      if (ib == b.end())
+        return result;
+    }
+    else
+    {
+      assert(ia->first == ib->first);
+      result += ia->second * ib->second;
+      ++ia;
+      if (ia == a.end())
+        return result;
+      ++ib;
+      if (ib == b.end())
+        return result;
+    }
+  }
   return result;
 }
 
-template <typename T>
-double operator*(const sparse_vector<T>& a, const double* b)
+template <typename T, typename U>
+T operator*(const sparse_vector<T>& a, const U* b)
 {
-  double result(0);
+  T result(0);
   for (auto& iter : a)
-    result += ipo::toDouble(iter.second) * b[iter.first];
+    result += iter.second * convertNumber<T>(b[iter.first]);
+  return result;
+}
+
+template <typename T, typename U>
+T operator*(const T* a, const sparse_vector<U>& b)
+{
+  T result(0);
+  for (auto& iter : b)
+    result += a[iter.first] * convertNumber<T>(iter.second);
   return result;
 }
 
@@ -277,77 +278,86 @@ std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
   return stream << ']';
 }
 
-template <typename U, typename T>
-  double squaredEuclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
+template <typename T, typename U>
+double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U>& b)
+{
+  double result = 0.0;
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  typename sparse_vector<U>::const_iterator ib = b.begin();
+  if (ia != a.end() && ib != b.end())
   {
-    double result = 0.0;
-    typename sparse_vector<T>::const_iterator ia = a.begin();
-    typename sparse_vector<T>::const_iterator ib = b.begin();
-    if (ia != a.end() && ib != b.end())
+    while (true)
     {
-      while (true)
+      if (ia->first < ib->first)
       {
-        if (ia->first < ib->first)
-        {
-          double x = ipo::toDouble(ia->second);
-          result += x*x;
-          ++ia;
-          if (ia == a.end())
-            break;
-        }
-        else if (ia->first > ib->first)
-        {
-          double x = ipo::toDouble(ib->second);
-          result += x*x;
-          ++ib;
-          if (ib == b.end())
-            break;
-        }
-        else
-        {
-          double x = ipo::toDouble(ia->second - ib->second);
-          result += x*x;
-          ++ia;
-          ++ib;
-          if (ia == a.end() || ib == b.end())
-            break;
-        }
+        double x = convertNumber<double>(ia->second);
+        result += x*x;
+        ++ia;
+        if (ia == a.end())
+          break;
+      }
+      else if (ia->first > ib->first)
+      {
+        double x = convertNumber<double>(ib->second);
+        result += x*x;
+        ++ib;
+        if (ib == b.end())
+          break;
+      }
+      else
+      {
+        double x = convertNumber<double, T>(ia->second) - convertNumber<double, U>(ib->second);
+        result += x*x;
+        ++ia;
+        ++ib;
+        if (ia == a.end() || ib == b.end())
+          break;
       }
     }
-    for (; ia != a.end(); ++ia)
-    {
-      double x = ipo::toDouble(ia->second);
-      result += x*x;
-    }
-    for (; ib != b.end(); ++ib)
-    {
-      double x = ipo::toDouble(ib->second);
-      result += x*x;
-    }
-    return result;
   }
-
-  template <typename U, typename T>
-  double euclideanDistance(const sparse_vector<U>& a, const sparse_vector<T>& b)
+  for (; ia != a.end(); ++ia)
   {
-    return sqrt(squaredEuclideanDistance(a, b));
+    double x = convertNumber<double>(ia->second);
+    result += x*x;
   }
-
-  template <typename T>
-  double squaredEuclideanNorm(const sparse_vector<T>& vector)
+  for (; ib != b.end(); ++ib)
   {
-    double result = 0.0;
-    for (const auto& iter : vector)
-    {
-      double x = ipo::toDouble(iter.second);
-      result += x*x;
-    }
-    return result;
+    double x = convertNumber<double>(ib->second);
+    result += x*x;
   }
+  return result;
+}
 
-  template <typename T>
-  double euclideanNorm(const sparse_vector<T>& vector)
+template <typename T, typename U>
+double euclideanDistance(const sparse_vector<T>& a, const sparse_vector<U>& b)
+{
+  return sqrt(squaredEuclideanDistance(a, b));
+}
+
+template <typename T>
+double squaredEuclideanNorm(const sparse_vector<T>& vector)
+{
+  double result = 0.0;
+  for (const auto& iter : vector)
   {
-    return sqrt(squaredEuclideanNorm(vector));
+    double x = convertNumber<double>(iter.second);
+    result += x*x;
   }
+  return result;
+}
 
+template <typename T>
+double euclideanNorm(const sparse_vector<T>& vector)
+{
+  return sqrt(squaredEuclideanNorm(vector));
+}
+
+template<typename To, typename From>
+inline sparse_vector<To> convertTo(const sparse_vector<From>& vector)
+{
+  std::vector<std::pair<std::size_t, To>> entries;
+  entries.reserve(vector.size());
+  for (const auto& iter : vector)
+    entries.push_back(std::make_pair(iter.first, convertNumber<To>(iter.second)));
+  return sparse_vector<To>(std::move(entries), false);
+}

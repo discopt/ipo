@@ -118,7 +118,7 @@ namespace ipo
 #if defined(IPO_DEBUG_LU_PRINT)
       std::cout << "last diagonal = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU_PRINT */
-      if (fabs(toDouble(newDiagonal)) <= epsilonEntry)
+      if (fabs(convertNumber<double>(newDiagonal)) <= epsilonEntry)
       {
 #if defined(IPO_DEBUG_LU_CHECK)
       for (std::size_t r = 0; r < size(); ++r)
@@ -131,7 +131,7 @@ namespace ipo
       /* Add the new row to L. */
       for (std::size_t i = 0; i < n; ++i)
       {
-        if (fabs(toDouble(newRow[i])) > epsilonEntry)
+        if (fabs(convertNumber<double>(newRow[i])) > epsilonEntry)
         {
           _leftRows[i].push_back(n);
           _leftEntries[i].push_back(newRow[i]);
@@ -149,7 +149,7 @@ namespace ipo
       std::vector<T>& lastColumnEntries = _upperEntries.back();
       for (std::size_t i = 0; i < n; ++i)
       {
-        if (fabs(toDouble(newColumn[i])) > epsilonEntry)
+        if (fabs(convertNumber<double>(newColumn[i])) > epsilonEntry)
         {
           lastColumnRows.push_back(i);
           lastColumnEntries.push_back(newColumn[i]);

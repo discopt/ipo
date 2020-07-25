@@ -51,9 +51,7 @@ namespace ipo
       // Compute scalar product with each normalized ray.
       for (auto& rayProduct : _polyhedron->_rayProducts)
       {
-        rayProduct.product = 0.0;
-        for (const auto& iter : *_polyhedron->_rays[rayProduct.vectorIndex].vector)
-          rayProduct.product += objectiveVector[iter.first] * toDouble(iter.second);
+        rayProduct.product = objectiveVector * *_polyhedron->_rays[rayProduct.vectorIndex].vector;
         rayProduct.product *= _polyhedron->_rays[rayProduct.vectorIndex].inverseNorm;
       }
 
@@ -103,9 +101,7 @@ namespace ipo
 
       for (auto& pointProduct : _polyhedron->_pointProducts)
       {
-        pointProduct.product = 0.0;
-        for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
-          pointProduct.product += objectiveVector[iter.first] * toDouble(iter.second);
+        pointProduct.product = objectiveVector * *_polyhedron->_points[pointProduct.vectorIndex].vector;
         pointProduct.product *= _polyhedron->_points[pointProduct.vectorIndex].inverseNorm;
       }
 
@@ -125,7 +121,7 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
-      double threshold = toDouble(query.minObjectiveValue);
+      double threshold = convertNumber<double>(query.minObjectiveValue);
       if (std::isfinite(threshold))
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
@@ -164,7 +160,7 @@ namespace ipo
       double objectiveNormalization = 0.0;
       for (std::size_t v = 0; v < this->space()->dimension(); ++v)
       {
-        double x = toDouble(objectiveVector[v]);
+        double x = convertNumber<double>(objectiveVector[v]);
         objectiveNormalization += x*x;
       }
       objectiveNormalization = sqrt(objectiveNormalization);
@@ -176,7 +172,10 @@ namespace ipo
       {
         rayProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_rays[rayProduct.vectorIndex].vector)
-          rayProduct.product += toDouble(objectiveVector[iter.first]) * toDouble(iter.second);
+        {
+          rayProduct.product += convertNumber<double>(objectiveVector[iter.first])
+            * convertNumber<double>(iter.second);
+        }
         rayProduct.product *= _polyhedron->_rays[rayProduct.vectorIndex].inverseNorm;
       }
 
@@ -228,7 +227,10 @@ namespace ipo
       {
         pointProduct.product = 0.0;
         for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
-          pointProduct.product += toDouble(objectiveVector[iter.first]) * toDouble(iter.second);
+        {
+          pointProduct.product += convertNumber<double>(objectiveVector[iter.first])
+            * convertNumber<double>(iter.second);
+        }
         pointProduct.product *= _polyhedron->_points[pointProduct.vectorIndex].inverseNorm;
       }
 
@@ -248,7 +250,7 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
-      double threshold = toDouble(query.minObjectiveValue);
+      double threshold = convertNumber<double>(query.minObjectiveValue);
       if (std::isfinite(threshold))
         threshold += objectiveNormalization * _polyhedron->_normalizedPointEpsilon;
       for (auto& pointProduct : _polyhedron->_pointProducts)
@@ -260,7 +262,7 @@ namespace ipo
           T product(0.0);
           for (const auto& iter : *_polyhedron->_points[pointProduct.vectorIndex].vector)
             product += objectiveVector[iter.first] * iter.second;
-          if (toDouble(product) <= threshold)
+          if (convertNumber<double>(product) <= threshold)
             break;
         }
         response.points.push_back(typename OptimizationOracle<T>::Response::Point(
@@ -492,7 +494,7 @@ namespace ipo
     void addToCache(std::vector<CachedVector>& vectors, std::map<double, std::size_t>& hashToIndex,
       std::vector<ProductVector>& products, std::shared_ptr<sparse_vector<T>>& vector)
     {
-      double hash = *vector * _hashVector;
+      double hash = _hashVector * *vector;
       auto afterIter = hashToIndex.lower_bound(hash);
       double afterDist = std::numeric_limits<double>::infinity();
       if (afterIter != hashToIndex.end())

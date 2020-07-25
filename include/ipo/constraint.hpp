@@ -213,3 +213,13 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 }
+
+template <typename To, typename From>
+inline ipo::Constraint<To> convertConstraint(const ipo::Constraint<From>& from)
+{
+  To lhs = convertNumber<To, From>(from.lhs());
+  To rhs = convertNumber<To, From>(from.rhs());
+  return ipo::Constraint<To>(lhs,
+    std::make_shared<sparse_vector<To>>(convertTo<To, From>(from.vector())), rhs, from.type());
+}
+

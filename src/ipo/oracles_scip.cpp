@@ -251,7 +251,7 @@ namespace ipo
         unsortedEntries.clear();
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
         visitor(Constraint<double>(average, vector, average, EQUATION));
         continue;
       }
@@ -262,7 +262,7 @@ namespace ipo
         unsortedEntries.clear();
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
         visitor(Constraint<double>(vector, rhs));
       }
       if (SCIPisInfinity(scip, rhs) || (!SCIPisInfinity(scip, -lhs) && !ranged))
@@ -270,7 +270,7 @@ namespace ipo
         unsortedEntries.clear();
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
         visitor(Constraint<double>(lhs, vector));
       }
       if (ranged && !SCIPisInfinity(scip, -lhs) && !SCIPisInfinity(scip, rhs))
@@ -278,7 +278,7 @@ namespace ipo
         unsortedEntries.clear();
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
-        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries));
+        auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
         visitor(Constraint<double>(lhs, vector, rhs, RANGED));
       }
     }

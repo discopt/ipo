@@ -142,7 +142,7 @@ namespace ipo
     inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational(
       std::shared_ptr<Constraint<mpq_class>> face)
     {
-      auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
+      auto approximateFace = std::make_shared<Constraint<double>>(convertConstraint<double>(*face));
       auto approximateOracle = getOptimizationOracleDouble(approximateFace);
       return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
     }
@@ -191,7 +191,7 @@ namespace ipo
     inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational(
       std::shared_ptr<Constraint<mpq_class>> face)
     {
-      auto approximateFace = std::make_shared<Constraint<double>>(constraintToDouble(*face));
+      auto approximateFace = std::make_shared<Constraint<double>>(convertConstraint<double>(*face));
       auto approximateOracle = getSeparationOracleDouble(approximateFace);
       return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
     }
