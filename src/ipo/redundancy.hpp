@@ -1,6 +1,6 @@
 #pragma once
 
-// #define IPO_DEBUG_REDUNDANCY
+// #define IPO_DEBUG_REDUNDANCY_PRINT
 
 #include <ipo/config.hpp>
 #include <ipo/constraint.hpp>
@@ -44,6 +44,10 @@ namespace ipo
     EquationRedundancy test(const Constraint<T>& constraint, double epsilonConstraint,
       double epsilonCoefficient, double* pNorm = NULL) const
     {
+#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
+      std::cout << "EquationRedundancy.test(" << constraint << ")." << std::endl;
+#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
+      
       if (constraint.lhs() != constraint.rhs())
         EQUATION_INVALID;
 
@@ -60,6 +64,15 @@ namespace ipo
 
     EquationRedundancy test(const sparse_vector<T>& vector, double epsilonCoefficient) const
     {
+#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
+      std::cout << "EquationRedundancy.test(" << vector << ").\n";
+      std::cout << "  current equations are:\n";
+      for (const auto equation : _equations)
+      {
+        std::cout << "  " << equation << std::endl;
+      }
+#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
+
       T rhs(0);
       std::size_t newBasic;
       return testImplementation(vector, rhs, newBasic, epsilonCoefficient);
@@ -68,9 +81,9 @@ namespace ipo
     EquationRedundancy add(const Constraint<T>& constraint, double epsilonConstraint,
       double epsilonFactorization, double epsilonCoefficient, double* pNorm = NULL)
     {
-#if defined(IPO_DEBUG_REDUNDANCY)
+#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
       std::cout << "EquationRedundancy.add(" << constraint << ")." << std::endl;
-#endif /* IPO_DEBUG_REDUNDANCY */
+#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
 
       if (constraint.lhs() != constraint.rhs())
         return EQUATION_INVALID;
@@ -131,11 +144,11 @@ namespace ipo
       for (const auto& iter : vector)
         dense[iter.first] -= iter.second;
 
-#if defined(IPO_DEBUG_REDUNDANCY)
-      for (std::size_t v = 0; v < numVariables(); ++v)
-        std::cout << " " << dense[v];
-      std::cout << "; " << rhs << std::endl;
-#endif /* IPO_DEBUG_REDUNDANCY */
+// #if defined(IPO_DEBUG_REDUNDANCY_PRINT)
+//       for (std::size_t v = 0; v < numVariables(); ++v)
+//         std::cout << " " << dense[v];
+//       std::cout << "; " << rhs << std::endl;
+// #endif /* IPO_DEBUG_REDUNDANCY_PRINT */
 
       newBasic = std::numeric_limits<std::size_t>::max();
       double newBasicValue = 0.0;

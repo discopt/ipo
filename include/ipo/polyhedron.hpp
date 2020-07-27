@@ -1,6 +1,6 @@
 #pragma once
 
-#define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
+// #define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
 
 #include <iostream>
 

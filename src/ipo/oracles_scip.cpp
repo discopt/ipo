@@ -1,5 +1,7 @@
 #include <ipo/oracles_scip.hpp>
 
+// #define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
+
 #include <cassert>
 #include <functional>
 #include <chrono>
@@ -287,7 +289,9 @@ namespace ipo
   SCIPSolver::SCIPSolver(SCIP* scip)
     : _scip(scip), _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
   {
+#if !defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
+#endif /* !IPO_DEBUG_ORACLES_SCIP_PRINT */
     initialize();
   }
 
@@ -296,7 +300,9 @@ namespace ipo
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
+#if !defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
+#endif /* !IPO_DEBUG_ORACLES_SCIP_PRINT */
     SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), NULL) );
 
     initialize();
@@ -483,9 +489,11 @@ namespace ipo
       }
 
       std::size_t numSolutions = SCIPgetNSols(_solver->_scip);
-      if (status != SCIP_STATUS_INFEASIBLE && status != SCIP_STATUS_INFORUNBD
-        && status != SCIP_STATUS_UNBOUNDED && numSolutions > 0)
+      if (status != SCIP_STATUS_INFORUNBD && status != SCIP_STATUS_UNBOUNDED && numSolutions > 0)
       {
+        // Note that SCIP_STATUS_INFEASIBLE is fine since this is issued if the objective limit was
+        // reached. However, if solutions were found, we want to process them.
+
         SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
@@ -513,7 +521,8 @@ namespace ipo
       else if (status == SCIP_STATUS_INFEASIBLE)
       {
         assert(numSolutions == 0);
-        response.outcome = OPTIMIZATION_INFEASIBLE;
+        response.outcome = query.hasMinObjectiveValue ? OPTIMIZATION_FEASIBLE
+          : OPTIMIZATION_INFEASIBLE;
         break;
       }
       else if (status == SCIP_STATUS_UNBOUNDED)

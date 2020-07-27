@@ -9,10 +9,14 @@ int printUsage(const std::string& program)
   std::cout << program << " [OPTIONS] MODEL\n";
   std::cout << "Options:\n";
 #if defined(IPO_WITH_GMP)
-  std::cout << " --gmp|-g        Use exact arithmetic (GMP).\n";
+  std::cout << " --gmp|-g          Use exact arithmetic (GMP).\n";
 #endif /* IPO_WITH_GMP */
-  std::cout << " --new-equations Print new equations.\n";
-  std::cout << " --help|-h       Show this help and exit.\n";
+  std::cout << " --print-equations Print equations.\n";
+  std::cout << " --affinehull ALGO Algorithm used for rational polyhedra. Choices are:\n";
+  std::cout << "                   direct Apply the algorithm in exact arithmetic.\n";
+  std::cout << "                   verify Apply the algorithm in floating-point algorithm and finally verify.\n";
+  std::cout << "                   mixed  Apply the algorithm in exact arithmetic with floating-point decision support.\n";
+  std::cout << " --help|-h         Show this help and exit.\n";
   std::cout << std::flush;
   return EXIT_FAILURE;
 }
@@ -25,6 +29,7 @@ int main(int argc, char** argv)
   double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
   bool printEquations = false;
+  ipo::AffineHullAlgorithm affineHullAlgorithm = ipo::AFFINEHULL_ALGORITHM_DIRECT;
   for (int a = 1; a < argc; ++a)
   {
     const std::string arg = argv[a];
@@ -45,6 +50,22 @@ int main(int argc, char** argv)
     }
     else if (arg == "--print-equations")
       printEquations = true;
+    else if (arg == "--affinehull" && a+1 < argc)
+    {
+      std::string algo = argv[a+1];
+      if (algo == "direct")
+        affineHullAlgorithm = ipo::AFFINEHULL_ALGORITHM_DIRECT;
+      else if (algo == "verify")
+        affineHullAlgorithm = ipo::AFFINEHULL_ALGORITHM_VERIFY;
+      else if (algo == "mixed")
+        affineHullAlgorithm = ipo::AFFINEHULL_ALGORITHM_MIXED;
+      else
+      {
+        std::cerr << "Invalid affine-hull algorithm <" << algo << ">!" << std::endl;
+        return EXIT_FAILURE;
+      }
+      ++a;
+    }
     else if (fileName.empty())
       fileName = arg;
     else
@@ -73,8 +94,9 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery(false);
+    ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
+    affQuery.algorithm = affineHullAlgorithm;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
     if (printEquations)
@@ -114,7 +136,7 @@ int main(int argc, char** argv)
     }
 
     std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery(false);
+    ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;

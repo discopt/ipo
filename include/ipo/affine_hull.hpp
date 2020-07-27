@@ -10,6 +10,13 @@
 
 namespace ipo
 {
+  enum AffineHullAlgorithm
+  {
+    AFFINEHULL_ALGORITHM_DIRECT = 0,
+    AFFINEHULL_ALGORITHM_VERIFY = 1,
+    AFFINEHULL_ALGORITHM_MIXED = 2
+  };
+
   struct AffineHullQuery
   {
     /**
@@ -30,14 +37,11 @@ namespace ipo
      * \brief Vector entries smaller than this are considered to be zero.
      */
     double epsilonCoefficient;
-    /**
-     * \brief Use hybridization with floating-point arithmetic for rational polyhedra.
-     */
-    bool hybrid;
+    AffineHullAlgorithm algorithm; /// Algorithm to be used for rational polyhedra.
     double timeLimit; /// Time limit in seconds.
 
     IPO_EXPORT
-    AffineHullQuery(bool exact);
+    AffineHullQuery();
   };
 
   const static int AFFINEHULL_ERROR_RUNNING = -2;
@@ -50,6 +54,7 @@ namespace ipo
     int upperBound; /// Upper bound on dimension.
     double timeTotal; /// Total time spent.
     double timeOracles; /// Time spent for oracle calls.
+    std::size_t numKernel; // Number of computed kernel vectors.
     double timeKernel; /// Time spent for computing kernel vectors.
     double timePointsRays; /// Time spent for the LU factorization of points and rays.
     double timeEquations; /// Time spent for the LU factorization of equations.
@@ -70,6 +75,7 @@ namespace ipo
       upperBound = std::numeric_limits<int>::max();
       timeTotal = 0.0;
       timeOracles = 0.0;
+      numKernel = 0;
       timeKernel = 0.0;
       timePointsRays = 0.0;
       timeEquations = 0.0;
@@ -85,6 +91,7 @@ namespace ipo
       upperBound = other.upperBound;
       timeTotal = other.timeTotal;
       timeOracles = other.timeOracles;
+      numKernel = other.numKernel;
       timeKernel = other.timeKernel;
       timePointsRays = other.timePointsRays;
       timeEquations = other.timeEquations;
@@ -106,6 +113,7 @@ namespace ipo
         stream << "Unknown error. ";
       stream << "Dimension in [" << result.lowerBound << "," << result.upperBound << "]";
     }
+    stream << " (stats -- kernel vectors: " << result.numKernel << ")";
     stream << " (running times -- total: " << result.timeTotal << ", oracles: " << result.timeOracles
       << ", kernel: " << result.timeKernel << ", points/rays: " << result.timePointsRays
       << ", equations: " << result.timeEquations << ")";
