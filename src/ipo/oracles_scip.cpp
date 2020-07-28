@@ -1,6 +1,6 @@
 #include <ipo/oracles_scip.hpp>
 
-#define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
+// #define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
 
 #include <cassert>
 #include <functional>
@@ -290,9 +290,10 @@ namespace ipo
     }
   }
 
-  SCIPSolver::SCIPSolver(SCIP* scip)
+  SCIPSolver::SCIPSolver(SCIP*&& scip)
     : _scip(scip), _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
   {
+    scip = NULL;
 #if !defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
 #endif /* !IPO_DEBUG_ORACLES_SCIP_PRINT */

@@ -32,7 +32,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &x);
     SCIPreleaseVar(scip, &y);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getOptimizationOracleDouble();
 
     double obj[] = {1.0, 1.0};
@@ -74,7 +74,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &y);
     SCIPreleaseCons(scip, &cons);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getOptimizationOracleDouble();
 
     double obj[] = { 1.0, 2.0 };
@@ -109,7 +109,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &y);
     SCIPreleaseCons(scip, &cons);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getSeparationOracleDouble();
 
     double vector[] = { 1.0, 1.0 };

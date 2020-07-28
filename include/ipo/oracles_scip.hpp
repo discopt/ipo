@@ -52,7 +52,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPSolver(SCIP* scip);
+    SCIPSolver(SCIP*&& scip);
 
     /**
      * \brief Constructs a solver instance from any file that SCIP can read. Before using it,
