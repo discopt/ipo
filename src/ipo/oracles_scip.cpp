@@ -1,11 +1,15 @@
 #include <ipo/oracles_scip.hpp>
 
-// #define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
+#define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
 
 #include <cassert>
 #include <functional>
 #include <chrono>
 #include <sstream>
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+#include <iostream>
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -342,7 +346,7 @@ namespace ipo
         bounds[i].second = std::numeric_limits<double>::infinity();
     }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
@@ -357,7 +361,7 @@ namespace ipo
 
     Visitor visitor = { _extender };
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
   }
 
@@ -365,9 +369,9 @@ namespace ipo
   {
     delete[] _instanceObjective;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     delete _extender;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
     for (auto& iter : _faceConstraints)
     {
@@ -552,6 +556,10 @@ namespace ipo
       SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", 0) );
       SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
       SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "Disabling presolve for a second optimization attempt." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
     }
 
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", oldMaxRounds) );

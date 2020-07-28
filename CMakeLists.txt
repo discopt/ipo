@@ -51,7 +51,7 @@ if(SOPLEX_FOUND)
   )
   # TODO: target_include_directories(ipo ... did not work here.
   include_directories(
-    PRIVATE ${SOPLEX_INCLUDE_DIRS}
+    ${SOPLEX_INCLUDE_DIRS}
   )
 endif()
 
@@ -74,7 +74,7 @@ if(SCIP_FOUND)
   )
   # TODO: target_include_directories(ipo ... did not work here.
   include_directories(
-    PUBLIC ${SCIP_INCLUDE_DIRS}
+    ${SCIP_INCLUDE_DIRS}
   )
 endif()
 
@@ -83,7 +83,7 @@ add_executable(ipo_mip
   src/mip/main.cpp)
 target_link_libraries(ipo_mip
   PRIVATE
-    IPO::ipo
+    IPO::IPO
 )
 set_target_properties(ipo_mip PROPERTIES OUTPUT_NAME ipo-mip)
 
@@ -96,7 +96,7 @@ generate_export_header(ipo EXPORT_FILE_NAME ${CMAKE_CURRENT_BINARY_DIR}/ipo/expo
 
 # TODO: Why both things below?
 # Add an alias so that library can be used inside the build tree.
-add_library(IPO::ipo ALIAS ipo)
+add_library(IPO::IPO ALIAS ipo)
 
 # This is required so that the exported target has the name IPO and not just ipo.
 set_target_properties(ipo PROPERTIES EXPORT_NAME IPO)

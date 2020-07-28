@@ -27,11 +27,11 @@ namespace ipo
   class SCIPOptimizationOracleDouble;
   class SCIPSeparationOracleDouble;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   typedef RationalMIPExtendedOptimizationOracle SCIPOptimizationOracleRational;
 
   typedef RationalMIPExtendedSeparationOracle SCIPSeparationOracleRational;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
   /**
    * \brief A SCIP solver instance.
@@ -121,7 +121,7 @@ namespace ipo
       return std::make_shared<SCIPOptimizationOracleDouble>(shared_from_this(), face);
     }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
     /**
      * \brief Returns an optimization oracle for the polyhedron.
@@ -147,7 +147,7 @@ namespace ipo
       return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
     }
 
-#endif /* IPO_WITH_GMP*/
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
@@ -170,7 +170,7 @@ namespace ipo
       return std::make_shared<SCIPSeparationOracleDouble>(shared_from_this(), face);
     }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
@@ -196,7 +196,7 @@ namespace ipo
       return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
     }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
   protected:
 
@@ -229,9 +229,9 @@ namespace ipo
     std::shared_ptr<Constraint<double>> _currentFace;
     std::unordered_map<std::shared_ptr<Constraint<double>>, SCIP_CONS*> _faceConstraints;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     RationalMIPExtender* _extender;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   };
 
   /**

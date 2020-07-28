@@ -2,7 +2,7 @@
 
 // #define IPO_DEBUG_ORACLES_MIP // Uncomment to debug this file.
 
-#if defined (IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
 #include <ipo/arithmetic.hpp>
 
@@ -440,4 +440,4 @@ namespace ipo
 
 }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */

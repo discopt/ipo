@@ -280,12 +280,15 @@ namespace ipo
     return redundancyCheck.numVariables() - redundancyCheck.rank();
   }
 
+#if defined(IPO_WITH_GMP)
+
   static OptimizationOracle<mpq_class>::Response maximize(
     std::shared_ptr<Polyhedron<mpq_class>> polyhedron, const mpq_class* objective,
     const typename OptimizationOracle<mpq_class>::Query& query)
   {
     return polyhedron->maximize(objective, query);
   }
+#endif /* IPO_WITH_GMP */
 
   static OptimizationOracle<double>::Response maximize(
     std::shared_ptr<Polyhedron<double>> polyhedron, const double* objective,
@@ -294,12 +297,16 @@ namespace ipo
     return polyhedron->maximize(objective, query);
   }
 
+#if defined(IPO_WITH_GMP)
+
   static OptimizationOracle<mpq_class>::Response maximize(
     std::shared_ptr<Polyhedron<mpq_class>> polyhedron, const double* objective,
     const typename OptimizationOracle<mpq_class>::Query& query)
   {
     return polyhedron->maximizeDouble(objective, query);
   }
+
+#endif /* IPO_WITH_GMP */
 
   template <typename T, typename U>
   static void findLastPoint(std::shared_ptr<Polyhedron<T>> polyhedron, U* objective,
@@ -822,6 +829,8 @@ namespace ipo
     result.timeTotal = elapsedTime(timeStarted);
   }
 
+#if defined(IPO_WITH_GMP)
+
   static void affineHullMixed(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     std::vector<std::shared_ptr<sparse_vector<mpq_class>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<mpq_class>>>& resultRays,
@@ -1217,6 +1226,8 @@ namespace ipo
     result.dimension = result.lowerBound;
     result.timeTotal = elapsedTime(timeStarted);
   }
+
+#endif /* IPO_WITH_GMP */
 
   AffineHullResult<double> affineHull(
     std::shared_ptr<Polyhedron<double>> polyhedron,

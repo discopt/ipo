@@ -8,9 +8,9 @@ int printUsage(const std::string& program)
 {
   std::cout << program << " [OPTIONS] MODEL\n";
   std::cout << "Options:\n";
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   std::cout << " --gmp|-g          Use exact arithmetic (GMP).\n";
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   std::cout << " --print-equations Print equations.\n";
   std::cout << " --affinehull ALGO Algorithm used for rational polyhedra. Choices are:\n";
   std::cout << "                   direct Apply the algorithm in exact arithmetic.\n";
@@ -23,9 +23,9 @@ int printUsage(const std::string& program)
 
 int main(int argc, char** argv)
 {
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   bool gmp = false;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && defined(IPO_WITH_SOPLEX) */
   double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
   bool printEquations = false;
@@ -38,10 +38,10 @@ int main(int argc, char** argv)
       printUsage(argv[0]);
       return EXIT_SUCCESS;
     }
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     else if (arg == "-G" || arg == "-g" || arg == "--gmp")
       gmp = true;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
     else if ((arg == "-T" || arg == "-t" || arg == "--time") && a+1 < argc)
     {
       std::stringstream ss(argv[a+1]);
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
   }
 
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
@@ -120,7 +120,7 @@ int main(int argc, char** argv)
     }
   }
   else
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
     auto opt = scip->getOptimizationOracleDouble();
     auto poly = std::make_shared<ipo::Polyhedron<double>>(opt);
