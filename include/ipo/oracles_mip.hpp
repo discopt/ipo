@@ -32,7 +32,7 @@ namespace ipo
     void addConstraint(const Constraint<double>& constraint);
 
     IPO_EXPORT
-    void setFace(std::shared_ptr<Constraint<mpq_class>> face);
+    void setFace(Constraint<mpq_class>* face);
 
     /**
      * \brief Maximize a floating-point objective vector.
@@ -82,7 +82,7 @@ namespace ipo
     mpq_t* _coefficients;
     mpq_t* _originalLowerBounds;
     mpq_t* _originalUpperBounds;
-    std::shared_ptr<Constraint<mpq_class>> _currentFace;
+    Constraint<mpq_class>* _currentFace;
   };
 
   class RationalMIPExtendedOptimizationOracle: public OptimizationOracle<mpq_class>
@@ -91,7 +91,7 @@ namespace ipo
     IPO_EXPORT
     RationalMIPExtendedOptimizationOracle(RationalMIPExtender* extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
-      std::shared_ptr<Constraint<mpq_class>> face);
+      const Constraint<mpq_class>& face);
 
     IPO_EXPORT
     virtual ~RationalMIPExtendedOptimizationOracle();
@@ -107,7 +107,7 @@ namespace ipo
   protected:
     RationalMIPExtender* _extender;
     std::shared_ptr<OptimizationOracle<double>> _approximateOracle;
-    std::shared_ptr<Constraint<mpq_class>> _face;
+    Constraint<mpq_class> _face;
   };
 
   class RationalMIPExtendedSeparationOracle: public SeparationOracle<mpq_class>
@@ -115,7 +115,7 @@ namespace ipo
   public:
     IPO_EXPORT
     RationalMIPExtendedSeparationOracle(std::shared_ptr<SeparationOracle<double>> approximateOracle,
-      std::shared_ptr<Constraint<mpq_class>> face);
+      const Constraint<mpq_class>& face);
 
     IPO_EXPORT
     virtual ~RationalMIPExtendedSeparationOracle();
@@ -165,7 +165,7 @@ namespace ipo
 
   protected:
     std::shared_ptr<SeparationOracle<double>> _approximateOracle;
-    std::shared_ptr<Constraint<mpq_class>> _face;
+    Constraint<mpq_class> _face;
   };
 
 } /* namespace ipo */

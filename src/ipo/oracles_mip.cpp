@@ -11,8 +11,7 @@ namespace ipo
 
   RationalMIPExtender::RationalMIPExtender(const std::vector<bool>& integrality,
     const std::vector<std::pair<double, double>>& bounds)
-    : _integrality(integrality), _currentFace(std::make_shared<ipo::Constraint<mpq_class>>(
-    ipo::alwaysSatisfiedConstraint<mpq_class>()))
+    : _integrality(integrality), _currentFace(0)
   {
     _spx.setIntParam(soplex::SoPlex::OBJSENSE, soplex::SoPlex::OBJSENSE_MAXIMIZE);
     _spx.setIntParam(soplex::SoPlex::SYNCMODE, soplex::SoPlex::SYNCMODE_AUTO);
@@ -117,13 +116,13 @@ namespace ipo
     mpq_clear(rationalRhs);
   }
 
-  void RationalMIPExtender::setFace(std::shared_ptr<Constraint<mpq_class>> face)
+  void RationalMIPExtender::setFace(Constraint<mpq_class>* face)
   {
     if (face != _currentFace)
     {
-      if (!_currentFace->isAlwaysSatisfied())
+      if (_currentFace)
         _spx.removeRowRational(_spx.numRowsRational() - 1);
-      if (!face->isAlwaysSatisfied())
+      if (face)
         addConstraint(*face);
 
       _currentFace = face;
@@ -349,13 +348,12 @@ namespace ipo
   RationalMIPExtendedOptimizationOracle::RationalMIPExtendedOptimizationOracle(
     RationalMIPExtender* extender,
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
-    std::shared_ptr<Constraint<mpq_class>> face)
+    const Constraint<mpq_class>& face)
     : OptimizationOracle<mpq_class>("Rational " + approximateOracle->name()), _extender(extender),
     _approximateOracle(approximateOracle), _face(face)
   {
     assert(_extender);
     assert(_approximateOracle);
-    assert(_face);
 
     _space = approximateOracle->space();
   }
@@ -369,7 +367,7 @@ namespace ipo
     const double* objectiveVector,
     const OptimizationOracle<mpq_class>::Query& query)
   {
-    _extender->setFace(_face);
+    _extender->setFace(&_face);
     return _extender->maximizeDouble(_approximateOracle, objectiveVector, query);
   }
 
@@ -377,13 +375,12 @@ namespace ipo
     const mpq_class* objectiveVector,
     const OptimizationOracle<mpq_class>::Query& query)
   {
-    _extender->setFace(_face);
+    _extender->setFace(&_face);
     return _extender->maximize(_approximateOracle, objectiveVector, query);
   }
 
   RationalMIPExtendedSeparationOracle::RationalMIPExtendedSeparationOracle(
-    std::shared_ptr<SeparationOracle<double>> approximateOracle,
-    std::shared_ptr<Constraint<mpq_class>> face)
+    std::shared_ptr<SeparationOracle<double>> approximateOracle, const Constraint<mpq_class>& face)
     : SeparationOracle<mpq_class>("Rational " + approximateOracle->name()),
     _approximateOracle(approximateOracle), _face(face)
   {

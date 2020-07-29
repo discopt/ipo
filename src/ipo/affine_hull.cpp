@@ -19,6 +19,17 @@ namespace ipo
   {
 
   }
+
+  AffineHullQuery& AffineHullQuery::operator=(const AffineHullQuery& other)
+  {
+    epsilonConstraints = other.epsilonConstraints;
+    epsilonSafety = other.epsilonSafety;
+    epsilonCoefficient = other.epsilonCoefficient;
+    epsilonFactorization = other.epsilonFactorization;
+    algorithm = other.algorithm;
+    timeLimit = other.timeLimit;
+    return *this;
+  }
   
   template <typename T>
   class AffineComplement
@@ -782,7 +793,7 @@ namespace ipo
       }
       else if (outcome == INTERNAL_INFEASIBLE)
       {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        result.dimension = -1;
         return;
       }
       else if (outcome == INTERNAL_INITIAL_ONE)

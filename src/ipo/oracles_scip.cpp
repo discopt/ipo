@@ -291,7 +291,7 @@ namespace ipo
   }
 
   SCIPSolver::SCIPSolver(SCIP*&& scip)
-    : _scip(scip), _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
+    : _scip(scip), _currentFace(NULL)
   {
     scip = NULL;
 #if !defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
@@ -301,7 +301,7 @@ namespace ipo
   }
 
   SCIPSolver::SCIPSolver(const std::string& fileName)
-    : _currentFace(std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()))
+    : _currentFace(NULL)
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
@@ -383,18 +383,20 @@ namespace ipo
     SCIPfree(&_scip);
   }
 
-  void SCIPSolver::setFace(std::shared_ptr<Constraint<double>> face)
+  void SCIPSolver::setFace(Constraint<double>* face)
   {
+    if (face->isAlwaysSatisfied())
+      face = NULL;
+
     if (face == _currentFace)
       return;
 
     // Remove from SCIP.
-    SCIP_CONS* currentCons = _currentFace->isAlwaysSatisfied() ? nullptr
-      : _faceConstraints.at(_currentFace);
+    SCIP_CONS* currentCons = _currentFace ? _faceConstraints.at(_currentFace) : nullptr;
     if (currentCons != nullptr)
       SCIP_CALL_EXC( SCIPdelCons(_scip, currentCons) );
 
-    if (!face->isAlwaysSatisfied())
+    if (face)
     {
       // Create face constraint if it does not exist.
 
@@ -414,8 +416,27 @@ namespace ipo
           vars.push_back(_variables[iter.first]);
           coefficients.push_back(iter.second);
         }
-        double lhs = face->lhs() == -std::numeric_limits<double>::infinity() ? -SCIPinfinity(_scip) : face->lhs();
-        double rhs = face->rhs() == std::numeric_limits<double>::infinity() ? SCIPinfinity(_scip) : face->rhs();
+        double lhs, rhs;
+        if (face->type() == LESS_OR_EQUAL)
+        {
+          lhs = face->rhs();
+          rhs = face->rhs();
+        }
+        else if (face->type() == GREATER_OR_EQUAL)
+        {
+          lhs = face->lhs();
+          rhs = face->lhs();
+        }
+        else if (face->type() == EQUATION)
+        {
+          lhs = face->lhs();
+          rhs = face->rhs();
+          assert(SCIPisEQ(_scip, lhs, rhs));
+        }
+        else
+        {
+          throw std::runtime_error("Cannot use a ranged constraint or equation to define a face.");
+        }
         SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
           &coefficients[0], lhs, rhs));
         _faceConstraints.insert(std::make_pair(face, cons));
@@ -432,7 +453,7 @@ namespace ipo
   }
 
   SCIPOptimizationOracleDouble::SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
-    std::shared_ptr<Constraint<double>> face)
+    const Constraint<double>& face)
     : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
@@ -448,7 +469,7 @@ namespace ipo
   {
     OptimizationOracle<double>::Response response;
 
-    _solver->setFace(_face);
+    _solver->setFace(&_face);
 
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
       query.timeLimit == std::numeric_limits<double>::infinity() ? SCIPinfinity(_solver->_scip)
@@ -460,9 +481,23 @@ namespace ipo
 
     std::size_t n = space()->dimension();
 
+    // Compute factor for scaling the objective vector down.
+
+    double maxEntry = 0.0;
     for (std::size_t i = 0; i < n; ++i)
     {
-      SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], objectiveVector[i]) );
+      double ci = fabs(objectiveVector[i]);
+      if (ci > maxEntry)
+        maxEntry = ci;
+    }
+
+    const double maxAllowedEntry = 10e9;
+    double scalingFactor = 1.0 / std::max(1.0, maxEntry / maxAllowedEntry);
+
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i],
+        objectiveVector[i] * scalingFactor) );
     }
 
     int oldMaxRounds;
@@ -470,7 +505,16 @@ namespace ipo
 
     for (int attempt = 1; attempt <= 2; ++attempt)
     {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "Solving optimization problem." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+
       SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
+        << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
       bool hasRay = SCIPhasPrimalRay(_solver->_scip);
       if (hasRay)
@@ -502,11 +546,19 @@ namespace ipo
         SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+          std::cout << "Solution " << solIndex << std::flush;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+
           SCIP_SOL* sol = solutions[solIndex];
-          double objectiveValue = SCIPgetSolOrigObj(_solver->_scip, sol);
+          double objectiveValue = SCIPgetSolOrigObj(_solver->_scip, sol) / scalingFactor;
           auto vector = std::make_shared<sparse_vector<double>>();
           if (!query.hasMinObjectiveValue || objectiveValue > query.minObjectiveValue)
           {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+            std::cout << " of value " << objectiveValue << " is accepted." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+            
             for (std::size_t i = 0; i < n; ++i)
             {
               double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
@@ -516,11 +568,20 @@ namespace ipo
             response.points.push_back(OptimizationOracle<double>::Response::Point(vector,
               objectiveValue));
           }
-        }
-        response.primalBound = SCIPgetPrimalbound(_solver->_scip);
-        response.dualBound = SCIPgetDualbound(_solver->_scip);
+          else
+          {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+            std::cout << " of value " << objectiveValue << " is rejected." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+          }
+        }        
+        response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
+        response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
         response.hasDualBound = true;
         response.outcome = OPTIMIZATION_FEASIBLE;
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+        std::cout << "Created response." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
         break;
       }
       else if (status == SCIP_STATUS_INFEASIBLE)
@@ -577,7 +638,16 @@ namespace ipo
         for (std::size_t i = 0; i < n; ++i)
           SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
 
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+        std::cout << "Solving feasibility problem." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+
         SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
+        << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
         if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
         {
@@ -605,13 +675,17 @@ namespace ipo
       }
     }
 
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+    std::cout << "Sorting points." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+
     response.sortPoints();
 
     return response;
   }
 
   SCIPSeparationOracleDouble::SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
-    std::shared_ptr<Constraint<double>> face)
+    const Constraint<double>& face)
     : SeparationOracle(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
@@ -627,8 +701,8 @@ namespace ipo
   {
     SeparationOracle<double>::Response result;
 
-    if (query.maxNumInequalities > 0 && !_face->isAlwaysSatisfied())
-      result.constraints.push_back(*_face);
+    if (query.maxNumInequalities > 0 && !_face.isAlwaysSatisfied())
+      result.constraints.push_back(_face);
 
     struct Visitor
     {
@@ -667,12 +741,12 @@ namespace ipo
     return result;
   }
 
-  SeparationOracle<double>::Response SCIPSeparationOracleDouble::separate(const double* vector, bool isPoint,
-      const SeparationOracle<double>::Query& query)
+  SeparationOracle<double>::Response SCIPSeparationOracleDouble::separate(const double* vector,
+    bool isPoint, const SeparationOracle<double>::Query& query)
   {
     SeparationOracle<double>::Response result;
 
-    _solver->setFace(_face);
+    _solver->setFace(&_face);
 
     struct Visitor
     {

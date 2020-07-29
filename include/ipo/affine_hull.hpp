@@ -42,6 +42,9 @@ namespace ipo
 
     IPO_EXPORT
     AffineHullQuery();
+
+    IPO_EXPORT
+    AffineHullQuery& operator=(const AffineHullQuery& other);
   };
 
   const static int AFFINEHULL_ERROR_RUNNING = -2;
@@ -95,6 +98,24 @@ namespace ipo
       timeKernel = other.timeKernel;
       timePointsRays = other.timePointsRays;
       timeEquations = other.timeEquations;
+    }
+
+    IPO_EXPORT
+    AffineHullResult<T>& operator=(AffineHullResult<T>&& other)
+    {
+      points = std::move(other.points);
+      rays = std::move(other.rays);
+      equations = std::move(other.equations);
+      dimension = other.dimension;
+      lowerBound = other.lowerBound;
+      upperBound = other.upperBound;
+      timeTotal = other.timeTotal;
+      timeOracles = other.timeOracles;
+      numKernel = other.numKernel;
+      timeKernel = other.timeKernel;
+      timePointsRays = other.timePointsRays;
+      timeEquations = other.timeEquations;
+      return *this;
     }
   };
 

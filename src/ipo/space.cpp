@@ -67,7 +67,7 @@ namespace ipo
       str << '-';
     else if (x0 != 1)
       str << x0;
-    str << _variableNames[iter->first];
+    str << '<' << _variableNames[iter->first] << '>';
     ++iter;
 
     for (; iter != vector.end(); ++iter)
@@ -81,7 +81,7 @@ namespace ipo
         str << " + " << xi;
       else
         str << " - " << (-xi);
-      str << _variableNames[iter->first];
+      str << '<' << _variableNames[iter->first] << '>';
     }
   }
 
@@ -184,7 +184,7 @@ namespace ipo
       else
         str << x0;
     }
-    str << _variableNames[iter->first];
+    str << '<' << _variableNames[iter->first] << '>';
     ++iter;
 
     if (rounded)
@@ -200,7 +200,7 @@ namespace ipo
           str << " + " << xi;
         else
           str << " - " << (-xi);
-        str << _variableNames[iter->first];
+        str << '<' << _variableNames[iter->first] << '>';
       }
     }
     else
@@ -216,7 +216,7 @@ namespace ipo
           str << " + " << xi;
         else
           str << " - " << (-xi);
-        str << _variableNames[iter->first];
+        str << '<' << _variableNames[iter->first] << '>';
       }
     }
   }

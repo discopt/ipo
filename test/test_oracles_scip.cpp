@@ -169,7 +169,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &x);
     SCIPreleaseVar(scip, &y);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getOptimizationOracleRational();
 
     mpq_class obj[] = {1.0, 1.0};
@@ -210,7 +210,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &y);
     SCIPreleaseCons(scip, &cons);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getOptimizationOracleRational();
 
     mpq_class obj[] = { 1, 2 };
@@ -245,7 +245,7 @@ TEST(Oracles, SCIP)
     SCIPreleaseVar(scip, &y);
     SCIPreleaseCons(scip, &cons);
 
-    auto solver = std::make_shared<ipo::SCIPSolver>(scip);
+    auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
     auto oracle = solver->getSeparationOracleRational();
 
     mpq_class vector[] = { 20, 20 };

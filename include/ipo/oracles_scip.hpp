@@ -106,8 +106,7 @@ namespace ipo
     IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble()
     {
-      return getOptimizationOracleDouble(
-        std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()));
+      return getOptimizationOracleDouble(alwaysSatisfiedConstraint<double>());
     }
 
     /**
@@ -116,7 +115,7 @@ namespace ipo
 
     IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble(
-      std::shared_ptr<Constraint<double>> face)
+      const Constraint<double>& face)
     {
       return std::make_shared<SCIPOptimizationOracleDouble>(shared_from_this(), face);
     }
@@ -130,8 +129,7 @@ namespace ipo
     IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational()
     {
-      return getOptimizationOracleRational(
-        std::make_shared<Constraint<mpq_class>>(alwaysSatisfiedConstraint<mpq_class>()));
+      return getOptimizationOracleRational(alwaysSatisfiedConstraint<mpq_class>());
     }
 
     /**
@@ -140,9 +138,9 @@ namespace ipo
 
     IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational(
-      std::shared_ptr<Constraint<mpq_class>> face)
+      const Constraint<mpq_class>& face)
     {
-      auto approximateFace = std::make_shared<Constraint<double>>(convertConstraint<double>(*face));
+      auto approximateFace = convertConstraint<double>(face);
       auto approximateOracle = getOptimizationOracleDouble(approximateFace);
       return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
     }
@@ -156,8 +154,7 @@ namespace ipo
     IPO_EXPORT
     inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble()
     {
-      return getSeparationOracleDouble(
-        std::make_shared<Constraint<double>>(alwaysSatisfiedConstraint<double>()));
+      return getSeparationOracleDouble(alwaysSatisfiedConstraint<double>());
     }
 
     /**
@@ -165,7 +162,8 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble(std::shared_ptr<Constraint<double>> face)
+    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble(
+      const Constraint<double>& face)
     {
       return std::make_shared<SCIPSeparationOracleDouble>(shared_from_this(), face);
     }
@@ -179,8 +177,7 @@ namespace ipo
     IPO_EXPORT
     inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational()
     {
-      return getSeparationOracleRational(
-        std::make_shared<Constraint<mpq_class>>(alwaysSatisfiedConstraint<mpq_class>()));
+      return getSeparationOracleRational(alwaysSatisfiedConstraint<mpq_class>());
     }
 
     /**
@@ -189,9 +186,9 @@ namespace ipo
 
     IPO_EXPORT
     inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational(
-      std::shared_ptr<Constraint<mpq_class>> face)
+      const Constraint<mpq_class>& face)
     {
-      auto approximateFace = std::make_shared<Constraint<double>>(convertConstraint<double>(*face));
+      auto approximateFace = convertConstraint<double>(face);
       auto approximateOracle = getSeparationOracleDouble(approximateFace);
       return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
     }
@@ -214,7 +211,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    void setFace(std::shared_ptr<Constraint<double>> face);
+    void setFace(Constraint<double>* face);
 
   protected:
     /// Actual SCIP instance.
@@ -226,8 +223,8 @@ namespace ipo
     double* _instanceObjective;
     std::string _name;
     std::shared_ptr<Space> _space;
-    std::shared_ptr<Constraint<double>> _currentFace;
-    std::unordered_map<std::shared_ptr<Constraint<double>>, SCIP_CONS*> _faceConstraints;
+    Constraint<double>* _currentFace;
+    std::unordered_map<Constraint<double>*, SCIP_CONS*> _faceConstraints;
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     RationalMIPExtender* _extender;
@@ -251,7 +248,7 @@ namespace ipo
 
     IPO_EXPORT
     SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
-      std::shared_ptr<Constraint<double>> face);
+      const Constraint<double>& face);
 
     /**
      * \brief Destructor.
@@ -293,7 +290,7 @@ namespace ipo
     /// The solver instance
     std::shared_ptr<SCIPSolver> _solver;
     /// The index of the face we are optimizing over.
-    std::shared_ptr<Constraint<double>> _face;
+    Constraint<double> _face;
   };
 
   /**
@@ -312,7 +309,7 @@ namespace ipo
 
     IPO_EXPORT
     SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
-      std::shared_ptr<Constraint<double>> face);
+      const Constraint<double>& face);
 
     /**
      * \brief Destructor.
@@ -371,7 +368,7 @@ namespace ipo
     /// The solver instance
     std::shared_ptr<SCIPSolver> _solver;
     /// The index of the face we are separating for.
-    std::shared_ptr<Constraint<double>> _face;
+    Constraint<double> _face;
   };
 
 } /* namespace ipo */
