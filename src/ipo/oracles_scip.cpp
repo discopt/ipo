@@ -469,6 +469,9 @@ namespace ipo
   {
     OptimizationOracle<double>::Response response;
 
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+    std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
     _solver->setFace(&_face);
 
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",

@@ -56,7 +56,6 @@ namespace ipo
       return _basisIndexToColumn.size();
     }
 
-    
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
     void _debugAdd(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
       const T* kernelVector)
@@ -96,23 +95,21 @@ namespace ipo
           ++countNonzeroProducts;
       }
 
-      if (countNonzeroProducts > 1)
+//       if (countNonzeroProducts != 1)
       {
-        for (std::size_t p = 1; p < _debugDensePoints.size(); ++p)
+        for (std::size_t p = 0; p < _debugDensePoints.size(); ++p)
         {
           T prod = 0;
           for (std::size_t v = 0; v < numVariables(); ++v)
-            prod += (_debugDensePoints[p][v] - _debugDensePoints[0][v]) * kernelVector[v];
-          if (fabs(convertNumber<double>(prod)) > 1.0e-12)
-            std::cout << "Product for point " << p << "-0 is " << prod << std::endl;
+            prod += _debugDensePoints[p][v] * kernelVector[v];
+          std::cout << "Product for point " << p << " is " << prod << std::endl;
         }
         for (std::size_t r = 0; r < _debugDenseRays.size(); ++r)
         {
           T prod = 0;
           for (std::size_t v = 0; v < numVariables(); ++v)
             prod += _debugDenseRays[r][v] * kernelVector[v];
-          if (fabs(convertNumber<double>(prod)) > 1.0e-12)
-            std::cout << "Product for ray " << r << " is " << prod << std::endl;
+          std::cout << "Product for ray " << r << " is " << prod << std::endl;
         }
       }
     }
@@ -369,12 +366,16 @@ namespace ipo
 
     for (std::size_t v = 0; v < polyhedron->space()->dimension(); ++v)
       objective[v] = 0;
+    kernelDirectionValue = 0;
     for (const auto& iter : kernelDirectionVector)
+    {
       objective[iter.first] = iter.second;
+    }
 
     typename OptimizationOracle<T>::Query oracleQuery;
     if (!resultPoints.empty())
     {
+      kernelDirectionValue = kernelDirectionVector * *resultPoints.front();
       oracleQuery.hasMinObjectiveValue = true;
       oracleQuery.minObjectiveValue = kernelDirectionValue;
     }
@@ -504,6 +505,7 @@ namespace ipo
       // Check if some vector has a different objective value.
       for (const auto& point : oracleResponse.points)
       {
+        assert(oracleQuery.hasMinObjectiveValue);
         double difference = fabs(convertNumber<double, T>(
           point.objectiveValue - oracleQuery.minObjectiveValue));
         difference /= kernelDirectionNorm;
@@ -614,7 +616,7 @@ namespace ipo
       difference /= kernelDirectionNorm;
       if (difference <= epsilonConstraints)
         return INTERNAL_NONE;
-  
+
       resultPoints.push_back(oracleResponse.points.front().vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
@@ -673,7 +675,8 @@ namespace ipo
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays,
     std::vector<Constraint<T>>& resultEquations, const AffineHullQuery& query,
-    const std::vector<Constraint<T>>& knownEquations, AffineHullResultCommon& result)
+    const std::vector<Constraint<T>>& knownEquations, AffineHullResultCommon& result,
+    const Constraint<T>* debugEquation = NULL)
   {
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
@@ -1242,11 +1245,12 @@ namespace ipo
 
   AffineHullResult<double> affineHull(
     std::shared_ptr<Polyhedron<double>> polyhedron,
-    const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
+    const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations,
+    const Constraint<double>* debugEquation)
   {
     AffineHullResult<double> result;
     affineHullDirect(polyhedron, result.points, result.rays, result.equations, query,
-      knownEquations, result);
+      knownEquations, result, debugEquation);
     return result;
   }
 

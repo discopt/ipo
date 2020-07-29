@@ -116,14 +116,14 @@ namespace ipo
       for (std::size_t i = 0; i < n; ++i)
         newDiagonal -= newRow[i] * newColumn[i];
 #if defined(IPO_DEBUG_LU_PRINT)
-      std::cout << "last diagonal = " << newDiagonal << std::endl;
+      std::cout << "new diagonal of U = " << newDiagonal << std::endl;
 #endif /* IPO_DEBUG_LU_PRINT */
       if (fabs(convertNumber<double>(newDiagonal)) <= epsilonEntry)
       {
 #if defined(IPO_DEBUG_LU_CHECK)
-      for (std::size_t r = 0; r < size(); ++r)
-        _debugDenseMatrix[r].pop_back();s
-      _debugDenseMatrix.pop_back();
+        for (std::size_t r = 0; r < size(); ++r)
+          _debugDenseMatrix[r].pop_back();
+        _debugDenseMatrix.pop_back();
 #endif /* IPO_DEBUG_LU_CHECK */
         return false;
       }
@@ -200,7 +200,7 @@ namespace ipo
       {
         for (std::size_t c = 0; c < size(); ++c)
         {
-          if (fabs(double(_debugDenseMatrix[r][c] - _debugProduct[r][c])) > 1.0e-9)
+          if (fabs(convertNumber<double, T>(_debugDenseMatrix[r][c] - _debugProduct[r][c])) > 1.0e-9)
             failure = true;
         }
       }

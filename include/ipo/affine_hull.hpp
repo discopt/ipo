@@ -145,7 +145,8 @@ namespace ipo
   AffineHullResult<double> affineHull(
     std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query,
-    const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
+    const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>(),
+    const Constraint<double>* debugEquation = NULL);
 
 #if defined(IPO_WITH_GMP)
 

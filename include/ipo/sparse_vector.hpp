@@ -232,7 +232,7 @@ T operator*(const sparse_vector<T>& a, const sparse_vector<U>& b)
     else
     {
       assert(ia->first == ib->first);
-      result += ia->second * ib->second;
+      result += ia->second * convertNumber<T,U>(ib->second);
       ++ia;
       if (ia == a.end())
         return result;
