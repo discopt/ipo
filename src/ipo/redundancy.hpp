@@ -8,18 +8,17 @@
 
 namespace ipo
 {
-  enum EquationRedundancy
-  {
-    EQUATION_INDEPENDENT,
-    EQUATION_REDUNDANT,
-    EQUATION_INCONSISTENT,
-    EQUATION_INVALID
-  };
-
   template <typename T>
   class EquationRedundancyCheck
   {
   public:
+    struct Result
+    {
+      double maxViolation;
+      std::size_t maxCoordinate;
+      T rhs;
+    };
+
     EquationRedundancyCheck(std::size_t numVariables)
       : _numVariables(numVariables), _lu()
     {
@@ -41,89 +40,53 @@ namespace ipo
       return _equations[e];
     }
 
-    EquationRedundancy test(const Constraint<T>& constraint, double epsilonConstraint,
-      double epsilonCoefficient, double* pNorm = NULL) const
+    Result test(const Constraint<T>& constraint, double norm) const
     {
-#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
-      std::cout << "EquationRedundancy.test(" << constraint << ")." << std::endl;
-#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
-      
-      if (constraint.lhs() != constraint.rhs())
-        EQUATION_INVALID;
+      assert(constraint.type() == EQUATION);
 
-      std::size_t newBasic;
-      double norm = pNorm ? *pNorm : euclideanNorm(constraint.vector());
-      T rhs = -constraint.rhs();
-      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
-        epsilonCoefficient);
-      if (result == EQUATION_REDUNDANT && fabs(convertNumber<double>(rhs)) > epsilonConstraint * norm)
-        return EQUATION_INCONSISTENT;
-      else
-        return result;
+      return test(constraint.vector(), norm, -constraint.rhs());
     }
 
-    EquationRedundancy test(const sparse_vector<T>& vector, double epsilonCoefficient) const
+    bool add(const Constraint<T>& constraint, std::size_t maxCoordinate,
+      double epsilonFactorization)
     {
-#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
-      std::cout << "EquationRedundancy.test(" << vector << ").\n";
-      std::cout << "  current equations are:\n";
-      for (const auto equation : _equations)
-      {
-        std::cout << "  " << equation << std::endl;
-      }
-#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
-
-      T rhs(0);
-      std::size_t newBasic;
-      return testImplementation(vector, rhs, newBasic, epsilonCoefficient);
-    }
-
-    EquationRedundancy add(const Constraint<T>& constraint, double epsilonConstraint,
-      double epsilonFactorization, double epsilonCoefficient, double* pNorm = NULL)
-    {
-#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
-      std::cout << "EquationRedundancy.add(" << constraint << ")." << std::endl;
-#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
-
-      if (constraint.lhs() != constraint.rhs())
-        return EQUATION_INVALID;
-
-      double norm = pNorm ? *pNorm : euclideanNorm(constraint.vector());
-      std::size_t newBasic;
-      T rhs = -constraint.rhs();
-      EquationRedundancy result = testImplementation(constraint.vector(), rhs, newBasic,
-        epsilonCoefficient);
-      if (result == EQUATION_REDUNDANT && fabs(convertNumber<double>(rhs)) > epsilonConstraint * norm)
-        return EQUATION_INCONSISTENT;
-      else if (result != EQUATION_INDEPENDENT)
-        return result;
-
       /* Add the constraint to the equations. */
       _equations.push_back(constraint);
 
       /* We enlarge the basis */
       std::vector<T> basisRow(_basis.size(), 0);
       std::vector<T> basisColumn(_basis.size() + 1, 0);
-      _basis.push_back(newBasic);
+      _basis.push_back(maxCoordinate);
       for (std::size_t b = 0; b + 1 < _basis.size(); ++b)
       {
-        basisRow[b] = _equations[b].vector().find(newBasic, 0);
+        basisRow[b] = _equations[b].vector().find(maxCoordinate, 0);
       }
       for (std::size_t b = 0; b < _basis.size(); ++b)
       {
         basisColumn[b] = constraint.vector().find(_basis[b], 0);
       }
 
-      _lu.extend(&basisRow[0], &basisColumn[0], basisColumn.back(), epsilonFactorization);
-
-      return result;
+      bool luResult = _lu.extend(&basisRow[0], &basisColumn[0], basisColumn.back(),
+        epsilonFactorization);
+      if (luResult)
+        return true;
+      else
+      {
+        _basis.pop_back();
+        _equations.pop_back();
+        return false;
+      }
     }
 
-  protected:
-
-    EquationRedundancy testImplementation(const sparse_vector<T>& vector, T& rhs,
-      std::size_t& newBasic, double epsilonCoefficient) const
+    Result test(const sparse_vector<T>& vector, double norm, const T& rhs = 0) const
     {
+#if defined(IPO_DEBUG_REDUNDANCY_PRINT)
+      std::cout << "EquationRedundancy.test(" << vector << ". " << rhs << ")." << std::endl;
+#endif /* IPO_DEBUG_REDUNDANCY_PRINT */
+
+      Result result;
+      result.rhs = rhs;
+
       /* Find multipliers such that combined equation agrees with given one on basic variables.
        * To this end, solve Ax = r, where r is the basic part of the constraint vector. */
       std::vector<T> multipliers(_basis.size());
@@ -138,36 +101,26 @@ namespace ipo
       {
         for (const auto& iter : _equations[e].vector())
           dense[iter.first] += multipliers[e] * iter.second;
-        rhs += multipliers[e] * _equations[e].rhs();
+        result.rhs += multipliers[e] * _equations[e].rhs();
       }
       /* Subtract given equation normal. */
       for (const auto& iter : vector)
         dense[iter.first] -= iter.second;
+      for (std::size_t b = 0; b < _basis.size(); ++b)
+        dense[_basis[b]] = 0;
 
-// #if defined(IPO_DEBUG_REDUNDANCY_PRINT)
-//       for (std::size_t v = 0; v < numVariables(); ++v)
-//         std::cout << " " << dense[v];
-//       std::cout << "; " << rhs << std::endl;
-// #endif /* IPO_DEBUG_REDUNDANCY_PRINT */
-
-      newBasic = std::numeric_limits<std::size_t>::max();
-      double newBasicValue = 0.0;
+      result.maxCoordinate = std::numeric_limits<std::size_t>::max();
+      result.maxViolation = 0.0;
       for (std::size_t v = 0; v < numVariables(); ++v)
       {
-        if (fabs(convertNumber<double>(dense[v])) > epsilonCoefficient)
+        double violation = fabs(convertNumber<double>(dense[v])) / norm;
+        if (violation > result.maxViolation)
         {
-          double value = fabs(convertNumber<double>(dense[v]));
-          if (value > newBasicValue)
-          {
-            newBasic = v;
-            newBasicValue = value;
-          }
+          result.maxCoordinate = v;
+          result.maxViolation = violation;
         }
       }
-      if (newBasic != std::numeric_limits<std::size_t>::max())
-        return EQUATION_INDEPENDENT;
-      else
-        return EQUATION_REDUNDANT;
+      return result;
     }
 
   protected:

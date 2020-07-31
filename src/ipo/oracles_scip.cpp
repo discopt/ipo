@@ -315,6 +315,7 @@ namespace ipo
 
   void SCIPSolver::initialize()
   {
+    SCIP_CALL_EXC( SCIPsetBoolParam(_scip, "misc/catchctrlc", false) );
     std::size_t n = SCIPgetNOrigVars(_scip);
     _variables.resize(n);
     std::vector<std::string> variableNames;
@@ -529,7 +530,7 @@ namespace ipo
           if (!SCIPisZero(_solver->_scip, y))
             vector->push_back(i, y);
         }
-        response.rays.push_back(OptimizationOracle::Response::Ray(vector));
+        response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
         response.outcome = OPTIMIZATION_UNBOUNDED;
         break;
       }

@@ -10,20 +10,26 @@
 
 namespace ipo
 {
-  enum AffineHullAlgorithm
-  {
-    AFFINEHULL_ALGORITHM_DIRECT = 0,
-    AFFINEHULL_ALGORITHM_VERIFY = 1,
-    AFFINEHULL_ALGORITHM_MIXED = 2
-  };
-
   struct AffineHullQuery
   {
+    /**
+     * \brief If a normalized vector cannot be combined from others up to this accuracy,
+     *        then we are sure that it is linearly independent from these.
+     */
+    double epsilonLinearDependence;
     /**
      * \brief Decides when a constraint is satisfied with equality for double-precision
      * computations.
      */
     double epsilonConstraints;
+    /**
+     * \brief Decides whether a kernel vector should be invalidated.
+     * 
+     * Decides whether a kernel vector should be invalidated. Should be at least
+     * \ref epsilonConstraints. When debugging numerically difficult instances, it can be set to
+     * infinity in order to invalidate all vectors.
+     */
+    double epsilonInvalidate;
     /**
      * \brief If maximization yields a points with objective value within that bound, numerical
      * issues are likely and thus we try whether minimization gives a better result.
@@ -37,7 +43,6 @@ namespace ipo
      * \brief Vector entries smaller than this are considered to be zero.
      */
     double epsilonCoefficient;
-    AffineHullAlgorithm algorithm; /// Algorithm to be used for rational polyhedra.
     double timeLimit; /// Time limit in seconds.
 
     IPO_EXPORT
@@ -145,8 +150,7 @@ namespace ipo
   AffineHullResult<double> affineHull(
     std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query,
-    const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>(),
-    const Constraint<double>* debugEquation = NULL);
+    const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
 
 #if defined(IPO_WITH_GMP)
 

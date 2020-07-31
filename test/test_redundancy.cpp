@@ -15,8 +15,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, 2.0);
     vector->push_back(2, 3.0);
     auto eq1 = ipo::Constraint<double>(1.0, vector, 1.0);
-    ASSERT_EQ(red.test(eq1, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq1, 1.0e-12, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
+    auto result = red.test(eq1, euclideanNorm(eq1.vector()));
+    ASSERT_GT(result.maxViolation, 1.0e-12);
+    ASSERT_TRUE(red.add(eq1, result.maxCoordinate, 1.0e-12));
     ASSERT_EQ(red.rank(), 1);
     
     vector = std::make_shared<sparse_vector<double>>();
@@ -24,8 +25,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, 2.0);
     vector->push_back(2, 4.0);
     auto eq2 = ipo::Constraint<double>(1.0, vector, 1.0);
-    ASSERT_EQ(red.test(eq2, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq2, 1.0e-12, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
+    result = red.test(eq2, euclideanNorm(eq2.vector()));
+    ASSERT_GT(result.maxViolation, 1.0e-12);
+    ASSERT_TRUE(red.add(eq2, result.maxCoordinate, 1.0e-12));
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<double>>();
@@ -33,8 +35,8 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -6.0);
     vector->push_back(2, -10.0);
     auto eq3 = ipo::Constraint<double>(-3.0, vector, -3.0);
-    ASSERT_EQ(red.test(eq3, 1.0e-12, 1.0e-12), ipo::EQUATION_REDUNDANT);
-    ASSERT_EQ(red.add(eq3, 1.0e-12, 1.0e-12, 1.0e-12), ipo::EQUATION_REDUNDANT);
+    result = red.test(eq3, euclideanNorm(eq3.vector()));
+    ASSERT_LE(result.maxViolation, 1.0e-12);
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<double>>();
@@ -42,8 +44,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -6.0);
     vector->push_back(2, -10.0);
     auto eq4 = ipo::Constraint<double>(0.0, vector, 0.0);
-    ASSERT_EQ(red.test(eq4, 1.0e-12, 1.0e-12), ipo::EQUATION_INCONSISTENT);
-    ASSERT_EQ(red.add(eq4, 1.0e-12, 1.0e-12, 1.0e-12), ipo::EQUATION_INCONSISTENT);
+    result = red.test(eq4, euclideanNorm(eq4.vector()));
+    ASSERT_LE(result.maxViolation, 1.0e-12);
+    ASSERT_GT(result.rhs, 1.0e-12);
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<double>>();
@@ -51,8 +54,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -5.0);
     vector->push_back(2, -10.0);
     auto eq5 = ipo::Constraint<double>(0.0, vector, 0.0);
-    ASSERT_EQ(red.test(eq5, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq5, 1.0e-12, 1.0e-12, 1.0e-12), ipo::EQUATION_INDEPENDENT);
+    result = red.test(eq5, euclideanNorm(eq5.vector()));
+    ASSERT_GT(result.maxViolation, 1.0e-12);
+    ASSERT_TRUE(red.add(eq5, result.maxCoordinate, 1.0e-12));
     ASSERT_EQ(red.rank(), 3);
   }
 
@@ -67,8 +71,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, 2);
     vector->push_back(2, 3);
     auto eq1 = ipo::Constraint<mpq_class>(mpq_class(1), vector, mpq_class(1));
-    ASSERT_EQ(red.test(eq1, 0, 0), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq1, 0, 0, 0), ipo::EQUATION_INDEPENDENT);
+    auto result = red.test(eq1, euclideanNorm(eq1.vector()));
+    ASSERT_EQ(result.maxViolation, 0);
+    ASSERT_TRUE(red.add(eq1, result.maxCoordinate, 0));
     ASSERT_EQ(red.rank(), 1);
 
     vector = std::make_shared<sparse_vector<mpq_class>>();
@@ -76,8 +81,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, 2);
     vector->push_back(2, 4);
     auto eq2 = ipo::Constraint<mpq_class>(mpq_class(1), vector, mpq_class(1));
-    ASSERT_EQ(red.test(eq2, 0, 0), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq2, 0, 0, 0), ipo::EQUATION_INDEPENDENT);
+    result = red.test(eq2, euclideanNorm(eq2.vector()));
+    ASSERT_EQ(result.maxViolation, 0);
+    ASSERT_TRUE(red.add(eq2, result.maxCoordinate, 0));
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<mpq_class>>();
@@ -85,8 +91,8 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -6);
     vector->push_back(2, -10);
     auto eq3 = ipo::Constraint<mpq_class>(mpq_class(-3), vector, mpq_class(-3));
-    ASSERT_EQ(red.test(eq3, 0, 0), ipo::EQUATION_REDUNDANT);
-    ASSERT_EQ(red.add(eq3, 0, 0, 0), ipo::EQUATION_REDUNDANT);
+    result = red.test(eq3, euclideanNorm(eq3.vector()));
+    ASSERT_GT(result.maxViolation, 0);
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<mpq_class>>();
@@ -94,8 +100,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -6);
     vector->push_back(2, -10);
     auto eq4 = ipo::Constraint<mpq_class>(mpq_class(0), vector, mpq_class(0));
-    ASSERT_EQ(red.test(eq4, 0, 0), ipo::EQUATION_INCONSISTENT);
-    ASSERT_EQ(red.add(eq4, 0, 0, 0), ipo::EQUATION_INCONSISTENT);
+    result = red.test(eq4, euclideanNorm(eq4.vector()));
+    ASSERT_EQ(result.maxViolation, 0);
+    ASSERT_NE(result.rhs, 0);
     ASSERT_EQ(red.rank(), 2);
 
     vector = std::make_shared<sparse_vector<mpq_class>>();
@@ -103,8 +110,9 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     vector->push_back(1, -5);
     vector->push_back(2, -10);
     auto eq5 = ipo::Constraint<mpq_class>(mpq_class(0), vector, mpq_class(0));
-    ASSERT_EQ(red.test(eq5, 0, 0), ipo::EQUATION_INDEPENDENT);
-    ASSERT_EQ(red.add(eq5, 0, 0, 0), ipo::EQUATION_INDEPENDENT);
+    result = red.test(eq5, euclideanNorm(eq5.vector()));
+    ASSERT_EQ(result.maxViolation, 0);
+    ASSERT_TRUE(red.add(eq5, result.maxCoordinate, 0));
     ASSERT_EQ(red.rank(), 3);
   }
 

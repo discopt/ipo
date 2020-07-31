@@ -135,15 +135,31 @@ namespace ipo
 
       struct Ray
       {
+      public:
         std::shared_ptr<sparse_vector<T>> vector;
 
         IPO_EXPORT
         Ray(std::shared_ptr<sparse_vector<T>> vec)
-          : vector(vec)
+          : vector(vec), _norm(euclideanNorm(*vec))
         {
 
         }
 
+        IPO_EXPORT
+        Ray(std::shared_ptr<sparse_vector<T>> vec, double norm)
+          : vector(vec), _norm(norm)
+        {
+          assert(norm == euclideanNorm(*vec));
+        }
+
+        IPO_EXPORT
+        inline double norm() const
+        {
+          return _norm;
+        }
+
+      private:
+        double _norm;
       };
 
       /// Outcome of query.
