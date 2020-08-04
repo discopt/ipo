@@ -151,7 +151,7 @@ namespace ipo
 
   IPO_EXPORT
   AffineHullResult<double> affineHull(
-    std::shared_ptr<Polyhedron<double>> polyhedron,
+    std::shared_ptr<RealPolyhedron> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
 
@@ -159,7 +159,7 @@ namespace ipo
 
   IPO_EXPORT
   AffineHullResult<mpq_class> affineHull(
-    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+    std::shared_ptr<RationalPolyhedron> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<mpq_class>>& knownEquations = std::vector<Constraint<mpq_class>>());
 

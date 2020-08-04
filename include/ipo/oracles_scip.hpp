@@ -235,7 +235,7 @@ namespace ipo
   * \brief OptimizationOracle based on the SCIP solver.
   */
 
-  class SCIPOptimizationOracleDouble: public OptimizationOracle<double>
+  class SCIPOptimizationOracleDouble: public RealOptimizationOracle
   {
   public:
 
@@ -258,21 +258,6 @@ namespace ipo
     virtual ~SCIPOptimizationOracleDouble();
 
     /**
-     * \brief Maximize a floating-point objective vector.
-     *
-     * \param objectiveVector Array that maps coordinates to objective value coefficients.
-     * \param query Parameters of query.
-     * \return Optimization result.
-     **/
-
-    IPO_EXPORT
-    virtual OptimizationOracle<double>::Response maximizeDouble(const double* objectiveVector,
-      const OptimizationOracle<double>::Query& query) override
-    {
-      return maximize(objectiveVector, query);
-    }
-
-    /**
      * \brief Maximize an objective vector of type double.
      *
      * \param objectiveVector Array that maps coordinates to objective value coefficients.
@@ -281,8 +266,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
-      const OptimizationOracle<double>::Query& query);
+    virtual RealOptimizationOracle::Response maximize(const double* objectiveVector,
+      const RealOptimizationOracle::Query& query);
 
   protected:
     friend SCIPSolver;
@@ -297,7 +282,7 @@ namespace ipo
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
   */
 
-  class SCIPSeparationOracleDouble: public SeparationOracle<double>
+  class SCIPSeparationOracleDouble: public RealSeparationOracle
   {
   public:
     /**
@@ -326,7 +311,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    SeparationOracle<double>::Response getInitial(const SeparationOracle<double>::Query& query)
+    RealSeparationOracle::Response getInitial(const RealSeparationOracle::Query& query)
       override;
 
     /**
@@ -341,8 +326,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<double>::Response separateDouble(const double* vector, bool isPoint,
-      const SeparationOracle<double>::Query& query)
+    virtual RealSeparationOracle::Response separateDouble(const double* vector, bool isPoint,
+      const RealSeparationOracle::Query& query)
     {
       return separate(vector, isPoint, query);
     }
@@ -359,8 +344,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationOracle<double>::Response separate(const double* vector, bool isPoint,
-      const SeparationOracle<double>::Query& query);
+    virtual RealSeparationOracle::Response separate(const double* vector, bool isPoint,
+      const RealSeparationOracle::Query& query);
 
   protected:
     friend SCIPSolver;

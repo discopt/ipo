@@ -36,10 +36,10 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getOptimizationOracleDouble();
 
     double obj[] = {1.0, 1.0};
-    ipo::OptimizationOracle<double>::Query query;
+    ipo::RealOptimizationOracle::Query query;
     std::cout << "oracle->maximize()" << std::endl;
     auto response = oracle->maximize(obj, query);
-    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_UNBOUNDED);
+    ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::UNBOUNDED);
     ASSERT_FALSE(response.hasDualBound);
     ASSERT_FALSE(response.rays.empty());
     ASSERT_EQ(response.rays[0].vector->size(), 2);
@@ -78,9 +78,9 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getOptimizationOracleDouble();
 
     double obj[] = { 1.0, 2.0 };
-    ipo::OptimizationOracle<double>::Query query;
+    ipo::RealOptimizationOracle::Query query;
     auto response = oracle->maximize(obj, query);
-    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_INFEASIBLE);
+    ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::INFEASIBLE);
     ASSERT_FALSE(response.hasDualBound);
   }
 
@@ -113,7 +113,7 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getSeparationOracleDouble();
 
     double vector[] = { 1.0, 1.0 };
-    ipo::SeparationOracle<double>::Query query;
+    ipo::RealSeparationOracle::Query query;
     auto response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
     ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
@@ -173,9 +173,9 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getOptimizationOracleRational();
 
     mpq_class obj[] = {1.0, 1.0};
-    ipo::OptimizationOracle<mpq_class>::Query query;
+    ipo::RationalOptimizationOracle::Query query;
     auto response = oracle->maximize(obj, query);
-    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_UNBOUNDED);
+    ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::UNBOUNDED);
     ASSERT_FALSE(response.hasDualBound);
     ASSERT_FALSE(response.rays.empty());
     ASSERT_EQ(response.rays[0].vector->size(), 2);
@@ -214,9 +214,9 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getOptimizationOracleRational();
 
     mpq_class obj[] = { 1, 2 };
-    ipo::OptimizationOracle<mpq_class>::Query query;
+    ipo::RationalOptimizationOracle::Query query;
     auto response = oracle->maximize(obj, query);
-    ASSERT_EQ(response.outcome, ipo::OPTIMIZATION_INFEASIBLE);
+    ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::INFEASIBLE);
     ASSERT_FALSE(response.hasDualBound);
   }
 
@@ -249,7 +249,7 @@ TEST(Oracles, SCIP)
     auto oracle = solver->getSeparationOracleRational();
 
     mpq_class vector[] = { 20, 20 };
-    ipo::SeparationOracle<mpq_class>::Query query;
+    ipo::RationalSeparationOracle::Query query;
     auto response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
     ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);

@@ -525,12 +525,12 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
-  template <typename T, typename U>
-  static void findLastPoint(std::shared_ptr<Polyhedron<T>> polyhedron, U* objective,
+  template <typename P, typename T, typename U>
+  static void findLastPoint(std::shared_ptr<P> polyhedron, U* objective,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints, double timeLimit,
     double& timeOracles)
   {
-    typename OptimizationOracle<T>::Query oracleQuery;
+    typename P::OptimizationOracle::Query oracleQuery;
     for (std::size_t v = 0; v < polyhedron->space()->dimension(); ++v)
       objective[v] = 0;
     oracleQuery.timeLimit = timeLimit;
@@ -538,9 +538,9 @@ namespace ipo
     auto oracleResponse = polyhedron->maximize(objective, oracleQuery);
     timeOracles += elapsedTime(timeComponent);
 
-    if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
+    if (oracleResponse.outcome == OptimizationOutcome::UNBOUNDED)
       throw std::runtime_error("maximize(<zero vector>) returned unbounded result.");
-    else if (oracleResponse.outcome == OPTIMIZATION_FEASIBLE)
+    else if (oracleResponse.outcome == OptimizationOutcome::FEASIBLE)
     {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "  -> adding last point" << std::endl;
@@ -580,8 +580,8 @@ namespace ipo
     }
   }
 
-  template <typename T, typename U, typename KV>
-  static int tryMaximization(std::shared_ptr<Polyhedron<T>> polyhedron,
+  template <typename P, typename T, typename U, typename KV>
+  static int tryMaximization(std::shared_ptr<P> polyhedron,
     AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
     const sparse_vector<U>& kernelVector, std::size_t kernelVectorColumn, double kernelVectorNorm,
     U& kernelDirectionValue, std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
@@ -599,7 +599,7 @@ namespace ipo
     for (const auto& iter : kernelVector)
       objective[iter.first] = iter.second;
 
-    typename OptimizationOracle<T>::Query oracleQuery;
+    typename P::OptimizationOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
       kernelDirectionValue = kernelVector * *resultPoints.front();
@@ -625,11 +625,11 @@ namespace ipo
     if (timeOracle >= timeLimit)
       return INTERNAL_TIMEOUT;
 
-    if (oracleResponse.outcome == OPTIMIZATION_INFEASIBLE)
+    if (oracleResponse.outcome == OptimizationOutcome::INFEASIBLE)
       return INTERNAL_INFEASIBLE;
-    else if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
+    else if (oracleResponse.outcome == OptimizationOutcome::UNBOUNDED)
     {
-      const typename OptimizationOracle<T>::Response::Ray& firstRay = oracleResponse.rays.front();
+      const auto& firstRay = oracleResponse.rays.front();
       resultRays.push_back(firstRay.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
@@ -657,7 +657,7 @@ namespace ipo
 
       if (resultPoints.empty() && !oracleResponse.points.empty())
       {
-        const typename OptimizationOracle<T>::Response::Point& bestPoint = oracleResponse.points.front();
+        const auto& bestPoint = oracleResponse.points.front();
         resultPoints.push_back(bestPoint.vector);
         timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
@@ -686,7 +686,7 @@ namespace ipo
     }
     else if (resultPoints.empty())
     {
-      assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
+      assert(oracleResponse.outcome == OptimizationOutcome::FEASIBLE);
 
       if (oracleResponse.points.empty())
       {
@@ -697,7 +697,7 @@ namespace ipo
 
       // Add the maximizer.
 
-      const typename OptimizationOracle<T>::Response::Point& bestPoint = oracleResponse.points.front();
+      const auto& bestPoint = oracleResponse.points.front();
       resultPoints.push_back(bestPoint.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
@@ -723,7 +723,7 @@ namespace ipo
       // If another point has a different objective value, we also add that and continue.
       for (std::size_t p = 2; p < oracleResponse.points.size(); ++p)
       {
-        const typename OptimizationOracle<T>::Response::Point& otherPoint = oracleResponse.points[p];
+        const auto& otherPoint = oracleResponse.points[p];
         double difference = fabs(convertNumber<double, T>(otherPoint.objectiveValue
           - bestPoint.objectiveValue));
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -772,7 +772,7 @@ namespace ipo
     }
     else
     {
-      assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
+      assert(oracleResponse.outcome == OptimizationOutcome::FEASIBLE);
 
       // Check if some vector has a different objective value.
       for (const auto& point : oracleResponse.points)
@@ -817,8 +817,8 @@ namespace ipo
     return std::numeric_limits<int>::max();
   }
 
-  template <typename T, typename U, typename KV>
-  static int tryMinimization(std::shared_ptr<Polyhedron<T>> polyhedron,
+  template <typename P, typename T, typename U, typename KV>
+  static int tryMinimization(std::shared_ptr<P> polyhedron,
     AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
     const sparse_vector<U>& kernelDirectionVector, std::size_t kernelVectorColumn,
     double kernelDirectionNorm, const U& kernelDirectionValue,
@@ -839,7 +839,7 @@ namespace ipo
 #endif /* !NDEBUG */
     }
 
-    typename OptimizationOracle<T>::Query oracleQuery;
+    typename P::OptimizationOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
       oracleQuery.hasMinObjectiveValue = true;
@@ -864,11 +864,11 @@ namespace ipo
     if (timeOracle >= timeLimit)
       return INTERNAL_TIMEOUT;
 
-    if (oracleResponse.outcome == OPTIMIZATION_INFEASIBLE)
+    if (oracleResponse.outcome == OptimizationOutcome::INFEASIBLE)
       throw std::runtime_error("Oracle for minimization claims infeasible.");
-    else if (oracleResponse.outcome == OPTIMIZATION_UNBOUNDED)
+    else if (oracleResponse.outcome == OptimizationOutcome::UNBOUNDED)
     {
-      const typename OptimizationOracle<T>::Response::Ray& firstRay = oracleResponse.rays.front();
+      const auto& firstRay = oracleResponse.rays.front();
       resultRays.push_back(firstRay.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
@@ -896,14 +896,13 @@ namespace ipo
     else
     {
       assert(!resultPoints.empty());
-      assert(oracleResponse.outcome == OPTIMIZATION_FEASIBLE);
+      assert(oracleResponse.outcome == OptimizationOutcome::FEASIBLE);
 
       // Check if some vector has a different objective value.
       if (oracleResponse.points.empty())
         return INTERNAL_NONE;
 
-      const typename OptimizationOracle<T>::Response::Point& bestPoint
-        = oracleResponse.points.front();
+      const auto& bestPoint = oracleResponse.points.front();
       double difference = fabs(convertNumber<double, T>(
         bestPoint.objectiveValue - oracleQuery.minObjectiveValue));
       difference /= kernelDirectionNorm;
@@ -975,7 +974,7 @@ namespace ipo
     return INTERNAL_OKAY;
   }
 
-  AffineHullResult<double> affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
+  AffineHullResult<double> affineHull(std::shared_ptr<RealPolyhedron> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
     AffineHullResult<double> result;
@@ -1177,7 +1176,7 @@ namespace ipo
       std::vector<double> direction(n, 0.0);
       for (const auto& iter : *kernelVector.vector)
         direction[iter.first] = iter.second;
-      typename OptimizationOracle<double>::Query verifyQuery;
+      RealOptimizationOracle::Query verifyQuery;
       auto verifyResult = polyhedron->maximize(&direction[0], verifyQuery);
       std::cout << "Maximization of equation normal yields " << verifyResult << std::endl;
       for (std::size_t v = 0; v < n; ++v)
@@ -1212,7 +1211,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  AffineHullResult<mpq_class> affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+  AffineHullResult<mpq_class> affineHull(std::shared_ptr<RationalPolyhedron> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
     AffineHullResult<mpq_class> result;

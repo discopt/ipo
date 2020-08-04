@@ -64,11 +64,11 @@ int main(int argc, char** argv)
   if (gmp)
   {
     auto opt = scip->getOptimizationOracleRational();
-    auto poly = std::make_shared<ipo::Polyhedron<mpq_class>>(opt);
+    auto poly = std::make_shared<ipo::RationalPolyhedron>(opt);
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<mpq_class>> knownEquations;
-    ipo::SeparationOracle<mpq_class>::Query sepaQuery;
+    ipo::RationalSeparationOracle::Query sepaQuery;
     auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
@@ -105,11 +105,11 @@ int main(int argc, char** argv)
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
     auto opt = scip->getOptimizationOracleDouble();
-    auto poly = std::make_shared<ipo::Polyhedron<double>>(opt);
+    auto poly = std::make_shared<ipo::RealPolyhedron>(opt);
 
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<double>> knownEquations;
-    ipo::SeparationOracle<double>::Query sepaQuery;
+    ipo::RealSeparationOracle::Query sepaQuery;
     auto sepaResult = scip->getSeparationOracleDouble()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
