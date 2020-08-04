@@ -974,10 +974,10 @@ namespace ipo
     return INTERNAL_OKAY;
   }
 
-  AffineHullResult<double> affineHull(std::shared_ptr<RealPolyhedron> polyhedron,
+  RealAffineHullResult affineHull(std::shared_ptr<RealPolyhedron> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
-    AffineHullResult<double> result;
+    RealAffineHullResult result;
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
@@ -1211,10 +1211,10 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  AffineHullResult<mpq_class> affineHull(std::shared_ptr<RationalPolyhedron> polyhedron,
+  RationalAffineHullResult affineHull(std::shared_ptr<RationalPolyhedron> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
-    AffineHullResult<mpq_class> result;
+    RationalAffineHullResult result;
 
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();

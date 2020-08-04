@@ -56,7 +56,9 @@ namespace ipo
   const static int AFFINEHULL_ERROR_TIMEOUT = -3;
   const static int AFFINEHULL_ERROR_NUMERICS = -4;
 
-  struct AffineHullResultCommon
+
+  template <typename R>
+  struct CommonAffineHullResult
   {
     int dimension; /// Dimension or an error code.
     int lowerBound; /// Lower bound on dimension.
@@ -67,17 +69,12 @@ namespace ipo
     double timeKernel; /// Time spent for computing kernel vectors.
     double timePointsRays; /// Time spent for the LU factorization of points and rays.
     double timeEquations; /// Time spent for the LU factorization of equations.
-  };
-
-  template <typename T>
-  struct AffineHullResult: public AffineHullResultCommon
-  {
-    std::vector<std::shared_ptr<sparse_vector<T>>> points; /// Points of inner description.
-    std::vector<std::shared_ptr<sparse_vector<T>>> rays; /// Rays of inner description.
-    std::vector<Constraint<T>> equations; /// Linearly independent equations.
+    std::vector<std::shared_ptr<sparse_vector<R>>> points; /// Points of inner description.
+    std::vector<std::shared_ptr<sparse_vector<R>>> rays; /// Rays of inner description.
+    std::vector<Constraint<R>> equations; /// Linearly independent equations.
 
     IPO_EXPORT
-    AffineHullResult()
+    CommonAffineHullResult()
     {
       dimension = AFFINEHULL_ERROR_RUNNING;
       lowerBound = -1;
@@ -91,7 +88,7 @@ namespace ipo
     }
 
     IPO_EXPORT
-    AffineHullResult(AffineHullResult<T>&& other)
+    CommonAffineHullResult(CommonAffineHullResult<R>&& other)
       : points(std::move(other.points)), rays(std::move(other.rays)),
       equations(std::move(other.equations))
     {
@@ -107,7 +104,7 @@ namespace ipo
     }
 
     IPO_EXPORT
-    AffineHullResult<T>& operator=(AffineHullResult<T>&& other)
+    CommonAffineHullResult<R>& operator=(CommonAffineHullResult<R>&& other)
     {
       points = std::move(other.points);
       rays = std::move(other.rays);
@@ -125,8 +122,8 @@ namespace ipo
     }
   };
 
-  template <typename T>
-  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<T>& result)
+  template <typename R>
+  std::ostream& operator<<(std::ostream& stream, const CommonAffineHullResult<R>& result)
   {
     if (result.dimension >= -1)
       stream << "Dimension: " << result.dimension;
@@ -149,16 +146,20 @@ namespace ipo
     return stream;
   }
 
+  typedef CommonAffineHullResult<double> RealAffineHullResult;
+
   IPO_EXPORT
-  AffineHullResult<double> affineHull(
+  RealAffineHullResult affineHull(
     std::shared_ptr<RealPolyhedron> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
 
 #if defined(IPO_WITH_GMP)
 
+  typedef CommonAffineHullResult<mpq_class> RationalAffineHullResult;
+
   IPO_EXPORT
-  AffineHullResult<mpq_class> affineHull(
+  RationalAffineHullResult affineHull(
     std::shared_ptr<RationalPolyhedron> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<mpq_class>>& knownEquations = std::vector<Constraint<mpq_class>>());
