@@ -54,6 +54,7 @@ namespace ipo
 
   const static int AFFINEHULL_ERROR_RUNNING = -2;
   const static int AFFINEHULL_ERROR_TIMEOUT = -3;
+  const static int AFFINEHULL_ERROR_NUMERICS = -4;
 
   struct AffineHullResultCommon
   {
@@ -135,6 +136,8 @@ namespace ipo
         stream << "Running. ";
       else if (result.dimension == AFFINEHULL_ERROR_TIMEOUT)
         stream << "Timeout. ";
+      else if (result.dimension == AFFINEHULL_ERROR_NUMERICS)
+        stream << "Numerical difficulties. ";
       else
         stream << "Unknown error. ";
       stream << "Dimension in [" << result.lowerBound << "," << result.upperBound << "]";

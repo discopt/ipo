@@ -20,6 +20,8 @@ namespace ipo
   public:
     /**
      * \brief Constructs an oracle with given \p name.
+     * 
+     * The parent constructor must set \ref _space properly.
      */
 
     IPO_EXPORT
@@ -57,7 +59,7 @@ namespace ipo
   enum OptimizationOutcome
   {
     OPTIMIZATION_TIMEOUT = -1,
-    OPTIMIZATION_FOUNDNOTHING= 0,
+    OPTIMIZATION_FOUNDNOTHING = 0,
     OPTIMIZATION_UNBOUNDED = 1,
     OPTIMIZATION_INFEASIBLE = 2,
     OPTIMIZATION_FEASIBLE = 3

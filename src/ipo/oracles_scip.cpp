@@ -6,10 +6,7 @@
 #include <functional>
 #include <chrono>
 #include <sstream>
-
-#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
 #include <iostream>
-#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -495,7 +492,7 @@ namespace ipo
         maxEntry = ci;
     }
 
-    const double maxAllowedEntry = 10e9;
+    const double maxAllowedEntry = 10e5;
     double scalingFactor = 1.0 / std::max(1.0, maxEntry / maxAllowedEntry);
 
     for (std::size_t i = 0; i < n; ++i)
@@ -513,11 +510,16 @@ namespace ipo
       std::cout << "Solving optimization problem." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
-      SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+      SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
+      if (retcode != SCIP_OKAY)
+      {
+        std::cerr << "SCIPOptimizationOracleDouble received return code " << retcode
+          << " from SCIPsolve() call." << std::endl;
+      }
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-      std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
-        << std::endl;
+      std::cout << "SCIP returned with return code " << retcode << " and status "
+        << SCIPgetStatus(_solver->_scip) << "." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
       bool hasRay = SCIPhasPrimalRay(_solver->_scip);
@@ -555,20 +557,19 @@ namespace ipo
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
           SCIP_SOL* sol = solutions[solIndex];
-          double objectiveValue = SCIPgetSolOrigObj(_solver->_scip, sol) / scalingFactor;
           auto vector = std::make_shared<sparse_vector<double>>();
+          for (std::size_t i = 0; i < n; ++i)
+          {
+            double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+            if (!SCIPisZero(_solver->_scip, x))
+              vector->push_back(i, x);
+          }
+          double objectiveValue = objectiveVector * *vector;
           if (!query.hasMinObjectiveValue || objectiveValue > query.minObjectiveValue)
           {
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
             std::cout << " of value " << objectiveValue << " is accepted." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
-            
-            for (std::size_t i = 0; i < n; ++i)
-            {
-              double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-              if (!SCIPisZero(_solver->_scip, x))
-                vector->push_back(i, x);
-            }
             response.points.push_back(OptimizationOracle<double>::Response::Point(vector,
               objectiveValue));
           }
@@ -578,7 +579,7 @@ namespace ipo
             std::cout << " of value " << objectiveValue << " is rejected." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
           }
-        }        
+        }
         response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
         response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
         response.hasDualBound = true;
@@ -678,6 +679,13 @@ namespace ipo
         SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
       }
     }
+
+#if !defined(NDEBUG)
+    for (auto& point : response.points)
+    {
+      assert(fabs(*point.vector * objectiveVector - point.objectiveValue) < 1.0e-9);
+    }
+#endif /* !NDEBUG */
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     std::cout << "Sorting points." << std::endl;

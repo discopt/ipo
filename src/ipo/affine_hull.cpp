@@ -13,9 +13,18 @@
 
 namespace ipo
 {
+  static const int INTERNAL_NUMERICS = AFFINEHULL_ERROR_NUMERICS;
+  static const int INTERNAL_TIMEOUT = AFFINEHULL_ERROR_TIMEOUT;
+  static const int INTERNAL_INFEASIBLE = -1;
+  static const int INTERNAL_OKAY = 0;
+  static const int INTERNAL_NONE = 0;
+  static const int INTERNAL_INITIAL_ONE = 1;
+  static const int INTERNAL_INITIAL_TWO = 2;
+  static const int INTERNAL_FURTHER_ONE = 3;
+
   AffineHullQuery::AffineHullQuery()
-    : epsilonLinearDependence(1.0e-6), epsilonConstraints(1.0e-9), epsilonInvalidate(1.e-7),
-    epsilonSafety(1.0e-6), epsilonFactorization(1.0e-12), epsilonCoefficient(1.0e-12),
+    : epsilonLinearDependence(1.0e-6), epsilonConstraints(1.0e-8), epsilonInvalidate(1.e-20),
+    epsilonSafety(1.0e-6), epsilonFactorization(1.0e-20), epsilonCoefficient(1.0e-12),
     timeLimit(std::numeric_limits<double>::infinity())
   {
 
@@ -116,7 +125,7 @@ namespace ipo
     }
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
 
-    void add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
+    int add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
       double epsilonFactorization)
     {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -146,7 +155,8 @@ namespace ipo
         newColumn[_columns[newBasicColumn].rows[i]] = _columns[newBasicColumn].entries[i];
 
       // Update LU decomposition.
-      _lu.extend(&newRow[0], &newColumn[0], newRow.back(), epsilonFactorization);
+      if (!_lu.extend(&newRow[0], &newColumn[0], newRow.back(), epsilonFactorization))
+        return INTERNAL_NUMERICS;
 
       // Add the row.
       for (const auto& iter : row)
@@ -160,6 +170,8 @@ namespace ipo
       // Invalidate equations.
       for (auto& columnData : _columns)
         columnData.definesEquation = false;
+
+      return INTERNAL_OKAY;
     }
 
     void computeKernelVector(std::size_t column, sparse_vector<T>& result, T& rhs,
@@ -184,7 +196,12 @@ namespace ipo
           result.push_back(c, vector[_columns[c].basisIndex]);
         }
       }
-      rhs = _columns.back().isBasic() ? vector[_columns.back().basisIndex] : 0;
+      if (column == numVariables())
+        rhs = -1;
+      else if (_columns.back().isBasic())
+        rhs = -vector[_columns.back().basisIndex];
+      else
+        rhs = 0;
     }
 
     std::size_t selectColumn()
@@ -276,12 +293,12 @@ namespace ipo
           pResultEquations->clear();
           pResultEquations->push_back(neverSatisfiedConstraint<U>());
         }
-        return -1;
+        return INTERNAL_INFEASIBLE;
       }
       else if (redundancy.maxViolation >= epsilonCoefficient)
       {
-        bool success = redundancyCheck.add(convertedEquation, redundancy.maxCoordinate, 0.0);
-        assert(success);
+        if (!redundancyCheck.add(convertedEquation, redundancy.maxCoordinate, 0.0))
+          return INTERNAL_NUMERICS;
         if (pApproximateRedundancyCheck)
         {
           pApproximateRedundancyCheck->add(convertConstraint<double>(equation),
@@ -309,15 +326,15 @@ namespace ipo
       : column(col), rhs(0.0), norm(1.0), maxViolation(std::numeric_limits<double>::max()),
       sparsity(1), redundancyCoordinate(std::numeric_limits<std::size_t>::max()), isLast(last)
     {
-      if (valid)
+      if (valid && !last)
       {
         vector = std::make_shared<sparse_vector<double>>();
         vector->push_back(col, -1);
+        redundancyCoordinate = col;
       }
     }
 
-    template <typename T>
-    void ensureValidity(const sparse_vector<T>& solution, double pointFactor, double epsilon)
+    void ensureValidity(const sparse_vector<double>& solution, double pointFactor, double epsilon)
     {
       if (vector)
       {
@@ -329,18 +346,18 @@ namespace ipo
   };
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-  std::ostream& operator<<(std::ostream& stream, const KernelVector& kv)
+  std::ostream& operator<<(std::ostream& stream, const KernelVectorDouble& kv)
   {
     stream << "Kernel vector for column " << kv.column << ": ";
     if (kv.vector)
     {
       return stream << *kv.vector << " with sparsity " << kv.sparsity
-        << " and max violation " << kv.maxViolation;
+        << " and max violation " << kv.maxViolation << " attained at " << kv.redundancyCoordinate;
     }
     else
     {
       return stream << "<invalid> with expected sparsity " << kv.sparsity
-        << " and expected max violation " << kv.maxViolation;
+        << " and expected max violation " << kv.maxViolation << " attained at " << kv.redundancyCoordinate;
     }
   }
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
@@ -398,8 +415,9 @@ namespace ipo
   {
     std::size_t column;
     std::shared_ptr<sparse_vector<mpq_class>> vector;
-    std::shared_ptr<sparse_vector<double>> approximation;
-    double rhs;
+    mpq_class rhs;
+    std::shared_ptr<sparse_vector<double>> approximateVector;
+    double approximateRhs;
     double norm;
     double maxViolation;
     std::size_t sparsity;
@@ -409,24 +427,27 @@ namespace ipo
     KernelVectorRational() = default;
 
     KernelVectorRational(std::size_t col, bool valid, bool last)
-      : column(col), rhs(0.0), norm(1.0), maxViolation(std::numeric_limits<double>::max()),
-      sparsity(1), redundancyCoordinate(std::numeric_limits<std::size_t>::max()), isLast(last)
+      : column(col), rhs(0), approximateRhs(1.0), norm(1.0),
+      maxViolation(std::numeric_limits<double>::max()), sparsity(1),
+      redundancyCoordinate(std::numeric_limits<std::size_t>::max()), isLast(last)
     {
-      if (valid)
+      if (valid && !last)
       {
         vector = std::make_shared<sparse_vector<mpq_class>>();
         vector->push_back(col, mpq_class(-1));
-        approximation = std::make_shared<sparse_vector<double>>();
-        approximation->push_back(col, -1.0);        
+        approximateVector = std::make_shared<sparse_vector<double>>();
+        approximateVector->push_back(col, -1.0);        
+        redundancyCoordinate = col;
       }
     }
 
-    template <typename T>
-    void ensureValidity(const sparse_vector<T>& solution, double pointFactor, double epsilon)
+    void ensureValidity(const sparse_vector<mpq_class>& solution, const mpq_class& pointFactor,
+      double epsilon)
     {
       if (vector)
       {
-        double violation = fabs(*vector * solution - rhs * pointFactor);
+        double violation = fabs(convertNumber<double, mpq_class>(
+          *vector * solution - rhs * pointFactor));
         if (violation > epsilon * norm)
           vector.reset();
       }
@@ -434,13 +455,13 @@ namespace ipo
   };
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-  std::ostream& operator<<(std::ostream& stream, const KernelVector& kv)
+  std::ostream& operator<<(std::ostream& stream, const KernelVectorRational& kv)
   {
     stream << "Kernel vector for column " << kv.column << ": ";
     if (kv.vector)
     {
       return stream << *kv.vector << " with sparsity " << kv.sparsity
-        << " and max violation " << kv.maxViolation;
+        << " and max violation " << kv.maxViolation << " attained at " << kv.redundancyCoordinate;
     }
     else
     {
@@ -475,11 +496,16 @@ namespace ipo
         if (a.sparsity < b.sparsity)
           return false;
 
+        if (!a.approximateVector && b.approximateVector)
+          return true;
+        if (a.approximateVector && !b.approximateVector)
+          return false;
+
         if (!a.vector && b.vector)
           return true;
         if (a.vector && !b.vector)
           return false;
-        
+
         return false;
       }
       else
@@ -487,9 +513,9 @@ namespace ipo
         // If both don't have a safe violation we prefer invalid ones to validate them.
         // Among the valid ones, those with a largest violation are better.
 
-        if (a.vector && !b.vector)
+        if (a.approximateVector && !b.approximateVector)
           return true;
-        if (!a.vector && b.vector)
+        if (!a.approximateVector && b.approximateVector)
           return false;
 
         return a.maxViolation < b.maxViolation;
@@ -526,20 +552,39 @@ namespace ipo
       throw std::runtime_error("maximize(<zero vector>) returned infeasible after some rays.");
   }
 
-  static const int INTERNAL_TIMEOUT = AFFINEHULL_ERROR_TIMEOUT;
-  static const int INTERNAL_INFEASIBLE = -1;
-  static const int INTERNAL_NONE = 0;
-  static const int INTERNAL_INITIAL_ONE = 1;
-  static const int INTERNAL_INITIAL_TWO = 2;
-  static const int INTERNAL_FURTHER_ONE = 3;
+  template <typename T, typename KV>
+  static void ensureValidity(std::vector<KV>& kernelVectors, const sparse_vector<T>& solution,
+    const T& pointFactor, double epsilon, AffineComplement<T>& affineComplement, const std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints)
+  {
+    for (auto& kv : kernelVectors)
+    {
+      sparse_vector<T> oldVector;
+      sparse_vector<T> newVector;
+      T debugKernelRhs;
+      if (kv.vector)
+      {
+        oldVector = *kv.vector;
+        affineComplement.computeKernelVector(kv.column, newVector, debugKernelRhs, epsilon);
+      }
+      kv.ensureValidity(solution, pointFactor, epsilon);
+      if (kv.vector && euclideanDistance(oldVector, newVector) > 1.e-9)
+      {
+        std::cout << "Column " << kv.column << ", old vector is " << oldVector << ", new vector is " << newVector << std::endl;
+        for (auto& vector : resultPoints)
+        {
+          std::cout << "Product of old vector with point " << *vector << " is " << (*vector * oldVector) << std::endl;
+        }
+        std::cout << "rhs = " << kv.rhs << std::endl;
+        assert(false);
+      }
+    }
+  }
 
-  template <typename T, typename U>
+  template <typename T, typename U, typename KV>
   static int tryMaximization(std::shared_ptr<Polyhedron<T>> polyhedron,
-    AffineComplement<U>& affineComplement, U* objective,
-    std::vector<KernelVectorDouble>& kernelVectors,
-    const sparse_vector<U>& kernelVector, std::size_t kernelVectorColumn,
-    double kernelVectorNorm, U& kernelDirectionValue,
-    std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
+    AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
+    const sparse_vector<U>& kernelVector, std::size_t kernelVectorColumn, double kernelVectorNorm,
+    U& kernelDirectionValue, std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays, const AffineHullQuery& query,
     double timeLimit, double& timeOracles, double& timePointsRays,
     AffineComplement<double>* pAffineComplement = NULL)
@@ -552,9 +597,7 @@ namespace ipo
       objective[v] = 0;
     kernelDirectionValue = 0;
     for (const auto& iter : kernelVector)
-    {
       objective[iter.first] = iter.second;
-    }
 
     typename OptimizationOracle<T>::Query oracleQuery;
     if (!resultPoints.empty())
@@ -562,6 +605,9 @@ namespace ipo
       kernelDirectionValue = kernelVector * *resultPoints.front();
       oracleQuery.hasMinObjectiveValue = true;
       oracleQuery.minObjectiveValue = kernelDirectionValue;
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "Common objective of previous points is " << kernelDirectionValue << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
     }
     if (timeLimit <= 0)
       return INTERNAL_TIMEOUT;
@@ -588,21 +634,24 @@ namespace ipo
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
       affineComplement._debugAdd(convertTo<U>(*firstRay.vector), 0,
-        kernelDirectionColumn, objective);
+        kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      affineComplement.add(convertTo<U>(*firstRay.vector), 0,
+      int error = affineComplement.add(convertTo<U>(*firstRay.vector), 0,
         kernelVectorColumn, query.epsilonFactorization);
+      if (error != INTERNAL_OKAY)
+        return error;
+      
       if (pAffineComplement)
       {
-        pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
+        error = pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
           kernelVectorColumn, query.epsilonFactorization);
+        if (error != INTERNAL_OKAY)
+          return error;
       }
       timePointsRays += elapsedTime(timeComponent);
 
       // Invalidate kernel vectors.
-
-      for (auto& kv : kernelVectors)
-        kv.ensureValidity(*firstRay.vector, 0, firstRay.norm() * query.epsilonInvalidate);
+      ensureValidity(kernelVectors, *firstRay.vector, T(0), firstRay.norm() * query.epsilonInvalidate, affineComplement, resultPoints);
 
       // Process points if present.
 
@@ -615,19 +664,21 @@ namespace ipo
         affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-        affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+        int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), query.epsilonFactorization);
+        if (error != INTERNAL_OKAY)
+          return error;
         if (pAffineComplement)
         {
-          pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+          error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
             polyhedron->space()->dimension(), query.epsilonFactorization);
+          if (error != INTERNAL_OKAY)
+            return error;
         }
         timePointsRays += elapsedTime(timeComponent);
         
         // Invalidate kernel vectors.
-
-        for (auto& kv : kernelVectors)
-          kv.ensureValidity(*bestPoint.vector, 1, query.epsilonInvalidate);
+        ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
         return INTERNAL_INITIAL_TWO;
       }
@@ -653,19 +704,21 @@ namespace ipo
       affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
         polyhedron->space()->dimension(), objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      affineComplement.add(convertTo<U>(*bestPoint.vector), 1, polyhedron->space()->dimension(),
-        query.epsilonFactorization);
+      int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+        polyhedron->space()->dimension(), query.epsilonFactorization);
+      if (error != INTERNAL_OKAY)
+        return error;
       if (pAffineComplement)
       {
-        pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+        error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), query.epsilonFactorization);
+        if (error != INTERNAL_OKAY)
+          return error;
       }
       timePointsRays += elapsedTime(timeComponent);
 
       // Invalidate kernel vectors.
-
-      for (auto& kv : kernelVectors)
-        kv.ensureValidity(*bestPoint.vector, 1.0, query.epsilonInvalidate);
+      ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
       // If another point has a different objective value, we also add that and continue.
       for (std::size_t p = 2; p < oracleResponse.points.size(); ++p)
@@ -673,28 +726,34 @@ namespace ipo
         const typename OptimizationOracle<T>::Response::Point& otherPoint = oracleResponse.points[p];
         double difference = fabs(convertNumber<double, T>(otherPoint.objectiveValue
           - bestPoint.objectiveValue));
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+        std::cout << "Two initial points found. Absolute objective value difference: "
+          << difference << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
         difference /= kernelVectorNorm;
         if (difference > query.epsilonConstraints)
         {
           resultPoints.push_back(otherPoint.vector);
           timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-          affineComplement._debugAdd(convertTo<U>(*otherPoint.vector), 1, kernelDirectionColumn,
+          affineComplement._debugAdd(convertTo<U>(*otherPoint.vector), 1, kernelVectorColumn,
             objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-          affineComplement.add(convertTo<U>(*otherPoint.vector), 1, kernelVectorColumn,
+          int error = affineComplement.add(convertTo<U>(*otherPoint.vector), 1, kernelVectorColumn,
             query.epsilonFactorization);
+          if (error != INTERNAL_OKAY)
+            return error;
           if (pAffineComplement)
           {
-            pAffineComplement->add(convertTo<double>(*otherPoint.vector), 1,
+            error = pAffineComplement->add(convertTo<double>(*otherPoint.vector), 1,
               kernelVectorColumn, query.epsilonFactorization);
+            if (error != INTERNAL_OKAY)
+              return error;
           }
           timePointsRays += elapsedTime(timeComponent);
 
           // Invalidate kernel vectors.
-
-          for (auto& kv : kernelVectors)
-            kv.ensureValidity(*otherPoint.vector, 1.0, query.epsilonInvalidate);
+          ensureValidity(kernelVectors, *otherPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
           std::cout << "  -> adding two points with objective values "
@@ -727,22 +786,24 @@ namespace ipo
           resultPoints.push_back(point.vector);
           timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-          affineComplement._debugAdd(convertTo<U>(*point.vector), 1, kernelDirectionColumn,
+          affineComplement._debugAdd(convertTo<U>(*point.vector), 1, kernelVectorColumn,
             objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-          affineComplement.add(convertTo<U>(*point.vector), 1, kernelVectorColumn,
+          int error = affineComplement.add(convertTo<U>(*point.vector), 1, kernelVectorColumn,
             query.epsilonFactorization);
+          if (error != INTERNAL_OKAY)
+            return error;
           if (pAffineComplement)
           {
-            pAffineComplement->add(convertTo<double>(*point.vector), 1,
+            error = pAffineComplement->add(convertTo<double>(*point.vector), 1,
               kernelVectorColumn, query.epsilonFactorization);
+            if (error != INTERNAL_OKAY)
+              return error;
           }
           timePointsRays += elapsedTime(timeComponent);
 
           // Invalidate kernel vectors.
-
-          for (auto& kv : kernelVectors)
-            kv.ensureValidity(*point.vector, 1.0, query.epsilonInvalidate);
+          ensureValidity(kernelVectors, *point.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
           std::cout << "  -> adding a point with objective value "
@@ -756,11 +817,10 @@ namespace ipo
     return std::numeric_limits<int>::max();
   }
 
-  template <typename T, typename U>
+  template <typename T, typename U, typename KV>
   static int tryMinimization(std::shared_ptr<Polyhedron<T>> polyhedron,
-    AffineComplement<U>& affineComplement, U* objective,
-    std::vector<KernelVectorDouble>& kernelVectors,
-    const sparse_vector<U>& kernelDirectionVector, std::size_t kernelDirectionColumn,
+    AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
+    const sparse_vector<U>& kernelDirectionVector, std::size_t kernelVectorColumn,
     double kernelDirectionNorm, const U& kernelDirectionValue,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays, const AffineHullQuery& query,
@@ -772,18 +832,21 @@ namespace ipo
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     for (std::size_t v = 0; v < polyhedron->space()->dimension(); ++v)
+    {
       objective[v] = -objective[v];
-
 #if !defined(NDEBUG)
-    for (const auto& iter : kernelDirectionVector)
-      assert(objective[iter.first] == -iter.second);
+      assert(objective[v] == -kernelDirectionVector.find(v, 0));
 #endif /* !NDEBUG */
+    }
 
     typename OptimizationOracle<T>::Query oracleQuery;
     if (!resultPoints.empty())
     {
       oracleQuery.hasMinObjectiveValue = true;
       oracleQuery.minObjectiveValue = -kernelDirectionValue;
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "Common objective of previous points is " << -kernelDirectionValue << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
     }
     if (timeLimit <= 0)
       return INTERNAL_TIMEOUT;
@@ -810,21 +873,23 @@ namespace ipo
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
       affineComplement._debugAdd(convertTo<U>(*firstRay.vector), 0,
-        kernelDirectionColumn, objective);
+        kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      affineComplement.add(convertTo<U>(*firstRay.vector), 0,
-        kernelDirectionColumn, query.epsilonFactorization);
+      int error = affineComplement.add(convertTo<U>(*firstRay.vector), 0,
+        kernelVectorColumn, query.epsilonFactorization);
+      if (error != INTERNAL_OKAY)
+        return error;
       if (pAffineComplement)
       {
-        pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
-          kernelDirectionColumn, query.epsilonFactorization);
+        error = pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
+          kernelVectorColumn, query.epsilonFactorization);
+        if (error != INTERNAL_OKAY)
+          return error;
       }
       timePointsRays += elapsedTime(timeComponent);
 
       // Invalidate kernel vectors.
-
-      for (auto& kv : kernelVectors)
-        kv.ensureValidity(*firstRay.vector, 0.0, firstRay.norm() * query.epsilonInvalidate);
+      ensureValidity(kernelVectors, *firstRay.vector, T(0), firstRay.norm() * query.epsilonInvalidate, affineComplement, resultPoints);
 
       return INTERNAL_FURTHER_ONE;
     }
@@ -845,25 +910,31 @@ namespace ipo
       if (difference <= query.epsilonConstraints)
         return INTERNAL_NONE;
 
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "Normalized objective value difference is " << difference << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
       resultPoints.push_back(bestPoint.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
       affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
-        kernelDirectionColumn, objective);
+        kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
-        kernelDirectionColumn, query.epsilonFactorization);
+      int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+        kernelVectorColumn, query.epsilonFactorization);
+      if (error != INTERNAL_OKAY)
+        return error;
       if (pAffineComplement)
       {
-        pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
-          kernelDirectionColumn, query.epsilonFactorization);
+        error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+          kernelVectorColumn, query.epsilonFactorization);
+        if (error != INTERNAL_OKAY)
+          return error;
       }
       timePointsRays += elapsedTime(timeComponent);
 
       // Invalidate kernel vectors.
-
-      for (auto& kv : kernelVectors)
-        kv.ensureValidity(*bestPoint.vector, 1.0, query.epsilonInvalidate);
+      ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "  -> adding a point with objective value "
@@ -875,7 +946,7 @@ namespace ipo
   }
 
   template <typename T>
-  static void addEquation(EquationRedundancyCheck<T>& redundancyCheck,
+  static int addEquation(EquationRedundancyCheck<T>& redundancyCheck,
     std::size_t redundancyCoordinate, AffineComplement<T>& affineComplement,
     std::vector<Constraint<T>>& resultEquations,
     std::shared_ptr<sparse_vector<T>> kernelDirectionVector, std::size_t kernelDirectionColumn,
@@ -889,18 +960,19 @@ namespace ipo
     if (pAffineComplement)
       pAffineComplement->markEquation(kernelDirectionColumn);
     auto timeComponent = std::chrono::system_clock::now();
-    bool success = redundancyCheck.add(resultEquations.back(), redundancyCoordinate, 0);
-    assert(success);
+    if (!redundancyCheck.add(resultEquations.back(), redundancyCoordinate, epsilonFactorization))
+      return INTERNAL_NUMERICS;
     if (pRedundancyCheck)
     {
-      success = pRedundancyCheck->add(convertConstraint<double>(resultEquations.back()),
-        redundancyCoordinate, 0);
-      assert(success);
+      pRedundancyCheck->add(convertConstraint<double>(resultEquations.back()),
+        redundancyCoordinate, epsilonFactorization);
     }
     timeEquations += elapsedTime(timeComponent);
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
     std::cout << "  -> adding an equation." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+    return INTERNAL_OKAY;
   }
 
   AffineHullResult<double> affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
@@ -917,12 +989,22 @@ namespace ipo
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     auto redundancyCheck = EquationRedundancyCheck<double>(n);
-    result.upperBound = filterGivenEquation(redundancyCheck, knownEquations, &result.equations,
+    int filterResult =  filterGivenEquation(redundancyCheck, knownEquations, &result.equations,
       query.epsilonCoefficient);
-    if (result.upperBound == -1)
+    if (filterResult == INTERNAL_INFEASIBLE)
     {
+      result.upperBound = -1;
       result.dimension = -1;
       return result;
+    }
+    else if (filterResult == INTERNAL_NUMERICS)
+    {
+      result.dimension = AFFINEHULL_ERROR_NUMERICS;
+      return result;
+    }
+    else
+    {
+      result.upperBound = filterResult;
     }
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -937,8 +1019,8 @@ namespace ipo
     std::vector<KernelVectorDouble> kernelVectors;
     for (std::size_t v = 0; v <= n; ++v)
     {
-      kernelVectors.push_back(KernelVectorDouble(v,
-        redundancyCheck.rank() == 0, v == n));
+      kernelVectors.push_back(KernelVectorDouble(v, false, v == n));
+//       kernelVectors.push_back(KernelVectorDouble(v, redundancyCheck.rank() == 0, v == n));
     }
     while (result.lowerBound < result.upperBound)
     {
@@ -972,29 +1054,31 @@ namespace ipo
         std::cout << "Top priority kernel vector: " << kernelVectors.back() << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-        if (kernelVectors.back().vector)
-          break;
-
-        timeComponent = std::chrono::system_clock::now();
-        kernelVectors.back().vector = std::make_shared<sparse_vector<double>>();
-        affineComplement.computeKernelVector(kernelVectors.back().column,
-          *kernelVectors.back().vector, kernelVectors.back().rhs, query.epsilonCoefficient);
-        result.numKernel++;
-        result.timeKernel += elapsedTime(timeComponent);
-        assert(!kernelVectors.back().vector->empty());
+        bool success = true;
+        if (!kernelVectors.back().vector)
+        {
+          success = false;
+          timeComponent = std::chrono::system_clock::now();
+          kernelVectors.back().vector = std::make_shared<sparse_vector<double>>();
+          affineComplement.computeKernelVector(kernelVectors.back().column,
+            *kernelVectors.back().vector, kernelVectors.back().rhs, query.epsilonCoefficient);
+          result.numKernel++;
+          result.timeKernel += elapsedTime(timeComponent);
+          assert(!kernelVectors.back().vector->empty());
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Computed kernel vector is " << *kernelVectors.back().vector << std::endl;
+          std::cout << "Computed kernel vector is " << *kernelVectors.back().vector << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-        if (elapsedTime(timeStarted) >= query.timeLimit)
-        {
-          result.dimension = AFFINEHULL_ERROR_TIMEOUT;
-          return result;
-        }
+          if (elapsedTime(timeStarted) >= query.timeLimit)
+          {
+            result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+            return result;
+          }
 
-        kernelVectors.back().sparsity = kernelVectors.back().vector->size();
-        kernelVectors.back().norm = euclideanNorm(*kernelVectors.back().vector);
+          kernelVectors.back().sparsity = kernelVectors.back().vector->size();
+          kernelVectors.back().norm = euclideanNorm(*kernelVectors.back().vector);
+        }
 
         timeComponent = std::chrono::system_clock::now();
         auto redundancy = redundancyCheck.test(*kernelVectors.back().vector,
@@ -1011,8 +1095,16 @@ namespace ipo
           return result;
         }
 
+        if (redundancy.maxViolation > kernelVectors.back().maxViolation
+          || redundancy.maxCoordinate != kernelVectors.back().redundancyCoordinate)
+        {
+          success = false;
+        }
         kernelVectors.back().maxViolation = redundancy.maxViolation;
         kernelVectors.back().redundancyCoordinate = redundancy.maxCoordinate;
+
+        if (success)
+          break;
 
         std::push_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
       }
@@ -1021,24 +1113,30 @@ namespace ipo
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "Selected kernel vector has maximum violation " << kernelVector.maxViolation << std::endl;
+      std::cout << "It reads:\n" << *kernelVector.vector << std::endl;
+      sparse_vector<double> debugKernelVector;
+      double debugKernelRhs;
+      affineComplement.computeKernelVector(kernelVector.column, debugKernelVector, debugKernelRhs, query.epsilonFactorization);
+      std::cout << "Verification reads:\n" << debugKernelVector << std::endl;
+      std::cout << "Product with all points are:";
+      for (const auto& point : result.points)
+      {
+        std::cout << " " << (*point * debugKernelVector);
+      }
+      std::cout << "\nExpected right-hand side is " << kernelVector.rhs << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
       double kernelVectorValue = 0.0;
 
-      // Maximize kernelDirectionVector.
+      // Maximize kernelVectorValue.
 
       int outcome = tryMaximization(polyhedron, affineComplement, &objective[0],
         kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
         result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
         result.timeOracles, result.timePointsRays);
-      if (outcome == INTERNAL_TIMEOUT)
+      if (outcome < INTERNAL_OKAY)
       {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
-        return result;
-      }
-      else if (outcome == INTERNAL_INFEASIBLE)
-      {
-        result.dimension = -1;
+        result.dimension = outcome;
         return result;
       }
       else if (outcome == INTERNAL_INITIAL_ONE)
@@ -1062,9 +1160,9 @@ namespace ipo
         kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
         result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
         result.timeOracles, result.timePointsRays);
-      if (outcome == INTERNAL_TIMEOUT)
+      if (outcome < INTERNAL_OKAY)
       {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        result.dimension = outcome;
         return result;
       }
       else if (outcome == INTERNAL_FURTHER_ONE)
@@ -1086,12 +1184,20 @@ namespace ipo
         direction[v] = -direction[v];
       verifyResult = polyhedron->maximize(&direction[0], verifyQuery);
       std::cout << "Maximization of negated equation normal yields " << verifyResult << std::endl;
+      auto redTest = redundancyCheck.test(*kernelVector.vector, 1);
+      std::cout << "Repeated redundancy check yields unnormalized violation " << redTest.maxViolation << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-      addEquation(redundancyCheck, kernelVector.redundancyCoordinate, affineComplement,
+      assert(kernelVector.redundancyCoordinate < n);
+      int error = addEquation(redundancyCheck, kernelVector.redundancyCoordinate, affineComplement,
         result.equations, kernelVector.vector, kernelVector.column, kernelVectorValue,
         query.epsilonFactorization, query.epsilonConstraints, query.epsilonCoefficient,
         result.timeEquations);
+      if (error != INTERNAL_OKAY)
+      {
+        result.dimension = error;
+        return result;
+      }
       --result.upperBound;
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       polyhedron->space()->printConstraint(std::cout, result.equations.back());
@@ -1106,8 +1212,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  AffineHullResult<mpq_class> affineHull(
-    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+  AffineHullResult<mpq_class> affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
     AffineHullResult<mpq_class> result;
@@ -1123,12 +1228,22 @@ namespace ipo
 
     auto redundancyCheck = EquationRedundancyCheck<mpq_class>(n);
     auto approximateRedundancyCheck = EquationRedundancyCheck<double>(n);
-    result.upperBound = filterGivenEquation(redundancyCheck, knownEquations, &result.equations, 0,
+    int filterResult = filterGivenEquation(redundancyCheck, knownEquations, &result.equations, 0,
       &approximateRedundancyCheck);
-    if (result.upperBound == -1)
+    if (filterResult == INTERNAL_INFEASIBLE)
     {
+      result.upperBound = -1;
       result.dimension = -1;
       return result;
+    }
+    else if (filterResult == INTERNAL_NUMERICS)
+    {
+      result.dimension = AFFINEHULL_ERROR_NUMERICS;
+      return result;
+    }
+    else
+    {
+      result.upperBound = filterResult;
     }
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -1139,6 +1254,11 @@ namespace ipo
     auto affineComplement = AffineComplement<mpq_class>(n);
     auto approximateAffineComplement = AffineComplement<double>(n);
     std::vector<mpq_class> objective(n);
+    KernelVectorRationalLess kernelVectorLess;
+    kernelVectorLess.epsilon = query.epsilonLinearDependence;
+    std::vector<KernelVectorRational> kernelVectors;
+    for (std::size_t v = 0; v <= n; ++v)
+      kernelVectors.push_back(KernelVectorRational(v, redundancyCheck.rank() == 0, v == n));
     while (result.lowerBound < result.upperBound)
     {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -1162,65 +1282,104 @@ namespace ipo
         return result;
       }
 
-      sparse_vector<mpq_class> kernelDirectionVector;
-      std::size_t kernelDirectionRedundancyCoordinate = 0;
-      sparse_vector<double> approximateKernelDirectionVector;
-      double kernelDirectionNorm = std::numeric_limits<double>::signaling_NaN();
-      std::size_t kernelDirectionColumn = std::numeric_limits<std::size_t>::max();
-      mpq_class kernelDirectionValue = 0;
-      while (kernelDirectionVector.empty())
+      std::make_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
+      while (true)
       {
-        assert(affineComplement.rank() == approximateAffineComplement.rank());
-
-        timeComponent = std::chrono::system_clock::now();
-        kernelDirectionColumn = approximateAffineComplement.selectColumn();
+        std::pop_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Computing approximate kernel vector." << std::endl;
+        std::cout << "Top priority kernel vector: " << kernelVectors.back() << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-        double approximateRhs; // TODO: use it later...
-        approximateAffineComplement.computeKernelVector(kernelDirectionColumn,
-          approximateKernelDirectionVector, approximateRhs, query.epsilonCoefficient);
-        result.timeKernel += elapsedTime(timeComponent);
-        assert(!approximateKernelDirectionVector.empty());
 
-        kernelDirectionNorm = euclideanNorm(approximateKernelDirectionVector);
-        timeComponent = std::chrono::system_clock::now();
+        bool success = true;
+        if (!kernelVectors.back().vector)
+        {
+          success = false;
+
+          if (!kernelVectors.back().approximateVector)
+          {
+            timeComponent = std::chrono::system_clock::now();
+            kernelVectors.back().approximateVector = std::make_shared<sparse_vector<double>>();
+            approximateAffineComplement.computeKernelVector(kernelVectors.back().column,
+              *kernelVectors.back().approximateVector, kernelVectors.back().approximateRhs,
+              query.epsilonCoefficient);
+            result.numKernel++;
+            result.timeKernel += elapsedTime(timeComponent);
+            assert(!kernelVectors.back().approximateVector->empty());
+
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Checking approximate kernel vector." << std::endl;
+            std::cout << "Computed approximate kernel vector is "
+              << *kernelVectors.back().approximateVector << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-        auto approximateRedundancy = approximateRedundancyCheck.test(
-          approximateKernelDirectionVector, kernelDirectionNorm);
+
+            if (elapsedTime(timeStarted) >= query.timeLimit)
+            {
+              result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+              return result;
+            }
+
+            kernelVectors.back().sparsity = kernelVectors.back().approximateVector->size();
+            kernelVectors.back().norm = euclideanNorm(*kernelVectors.back().approximateVector);
+
+            timeComponent = std::chrono::system_clock::now();
+            auto redundancy = approximateRedundancyCheck.test(*kernelVectors.back().approximateVector,
+              kernelVectors.back().norm);
+            result.timeEquations += elapsedTime(timeComponent);
+
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+            std::cout << "Redundancy check yields approximate violation " << redundancy.maxViolation
+              << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+            if (elapsedTime(timeStarted) >= query.timeLimit)
+            {
+              result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+              return result;
+            }
+
+            kernelVectors.back().maxViolation = redundancy.maxViolation;
+            kernelVectors.back().redundancyCoordinate = redundancy.maxCoordinate;
+
+            std::push_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
+            continue;
+          }
+          else
+          {
+            timeComponent = std::chrono::system_clock::now();
+            kernelVectors.back().vector = std::make_shared<sparse_vector<mpq_class>>();
+            affineComplement.computeKernelVector(kernelVectors.back().column,
+              *kernelVectors.back().vector, kernelVectors.back().rhs, 0);
+            *kernelVectors.back().approximateVector = convertTo<double>(
+              *kernelVectors.back().vector);
+            kernelVectors.back().approximateRhs = convertNumber<double>(
+              kernelVectors.back().rhs);
+            result.numKernel++;
+            result.timeKernel += elapsedTime(timeComponent);
+            assert(!kernelVectors.back().vector->empty());
+
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+            std::cout << "Computed exact kernel vector is "
+              << *kernelVectors.back().vector << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+            if (elapsedTime(timeStarted) >= query.timeLimit)
+            {
+              result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+              return result;
+            }
+
+            kernelVectors.back().sparsity = kernelVectors.back().vector->size();
+            kernelVectors.back().norm = euclideanNorm(*kernelVectors.back().vector);
+          }
+        }
+        
+        timeComponent = std::chrono::system_clock::now();
+        auto redundancy = redundancyCheck.test(*kernelVectors.back().vector,
+          kernelVectors.back().norm);
         result.timeEquations += elapsedTime(timeComponent);
 
-        if (approximateRedundancy.maxViolation <= query.epsilonCoefficient)
-        {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Approximate kernel vector lies in the span." << std::endl;
-#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-          approximateAffineComplement.markEquation(kernelDirectionColumn);
-          approximateKernelDirectionVector.clear();
-          continue;
-        }
-        else
-        {
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-          std::cout << "Approximate kernel vector is independent." << std::endl;
-#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-        }
-
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Computing exact kernel vector." << std::endl;
-#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-        mpq_class rhs;
-        affineComplement.computeKernelVector(kernelDirectionColumn, kernelDirectionVector, rhs, 0);
-        result.numKernel++;
-        result.timeKernel += elapsedTime(timeComponent);
-        assert(!kernelDirectionVector.empty());
-
-        kernelDirectionNorm = euclideanNorm(kernelDirectionVector);
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Checking exact kernel vector." << std::endl;
+        std::cout << "Redundancy check yields exact violation " << redundancy.maxViolation << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
         if (elapsedTime(timeStarted) >= query.timeLimit)
@@ -1229,50 +1388,36 @@ namespace ipo
           return result;
         }
 
-        timeComponent = std::chrono::system_clock::now();
-        auto redundancy = redundancyCheck.test(kernelDirectionVector, kernelDirectionNorm);
-        result.timeEquations += elapsedTime(timeComponent);
-  
-        if (redundancy.maxViolation > query.epsilonCoefficient)
+        if (redundancy.maxViolation > kernelVectors.back().maxViolation
+          || redundancy.maxCoordinate != kernelVectors.back().redundancyCoordinate)
         {
-          kernelDirectionRedundancyCoordinate = redundancy.maxCoordinate;
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-          std::cout << "Exact kernel vector is independent." << std::endl;
-#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+          success = false;
+        }
+        kernelVectors.back().maxViolation = redundancy.maxViolation;
+        kernelVectors.back().redundancyCoordinate = redundancy.maxCoordinate;
+
+        if (success)
           break;
-        }
-        else
-        {
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-          std::cout << "Exact kernel vector lies in the span." << std::endl;
-#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-          affineComplement.markEquation(kernelDirectionColumn);
-          kernelDirectionVector.clear();
-        }
 
-        if (elapsedTime(timeStarted) >= query.timeLimit)
-        {
-          result.dimension = AFFINEHULL_ERROR_TIMEOUT;
-          return result;
-        }
+        std::push_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
       }
+      KernelVectorRational kernelVector = kernelVectors.back();
+      kernelVectors.pop_back();
 
-      std::vector<KernelVectorDouble> kernelVectors;
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "Selected kernel vector has maximum violation " << kernelVector.maxViolation << std::endl;
+      assert(kernelVector.maxViolation > 0);
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-      // Maximize kernelDirectionVector.
+      mpq_class kernelVectorValue = 0;
 
       int outcome = tryMaximization(polyhedron, affineComplement, &objective[0],
-        kernelVectors, kernelDirectionVector, kernelDirectionColumn, kernelDirectionNorm, kernelDirectionValue,
-        result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
+        kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm,
+        kernelVectorValue, result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
         result.timeOracles, result.timePointsRays, &approximateAffineComplement);
-      if (outcome == INTERNAL_TIMEOUT)
+      if (outcome < INTERNAL_OKAY)
       {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
-        return result;
-      }
-      else if (outcome == INTERNAL_INFEASIBLE)
-      {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        result.dimension = outcome;
         return result;
       }
       else if (outcome == INTERNAL_INITIAL_ONE)
@@ -1292,14 +1437,13 @@ namespace ipo
 
       // Minimize kernelDirectionVector.
 
-      outcome = tryMinimization(polyhedron, affineComplement, &objective[0],
-        kernelVectors, kernelDirectionVector, kernelDirectionColumn, kernelDirectionNorm,
-        kernelDirectionValue, result.points, result.rays, query,
-        query.timeLimit - elapsedTime(timeStarted), result.timeOracles, result.timePointsRays,
-        &approximateAffineComplement);
-      if (outcome == INTERNAL_TIMEOUT)
+      outcome = tryMinimization(polyhedron, affineComplement, &objective[0], kernelVectors,
+        *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
+        result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
+        result.timeOracles, result.timePointsRays, &approximateAffineComplement);
+      if (outcome < INTERNAL_OKAY)
       {
-        result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+        result.dimension = outcome;
         return result;
       }
       else if (outcome == INTERNAL_FURTHER_ONE)
@@ -1310,11 +1454,20 @@ namespace ipo
 
       // Add equation defined by kernelDirectionVector.
 
-      addEquation(redundancyCheck, kernelDirectionRedundancyCoordinate, affineComplement,
-        result.equations, std::make_shared<sparse_vector<mpq_class>>(kernelDirectionVector),
-        kernelDirectionColumn, kernelDirectionValue, query.epsilonFactorization,
-        query.epsilonConstraints, query.epsilonCoefficient, result.timeEquations,
-        &approximateRedundancyCheck, &approximateAffineComplement);
+      assert(kernelVector.redundancyCoordinate < n);
+      int error = addEquation(redundancyCheck, kernelVector.redundancyCoordinate, affineComplement,
+        result.equations, kernelVector.vector, kernelVector.column, kernelVectorValue,
+        query.epsilonFactorization, query.epsilonConstraints, query.epsilonCoefficient,
+        result.timeEquations, &approximateRedundancyCheck, &approximateAffineComplement);
+      if (error == INTERNAL_NUMERICS)
+      {
+        result.dimension = AFFINEHULL_ERROR_NUMERICS;
+        return result;
+      }
+      else
+      {
+        assert(!error);
+      }
       --result.upperBound;
     }
 

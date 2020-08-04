@@ -2,6 +2,11 @@
 
 // #define IPO_DEBUG_LU_CHECK // Uncomment to enable dense checking of LU computations.
 // #define IPO_DEBUG_LU_PRINT // Uncomment to print activity.
+// #define IPO_DEBUG_LU_SAGE // Uncomdment to print matrices for sage.
+
+#if defined(IPO_DEBUG_LU_SAGE)
+#define IPO_DEBUG_LU_CHECK
+#endif /* IPO_DEBUG_LU_SAGE */
 
 #include <ipo/config.hpp>
 
@@ -53,6 +58,54 @@ namespace ipo
 
     bool extend(T* newRow, T* newColumn, T newDiagonal, double epsilonEntry)
     {
+#if defined(IPO_DEBUG_LU_PRINT)
+      std::cout << "IncrementalLUFactorization::extend(\nrow:\n";
+      for (std::size_t r = 0; r < size(); ++r)
+        std::cout << " " << newRow[r];
+      std::cout << " " << newDiagonal << "\ncolumn:\n";
+      for (std::size_t r = 0; r < size(); ++r)
+        std::cout << " " << newColumn[r];
+      std::cout << " " << newDiagonal << "\nepsilon = " << epsilonEntry << ")" << std::endl;
+#endif /* IPO_DEBUG_LU_PRINT */
+
+#if defined(IPO_DEBUG_LU_SAGE)
+      std::cout << "lu_A = Matrix(QQ, [";
+      for (std::size_t r = 0; r < size(); ++r)
+      {
+        if (r > 0)
+          std::cout << ",";
+        std::cout << "[";
+        for (std::size_t c = 0; c < size(); ++c)
+        {
+          if (c > 0)
+            std::cout << ",";
+          std::cout << _debugDenseMatrix[r][c];
+        }
+        std::cout << "]";
+      }
+      std::cout << "]); # SAGE\n";
+      std::cout << "lu_b = matrix(QQ, [";
+      for (std::size_t c = 0; c < size(); ++c)
+      {
+        if (c > 0)
+          std::cout << ",";
+        std::cout << "[" << newColumn[c] << "]";
+      }
+      std::cout << "]); # SAGE\n";
+      std::cout << "lu_a = matrix(QQ, [";
+      for (std::size_t r = 0; r < size(); ++r)
+      {
+        if (r > 0)
+          std::cout << ",";
+        std::cout << "[" << newRow[r] << "]";
+      }
+      std::cout << "]); # SAGE\n";
+      std::cout << "lu_beta = matrix(QQ, [[" << newDiagonal << "]]); # SAGE\n";
+      std::cout << "lu_A2 = block_matrix([[lu_A, lu_b], [lu_a.transpose(), lu_beta]]); # SAGE\n";
+      std::cout << "det(lu_A) # SAGE\n";
+      std::cout << "det(lu_A2) # SAGE\n";
+#endif /* IPO_DEBUG_LU_SAGE */
+
 #if defined(IPO_DEBUG_LU_CHECK)
       for (std::size_t r = 0; r < size(); ++r)
         _debugDenseMatrix[r].push_back(newColumn[r]);
@@ -67,10 +120,10 @@ namespace ipo
       solveLeft(newColumn);
 
 #if defined(IPO_DEBUG_LU_PRINT)
-      std::cout << "L^{-1}b = [";
+      std::cout << "L^{-1}b:\n";
       for (std::size_t i = 0; i < size(); ++i)
-        std::cout << (i > 0 ? " " : "") << newColumn[i];
-      std::cout << "]" << std::endl;
+        std::cout << " " << newColumn[i];
+      std::cout << std::endl;
 #endif /* IPO_DEBUG_LU_PRINT */
 
       /* Compute U^{-T} a. The transpose U^T has a row-wise sparse representation.
@@ -80,7 +133,7 @@ namespace ipo
        */
 
 #if defined(IPO_DEBUG_LU_PRINT)
-      std::cout << "U^{-T}a = [";
+      std::cout << "U^{-T}a:\n";
 #endif /* IPO_DEBUG_LU_PRINT */
 
       std::vector<std::size_t> positions(size(), 0);
@@ -91,7 +144,7 @@ namespace ipo
         assert(_upperRows[i][p_i] == i);
         const T& x_i = newRow[i] /= _upperEntries[i][p_i];
 #if defined(IPO_DEBUG_LU_PRINT)
-        std::cout << (i > 0 ? " " : "") << x_i << std::flush;
+        std::cout << " " << x_i << std::flush;
 #endif /* IPO_DEBUG_LU_PRINT */
         for (std::size_t j = i+1; j < size(); ++j)
         {
@@ -106,7 +159,7 @@ namespace ipo
         }
       }
 #if defined(IPO_DEBUG_LU_PRINT)
-      std::cout << "]" << std::endl;
+      std::cout << std::endl;
 #endif /* IPO_DEBUG_LU_PRINT */
 
       /* Cache size since we change it. */

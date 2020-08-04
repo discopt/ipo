@@ -116,6 +116,11 @@ public:
 
   iterator find(const key_type& key)
   {
+#if !defined(NDEBUG)
+    for (std::size_t i = 1; i < _data.size(); ++i)
+      assert(_data[i-1].first < _data[i].first);
+#endif /* !NDEBUG */
+
     std::size_t left = 0;
     std::size_t right = _data.size();
     while (left < right)
@@ -134,6 +139,11 @@ public:
 
   const_iterator find(const key_type& key) const
   {
+#if !defined(NDEBUG)
+    for (std::size_t i = 1; i < _data.size(); ++i)
+      assert(_data[i-1].first < _data[i].first);
+#endif /* !NDEBUG */
+    
     std::size_t left = 0;
     std::size_t right = _data.size();
     while (left < right)
