@@ -207,11 +207,25 @@ namespace ipo
     void initialize();
 
     /**
+     * \brief Adds the given \p face to the list of known faces.
+     */
+
+    IPO_EXPORT
+    void addFace(Constraint<double>* face);
+
+    /**
+     * \brief Removes the given \p face from the list of known faces.
+     */
+
+    IPO_EXPORT
+    void deleteFace(Constraint<double>* face);
+    /**
      * \brief Makes the given \p face the current one.
      */
 
     IPO_EXPORT
-    void setFace(Constraint<double>* face);
+    void selectFace(Constraint<double>* face);
+
 
   protected:
     /// Actual SCIP instance.

@@ -1,20 +1,12 @@
 #pragma once
 
-// #define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
-
 #include <iostream>
 
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
-#include <ipo/arithmetic.hpp>
-#include <ipo/space.hpp>
 #include <ipo/oracles.hpp>
 
-#include <map>
-#include <chrono>
 #include <memory>
-#include <deque>
-#include <random>
 
 namespace ipo
 { 

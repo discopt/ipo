@@ -116,7 +116,7 @@ TEST(Oracles, SCIP)
     ipo::RealSeparationOracle::Query query;
     auto response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_NEAR(response.constraints[0].rhs(), 1.5, 1.0e-9);
 
     vector[0] = 0.5;
@@ -126,7 +126,7 @@ TEST(Oracles, SCIP)
 
     response = oracle->separate(vector, false, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_TRUE(fabs(response.constraints[0].rhs() - 1.2) < 1.0e-9
       || fabs(response.constraints[0].rhs() - 1.4) < 1.0e-9
       || fabs(response.constraints[0].rhs() - 1.5) < 1.0e-9
@@ -136,7 +136,7 @@ TEST(Oracles, SCIP)
     vector[1] = -2.0;
     response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_NEAR(response.constraints[0].rhs(), 1.2, 1.0e-9);
   }
 
@@ -252,7 +252,7 @@ TEST(Oracles, SCIP)
     ipo::RationalSeparationOracle::Query query;
     auto response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
 
     vector[0] = 0.5;
@@ -262,14 +262,14 @@ TEST(Oracles, SCIP)
 
     response = oracle->separate(vector, false, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
 
     vector[0] = 3.0;
     vector[1] = -3.0;
     response = oracle->separate(vector, true, query);
     ASSERT_FALSE(response.constraints.empty());
-    ASSERT_EQ(response.constraints[0].type(), ipo::LESS_OR_EQUAL);
+    ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
     ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
   }
 

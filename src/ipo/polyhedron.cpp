@@ -1,5 +1,12 @@
 #include <ipo/polyhedron.hpp>
 
+// #define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
+
+#include <map>
+#include <deque>
+#include <random>
+#include <chrono>
+
 namespace ipo
 {
   template <typename R, typename OptOracle, typename SepaOracle, typename CacheOptOracle>

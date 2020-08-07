@@ -72,7 +72,7 @@ int main(int argc, char** argv)
     auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
-      if (constraint.type() == ipo::EQUATION)
+      if (constraint.type() == ipo::ConstraintType::EQUATION)
         knownEquations.push_back(constraint);
     }
 
@@ -113,7 +113,7 @@ int main(int argc, char** argv)
     auto sepaResult = scip->getSeparationOracleDouble()->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
-      if (constraint.type() == ipo::EQUATION)
+      if (constraint.type() == ipo::ConstraintType::EQUATION)
         knownEquations.push_back(constraint);
     }
 
@@ -122,6 +122,7 @@ int main(int argc, char** argv)
     affQuery.timeLimit = timeLimit;
     auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
     std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
+    ipo::verifyAffineHullResult(poly, affResult);
     if (printEquations)
     {
       for (auto& equation : affResult.equations)

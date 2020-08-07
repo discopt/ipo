@@ -9,6 +9,7 @@
 #endif /* IPO_DEBUG_LU_SAGE */
 
 #include <ipo/config.hpp>
+#include <ipo/sparse_vector.hpp>
 
 #include <vector>
 #include <cmath>
@@ -19,6 +20,17 @@
 
 namespace ipo
 {
+  IPO_EXPORT
+  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<double>>& matrix,
+    std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
+
+#if defined(IPO_WITH_GMP)
+
+  IPO_EXPORT
+  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<mpq_class>>& matrix,
+    std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
+
+#endif /* IPO_WITH_GMP */
 
   /**
    * \brief Class for an LU factorization.

@@ -10,6 +10,7 @@
 
 #include <iostream>
 #include <algorithm>
+#include <chrono>
 
 namespace ipo
 {
@@ -304,6 +305,8 @@ namespace ipo
           pApproximateRedundancyCheck->add(convertConstraint<double>(equation),
             redundancy.maxCoordinate, 0.0);
         }
+        if (pResultEquations)
+          pResultEquations->push_back(convertedEquation);
       }
     }
     return redundancyCheck.numVariables() - redundancyCheck.rank();
@@ -1028,6 +1031,10 @@ namespace ipo
         << " <= dim <= " << result.upperBound << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
+      verifyAffineHullResult(polyhedron, result);
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
+
       if (elapsedTime(timeStarted) >= query.timeLimit)
       {
         result.dimension = AFFINEHULL_ERROR_TIMEOUT;
@@ -1209,13 +1216,112 @@ namespace ipo
     return result;
   }
 
+  bool verifyAffineHullResult(std::shared_ptr<RealPolyhedron> polyhedron,
+    const RealAffineHullResult& result)
+  {
+    std::size_t n = polyhedron->space()->dimension();
+
+    // Check that points are affinely independent.
+
+    std::vector<std::vector<double>> matrix(result.points.size() + result.rays.size());
+    for (std::size_t p = 0; p < result.points.size(); ++p)
+    {
+      matrix[p].resize(n+1, 0.0);
+      for (const auto iter : *result.points[p])
+        matrix[p][iter.first] = iter.second;
+      matrix[p].back() = 1.0;
+    }
+    for (std::size_t r = 0; r < result.rays.size(); ++r)
+    {
+      matrix[result.points.size() + r].resize(n+1, 0.0);
+      for (const auto iter : *result.rays[r])
+        matrix[result.points.size() + r][iter.first] = iter.second;
+    }
+
+    int innerDimension = rowEchelon(n+1, matrix) - 1;
+    if (innerDimension != result.lowerBound)
+    {
+      std::cerr << "The " << matrix.size() << " points and rays have affine dimension "
+        << innerDimension << std::endl;
+      return false;
+    }
+
+    // Check that equations are independent.
+
+    matrix.clear();
+    matrix.resize(result.equations.size());
+    for (std::size_t e = 0; e < result.equations.size(); ++e)
+    {
+      matrix[e].resize(n, 0.0);
+      for (const auto& iter : result.equations[e].vector())
+        matrix[e][iter.first] = iter.second;
+    }
+
+    int outerDimension = n - rowEchelon(n, matrix);
+    if (outerDimension != result.upperBound)
+    {
+      std::cerr << "The " << matrix.size() << " equations form a system of rank "
+        << (n - outerDimension) << " and define a subspace of dimension " << outerDimension
+        << "." << std::endl;
+      return false;
+    }
+
+    // Check satisfaction of equations.
+
+    std::size_t worstEquation = 0;
+    std::size_t worstPoint = std::numeric_limits<std::size_t>::max();
+    std::size_t worstRay = std::numeric_limits<std::size_t>::max();
+    double worstViolation = 0.0;
+    for (std::size_t e = 0; e < result.equations.size(); ++e)
+    {
+      const Constraint<double>& equation = result.equations[e];
+      if (equation.type() != ConstraintType::EQUATION)
+      {
+        std::cerr << "Constraint " << e << " is not an equation!" << std::endl;
+        return false;
+      }
+      for (std::size_t p = 0; p < result.points.size(); ++p)
+      {
+        double violation = fabs(equation.vector() * *result.points[p] - equation.rhs());
+        if (violation > worstViolation)
+        {
+          worstViolation = violation;
+          worstEquation = e;
+          worstPoint = p;
+          worstRay = std::numeric_limits<std::size_t>::max();
+        }
+      }
+      for (std::size_t r = 0; r < result.rays.size(); ++r)
+      {
+        double violation = fabs(equation.vector() * *result.rays[r]);
+        if (violation > worstViolation)
+        {
+          worstViolation = violation;
+          worstEquation = e;
+          worstPoint = std::numeric_limits<std::size_t>::max();
+          worstRay = r;
+        }
+      }
+    }
+    if (worstViolation > 1.0e-9)
+    {
+      std::cerr << "Worst violation attained by ";
+      if (worstPoint < std::numeric_limits<std::size_t>::max())
+        std::cerr << "point " << worstPoint << " (" << *result.points[worstPoint] << ")";
+      else
+        std::cerr << "ray " << worstRay << " (" << *result.rays[worstRay] << ")";
+      std::cerr << " and equation " << worstEquation << " (" << result.equations[worstEquation]
+        << ") with violation " << worstViolation << "." << std::endl;
+    }
+    return worstViolation <= 1.0e-6;
+  }
+
 #if defined(IPO_WITH_GMP)
 
   RationalAffineHullResult affineHull(std::shared_ptr<RationalPolyhedron> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
     RationalAffineHullResult result;
-
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();

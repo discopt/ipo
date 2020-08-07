@@ -101,11 +101,11 @@ namespace ipo
       ++i;
     }
 
-    if (constraint.type() == LESS_OR_EQUAL)
+    if (constraint.type() == ConstraintType::LESS_OR_EQUAL)
       mpq_set_d(rationalLhs, -soplex::infinity);
     else
       reconstructRational(rationalLhs, constraint.lhs());
-    if (constraint.type() == GREATER_OR_EQUAL)
+    if (constraint.type() == ConstraintType::GREATER_OR_EQUAL)
       mpq_set_d(rationalRhs, soplex::infinity);
     else
       reconstructRational(rationalRhs, constraint.rhs());

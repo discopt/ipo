@@ -15,7 +15,7 @@
 
 namespace ipo
 {
-  enum ConstraintType
+  enum class ConstraintType
   {
     EQUATION,
     LESS_OR_EQUAL,
@@ -32,21 +32,21 @@ namespace ipo
       ConstraintType type)
       : _lhs(lhs), _vector(vector), _rhs(rhs), _type(type)
     {
-      assert(_type != RANGED || lhs <= rhs);
-      assert(_type != EQUATION || lhs == rhs);
+      assert(_type != ConstraintType::RANGED || lhs <= rhs);
+      assert(_type != ConstraintType::EQUATION || lhs == rhs);
     }
 
     IPO_EXPORT
     Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector, T&& rhs, ConstraintType type)
       : _lhs(std::move(lhs)), _vector(vector), _rhs(std::move(rhs)), _type(type)
     {
-      assert(_type != RANGED || lhs <= rhs);
-      assert(_type != EQUATION || lhs == rhs);
+      assert(_type != ConstraintType::RANGED || lhs <= rhs);
+      assert(_type != ConstraintType::EQUATION || lhs == rhs);
     }
 
     IPO_EXPORT
     Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>> vector, const T& rhs)
-      : _lhs(lhs), _vector(vector), _rhs(rhs), _type(lhs == rhs ? EQUATION : RANGED)
+      : _lhs(lhs), _vector(vector), _rhs(rhs), _type(lhs == rhs ? ConstraintType::EQUATION : ConstraintType::RANGED)
     {
       assert(lhs <= rhs);
     }
@@ -54,14 +54,14 @@ namespace ipo
     IPO_EXPORT
     Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector, T&& rhs)
       : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(std::move(rhs)),
-      _type(lhs == rhs ? EQUATION : RANGED)
+      _type(lhs == rhs ? ConstraintType::EQUATION : ConstraintType::RANGED)
     {
       assert(lhs <= rhs);
     }
 
     IPO_EXPORT
     Constraint(const T& lhs, std::shared_ptr<sparse_vector<T>> vector)
-      : _lhs(lhs), _vector(vector), _rhs(0), _type(GREATER_OR_EQUAL)
+      : _lhs(lhs), _vector(vector), _rhs(0), _type(ConstraintType::GREATER_OR_EQUAL)
     {
 
     }
@@ -69,21 +69,22 @@ namespace ipo
     IPO_EXPORT
     Constraint(T&& lhs, std::shared_ptr<sparse_vector<T>> vector)
       : _lhs(std::move(lhs)), _vector(std::move(vector)), _rhs(0),
-      _type(GREATER_OR_EQUAL)
+      _type(ConstraintType::GREATER_OR_EQUAL)
     {
 
     }
 
     IPO_EXPORT
     Constraint(std::shared_ptr<sparse_vector<T>> vector, const T& rhs)
-      : _lhs(0), _vector(vector), _rhs(rhs), _type(LESS_OR_EQUAL)
+      : _lhs(0), _vector(vector), _rhs(rhs), _type(ConstraintType::LESS_OR_EQUAL)
     {
 
     }
 
     IPO_EXPORT
     Constraint(std::shared_ptr<sparse_vector<T>> vector, T&& rhs)
-      : _lhs(0), _vector(std::move(vector)), _rhs(std::move(rhs)), _type(LESS_OR_EQUAL)
+      : _lhs(0), _vector(std::move(vector)), _rhs(std::move(rhs)),
+      _type(ConstraintType::LESS_OR_EQUAL)
     {
 
     }
@@ -139,13 +140,13 @@ namespace ipo
     IPO_EXPORT
     bool hasLhs() const
     {
-      return _type != LESS_OR_EQUAL;
+      return _type != ConstraintType::LESS_OR_EQUAL;
     }
 
     IPO_EXPORT
     bool hasRhs() const
     {
-      return _type != GREATER_OR_EQUAL;
+      return _type != ConstraintType::GREATER_OR_EQUAL;
     }
 
     IPO_EXPORT

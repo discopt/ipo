@@ -97,19 +97,19 @@ namespace ipo
   {
     switch (constraint.type())
     {
-    case EQUATION:
+    case ConstraintType::EQUATION:
       printLinearForm(str, constraint.vector());
       str << " == " << constraint.rhs();
     break;
-    case LESS_OR_EQUAL:
+    case ConstraintType::LESS_OR_EQUAL:
       printLinearForm(str, constraint.vector());
       str << " <= " << constraint.rhs();
     break;
-    case GREATER_OR_EQUAL:
+    case ConstraintType::GREATER_OR_EQUAL:
       printLinearForm(str, constraint.vector());
       str << " >= " << constraint.lhs();
     break;
-    case RANGED:
+    case ConstraintType::RANGED:
       str << constraint.lhs() << " <= ";
       printLinearForm(str, constraint.vector());
       str << " <= " << constraint.rhs();
@@ -233,19 +233,19 @@ namespace ipo
   {
     switch (constraint.type())
     {
-    case EQUATION:
+    case ConstraintType::EQUATION:
       printLinearForm(str, constraint.vector(), rounded);
       str << " == " << constraint.rhs();
     break;
-    case LESS_OR_EQUAL:
+    case ConstraintType::LESS_OR_EQUAL:
       printLinearForm(str, constraint.vector(), rounded);
       str << " <= " << constraint.rhs();
     break;
-    case GREATER_OR_EQUAL:
+    case ConstraintType::GREATER_OR_EQUAL:
       printLinearForm(str, constraint.vector(), rounded);
       str << " >= " << constraint.lhs();
     break;
-    case RANGED:
+    case ConstraintType::RANGED:
       str << constraint.lhs() << " <= ";
       printLinearForm(str, constraint.vector(), rounded);
       str << " <= " << constraint.rhs();

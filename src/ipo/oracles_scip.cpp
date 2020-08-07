@@ -171,7 +171,7 @@ namespace ipo
         double average = (lhs + rhs) / 2.0;
         auto vector = std::make_shared<sparse_vector<double>>();
         vector->push_back(coordinate, 1.0);
-        visitor(Constraint<double>(average, vector, average, EQUATION));
+        visitor(Constraint<double>(average, vector, average, ConstraintType::EQUATION));
         continue;
       }
       if (SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs))
@@ -192,7 +192,7 @@ namespace ipo
       {
         auto vector = std::make_shared<sparse_vector<double>>();
         vector->push_back(coordinate, 1.0);
-        visitor(Constraint<double>(lhs, vector, rhs, RANGED));
+        visitor(Constraint<double>(lhs, vector, rhs, ConstraintType::RANGED));
       }
     }
   }
@@ -255,7 +255,7 @@ namespace ipo
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
         auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
-        visitor(Constraint<double>(average, vector, average, EQUATION));
+        visitor(Constraint<double>(average, vector, average, ConstraintType::EQUATION));
         continue;
       }
       if (SCIPisInfinity(scip, -lhs) && SCIPisInfinity(scip, rhs))
@@ -282,7 +282,7 @@ namespace ipo
         for (std::size_t i = 0; i < k; ++i)
           unsortedEntries.push_back(std::make_pair(variablesToCoordinates.at(vars[i]), vals[i]));
         auto vector = std::make_shared<sparse_vector<double>>(std::move(unsortedEntries), true);
-        visitor(Constraint<double>(lhs, vector, rhs, RANGED));
+        visitor(Constraint<double>(lhs, vector, rhs, ConstraintType::RANGED));
       }
     }
   }
@@ -381,70 +381,99 @@ namespace ipo
     SCIPfree(&_scip);
   }
 
-  void SCIPSolver::setFace(Constraint<double>* face)
+  void SCIPSolver::addFace(Constraint<double>* face)
   {
+    assert(face);
     if (face->isAlwaysSatisfied())
+      return;
+
+    if (_faceConstraints.find(face) != _faceConstraints.end())
+      throw std::runtime_error("SCIPSolver::addFace() failed: the face is already known.");
+
+    // Add it to SCIP.
+    char consName[16];
+    SCIPsnprintf(consName, 16, "face#%d", _faceConstraints.size());
+    std::vector<SCIP_VAR*> vars;
+    std::vector<double> coefficients;
+    vars.resize(face->vector().size());
+    coefficients.resize(face->vector().size());
+    for (const auto& iter : face->vector())
+    {
+      vars.push_back(_variables[iter.first]);
+      coefficients.push_back(iter.second);
+    }
+    double lhs, rhs;
+    if (face->type() == ConstraintType::LESS_OR_EQUAL)
+    {
+      lhs = face->rhs();
+      rhs = face->rhs();
+    }
+    else if (face->type() == ConstraintType::GREATER_OR_EQUAL)
+    {
+      lhs = face->lhs();
+      rhs = face->lhs();
+    }
+    else if (face->type() == ConstraintType::EQUATION)
+    {
+      lhs = face->lhs();
+      rhs = face->rhs();
+      assert(SCIPisEQ(_scip, lhs, rhs));
+    }
+    else
+    {
+      throw std::runtime_error("Cannot use a ranged constraint or equation to define a face.");
+    }
+    SCIP_CONS* cons = NULL;
+    SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
+      &coefficients[0], lhs, rhs));
+    _faceConstraints.insert(std::make_pair(face, cons));
+  }
+
+  void SCIPSolver::deleteFace(Constraint<double>* face)
+  {
+    assert(face);
+    if (face->isAlwaysSatisfied())
+      return;
+
+    if (face == _currentFace)
+      selectFace(NULL);
+
+    auto iter = _faceConstraints.find(face);
+    if (iter == _faceConstraints.end())
+      throw std::runtime_error("SCIPSolver::deleteFace() failed: the face is not known.");
+
+    SCIP_CALL_EXC( SCIPreleaseCons(_scip, &iter->second) );
+    _faceConstraints.erase(iter);
+  }
+
+  void SCIPSolver::selectFace(Constraint<double>* face)
+  {
+    if (face && face->isAlwaysSatisfied())
       face = NULL;
 
     if (face == _currentFace)
+    {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "Face is already selected." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
       return;
+    }
 
     // Remove from SCIP.
-    SCIP_CONS* currentCons = _currentFace ? _faceConstraints.at(_currentFace) : nullptr;
-    if (currentCons != nullptr)
-      SCIP_CALL_EXC( SCIPdelCons(_scip, currentCons) );
+    if (_currentFace)
+    {
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "Disabling old face." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
+      SCIP_CALL_EXC( SCIPdelCons(_scip, _faceConstraints.at(_currentFace)) );
+    }
     if (face)
     {
-      // Create face constraint if it does not exist.
-
-      auto found = _faceConstraints.find(face);
-      SCIP_CONS* cons = nullptr;
-      if (found == _faceConstraints.end())
-      {
-        // Add it to SCIP.
-        char consName[16];
-        SCIPsnprintf(consName, 16, "face#%d", _faceConstraints.size());
-        std::vector<SCIP_VAR*> vars;
-        std::vector<double> coefficients;
-        vars.resize(face->vector().size());
-        coefficients.resize(face->vector().size());
-        for (const auto& iter : face->vector())
-        {
-          vars.push_back(_variables[iter.first]);
-          coefficients.push_back(iter.second);
-        }
-        double lhs, rhs;
-        if (face->type() == LESS_OR_EQUAL)
-        {
-          lhs = face->rhs();
-          rhs = face->rhs();
-        }
-        else if (face->type() == GREATER_OR_EQUAL)
-        {
-          lhs = face->lhs();
-          rhs = face->lhs();
-        }
-        else if (face->type() == EQUATION)
-        {
-          lhs = face->lhs();
-          rhs = face->rhs();
-          assert(SCIPisEQ(_scip, lhs, rhs));
-        }
-        else
-        {
-          throw std::runtime_error("Cannot use a ranged constraint or equation to define a face.");
-        }
-        SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
-          &coefficients[0], lhs, rhs));
-        _faceConstraints.insert(std::make_pair(face, cons));
-      }
-      else
-        cons = found->second;
-
-      // Add to SCIP.
-      if (cons != nullptr)
-        SCIP_CALL_EXC( SCIPaddCons(_scip, cons) );
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+      std::cout << "Enabling new face." << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+      SCIP_CALL_EXC( SCIPaddCons(_scip, _faceConstraints.at(face)) );
     }
 
     _currentFace = face;
@@ -455,11 +484,12 @@ namespace ipo
     : RealOptimizationOracle(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
+    _solver->addFace(&_face);
   }
 
   SCIPOptimizationOracleDouble::~SCIPOptimizationOracleDouble()
   {
-
+    _solver->deleteFace(&_face);
   }
 
   RealOptimizationOracle::Response SCIPOptimizationOracleDouble::maximize(const double* objectiveVector,
@@ -470,7 +500,7 @@ namespace ipo
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
-    _solver->setFace(&_face);
+    _solver->selectFace(&_face);
 
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
       query.timeLimit == std::numeric_limits<double>::infinity() ? SCIPinfinity(_solver->_scip)
@@ -701,11 +731,12 @@ namespace ipo
     : RealSeparationOracle(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
+    _solver->addFace(&_face);
   }
 
   SCIPSeparationOracleDouble::~SCIPSeparationOracleDouble()
   {
-
+    _solver->deleteFace(&_face);
   }
 
   RealSeparationOracle::Response SCIPSeparationOracleDouble::getInitial(
@@ -758,7 +789,7 @@ namespace ipo
   {
     RealSeparationOracle::Response result;
 
-    _solver->setFace(&_face);
+    _solver->selectFace(&_face);
 
     struct Visitor
     {

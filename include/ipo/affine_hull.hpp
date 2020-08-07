@@ -104,6 +104,24 @@ namespace ipo
     }
 
     IPO_EXPORT
+    CommonAffineHullResult<R>& operator=(const CommonAffineHullResult<R>& other)
+    {
+      points = other.points;
+      rays = other.rays;
+      equations = other.equations;
+      dimension = other.dimension;
+      lowerBound = other.lowerBound;
+      upperBound = other.upperBound;
+      timeTotal = other.timeTotal;
+      timeOracles = other.timeOracles;
+      numKernel = other.numKernel;
+      timeKernel = other.timeKernel;
+      timePointsRays = other.timePointsRays;
+      timeEquations = other.timeEquations;
+      return *this;
+    }
+
+    IPO_EXPORT
     CommonAffineHullResult<R>& operator=(CommonAffineHullResult<R>&& other)
     {
       points = std::move(other.points);
@@ -153,6 +171,10 @@ namespace ipo
     std::shared_ptr<RealPolyhedron> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
+
+  IPO_EXPORT
+  bool verifyAffineHullResult(std::shared_ptr<RealPolyhedron> polyhedron,
+    const RealAffineHullResult& result);
 
 #if defined(IPO_WITH_GMP)
 

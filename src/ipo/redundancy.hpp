@@ -48,7 +48,7 @@ namespace ipo
 
     Result test(const Constraint<T>& constraint, double norm) const
     {
-      assert(constraint.type() == EQUATION);
+      assert(constraint.type() == ConstraintType::EQUATION);
 
       return test(constraint.vector(), norm, -constraint.rhs());
     }

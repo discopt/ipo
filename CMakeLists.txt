@@ -32,6 +32,7 @@ add_library(ipo
   src/ipo/affine_hull.cpp
   src/ipo/arithmetic.cpp
   src/ipo/constraint.cpp
+  src/ipo/lu.cpp
   src/ipo/oracles.cpp
   src/ipo/oracles_mip.cpp
   src/ipo/polyhedron.cpp

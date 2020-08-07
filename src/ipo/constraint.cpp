@@ -8,13 +8,13 @@ namespace ipo
   {
     switch (constraint.type())
     {
-    case EQUATION:
+    case ConstraintType::EQUATION:
       return stream << constraint.vector() << " == " << constraint.rhs();
-    case LESS_OR_EQUAL:
+    case ConstraintType::LESS_OR_EQUAL:
       return stream << constraint.vector() << " <= " << constraint.rhs();
-    case GREATER_OR_EQUAL:
+    case ConstraintType::GREATER_OR_EQUAL:
       return stream << constraint.vector() << " >= " << constraint.lhs();
-    case RANGED:
+    case ConstraintType::RANGED:
       return stream << constraint.lhs() << " <= " << constraint.vector() << " <= "
         << constraint.rhs();
     default:
@@ -28,13 +28,13 @@ namespace ipo
   {
     switch (constraint.type())
     {
-    case EQUATION:
+    case ConstraintType::EQUATION:
       return stream << constraint.vector() << " == " << constraint.rhs();
-    case LESS_OR_EQUAL:
+    case ConstraintType::LESS_OR_EQUAL:
       return stream << constraint.vector() << " <= " << constraint.rhs();
-    case GREATER_OR_EQUAL:
+    case ConstraintType::GREATER_OR_EQUAL:
       return stream << constraint.vector() << " >= " << constraint.lhs();
-    case RANGED:
+    case ConstraintType::RANGED:
       return stream << constraint.lhs() << " <= " << constraint.vector() << " <= "
         << constraint.rhs();
     default:
@@ -72,13 +72,13 @@ namespace ipo
       factor *= -1;
 
     // Change types and swap lhs/rhs if we negate.
-    if (sgn(factor) < 0 && constraint._type != EQUATION)
+    if (sgn(factor) < 0 && constraint._type != ConstraintType::EQUATION)
     {
       std::swap(constraint._lhs, constraint._rhs);
-      if (constraint._type == LESS_OR_EQUAL)
-        constraint._type = GREATER_OR_EQUAL;
-      else if (constraint._type == GREATER_OR_EQUAL)
-        constraint._type = LESS_OR_EQUAL;
+      if (constraint._type == ConstraintType::LESS_OR_EQUAL)
+        constraint._type = ConstraintType::GREATER_OR_EQUAL;
+      else if (constraint._type == ConstraintType::GREATER_OR_EQUAL)
+        constraint._type = ConstraintType::LESS_OR_EQUAL;
     }
 
     // Scale numbers.
