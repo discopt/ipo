@@ -1,7 +1,7 @@
 #include <ipo/affine_hull.hpp>
 
-#define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-#define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
+// #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
+// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #include <ipo/arithmetic.hpp>
 
@@ -325,13 +325,15 @@ namespace ipo
     double maxViolation;
     std::size_t sparsity;
     std::size_t redundancyCoordinate;
+    std::size_t redundancyRank;
     bool isLast;
 
     KernelVectorDouble() = default;
 
     KernelVectorDouble(std::size_t col, bool valid, bool last)
       : column(col), rhs(0.0), norm(1.0), maxViolation(std::numeric_limits<double>::max()),
-      sparsity(1), redundancyCoordinate(std::numeric_limits<std::size_t>::max()), isLast(last)
+      sparsity(1), redundancyCoordinate(std::numeric_limits<std::size_t>::max()),
+      redundancyRank(std::numeric_limits<std::size_t>::max()), isLast(last)
     {
       if (valid && !last)
       {
@@ -1078,10 +1080,9 @@ namespace ipo
         std::cout << "Top priority kernel vector: " << kernelVectors.back() << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-        bool success = true;
-        if (!kernelVectors.back().vector)
+        bool updateVector = !kernelVectors.back().vector;
+        if (updateVector)
         {
-          success = false;
           timeComponent = std::chrono::system_clock::now();
           kernelVectors.back().vector = std::make_shared<sparse_vector<double>>();
           affineComplement.computeKernelVector(kernelVectors.back().column,
@@ -1104,30 +1105,37 @@ namespace ipo
           kernelVectors.back().norm = euclideanNorm(*kernelVectors.back().vector);
         }
 
-        timeComponent = std::chrono::system_clock::now();
-        auto redundancy = redundancyCheck.test(*kernelVectors.back().vector,
-          kernelVectors.back().norm);
-        result.timeEquations += elapsedTime(timeComponent);
+        bool updateRedundancy = updateVector
+          || kernelVectors.back().redundancyRank != redundancyCheck.rank();
+        if (updateRedundancy)
+        {
+          timeComponent = std::chrono::system_clock::now();
+          auto redundancy = redundancyCheck.test(*kernelVectors.back().vector,
+            kernelVectors.back().norm);
+          result.timeEquations += elapsedTime(timeComponent);
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-        std::cout << "Redundancy check yields violation " << redundancy.maxViolation << std::endl;
+          std::cout << "Redundancy must be checked: violation is " << redundancy.maxViolation << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+  
+          if (elapsedTime(timeStarted) >= query.timeLimit)
+          {
+            result.dimension = AFFINEHULL_ERROR_TIMEOUT;
+            return result;
+          }
 
-        if (elapsedTime(timeStarted) >= query.timeLimit)
+          kernelVectors.back().maxViolation = redundancy.maxViolation;
+          kernelVectors.back().redundancyCoordinate = redundancy.maxCoordinate;
+          kernelVectors.back().redundancyRank = redundancyCheck.rank();
+        }
+        else
         {
-          result.dimension = AFFINEHULL_ERROR_TIMEOUT;
-          return result;
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+          std::cout << "Redundancy must NOT be checked." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
         }
 
-        if (redundancy.maxViolation < kernelVectors.back().maxViolation
-          || redundancy.maxCoordinate != kernelVectors.back().redundancyCoordinate)
-        {
-          success = false;
-        }
-        kernelVectors.back().maxViolation = redundancy.maxViolation;
-        kernelVectors.back().redundancyCoordinate = redundancy.maxCoordinate;
-
-        if (success)
+        if (!updateRedundancy)
           break;
 
         std::push_heap(kernelVectors.begin(), kernelVectors.end(), kernelVectorLess);
