@@ -1,7 +1,7 @@
 #include <ipo/affine_hull.hpp>
 
-// #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
+#define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
+#define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #include <ipo/arithmetic.hpp>
 
@@ -106,14 +106,18 @@ namespace ipo
           ++countNonzeroProducts;
       }
 
-//       if (countNonzeroProducts != 1)
+      if (countNonzeroProducts != 1)
       {
+        T firstProd = 0;
         for (std::size_t p = 0; p < _debugDensePoints.size(); ++p)
         {
           T prod = 0;
           for (std::size_t v = 0; v < numVariables(); ++v)
             prod += _debugDensePoints[p][v] * kernelVector[v];
-          std::cout << "Product for point " << p << " is " << prod << std::endl;
+          if (p == 0)
+            firstProd = prod;
+          std::cout << "Product for point " << p << " is " << firstProd << " + " 
+            << (prod - firstProd) << "." << std::endl;
         }
         for (std::size_t r = 0; r < _debugDenseRays.size(); ++r)
         {
@@ -570,16 +574,24 @@ namespace ipo
         affineComplement.computeKernelVector(kv.column, newVector, debugKernelRhs, epsilon);
       }
       kv.ensureValidity(solution, pointFactor, epsilon);
-      if (kv.vector && euclideanDistance(oldVector, newVector) > 1.e-9)
+
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
+      if (kv.vector && euclideanDistance(oldVector, newVector) > 1.e-7)
       {
-        std::cout << "Column " << kv.column << ", old vector is " << oldVector << ", new vector is " << newVector << std::endl;
+        std::cout << "\n Kernel vector that was stored as valid was updated.\n";
         for (auto& vector : resultPoints)
         {
-          std::cout << "Product of old vector with point " << *vector << " is " << (*vector * oldVector) << std::endl;
+          std::cout << "Product of point with old vector is " << (*vector * oldVector)
+            << " and with new vector: " << (*vector * newVector) << std::endl;
         }
-        std::cout << "rhs = " << kv.rhs << std::endl;
+        std::cout << "kv.column = " << kv.column << ", old vector is " << oldVector
+          << ", new vector is " << newVector << std::endl;
+        std::cout << "kv.rhs = " << kv.rhs << std::endl;
+        std::cout << "Euclidean distance between the vectors is "
+          << euclideanDistance(oldVector, newVector) << std::endl;
         assert(false);
       }
+#endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
     }
   }
 
@@ -587,9 +599,9 @@ namespace ipo
   static int tryMaximization(std::shared_ptr<P> polyhedron,
     AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
     const sparse_vector<U>& kernelVector, std::size_t kernelVectorColumn, double kernelVectorNorm,
-    U& kernelDirectionValue, std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
+    U& kernelVectorValue, std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays, const AffineHullQuery& query,
-    double timeLimit, double& timeOracles, double& timePointsRays,
+    double epsilonConstraints, double timeLimit, double& timeOracles, double& timePointsRays,
     AffineComplement<double>* pAffineComplement = NULL)
   {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -598,18 +610,24 @@ namespace ipo
 
     for (std::size_t v = 0; v < polyhedron->space()->dimension(); ++v)
       objective[v] = 0;
-    kernelDirectionValue = 0;
+    kernelVectorValue = 0;
     for (const auto& iter : kernelVector)
       objective[iter.first] = iter.second;
 
     typename P::OptimizationOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
-      kernelDirectionValue = kernelVector * *resultPoints.front();
+      // We set a minimum required objective value to the common value plus an epsilon for
+      // (normalized) constraints.
+
+      kernelVectorValue = kernelVector * *resultPoints.front();
       oracleQuery.hasMinObjectiveValue = true;
-      oracleQuery.minObjectiveValue = kernelDirectionValue;
+      oracleQuery.minObjectiveValue = kernelVectorValue
+        + epsilonConstraints * kernelVectorNorm;
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-      std::cout << "Common objective of previous points is " << kernelDirectionValue << std::endl;
+      std::cout << "Common objective of previous points is " << kernelVectorValue
+        << ", we require solutions better than " << oracleQuery.minObjectiveValue << "."
+        << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
     }
     if (timeLimit <= 0)
@@ -734,7 +752,7 @@ namespace ipo
           << difference << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
         difference /= kernelVectorNorm;
-        if (difference > query.epsilonConstraints)
+        if (difference > 2 * epsilonConstraints)
         {
           resultPoints.push_back(otherPoint.vector);
           timeComponent = std::chrono::system_clock::now();
@@ -770,7 +788,7 @@ namespace ipo
       std::cout << "  -> adding a point with objective value "
         << convertNumber<double>(bestPoint.objectiveValue) << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-      kernelDirectionValue = convertNumber<U>(bestPoint.objectiveValue);
+      kernelVectorValue = convertNumber<U>(bestPoint.objectiveValue);
       return INTERNAL_INITIAL_ONE;
     }
     else
@@ -784,7 +802,7 @@ namespace ipo
         double difference = fabs(convertNumber<double, T>(
           point.objectiveValue - oracleQuery.minObjectiveValue));
         difference /= kernelVectorNorm;
-        if (difference > query.epsilonConstraints)
+        if (difference > 2 * epsilonConstraints)
         {
           resultPoints.push_back(point.vector);
           timeComponent = std::chrono::system_clock::now();
@@ -823,11 +841,11 @@ namespace ipo
   template <typename P, typename T, typename U, typename KV>
   static int tryMinimization(std::shared_ptr<P> polyhedron,
     AffineComplement<U>& affineComplement, U* objective, std::vector<KV>& kernelVectors,
-    const sparse_vector<U>& kernelDirectionVector, std::size_t kernelVectorColumn,
-    double kernelDirectionNorm, const U& kernelDirectionValue,
+    const sparse_vector<U>& kernelVector, std::size_t kernelVectorColumn,
+    double kernelVectorNorm, const U& kernelVectorValue,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints,
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultRays, const AffineHullQuery& query,
-    double timeLimit, double& timeOracles, double& timePointsRays,
+    double epsilonConstraints, double timeLimit, double& timeOracles, double& timePointsRays,
     AffineComplement<double>* pAffineComplement = NULL)
   {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -838,7 +856,7 @@ namespace ipo
     {
       objective[v] = -objective[v];
 #if !defined(NDEBUG)
-      assert(objective[v] == -kernelDirectionVector.find(v, 0));
+      assert(objective[v] == -kernelVector.find(v, 0));
 #endif /* !NDEBUG */
     }
 
@@ -846,10 +864,10 @@ namespace ipo
     if (!resultPoints.empty())
     {
       oracleQuery.hasMinObjectiveValue = true;
-      oracleQuery.minObjectiveValue = -kernelDirectionValue;
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-      std::cout << "Common objective of previous points is " << -kernelDirectionValue << std::endl;
+      std::cout << "Common objective of previous points is " << -kernelVectorValue << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+      oracleQuery.minObjectiveValue = -kernelVectorValue + epsilonConstraints * kernelVectorNorm;
     }
     if (timeLimit <= 0)
       return INTERNAL_TIMEOUT;
@@ -908,8 +926,8 @@ namespace ipo
       const auto& bestPoint = oracleResponse.points.front();
       double difference = fabs(convertNumber<double, T>(
         bestPoint.objectiveValue - oracleQuery.minObjectiveValue));
-      difference /= kernelDirectionNorm;
-      if (difference <= query.epsilonConstraints)
+      difference /= kernelVectorNorm;
+      if (difference <= epsilonConstraints)
         return INTERNAL_NONE;
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
@@ -952,7 +970,7 @@ namespace ipo
     std::size_t redundancyCoordinate, AffineComplement<T>& affineComplement,
     std::vector<Constraint<T>>& resultEquations,
     std::shared_ptr<sparse_vector<T>> kernelDirectionVector, std::size_t kernelDirectionColumn,
-    const T& kernelDirectionValue, double epsilonFactorization, double epsilonConstraints,
+    const T& kernelDirectionValue, double epsilonFactorization,
     double epsilonCoefficient, double& timeEquations,
     EquationRedundancyCheck<double>* pRedundancyCheck = NULL,
     AffineComplement<double>* pAffineComplement = NULL)
@@ -1101,7 +1119,7 @@ namespace ipo
           return result;
         }
 
-        if (redundancy.maxViolation > kernelVectors.back().maxViolation
+        if (redundancy.maxViolation < kernelVectors.back().maxViolation
           || redundancy.maxCoordinate != kernelVectors.back().redundancyCoordinate)
         {
           success = false;
@@ -1137,9 +1155,9 @@ namespace ipo
       // Maximize kernelVectorValue.
 
       int outcome = tryMaximization(polyhedron, affineComplement, &objective[0],
-        kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
-        result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
-        result.timeOracles, result.timePointsRays);
+        kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm,
+        kernelVectorValue, result.points, result.rays, query, query.epsilonConstraints,
+        query.timeLimit - elapsedTime(timeStarted), result.timeOracles, result.timePointsRays);
       if (outcome < INTERNAL_OKAY)
       {
         result.dimension = outcome;
@@ -1163,9 +1181,9 @@ namespace ipo
       // Minimize kernelDirectionVector.
 
       outcome = tryMinimization(polyhedron, affineComplement, &objective[0],
-        kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
-        result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
-        result.timeOracles, result.timePointsRays);
+        kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm,
+        kernelVectorValue, result.points, result.rays, query, query.epsilonConstraints,
+        query.timeLimit - elapsedTime(timeStarted), result.timeOracles, result.timePointsRays);
       if (outcome < INTERNAL_OKAY)
       {
         result.dimension = outcome;
@@ -1197,7 +1215,7 @@ namespace ipo
       assert(kernelVector.redundancyCoordinate < n);
       int error = addEquation(redundancyCheck, kernelVector.redundancyCoordinate, affineComplement,
         result.equations, kernelVector.vector, kernelVector.column, kernelVectorValue,
-        query.epsilonFactorization, query.epsilonConstraints, query.epsilonCoefficient,
+        query.epsilonFactorization, query.epsilonCoefficient,
         result.timeEquations);
       if (error != INTERNAL_OKAY)
       {
@@ -1283,6 +1301,7 @@ namespace ipo
       for (std::size_t p = 0; p < result.points.size(); ++p)
       {
         double violation = fabs(equation.vector() * *result.points[p] - equation.rhs());
+        violation /= euclideanNorm(equation.vector());
         if (violation > worstViolation)
         {
           worstViolation = violation;
@@ -1294,6 +1313,7 @@ namespace ipo
       for (std::size_t r = 0; r < result.rays.size(); ++r)
       {
         double violation = fabs(equation.vector() * *result.rays[r]);
+        violation /= euclideanNorm(equation.vector()) * euclideanNorm(*result.rays[r]);
         if (violation > worstViolation)
         {
           worstViolation = violation;
@@ -1518,8 +1538,9 @@ namespace ipo
 
       int outcome = tryMaximization(polyhedron, affineComplement, &objective[0],
         kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm,
-        kernelVectorValue, result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
-        result.timeOracles, result.timePointsRays, &approximateAffineComplement);
+        kernelVectorValue, result.points, result.rays, query, 0.0,
+        query.timeLimit - elapsedTime(timeStarted), result.timeOracles, result.timePointsRays,
+        &approximateAffineComplement);
       if (outcome < INTERNAL_OKAY)
       {
         result.dimension = outcome;
@@ -1544,7 +1565,7 @@ namespace ipo
 
       outcome = tryMinimization(polyhedron, affineComplement, &objective[0], kernelVectors,
         *kernelVector.vector, kernelVector.column, kernelVector.norm, kernelVectorValue,
-        result.points, result.rays, query, query.timeLimit - elapsedTime(timeStarted),
+        result.points, result.rays, query, 0.0, query.timeLimit - elapsedTime(timeStarted),
         result.timeOracles, result.timePointsRays, &approximateAffineComplement);
       if (outcome < INTERNAL_OKAY)
       {
@@ -1562,8 +1583,8 @@ namespace ipo
       assert(kernelVector.redundancyCoordinate < n);
       int error = addEquation(redundancyCheck, kernelVector.redundancyCoordinate, affineComplement,
         result.equations, kernelVector.vector, kernelVector.column, kernelVectorValue,
-        query.epsilonFactorization, query.epsilonConstraints, query.epsilonCoefficient,
-        result.timeEquations, &approximateRedundancyCheck, &approximateAffineComplement);
+        query.epsilonFactorization, query.epsilonCoefficient, result.timeEquations,
+        &approximateRedundancyCheck, &approximateAffineComplement);
       if (error == INTERNAL_NUMERICS)
       {
         result.dimension = AFFINEHULL_ERROR_NUMERICS;

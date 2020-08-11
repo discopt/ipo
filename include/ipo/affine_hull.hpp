@@ -25,9 +25,9 @@ namespace ipo
     /**
      * \brief Decides whether a kernel vector should be invalidated.
      * 
-     * Decides whether a kernel vector should be invalidated. Should be at least
+     * Decides whether a kernel vector should be invalidated. Should be at most
      * \ref epsilonConstraints. When debugging numerically difficult instances, it can be set to
-     * infinity in order to invalidate all vectors.
+     * 0 to invalidate almost all vectors.
      */
     double epsilonInvalidate;
     /**

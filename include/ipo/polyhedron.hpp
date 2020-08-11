@@ -9,10 +9,12 @@
 #include <memory>
 
 namespace ipo
-{ 
+{
+
   class RealPolyhedron: public std::enable_shared_from_this<RealPolyhedron>
   {
   public:
+    typedef double Number;
     typedef RealOptimizationOracle OptimizationOracle;
     typedef RealSeparationOracle SeparationOracle;
 
@@ -70,7 +72,36 @@ namespace ipo
     RealOptimizationOracle::Response maximize(const double* objectiveVector,
       const RealOptimizationOracle::Query& query);
 
+    /**
+     * \brief Adds given point to cache.
+     *
+     * Checks for duplicates.
+     * 
+     * \returns \c true if point was not cached before.
+     */
+
+    IPO_EXPORT
+    bool cachePoint(std::shared_ptr<sparse_vector<double>> point);
+
+    /**
+     * \brief Adds given point to cache.
+     *
+     * Checks for duplicates.
+     * 
+     * \returns \c true if ray was not cached before.
+     */
+
+    IPO_EXPORT
+    bool cacheRay(std::shared_ptr<sparse_vector<double>> ray);
+
+    IPO_EXPORT
+    std::size_t numCachedSolutions() const;
+
+    IPO_EXPORT
+    std::pair<bool, std::shared_ptr<sparse_vector<double>>> getCachedSolution(std::size_t index);
+
   protected:
+
     /// Pointer to private implementation.
     void* _implementation;
     /// Ambient space.
@@ -82,6 +113,7 @@ namespace ipo
   class RationalPolyhedron: public std::enable_shared_from_this<RationalPolyhedron>
   {
   public:
+    typedef double Number;
     typedef RationalOptimizationOracle OptimizationOracle;
     typedef RationalSeparationOracle SeparationOracle;
 
@@ -150,6 +182,28 @@ namespace ipo
     IPO_EXPORT
     RationalOptimizationOracle::Response maximize(const double* objectiveVector,
       const RationalOptimizationOracle::Query& query);
+
+    /**
+     * \brief Adds given point to cache.
+     *
+     * Checks for duplicates.
+     * 
+     * \returns \c true if point was not cached before.
+     */
+
+    IPO_EXPORT
+    bool cachePoint(std::shared_ptr<sparse_vector<mpq_class>> point);
+
+    /**
+     * \brief Adds given point to cache.
+     *
+     * Checks for duplicates.
+     * 
+     * \returns \c true if ray was not cached before.
+     */
+
+    IPO_EXPORT
+    bool cacheRay(std::shared_ptr<sparse_vector<mpq_class>> ray);
 
   protected:
     /// Pointer to private implementation.
