@@ -38,7 +38,7 @@ namespace ipo
         }
       }
 
-      if (pivotAbsolute <= 1.0e-6)
+      if (pivotAbsolute <= 1.0e-12)
         break;
 
       // Permute pivot to rank,rank.
