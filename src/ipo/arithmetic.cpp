@@ -4,6 +4,22 @@
 
 #if defined(IPO_WITH_GMP)
 
+double squaredEuclideanNorm(double* vector, std::size_t size)
+{
+  double result = 0.0;
+  for (std::size_t i = 0; i < size; ++i)
+  {
+    double x = vector[i];
+    result += x * x;
+  }
+  return result;
+}
+
+double euclideanNorm(double* vector, std::size_t size)
+{
+  return sqrt(squaredEuclideanNorm(vector,size));
+}
+
 void reconstructRational(mpq_ptr result, double x, double maxError)
 {
   const double input = x;

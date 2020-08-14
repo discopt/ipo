@@ -7,6 +7,12 @@
 #include <gmpxx.h>
 #endif /* IPO_WITH_GMP */
 
+IPO_EXPORT
+double squaredEuclideanNorm(double* vector, std::size_t size);
+
+IPO_EXPORT
+double euclideanNorm(double* vector, std::size_t size);
+
 template <typename To, typename From>
 To convertNumber(const From& from)
 {

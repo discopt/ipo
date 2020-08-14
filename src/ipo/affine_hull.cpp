@@ -198,6 +198,7 @@ namespace ipo
         else if (_columns[c].isBasic()
           && fabs(convertNumber<double>(vector[_columns[c].basisIndex])) > epsilonCoefficient)
         {
+          assert(vector[_columns[c].basisIndex] != 0.0);
           result.push_back(c, vector[_columns[c].basisIndex]);
         }
       }
@@ -586,9 +587,127 @@ namespace ipo
       throw std::runtime_error("maximize(<zero vector>) returned infeasible after some rays.");
   }
 
+  static void stabilizeDirection(std::size_t n,
+    const std::vector<std::shared_ptr<sparse_vector<double>>>& points,
+    const std::vector<std::shared_ptr<sparse_vector<double>>>& rays,
+    double epsilon, std::shared_ptr<sparse_vector<double>>& input, double& rhs)
+  {
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "    Stabilizing vector of size " << input->size() << ": " << *input << "."
+        << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+    std::vector<double> sortedEntries;
+    sortedEntries.reserve(input->size());
+    for (const auto& iter : *input)
+      sortedEntries.push_back(fabs(iter.second));
+    std::sort(sortedEntries.begin(), sortedEntries.end());
+
+    double threshold = sortedEntries.front();
+    double lastThreshold = threshold;
+    assert(threshold > 0);
+    std::size_t lastSupport = std::numeric_limits<std::size_t>::max();
+    std::vector<double> dense(n, 0.0);
+    double lastAverage = rhs;
+    while (lastSupport > 0)
+    {
+      threshold *= 4.0;
+      std::size_t support = 0;
+      for (const auto& iter : *input)
+      {
+        if (fabs(iter.second) > threshold)
+        {
+          dense[iter.first] = iter.second;
+          ++support;
+        }
+        else
+          dense[iter.first] = 0.0;
+      }
+      if (support == 0)
+        break;
+      if (support == lastSupport)
+        continue;
+
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "      Testing sparsified vector with threshold " << threshold << " and support "
+        << support << "." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+      double norm = euclideanNorm(&dense[0], n);
+      if (norm == 0.0)
+        continue;
+
+      // Check points.
+
+      bool failed = false;
+      double min = std::numeric_limits<double>::infinity();
+      double max = -std::numeric_limits<double>::infinity();
+      for (const auto& point : points)
+      {
+        double prod = *point * &dense[0];
+        min = std::min(min, prod);
+        max = std::max(max, prod);
+        if (max - min > 2 * norm * epsilon)
+        {
+          failed = true;
+          break;
+        }
+      }
+
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "      Normalized discrepancy is " << ((max - min) / norm) << "." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+      // Check rays.
+
+      if (!failed)
+      {
+        for (const auto& ray : rays)
+        {
+          double prod = *ray * &dense[0];
+          if (fabs(prod) / euclideanNorm(*ray) > epsilon)
+          {
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+            std::cout << "      Not orthogonal to some ray." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+            failed = true;
+            break;
+          }
+        }
+      }
+
+      if (failed)
+        break;
+
+      lastThreshold = threshold;
+      lastAverage = 0.5 * (min + max);
+      lastSupport = support;
+    }
+
+    auto output = std::make_shared<sparse_vector<double>>();
+    for (const auto& iter : *input)
+    {
+      if (fabs(iter.second) >= lastThreshold)
+        output->push_back(iter.first, iter.second);
+    }
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+    if (input->size() != output->size())
+    {
+      std::cout << "    Stabilized vector has size " << output->size() << ": " << *output << "."
+        << std::endl;
+    }
+    else
+      std::cout << "    Did not stabilize." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+    input = output;
+    rhs = lastAverage;
+  }
+
   template <typename T, typename KV>
   static void ensureValidity(std::vector<KV>& kernelVectors, const sparse_vector<T>& solution,
-    const T& pointFactor, double epsilon, AffineComplement<T>& affineComplement, const std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints)
+    const T& pointFactor, double epsilon, AffineComplement<T>& affineComplement,
+    const std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints)
   {
     for (auto& kv : kernelVectors)
     {
@@ -599,6 +718,7 @@ namespace ipo
       {
         oldVector = *kv.vector;
         affineComplement.computeKernelVector(kv.column, newVector, debugKernelRhs, epsilon);
+        
       }
       kv.ensureValidity(solution, pointFactor, epsilon);
 
@@ -726,7 +846,8 @@ namespace ipo
         timePointsRays += elapsedTime(timeComponent);
         
         // Invalidate kernel vectors.
-        ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
+        ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate,
+          affineComplement, resultPoints);
 
         return INTERNAL_INITIAL_TWO;
       }
@@ -1016,7 +1137,7 @@ namespace ipo
     }
     timeEquations += elapsedTime(timeComponent);
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-    std::cout << "    -> adding an equation." << std::endl;
+    std::cout << "    -> adding equation " << (resultEquations.size() - 1) << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     return INTERNAL_OKAY;
@@ -1121,6 +1242,15 @@ namespace ipo
             << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
+          stabilizeDirection(n, result.points, result.rays, query.epsilonConstraints,
+            kernelVectors.back().vector, kernelVectors.back().rhs);
+
+#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+          std::cout << "    Stabilized kernel vector is " << *kernelVectors.back().vector
+            << " with rhs " << kernelVectors.back().rhs << "." << std::endl;
+#endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
+
+            
           if (elapsedTime(timeStarted) >= query.timeLimit)
           {
             result.dimension = AFFINEHULL_ERROR_TIMEOUT;
@@ -1171,8 +1301,7 @@ namespace ipo
       kernelVectors.pop_back();
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-      std::cout << "    Selected kernel vector has maximum violation " << kernelVector.maxViolation << std::endl;
-      std::cout << "    It reads: " << *kernelVector.vector << std::endl;
+      std::cout << "    Selected kernel vector: " << kernelVector << std::endl;
       sparse_vector<double> debugKernelVector;
       double debugKernelRhs;
       affineComplement.computeKernelVector(kernelVector.column, debugKernelVector, debugKernelRhs, query.epsilonFactorization);
@@ -1232,7 +1361,7 @@ namespace ipo
 
       // Add equation defined by kernelDirectionVector.
 
-#if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+#if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
       std::vector<double> direction(n, 0.0);
       for (const auto& iter : *kernelVector.vector)
         direction[iter.first] = iter.second;

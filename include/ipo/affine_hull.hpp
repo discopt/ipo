@@ -138,6 +138,11 @@ namespace ipo
       timeEquations = other.timeEquations;
       return *this;
     }
+
+    inline bool success() const
+    {
+      return dimension >= -1;
+    }
   };
 
   template <typename R>
