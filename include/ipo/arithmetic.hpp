@@ -40,10 +40,10 @@ inline double convertNumber<double>(const mpq_class& x)
 }
 
 IPO_EXPORT
-mpq_class reconstructRational(double x, double maxError = 1.0e-15);
+mpq_class reconstructRational(double x, double maxError = 1.0e-9);
 
 IPO_EXPORT
-void reconstructRational(mpq_ptr result, double x, double maxError = 1.0e-15);
+void reconstructRational(mpq_ptr result, double x, double maxError = 1.0e-9 );
 
 template<>
 inline mpq_class convertNumber<mpq_class>(const double& x)

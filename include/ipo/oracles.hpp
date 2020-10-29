@@ -88,6 +88,12 @@ namespace ipo
       * with a value less than or equal to this number.
       */
     R minObjectiveValue;
+    /**
+     * \brief Weak lower bound on objective value of returned points.
+     * 
+     * The oracle should try hard to find a solution of at least this value.
+     */
+    double desiredObjectiveValue;
     /// Maximum number of solutions to return.
     std::size_t maxNumSolutions;
     /// Time limit for this oracle call.
@@ -100,6 +106,7 @@ namespace ipo
     IPO_EXPORT
     CommonOptimizationQuery()
       : hasMinObjectiveValue(false), minObjectiveValue(0),
+      desiredObjectiveValue(std::numeric_limits<double>::infinity()),
       maxNumSolutions(std::numeric_limits<std::size_t>::max()),
       timeLimit(std::numeric_limits<double>::infinity())
     {
@@ -275,6 +282,23 @@ namespace ipo
       dualBound = std::move(other.dualBound);
       points = std::move(other.points);
       rays = std::move(other.rays);
+      hitTimeLimit = other.hitTimeLimit;
+      return *this;
+    }
+
+    /**
+      * \brief Copy-assignment operator.
+      */
+
+    IPO_EXPORT
+    inline CommonOptimizationReponse<R>& operator=(const CommonOptimizationReponse<R>& other)
+    {
+      outcome = other.outcome;
+      primalBound = other.primalBound;
+      hasDualBound = other.hasDualBound;
+      dualBound = other.dualBound;
+      points = other.points;
+      rays = other.rays;
       hitTimeLimit = other.hitTimeLimit;
       return *this;
     }
@@ -461,7 +485,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response getInitial(const Query& query);
+    virtual Response getInitial(const Query& query = Query());
 
     /**
      * \brief Separates a point/ray given in floating-point arithmetic.
@@ -474,7 +498,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response separate(const double* vector, bool isPoint, const Query& query) = 0;
+    virtual Response separate(const double* vector, bool isPoint, const Query& query = Query()) = 0;
 
   };
 
@@ -576,7 +600,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response getInitial(const Query& query);
+    virtual Response getInitial(const Query& query = Query());
 
     /**
      * \brief Separates a point/ray given in rational arithmetic.
@@ -589,7 +613,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response separate(const mpq_class* vector, bool isPoint, const Query& query) = 0;
+    virtual Response separate(const mpq_class* vector, bool isPoint,
+      const Query& query = Query()) = 0;
 
     /**
      * \brief Separates a point/ray given in floating-point arithmetic.

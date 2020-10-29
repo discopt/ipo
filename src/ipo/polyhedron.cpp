@@ -92,9 +92,11 @@ namespace ipo
     typename OptOracle::Response maximize(const R* objectiveVector,
       const typename OptOracle::Query& query)
     {
+      // TODO: collect returned dual bounds and consider minimum among them.
+      
       sortOptimizationOracles();
 
-      typename OptOracle::Response response;
+      typename OptOracle::Response bestResponse;
       std::size_t lastOracle = 0;
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
@@ -107,39 +109,58 @@ namespace ipo
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
-        response = data.oracle->maximize(objectiveVector, query);
+        typename OptOracle::Response response = data.oracle->maximize(objectiveVector, query);
         double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
 
 #if defined (IPO_DEBUG_POLYHEDRON_PRINT)
-        std::cout << "Oracle " << data.oracle->name() << " took "
+        std::cout << "    Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
-          << " queries " << data.sumSuccess << " of which were successful." << std::endl;
+          << " queries " << data.sumSuccess << " of which were successful.\n   ";
         if (query.hasMinObjectiveValue)
-          std::cout << "  queried points better than " << query.minObjectiveValue << ";";
-        std::cout << "  response is " << response << ".\n" << std::flush;
+          std::cout << " queried points better than " << query.minObjectiveValue << ";";
+        std::cout << " response is " << response << ".\n" << std::flush;
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
-        if (response.wasSuccessful())
+        if (!response.wasSuccessful())
+          continue;
+
+        // Add points/rays to cache.
+        if (!data.isCache)
         {
-          if (!data.isCache)
-          {
-            // We add points / rays to the cache.
+          // We add points / rays to the cache.
 
-            for (auto& ray : response.rays)
-              addToCache(_rays, _hashToRayIndex, _rayProducts, ray.vector);
+          for (auto& ray : response.rays)
+            addToCache(_rays, _hashToRayIndex, _rayProducts, ray.vector);
 
-            for (auto& point : response.points)
-              addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
-          }
+          for (auto& point : response.points)
+            addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
+        }
 
+        if (response.outcome == OptimizationOutcome::INFEASIBLE
+          || response.outcome == OptimizationOutcome::UNBOUNDED
+          || (response.hasDualBound && response.primalBound == response.dualBound)
+          || response.primalBound >= query.desiredObjectiveValue)
+        {
           return response;
         }
+
+        assert(response.outcome == OptimizationOutcome::FEASIBLE);
+
+        bestResponse = response;
+
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+        std::cout << "    Did not find a solution of desired quality. Trying next oracle." << std::endl;
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
       }
 
-      return response;
+#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+        std::cout << "    Using last mentioned solution." << std::endl;
+#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+
+      return bestResponse;
     }
 
     /**
@@ -154,7 +175,7 @@ namespace ipo
     {
       sortOptimizationOracles();
 
-      typename OptOracle::Response response;
+      typename OptOracle::Response bestResponse;
       for (std::size_t o = 0; o < _optimization.size(); ++o)
       {
         Data<OptOracle>& data = _optimization[o];
@@ -167,7 +188,7 @@ namespace ipo
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
-        response = data.oracle->maximize(objectiveVector, query);
+        typename OptOracle::Response response = data.oracle->maximize(objectiveVector, query);
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
@@ -178,11 +199,33 @@ namespace ipo
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 
         // If the current oracle found a ray or a point, we stop.
-        if (response.wasSuccessful())
+        if (!response.wasSuccessful())
+          break;
+
+        // Add points/rays to cache.
+        if (!data.isCache)
+        {
+          // We add points / rays to the cache.
+
+          for (auto& ray : response.rays)
+            addToCache(_rays, _hashToRayIndex, _rayProducts, ray.vector);
+
+          for (auto& point : response.points)
+            addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
+        }
+
+        if (response.outcome == OptimizationOutcome::INFEASIBLE
+          || response.outcome == OptimizationOutcome::UNBOUNDED)
+        {
           return response;
+        }
+
+        assert(response.outcome == OptimizationOutcome::FEASIBLE);
+
+        bestResponse = response;
       }
 
-      return response;
+      return bestResponse;
     }
 
     /**

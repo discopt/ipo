@@ -771,10 +771,12 @@ namespace ipo
       oracleQuery.hasMinObjectiveValue = true;
       oracleQuery.minObjectiveValue = kernelVectorValue
         + epsilonConstraints * kernelVectorNorm;
+      oracleQuery.desiredObjectiveValue = convertNumber<double>(kernelVectorValue)
+        + 1000 * epsilonConstraints * kernelVectorNorm;
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-      std::cout << "    Common objective of previous points is " << kernelVectorValue
-        << ", we require solutions better than " << oracleQuery.minObjectiveValue << "."
-        << std::endl;
+      std::cout << "    Common objective of previous points is " << kernelVectorValue << "."
+        << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
+        << oracleQuery.desiredObjectiveValue << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
     }
     if (timeLimit <= 0)
@@ -790,7 +792,7 @@ namespace ipo
     std::cout << "    Result: " << oracleResponse << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-    if (timeOracle >= timeLimit)
+    if (timeOracle >= timeLimit || oracleResponse.outcome == OptimizationOutcome::TIMEOUT)
       return INTERNAL_TIMEOUT;
 
     if (oracleResponse.outcome == OptimizationOutcome::INFEASIBLE)
@@ -1012,10 +1014,16 @@ namespace ipo
     if (!resultPoints.empty())
     {
       oracleQuery.hasMinObjectiveValue = true;
+      oracleQuery.minObjectiveValue = -kernelVectorValue
+        + epsilonConstraints * kernelVectorNorm;
+      oracleQuery.desiredObjectiveValue = convertNumber<double, T>(-kernelVectorValue)
+        + 1000 * epsilonConstraints * kernelVectorNorm;
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-      std::cout << "    Common objective of previous points is " << -kernelVectorValue << std::endl;
+      std::cout << "    Common objective of previous points is " << -kernelVectorValue << "."
+        << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
+        << oracleQuery.desiredObjectiveValue << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
-      oracleQuery.minObjectiveValue = -kernelVectorValue + epsilonConstraints * kernelVectorNorm;
+
     }
     if (timeLimit <= 0)
       return INTERNAL_TIMEOUT;

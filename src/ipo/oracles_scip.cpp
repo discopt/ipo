@@ -1,6 +1,6 @@
 #include <ipo/oracles_scip.hpp>
 
-// #define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
+#define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
 
 #include <cassert>
 #include <functional>
@@ -427,6 +427,12 @@ namespace ipo
     SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
       &coefficients[0], lhs, rhs));
     _faceConstraints.insert(std::make_pair(face, cons));
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+    printf("Created new face constraint for face %p with lhs %f and rhs %f:\n", face, face->lhs(), face->rhs());
+    SCIPprintCons(_scip, cons, stdout);
+    fflush(stdout);
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
   }
 
   void SCIPSolver::deleteFace(Constraint<double>* face)
@@ -471,7 +477,9 @@ namespace ipo
     if (face)
     {
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-      std::cout << "Enabling new face." << std::endl;
+      printf("Enabling new face %p with lhs %f and rhs %f:\n", face, face->lhs(), face->rhs());
+      SCIPprintCons(_scip, _faceConstraints.at(face), stdout);
+      fflush(stdout);
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
       SCIP_CALL_EXC( SCIPaddCons(_scip, _faceConstraints.at(face)) );
     }
@@ -499,6 +507,7 @@ namespace ipo
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
     std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
+    std::cout << "Setting Time limit to " << query.timeLimit << "." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
     _solver->selectFace(&_face);
 
@@ -537,15 +546,25 @@ namespace ipo
     for (int attempt = 1; attempt <= 2; ++attempt)
     {
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-      std::cout << "Solving optimization problem." << std::endl;
+      std::cout << "Solving optimization problem";
+      double timeLimit;
+      SCIP_CALL_EXC( SCIPgetRealParam(_solver->_scip, "limits/time", &timeLimit) );
+      if (SCIPisFinite(timeLimit))
+        std::cout << " with time limit " << timeLimit << "s";
+      std::cout << "." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
+      double solutionTime = -SCIPgetTotalTime(_solver->_scip);
+      std::cout << "Before SCIPsolve: " << solutionTime << std::endl;
       SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
       if (retcode != SCIP_OKAY)
       {
         std::cerr << "SCIPOptimizationOracleDouble received return code " << retcode
           << " from SCIPsolve() call." << std::endl;
       }
+      solutionTime += SCIPgetTotalTime(_solver->_scip);
+      std::cout << "After SCIPsolve: " << SCIPgetTotalTime(_solver->_scip) << std::endl;
+      std::cout << "Difference is: " << solutionTime << std::endl;
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "SCIP returned with return code " << retcode << " and status "
@@ -610,6 +629,8 @@ namespace ipo
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
           }
         }
+        if (status == SCIP_STATUS_TIMELIMIT)
+          response.hitTimeLimit = true;
         response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
         response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
         response.hasDualBound = true;
@@ -641,6 +662,18 @@ namespace ipo
           response.outcome = OptimizationOutcome::UNBOUNDED;
         }
       }
+      else if (status == SCIP_STATUS_TIMELIMIT)
+      {
+        response.hitTimeLimit = true;
+        response.outcome = OptimizationOutcome::TIMEOUT;
+        if (SCIPisFinite(SCIPgetPrimalbound(_solver->_scip)))
+          response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
+        if (SCIPisFinite(SCIPgetDualbound(_solver->_scip)))
+        {
+          response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
+          response.hasDualBound = true;
+        }
+      }
       else if (attempt == 2)
       {
         std::ostringstream ss;
@@ -653,6 +686,16 @@ namespace ipo
       SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", 0) );
       SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
       SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+
+      // Adapt time limit.
+
+      std::cout << "Time limit is " << query.timeLimit << "." << std::endl;
+      std::cout << "SCIP used " << solutionTime << "s already." << std::endl;
+      if (query.timeLimit < std::numeric_limits<double>::infinity())
+      {
+        SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
+          std::max(0.0, query.timeLimit - solutionTime)) );
+      }
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "Disabling presolve for a second optimization attempt." << std::endl;
@@ -682,6 +725,8 @@ namespace ipo
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
         << std::endl;
+      SCIPprintTimingStatistics(_solver->_scip, stdout);
+      fflush(stdout);
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
         if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)

@@ -325,7 +325,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealSeparationOracle::Response getInitial(const RealSeparationOracle::Query& query)
+    RealSeparationOracle::Response getInitial(
+      const RealSeparationOracle::Query& query = RealSeparationOracle::Query())
       override;
 
     /**
@@ -341,7 +342,7 @@ namespace ipo
 
     IPO_EXPORT
     virtual RealSeparationOracle::Response separateDouble(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query)
+      const RealSeparationOracle::Query& query = RealSeparationOracle::Query())
     {
       return separate(vector, isPoint, query);
     }
@@ -359,7 +360,7 @@ namespace ipo
 
     IPO_EXPORT
     virtual RealSeparationOracle::Response separate(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query);
+      const RealSeparationOracle::Query& query = RealSeparationOracle::Query());
 
   protected:
     friend SCIPSolver;

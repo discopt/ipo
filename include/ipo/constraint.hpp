@@ -108,6 +108,12 @@ namespace ipo
     }
 
     IPO_EXPORT
+    inline bool operator!=(const Constraint<T>& other) const
+    {
+      return !(*this == other);
+    }
+
+    IPO_EXPORT
     const T& lhs() const
     {
       return _lhs;
