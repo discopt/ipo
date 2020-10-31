@@ -768,11 +768,10 @@ namespace ipo
       // (normalized) constraints.
 
       kernelVectorValue = kernelVector * *resultPoints.front();
-      oracleQuery.hasMinObjectiveValue = true;
-      oracleQuery.minObjectiveValue = kernelVectorValue
+      oracleQuery.hasMinPrimalBound = true;
+      oracleQuery.minPrimalBound = kernelVectorValue
         + epsilonConstraints * kernelVectorNorm;
-      oracleQuery.desiredObjectiveValue = convertNumber<double>(kernelVectorValue)
-        + 1000 * epsilonConstraints * kernelVectorNorm;
+      // TODO: We actually desire a much bigger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << kernelVectorValue << "."
         << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
@@ -948,9 +947,9 @@ namespace ipo
       // Check if some vector has a different objective value.
       for (const auto& point : oracleResponse.points)
       {
-        assert(oracleQuery.hasMinObjectiveValue);
+        assert(oracleQuery.hasMinPrimalBound);
         double difference = fabs(convertNumber<double, T>(
-          point.objectiveValue - oracleQuery.minObjectiveValue));
+          point.objectiveValue - oracleQuery.minPrimalBound));
         difference /= kernelVectorNorm;
         if (difference > 2 * epsilonConstraints)
         {
@@ -1013,11 +1012,10 @@ namespace ipo
     typename P::OptimizationOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
-      oracleQuery.hasMinObjectiveValue = true;
-      oracleQuery.minObjectiveValue = -kernelVectorValue
+      oracleQuery.hasMinPrimalBound = true;
+      oracleQuery.minPrimalBound = -kernelVectorValue
         + epsilonConstraints * kernelVectorNorm;
-      oracleQuery.desiredObjectiveValue = convertNumber<double, T>(-kernelVectorValue)
-        + 1000 * epsilonConstraints * kernelVectorNorm;
+      // TODO: We actually desire a much larger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << -kernelVectorValue << "."
         << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
@@ -1081,7 +1079,7 @@ namespace ipo
 
       const auto& bestPoint = oracleResponse.points.front();
       double difference = fabs(convertNumber<double, T>(
-        bestPoint.objectiveValue - oracleQuery.minObjectiveValue));
+        bestPoint.objectiveValue - oracleQuery.minPrimalBound));
       difference /= kernelVectorNorm;
       if (difference <= epsilonConstraints)
         return INTERNAL_NONE;

@@ -226,7 +226,7 @@ namespace ipo
 
     RealOptimizationOracle::Query approximateQuery;
     approximateQuery.maxNumSolutions = query.maxNumSolutions;
-    approximateQuery.minObjectiveValue = query.minObjectiveValue.get_d();
+    approximateQuery.minPrimalBound = query.minPrimalBound.get_d();
     approximateQuery.timeLimit = query.timeLimit;
     
     RealOptimizationOracle::Response approximateResponse = approximateOracle->maximize(
@@ -297,7 +297,7 @@ namespace ipo
       assert(response.rays.empty());
 
       response.outcome = approximateResponse.outcome;
-      response.primalBound = query.minObjectiveValue;
+      response.primalBound = query.minPrimalBound;
       for (const auto& point : approximateResponse.points)
       {
         preparePoint(point);
@@ -332,9 +332,9 @@ namespace ipo
 
       if (response.outcome == OptimizationOutcome::FEASIBLE
         && approximateResponse.outcome == OptimizationOutcome::FEASIBLE
-        && approximateResponse.primalBound == approximateQuery.minObjectiveValue)
+        && approximateResponse.primalBound == approximateQuery.minPrimalBound)
       {
-        response.primalBound = query.minObjectiveValue;
+        response.primalBound = query.minPrimalBound;
       }
     }
 

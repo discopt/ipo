@@ -66,9 +66,13 @@ namespace ipo
   {
     /// A timeout occured.
     TIMEOUT = -1,
+    /// The oracle did not find a solution with objective value at least CommonOptimizationQuery::minPrimalBound.
     FOUND_NOTHING = 0,
+    /// The oracle returned an unbounded ray.
     UNBOUNDED = 1,
+    /// The oracle asserted that the polyhedron is empty.
     INFEASIBLE = 2,
+    /// The oracle found a soluton of with objective value at least CommonOptimizationQuery::minPrimalBound.
     FEASIBLE = 3
   };
 
@@ -79,21 +83,22 @@ namespace ipo
   template <typename R>
   struct CommonOptimizationQuery
   {
-    /// Whether CommonOptimizationQuery::minObjectiveValue has a meaning.
-    bool hasMinObjectiveValue;
+    /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
+    bool hasMinPrimalBound;
     /**
-      * \brief Strict lower bound on objective value of returned points.
-      * 
-      * Strict lower bound on objective value of returned points. The oracle must not return points
-      * with a value less than or equal to this number.
+      * \brief Threshold for primal bound allowing the oracle to terminate.
+      *
+      * The oracle shall terminate if the primal bound is greater than or equal to this value.
       */
-    R minObjectiveValue;
+    R minPrimalBound;
+    /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
+    bool hasMaxDualBound;
     /**
-     * \brief Weak lower bound on objective value of returned points.
+     * \brief Threshold for dual bound allowing the oracle to terminate.
      * 
-     * The oracle should try hard to find a solution of at least this value.
+     * The oracle shall terminate if the dual bound is less than or equal to this value.
      */
-    double desiredObjectiveValue;
+    R maxDualBound;
     /// Maximum number of solutions to return.
     std::size_t maxNumSolutions;
     /// Time limit for this oracle call.
@@ -105,8 +110,7 @@ namespace ipo
 
     IPO_EXPORT
     CommonOptimizationQuery()
-      : hasMinObjectiveValue(false), minObjectiveValue(0),
-      desiredObjectiveValue(std::numeric_limits<double>::infinity()),
+      : hasMinPrimalBound(false), minPrimalBound(0), hasMaxDualBound(false), maxDualBound(0),
       maxNumSolutions(std::numeric_limits<std::size_t>::max()),
       timeLimit(std::numeric_limits<double>::infinity())
     {

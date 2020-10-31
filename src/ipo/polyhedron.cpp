@@ -142,7 +142,7 @@ namespace ipo
         if (response.outcome == OptimizationOutcome::INFEASIBLE
           || response.outcome == OptimizationOutcome::UNBOUNDED
           || (response.hasDualBound && response.primalBound == response.dualBound)
-          || response.primalBound >= query.desiredObjectiveValue)
+          || !query.hasMinPrimalBound || response.primalBound >= query.minPrimalBound)
         {
           return response;
         }
@@ -592,7 +592,11 @@ namespace ipo
 
     // Add best points as longs as they have sufficiently positive product.
 
-    double threshold = convertNumber<double>(query.minObjectiveValue);
+    double threshold;
+    if (query.hasMinPrimalBound)
+      threshold = convertNumber<double>(query.minPrimalBound);
+    else
+      threshold = -std::numeric_limits<double>::infinity();
     for (auto& pointProduct : _implementation->_pointProducts)
     {
       double product = 0.0;
@@ -791,9 +795,14 @@ namespace ipo
 
     // Add best points as longs as they have sufficiently positive product.
 
-    double threshold = convertNumber<double>(query.minObjectiveValue);
-    if (std::isfinite(threshold))
-      threshold += objectiveNormalization * _implementation->_normalizedPointEpsilon;
+    double threshold;
+    if (query.hasMinPrimalBound)
+    {
+      threshold = convertNumber<double>(query.minPrimalBound)
+        + objectiveNormalization * _implementation->_normalizedPointEpsilon;
+    }
+    else
+      threshold = -std::numeric_limits<double>::infinity();
     for (auto& pointProduct : _implementation->_pointProducts)
     {
       if (response.points.size() >= maxNumPoints)
@@ -910,9 +919,14 @@ namespace ipo
 
     // Add best points as longs as they have sufficiently positive product.
 
-    double threshold = convertNumber<double>(query.minObjectiveValue);
-    if (std::isfinite(threshold))
-      threshold += objectiveNormalization * _implementation->_normalizedPointEpsilon;
+    double threshold;
+    if (query.hasMinPrimalBound)
+    {
+      threshold = convertNumber<double>(query.minPrimalBound)
+        + objectiveNormalization * _implementation->_normalizedPointEpsilon;
+    }
+    else
+      threshold = -std::numeric_limits<double>::infinity();
     for (auto& pointProduct : _implementation->_pointProducts)
     {
       mpq_class product = 0;
