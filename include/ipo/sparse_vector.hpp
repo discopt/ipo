@@ -52,6 +52,21 @@ public:
     return *this;
   }
 
+  sparse_vector(const std::vector<value_type>& other, bool sort)
+    : _data(other)
+  {
+    struct Less
+    {
+      bool operator()(const value_type& a, const value_type& b) const
+      {
+        return a.first < b.first;
+      }
+    };
+
+    if (sort)
+      std::sort(_data.begin(), _data.end(), Less());
+  }
+
   sparse_vector(std::vector<value_type>&& other, bool sort)
     : _data(std::move(other))
   {

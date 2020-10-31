@@ -1,6 +1,6 @@
 #include <ipo/oracles_scip.hpp>
 
-#define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
+// #define IPO_DEBUG_ORACLES_SCIP_PRINT // Uncomment to print activity.
 
 #include <cassert>
 #include <functional>
@@ -555,7 +555,6 @@ namespace ipo
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
       double solutionTime = -SCIPgetTotalTime(_solver->_scip);
-      std::cout << "Before SCIPsolve: " << solutionTime << std::endl;
       SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
       if (retcode != SCIP_OKAY)
       {
@@ -563,8 +562,6 @@ namespace ipo
           << " from SCIPsolve() call." << std::endl;
       }
       solutionTime += SCIPgetTotalTime(_solver->_scip);
-      std::cout << "After SCIPsolve: " << SCIPgetTotalTime(_solver->_scip) << std::endl;
-      std::cout << "Difference is: " << solutionTime << std::endl;
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "SCIP returned with return code " << retcode << " and status "
