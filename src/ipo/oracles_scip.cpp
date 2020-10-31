@@ -519,7 +519,7 @@ namespace ipo
 
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", query.maxNumSolutions) );
     SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip,
-      query.hasMinPrimalBound ? query.minPrimalBound : -SCIPinfinity(_solver->_scip)) );
+      query.hasMinPrimalBound() ? query.minPrimalBound() : -SCIPinfinity(_solver->_scip)) );
 
     std::size_t n = space()->dimension();
 
@@ -613,7 +613,7 @@ namespace ipo
               vector->push_back(i, x);
           }
           double objectiveValue = objectiveVector * *vector;
-          if (!query.hasMinPrimalBound || objectiveValue > query.minPrimalBound)
+          if (!query.hasMinPrimalBound() || objectiveValue > query.minPrimalBound())
           {
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
             std::cout << " of value " << objectiveValue << " is accepted." << std::endl;
@@ -642,7 +642,7 @@ namespace ipo
       else if (status == SCIP_STATUS_INFEASIBLE)
       {
         assert(numSolutions == 0);
-        response.outcome = query.hasMinPrimalBound ? OptimizationOutcome::FEASIBLE
+        response.outcome = query.hasMinPrimalBound() ? OptimizationOutcome::FEASIBLE
           : OptimizationOutcome::INFEASIBLE;
         break;
       }
@@ -708,7 +708,7 @@ namespace ipo
     if (!response.rays.empty() && response.points.empty())
     {
       response.primalBound = std::numeric_limits<double>::infinity();
-      if (!query.hasMinPrimalBound)
+      if (!query.hasMinPrimalBound())
       {
         // We have to check feasibility.
         

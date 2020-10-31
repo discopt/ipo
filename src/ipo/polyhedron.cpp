@@ -142,7 +142,7 @@ namespace ipo
         if (response.outcome == OptimizationOutcome::INFEASIBLE
           || response.outcome == OptimizationOutcome::UNBOUNDED
           || (response.hasDualBound && response.primalBound == response.dualBound)
-          || !query.hasMinPrimalBound || response.primalBound >= query.minPrimalBound)
+          || !query.hasMinPrimalBound() || response.primalBound >= query.minPrimalBound())
         {
           return response;
         }
@@ -593,8 +593,8 @@ namespace ipo
     // Add best points as longs as they have sufficiently positive product.
 
     double threshold;
-    if (query.hasMinPrimalBound)
-      threshold = convertNumber<double>(query.minPrimalBound);
+    if (query.hasMinPrimalBound())
+      threshold = convertNumber<double>(query.minPrimalBound());
     else
       threshold = -std::numeric_limits<double>::infinity();
     for (auto& pointProduct : _implementation->_pointProducts)
@@ -796,9 +796,9 @@ namespace ipo
     // Add best points as longs as they have sufficiently positive product.
 
     double threshold;
-    if (query.hasMinPrimalBound)
+    if (query.hasMinPrimalBound())
     {
-      threshold = convertNumber<double>(query.minPrimalBound)
+      threshold = convertNumber<double>(query.minPrimalBound())
         + objectiveNormalization * _implementation->_normalizedPointEpsilon;
     }
     else
@@ -920,9 +920,9 @@ namespace ipo
     // Add best points as longs as they have sufficiently positive product.
 
     double threshold;
-    if (query.hasMinPrimalBound)
+    if (query.hasMinPrimalBound())
     {
-      threshold = convertNumber<double>(query.minPrimalBound)
+      threshold = convertNumber<double>(query.minPrimalBound())
         + objectiveNormalization * _implementation->_normalizedPointEpsilon;
     }
     else

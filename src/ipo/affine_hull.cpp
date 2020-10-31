@@ -768,9 +768,7 @@ namespace ipo
       // (normalized) constraints.
 
       kernelVectorValue = kernelVector * *resultPoints.front();
-      oracleQuery.hasMinPrimalBound = true;
-      oracleQuery.minPrimalBound = kernelVectorValue
-        + epsilonConstraints * kernelVectorNorm;
+      oracleQuery.setMinPrimalBound(kernelVectorValue + epsilonConstraints * kernelVectorNorm);
       // TODO: We actually desire a much bigger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << kernelVectorValue << "."
@@ -947,9 +945,9 @@ namespace ipo
       // Check if some vector has a different objective value.
       for (const auto& point : oracleResponse.points)
       {
-        assert(oracleQuery.hasMinPrimalBound);
+        assert(oracleQuery.hasMinPrimalBound());
         double difference = fabs(convertNumber<double, T>(
-          point.objectiveValue - oracleQuery.minPrimalBound));
+          point.objectiveValue - oracleQuery.minPrimalBound()));
         difference /= kernelVectorNorm;
         if (difference > 2 * epsilonConstraints)
         {
@@ -1012,9 +1010,7 @@ namespace ipo
     typename P::OptimizationOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
-      oracleQuery.hasMinPrimalBound = true;
-      oracleQuery.minPrimalBound = -kernelVectorValue
-        + epsilonConstraints * kernelVectorNorm;
+      oracleQuery.setMinPrimalBound(-kernelVectorValue + epsilonConstraints * kernelVectorNorm);
       // TODO: We actually desire a much larger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << -kernelVectorValue << "."
@@ -1079,7 +1075,7 @@ namespace ipo
 
       const auto& bestPoint = oracleResponse.points.front();
       double difference = fabs(convertNumber<double, T>(
-        bestPoint.objectiveValue - oracleQuery.minPrimalBound));
+        bestPoint.objectiveValue - oracleQuery.minPrimalBound()));
       difference /= kernelVectorNorm;
       if (difference <= epsilonConstraints)
         return INTERNAL_NONE;

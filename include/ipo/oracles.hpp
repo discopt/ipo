@@ -83,38 +83,93 @@ namespace ipo
   template <typename R>
   struct CommonOptimizationQuery
   {
+  public:
+    /// Maximum number of solutions to return.
+    std::size_t maxNumSolutions;
+    /// Time limit for this oracle call.
+    double timeLimit;
+  protected:
     /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
-    bool hasMinPrimalBound;
+    bool _hasMinPrimalBound;
     /**
       * \brief Threshold for primal bound allowing the oracle to terminate.
       *
       * The oracle shall terminate if the primal bound is greater than or equal to this value.
       */
-    R minPrimalBound;
+    R _minPrimalBound;
     /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
-    bool hasMaxDualBound;
+    bool _hasMaxDualBound;
     /**
      * \brief Threshold for dual bound allowing the oracle to terminate.
      * 
      * The oracle shall terminate if the dual bound is less than or equal to this value.
      */
-    R maxDualBound;
-    /// Maximum number of solutions to return.
-    std::size_t maxNumSolutions;
-    /// Time limit for this oracle call.
-    double timeLimit;
+    R _maxDualBound;
 
+  public:
     /**
       * \brief Constructs the query structure.
       */
 
     IPO_EXPORT
     CommonOptimizationQuery()
-      : hasMinPrimalBound(false), minPrimalBound(0), hasMaxDualBound(false), maxDualBound(0),
-      maxNumSolutions(std::numeric_limits<std::size_t>::max()),
-      timeLimit(std::numeric_limits<double>::infinity())
+      : maxNumSolutions(std::numeric_limits<std::size_t>::max()),
+      timeLimit(std::numeric_limits<double>::infinity()), _hasMinPrimalBound(false),
+      _minPrimalBound(0), _hasMaxDualBound(false), _maxDualBound(0)
     {
 
+    }
+
+    IPO_EXPORT
+    bool hasMinPrimalBound() const
+    {
+      return _hasMinPrimalBound;
+    }
+
+    IPO_EXPORT
+    const R& minPrimalBound() const
+    {
+      assert(_hasMinPrimalBound);
+      return _minPrimalBound;
+    }
+
+    IPO_EXPORT
+    void setMinPrimalBound(const R& minPrimalBound)
+    {
+      _hasMinPrimalBound = true;
+      _minPrimalBound = minPrimalBound;
+    }
+
+    IPO_EXPORT
+    void removeMinPrimalBound()
+    {
+      _hasMinPrimalBound = false;
+    }
+
+    IPO_EXPORT
+    bool hasMaxDualBound() const
+    {
+      return _hasMaxDualBound;
+    }
+
+    IPO_EXPORT
+    const R& maxDualBound() const
+    {
+      assert(_hasMaxDualBound);
+      return _maxDualBound;
+    }
+
+    IPO_EXPORT
+    void setMaxDualBound(const R& maxDualBound)
+    {
+      _hasMaxDualBound = true;
+      _maxDualBound = maxDualBound;
+    }
+
+    IPO_EXPORT
+    void removeMaxDualBound()
+    {
+      _hasMaxDualBound = false;
     }
   };
 
