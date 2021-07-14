@@ -244,7 +244,9 @@ int main(int argc, char** argv)
   spx.setIntParam(SoPlex::VERBOSITY, SoPlex::VERBOSITY_ERROR);
 
   std::shared_ptr<MixedIntegerLinearSet> mis = scipOracle->mixedIntegerLinearSet();
-  DVectorRational denseOriginalObjective(projectionOracle->projection().imageSpace().dimension());
+//   std::cout << projectionOracle->name() << std::endl;
+//   std::cout << projectionOracle->imageSpace(). << std::endl;
+  DVectorRational denseOriginalObjective(projectionRegex.empty() ? oracle->space().dimension() :  projectionOracle->projection().imageSpace().dimension());
   if (projectionRegex.empty())
   {
     vectorToDense(originalObjective, denseOriginalObjective);
@@ -338,7 +340,7 @@ int main(int argc, char** argv)
         spx.getPrimalRational(solution);
         ipo::Vector point = denseToVector(solution, false);
         oracle->space().printVector(std::cout, point);
-        std::cout << "\n";
+        std::cout << " with value " << spx.objValueRational() << " = " << spx.objValueReal() << "\n";
         InnerDescription certificate;
         LinearConstraint constraint;
         if (separatePoint(oracle, point, inner, facetSeparationHandlers, constraint, &certificate))
