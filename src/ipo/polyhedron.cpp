@@ -118,8 +118,8 @@ namespace ipo
         std::cout << "    Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful.\n   ";
-        if (query.hasMinObjectiveValue)
-          std::cout << " queried points better than " << query.minObjectiveValue << ";";
+        if (query.hasMinPrimalBound())
+          std::cout << " queried points better than " << query.minPrimalBound() << ";";
         std::cout << " response is " << response << ".\n" << std::flush;
 #endif /* IPO_DEBUG_POLYHEDRON_PRINT */
 

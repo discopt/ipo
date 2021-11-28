@@ -228,6 +228,12 @@ namespace ipo
 
 
   protected:
+    struct BoundLimits
+    {
+      double minPrimalBound;
+      double maxDualBound;
+    };
+    
     /// Actual SCIP instance.
     SCIP* _scip;
     /// Maps coordinates to SCIP variables.
@@ -239,6 +245,7 @@ namespace ipo
     std::shared_ptr<Space> _space;
     Constraint<double>* _currentFace;
     std::unordered_map<Constraint<double>*, SCIP_CONS*> _faceConstraints;
+    BoundLimits _boundLimits;
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
     RationalMIPExtender* _extender;

@@ -38,6 +38,72 @@
 
 static const int SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY = 1000;
 
+#define EVENTHDLR_NAME "boundchange"
+#define EVENTHDLR_DESC "event handler for primal or dual bound change"
+
+extern "C"
+{
+  struct SCIP_EventhdlrData
+  {
+    double minPrimalBound;
+    double maxDualBound;
+  };
+  
+  /** copy method for event handler plugins (called when SCIP copies plugins) */
+  static SCIP_DECL_EVENTCOPY(eventCopyGlobalBoundChange) 
+  {
+    return SCIP_OKAY;
+  }
+
+  /** initialization method of event handler (called after problem was transformed) */
+  static SCIP_DECL_EVENTINIT(eventInitGlobalBoundChange)
+  {
+    assert(scip != NULL);
+    assert(eventhdlr != NULL);
+    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+    /* notify SCIP that your event handler wants to react on the event type best solution found */
+    SCIP_CALL( SCIPcatchEvent( scip,
+      SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr,
+      NULL, NULL) );
+
+    return SCIP_OKAY;
+  }
+
+  /** deinitialization method of event handler (called before transformed problem is freed) */
+  static SCIP_DECL_EVENTEXIT(eventExitGlobalBoundChange)
+  {
+    assert(scip != NULL);
+    assert(eventhdlr != NULL);
+    assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
+
+    /* notify SCIP that your event handler wants to drop the event type best solution found */
+    SCIP_CALL( SCIPdropEvent( scip,
+      SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr,
+      NULL, -1) );
+
+    return SCIP_OKAY;
+  }
+
+  /** execution method of event handler */
+  static SCIP_DECL_EVENTEXEC(eventExecGlobalBoundChange)
+  {
+    assert(scip);
+
+    SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
+    if ((eventhdlrdata->minPrimalBound > -std::numeric_limits<double>::infinity()
+      && SCIPgetPrimalbound(scip) >= eventhdlrdata->minPrimalBound)
+      || (eventhdlrdata->maxDualBound < std::numeric_limits<double>::infinity()
+      && SCIPgetDualbound(scip) <= eventhdlrdata->maxDualBound))
+    {
+      SCIP_CALL( SCIPsetLongintParam(scip, "limits/totalnodes", SCIPgetNTotalNodes(scip)) );
+    }
+
+    return SCIP_OKAY;
+  }
+
+}
+
 namespace ipo
 {
   /**
@@ -363,7 +429,15 @@ namespace ipo
     Visitor visitor = { _extender };
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+    
+    SCIP_EVENTHDLR* eventhdlr = NULL;
+    SCIP_CALL_EXC( SCIPincludeEventhdlrBasic(_scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
+      eventExecGlobalBoundChange, (SCIP_EVENTHDLRDATA*)(&_boundLimits)) );
+    assert(eventhdlr != NULL);
 
+    SCIP_CALL_EXC( SCIPsetEventhdlrCopy(_scip, eventhdlr, eventCopyGlobalBoundChange) );
+    SCIP_CALL_EXC( SCIPsetEventhdlrInit(_scip, eventhdlr, eventInitGlobalBoundChange) );
+    SCIP_CALL_EXC( SCIPsetEventhdlrExit(_scip, eventhdlr, eventExitGlobalBoundChange) );
   }
 
   SCIPSolver::~SCIPSolver()
@@ -513,13 +587,12 @@ namespace ipo
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
     _solver->selectFace(&_face);
 
+    SCIP_CALL_EXC( SCIPsetLongintParam(_solver->_scip, "limits/totalnodes", -1L) );
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
       query.timeLimit == std::numeric_limits<double>::infinity() ? SCIPinfinity(_solver->_scip)
       : query.timeLimit) );
 
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", query.maxNumSolutions) );
-    SCIP_CALL_EXC( SCIPsetObjlimit(_solver->_scip,
-      query.hasMinPrimalBound() ? query.minPrimalBound() : -SCIPinfinity(_solver->_scip)) );
 
     std::size_t n = space()->dimension();
 
@@ -541,6 +614,22 @@ namespace ipo
       SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i],
         objectiveVector[i] * scalingFactor) );
     }
+
+    // Bound limits.
+
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
+    if (query.hasMinPrimalBound())
+      std::cout << "minPrimalBound = " << query.minPrimalBound() << std::endl;
+    if (query.hasMaxDualBound())
+      std::cout << "maxDualBound = " << query.maxDualBound() << std::endl;
+#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
+
+    _solver->_boundLimits.minPrimalBound = query.hasMinPrimalBound()
+      ? query.minPrimalBound() * scalingFactor : -std::numeric_limits<double>::infinity();
+    _solver->_boundLimits.maxDualBound = query.hasMaxDualBound()
+      ? query.maxDualBound() * scalingFactor : std::numeric_limits<double>::infinity();
+
+    // Save presolve settings.
 
     int oldMaxRounds;
     SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "presolving/maxrounds", &oldMaxRounds) );
@@ -566,8 +655,9 @@ namespace ipo
       solutionTime += SCIPgetTotalTime(_solver->_scip);
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-      std::cout << "SCIP returned with return code " << retcode << " and status "
-        << SCIPgetStatus(_solver->_scip) << "." << std::endl;
+      std::cout << "SCIP returned with return code " << retcode << ", status "
+        << SCIPgetStatus(_solver->_scip) << ", primal bound " << SCIPgetPrimalbound(_solver->_scip)
+        << " and dual bound " << SCIPgetDualbound(_solver->_scip) << "." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
       bool hasRay = SCIPhasPrimalRay(_solver->_scip);
@@ -600,10 +690,6 @@ namespace ipo
         SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
         for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
         {
-#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-          std::cout << "Solution " << solIndex << std::flush;
-#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
-
           SCIP_SOL* sol = solutions[solIndex];
           auto vector = std::make_shared<sparse_vector<double>>();
           for (std::size_t i = 0; i < n; ++i)
@@ -612,21 +698,8 @@ namespace ipo
             if (!SCIPisZero(_solver->_scip, x))
               vector->push_back(i, x);
           }
-          double objectiveValue = objectiveVector * *vector;
-          if (!query.hasMinPrimalBound() || objectiveValue > query.minPrimalBound())
-          {
-#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-            std::cout << " of value " << objectiveValue << " is accepted." << std::endl;
-#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
-            response.points.push_back(RealOptimizationOracle::Response::Point(vector,
-              objectiveValue));
-          }
-          else
-          {
-#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-            std::cout << " of value " << objectiveValue << " is rejected." << std::endl;
-#endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
-          }
+          response.points.push_back(RealOptimizationOracle::Response::Point(vector,
+            objectiveVector * *vector));
         }
         if (status == SCIP_STATUS_TIMELIMIT)
           response.hitTimeLimit = true;
@@ -642,8 +715,7 @@ namespace ipo
       else if (status == SCIP_STATUS_INFEASIBLE)
       {
         assert(numSolutions == 0);
-        response.outcome = query.hasMinPrimalBound() ? OptimizationOutcome::FEASIBLE
-          : OptimizationOutcome::INFEASIBLE;
+        response.outcome = OptimizationOutcome::INFEASIBLE;
         break;
       }
       else if (status == SCIP_STATUS_UNBOUNDED)
@@ -688,8 +760,10 @@ namespace ipo
 
       // Adapt time limit.
 
+#if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "Time limit is " << query.timeLimit << "." << std::endl;
       std::cout << "SCIP used " << solutionTime << "s already." << std::endl;
+#endif
       if (query.timeLimit < std::numeric_limits<double>::infinity())
       {
         SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
@@ -708,18 +782,21 @@ namespace ipo
     if (!response.rays.empty() && response.points.empty())
     {
       response.primalBound = std::numeric_limits<double>::infinity();
-      if (!query.hasMinPrimalBound())
-      {
-        // We have to check feasibility.
-        
-        for (std::size_t i = 0; i < n; ++i)
-          SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
+
+      // We have to check feasibility.
+
+      for (std::size_t i = 0; i < n; ++i)
+        SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
+
+      // Remove limits on primal and dual bounds.
+      _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
+      _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
-        std::cout << "Solving feasibility problem." << std::endl;
+      std::cout << "Solving feasibility problem." << std::endl;
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
-        SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
+      SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
 
 #if defined(IPO_DEBUG_ORACLES_SCIP_PRINT)
       std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
@@ -728,30 +805,29 @@ namespace ipo
       fflush(stdout);
 #endif /* IPO_DEBUG_ORACLES_SCIP_PRINT */
 
-        if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
+      if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
+      {
+        SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
+        auto vector = std::make_shared<sparse_vector<double>>();
+        double objectiveValue = 0.0;
+        for (std::size_t i = 0; i < n; ++i)
         {
-          SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
-          auto vector = std::make_shared<sparse_vector<double>>();
-          double objectiveValue = 0.0;
-          for (std::size_t i = 0; i < n; ++i)
+          double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+          if (!SCIPisZero(_solver->_scip, x))
           {
-            double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-            if (!SCIPisZero(_solver->_scip, x))
-            {
-              vector->push_back(i, x);
-              objectiveValue =+ objectiveVector[i] * x;
-            }
+            vector->push_back(i, x);
+            objectiveValue =+ objectiveVector[i] * x;
           }
-          response.points.push_back(RealOptimizationOracle::Response::Point(vector, objectiveValue)); 
         }
-        else
-        {
-          response.rays.clear();
-          response.primalBound = -std::numeric_limits<double>::infinity();
-        }
-        SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
-        SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+        response.points.push_back(RealOptimizationOracle::Response::Point(vector, objectiveValue)); 
       }
+      else
+      {
+        response.rays.clear();
+        response.primalBound = -std::numeric_limits<double>::infinity();
+      }
+      SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+      SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
     }
 
 #if !defined(NDEBUG)

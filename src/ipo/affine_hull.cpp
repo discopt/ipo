@@ -1,7 +1,7 @@
 #include <ipo/affine_hull.hpp>
 
 // #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
+// // #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #include <ipo/arithmetic.hpp>
 
@@ -772,8 +772,7 @@ namespace ipo
       // TODO: We actually desire a much bigger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << kernelVectorValue << "."
-        << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
-        << oracleQuery.desiredObjectiveValue << "." << std::endl;
+        << " Requiring " << oracleQuery.minPrimalBound() << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
     }
     if (timeLimit <= 0)
@@ -889,7 +888,7 @@ namespace ipo
       ensureValidity(kernelVectors, *bestPoint.vector, T(1), query.epsilonInvalidate, affineComplement, resultPoints);
 
       // If another point has a different objective value, we also add that and continue.
-      for (std::size_t p = 2; p < oracleResponse.points.size(); ++p)
+      for (std::size_t p = oracleResponse.points.size() - 1; p > 0; --p)
       {
         const auto& otherPoint = oracleResponse.points[p];
         double difference = fabs(convertNumber<double, T>(otherPoint.objectiveValue
@@ -899,6 +898,7 @@ namespace ipo
           << difference << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
         difference /= kernelVectorNorm;
+        // TODO: In fact we desire a much larger difference.
         if (difference > 2 * epsilonConstraints)
         {
           resultPoints.push_back(otherPoint.vector);
@@ -947,8 +947,9 @@ namespace ipo
       {
         assert(oracleQuery.hasMinPrimalBound());
         double difference = fabs(convertNumber<double, T>(
-          point.objectiveValue - oracleQuery.minPrimalBound()));
+          point.objectiveValue - kernelVectorValue));
         difference /= kernelVectorNorm;
+        // TODO: In fact we desire a larger difference.
         if (difference > 2 * epsilonConstraints)
         {
           resultPoints.push_back(point.vector);
@@ -1014,8 +1015,7 @@ namespace ipo
       // TODO: We actually desire a much larger value.
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
       std::cout << "    Common objective of previous points is " << -kernelVectorValue << "."
-        << " Requiring " << oracleQuery.minObjectiveValue << " and desiring "
-        << oracleQuery.desiredObjectiveValue << "." << std::endl;
+        << " Requiring " << oracleQuery.minPrimalBound() << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     }
@@ -1075,7 +1075,7 @@ namespace ipo
 
       const auto& bestPoint = oracleResponse.points.front();
       double difference = fabs(convertNumber<double, T>(
-        bestPoint.objectiveValue - oracleQuery.minPrimalBound()));
+        bestPoint.objectiveValue - -kernelVectorValue));
       difference /= kernelVectorNorm;
       if (difference <= epsilonConstraints)
         return INTERNAL_NONE;
