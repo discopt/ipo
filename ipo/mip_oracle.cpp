@@ -477,8 +477,8 @@ namespace ipo {
 
   void MIPOracleBase::restoreSolver()
   {
-      if (currentFace().definesCompleteFace())
-         _correctionLP->removeConstraint(_currentFaceConstraint);
+    if (!currentFace().definesCompleteFace())
+      _correctionLP->removeConstraint(_currentFaceConstraint);
 
     // Remove all added rows.
 
@@ -500,7 +500,7 @@ namespace ipo {
 //        << _mixedIntegerLinearSet->upperBound(v) << " (" << (_mixedIntegerLinearSet->isIntegral(v) ? "integral" : "continuous") << ". value = " << approxPoint[v] << std::endl;
       if (_mixedIntegerLinearSet->isIntegral(v))
       {
-        Rational value = Rational(int(approxPoint[v] + 0.5));
+        Rational value = Rational(round(approxPoint[v]));
         _correctionLP->changeBounds(v, value, value);
         integralObjective += _correctionLP->getObjective(v) * value;
       }
@@ -518,7 +518,7 @@ namespace ipo {
       VectorData* data =  new VectorData(n);
       for (std::size_t v = 0; v < n; ++v)
       {
-        Rational value = Rational(int(approxPoint[v] + 0.5));
+        Rational value = Rational(round(approxPoint[v]));
         if (value == 0)
           continue;
         data->add(v, value);

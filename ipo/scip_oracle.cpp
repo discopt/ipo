@@ -133,7 +133,7 @@ namespace ipo {
     SCIP_HASHMAP* hashMap = NULL;
     SCIP_CALL_EXC(SCIPhashmapCreate(&hashMap, SCIPblkmem(originalSCIP), n));
     SCIP_CALL_EXC(SCIPcreate(&_scip));
-    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, TRUE, &validSCIP));
+    SCIP_CALL_EXC(SCIPcopy(originalSCIP, _scip, hashMap, NULL, "-oracle", TRUE, FALSE, TRUE, TRUE, &validSCIP));
     if (!validSCIP)
       throw std::runtime_error("SCIPcopy failed while constructing oracle!");
     SCIP_CALL_EXC(SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE));

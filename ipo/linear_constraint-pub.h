@@ -144,7 +144,7 @@ namespace ipo {
     inline bool definesCompleteFace() const
     {
       if (_type == '=')
-        return false;
+        return _normal.size() == 0 && _rhs == 0;
       else if (_type == '<')
         return _normal.size() == 0 && _rhs >= 0;
       else
