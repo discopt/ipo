@@ -1,6 +1,6 @@
-#include <ipo/oracles_mip.hpp>
+// #define IPO_DEBUG // Uncomment to debug this file.
 
-// #define IPO_DEBUG_ORACLES_MIP // Uncomment to debug this file.
+#include <ipo/oracles_mip.hpp>
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
@@ -233,10 +233,10 @@ namespace ipo
     RealOptimizationOracle::Response approximateResponse = approximateOracle->maximize(
       &approximateObjectiveVector[0], approximateQuery);
 
-#if defined(IPO_DEBUG_ORACLES_MIP)
+#if defined(IPO_DEBUG)
     std::cout << "RationalMIPExtender::maximize. Approx. response: " << approximateResponse
       << std::endl;
-#endif /* IPO_DEBUG_ORACLES_MIP */
+#endif /* IPO_DEBUG */
 
     RationalOptimizationOracle::Response response;
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
@@ -251,7 +251,10 @@ namespace ipo
     }
 
     if (approximateResponse.outcome == OptimizationOutcome::INFEASIBLE)
+    {
+      response.hasPrimalBound = false;
       response.outcome = OptimizationOutcome::INFEASIBLE;
+    }
     else if (approximateResponse.outcome == OptimizationOutcome::UNBOUNDED)
     {
       prepareRay();
@@ -272,6 +275,7 @@ namespace ipo
       }
 
       // Also convert all points but without objective function.
+      response.hasPrimalBound = false;
       if (!approximateResponse.points.empty())
       {
         setZeroObjective();
@@ -298,7 +302,7 @@ namespace ipo
       assert(response.rays.empty());
 
       response.outcome = approximateResponse.outcome;
-      response.primalBound = query.minPrimalBound(); // TODO: does this make sense?
+      response.hasPrimalBound = false;
       for (const auto& point : approximateResponse.points)
       {
         preparePoint(point);
@@ -310,8 +314,12 @@ namespace ipo
           const mpq_class& value = response.points.back().objectiveValue;
           if (response.hasDualBound && value > response.dualBound)
             response.dualBound = value;
-          if (response.outcome == OptimizationOutcome::FEASIBLE && value > response.primalBound)
+          if (response.outcome == OptimizationOutcome::FEASIBLE
+            && (!response.hasPrimalBound || value > response.primalBound))
+          {
+            response.hasPrimalBound = true;
             response.primalBound = value;
+          }
         }
         else if (status == soplex::SPxSolver::UNBOUNDED)
         {
@@ -320,7 +328,6 @@ namespace ipo
 
           extractRay(response);
           response.outcome = OptimizationOutcome::UNBOUNDED;
-          response.primalBound = 0;
         }
         else if (status != soplex::SPxSolver::INFEASIBLE)
         {
@@ -332,16 +339,16 @@ namespace ipo
       }
 
       if (response.outcome == OptimizationOutcome::FEASIBLE
-        && approximateResponse.outcome == OptimizationOutcome::FEASIBLE
-        && approximateResponse.primalBound == approximateQuery.minPrimalBound())
+        && approximateResponse.outcome == OptimizationOutcome::FEASIBLE && !response.hasPrimalBound
+        && approximateQuery.hasMinPrimalBound() && approximateResponse.primalBound == approximateQuery.minPrimalBound())
       {
         response.primalBound = query.minPrimalBound();
       }
     }
 
-#if defined(IPO_DEBUG_ORACLES_MIP)
+#if defined(IPO_DEBUG)
     std::cout << "RationalMIPExtender::maximize. Exact response: " << response << std::endl;
-#endif /* IPO_DEBUG_ORACLES_MIP */
+#endif /* IPO_DEBUG */
 
     return response;
   }

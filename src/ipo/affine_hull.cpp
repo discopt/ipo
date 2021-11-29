@@ -718,7 +718,6 @@ namespace ipo
       {
         oldVector = *kv.vector;
         affineComplement.computeKernelVector(kv.column, newVector, debugKernelRhs, epsilon);
-        
       }
       kv.ensureValidity(solution, pointFactor, epsilon);
 

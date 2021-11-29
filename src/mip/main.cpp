@@ -11,15 +11,60 @@ int printUsage(const std::string& program)
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   std::cout << " --gmp|-g          Use exact arithmetic (GMP).\n";
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+  std::cout << " --time|-t TILIM   Abort computations after TILIM seconds.\n";
   std::cout << " --print-equations Print equations.\n";
-  std::cout << " --affinehull ALGO Algorithm used for rational polyhedra. Choices are:\n";
-  std::cout << "                   direct Apply the algorithm in exact arithmetic.\n";
-  std::cout << "                   verify Apply the algorithm in floating-point algorithm and finally verify.\n";
-  std::cout << "                   mixed  Apply the algorithm in exact arithmetic with floating-point decision support.\n";
+//   std::cout << " --affinehull ALGO Algorithm used for rational polyhedra. Choices are:\n";
+//   std::cout << "                   direct Apply the algorithm in exact arithmetic.\n";
+//   std::cout << "                   verify Apply the algorithm in floating-point algorithm and finally verify.\n";
+//   std::cout << "                   mixed  Apply the algorithm in exact arithmetic with floating-point decision support.\n";
   std::cout << " --help|-h         Show this help and exit.\n";
   std::cout << std::flush;
+
   return EXIT_FAILURE;
 }
+
+template <typename Number, typename Polyhedron, typename OptimizationOracle, typename SeparationOracle>
+void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptimizationOracle> opt,
+  std::shared_ptr<SeparationOracle> sepa, bool gmp, double timeLimit, bool printEquations)
+{
+  auto poly = std::make_shared<Polyhedron>(opt);
+
+  // Extract known equations from a separation oracle.
+  std::vector<ipo::Constraint<Number>> knownEquations;
+  typename SeparationOracle::Query sepaQuery;
+  auto sepaResult = sepa->getInitial(sepaQuery);
+  for (const auto& constraint : sepaResult.constraints)
+  {
+    if (constraint.type() == ipo::ConstraintType::EQUATION)
+      knownEquations.push_back(constraint);
+  }
+
+  std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << ".\n" << std::flush;
+  ipo::AffineHullQuery affQuery;
+  affQuery.timeLimit = timeLimit;
+  auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
+  std::cout << "Ambient dimension: " << poly->space()->dimension() << "\n" << affResult << std::endl;
+  if (printEquations)
+  {
+    for (auto& equation : affResult.equations)
+    {
+      bool isKnown = false;
+      for (const auto& knownEquation : knownEquations)
+      {
+        if (knownEquation == equation)
+        {
+          isKnown = true;
+          break;
+        }
+      }
+      if (!isKnown)
+        scaleIntegral(equation);
+      std::cout << (isKnown ? "Known " : "New ") << "equation "
+        << poly->space()->printConstraint(equation, true) << std::endl;
+    }
+  }
+}
+
 
 int main(int argc, char** argv)
 {
@@ -38,10 +83,10 @@ int main(int argc, char** argv)
       return EXIT_SUCCESS;
     }
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    else if (arg == "-G" || arg == "-g" || arg == "--gmp")
+    else if (arg == "-g" || arg == "--gmp")
       gmp = true;
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
-    else if ((arg == "-T" || arg == "-t" || arg == "--time") && a+1 < argc)
+    else if ((arg == "-t" || arg == "--time") && a+1 < argc)
     {
       std::stringstream ss(argv[a+1]);
       ss >> timeLimit;
@@ -63,85 +108,14 @@ int main(int argc, char** argv)
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   if (gmp)
   {
-    auto opt = scip->getOptimizationOracleRational();
-    auto poly = std::make_shared<ipo::RationalPolyhedron>(opt);
-
-    // Extract known equations from a separation oracle.
-    std::vector<ipo::Constraint<mpq_class>> knownEquations;
-    ipo::RationalSeparationOracle::Query sepaQuery;
-    auto sepaResult = scip->getSeparationOracleRational()->getInitial(sepaQuery);
-    for (const auto& constraint : sepaResult.constraints)
-    {
-      if (constraint.type() == ipo::ConstraintType::EQUATION)
-        knownEquations.push_back(constraint);
-    }
-
-    std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery;
-    affQuery.timeLimit = timeLimit;
-    auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
-    std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
-    if (printEquations)
-    {
-      for (auto& equation : affResult.equations)
-      {
-        bool isKnown = false;
-        for (const auto& knownEquation : knownEquations)
-        {
-          if (knownEquation == equation)
-          {
-            isKnown = true;
-            break;
-          }
-        }
-        if (!isKnown)
-          scaleIntegral(equation);
-        std::cout << (isKnown ? "Known " : "New ") << "equation "
-          << poly->space()->printConstraint(equation, true) << std::endl;
-      }
-    }
+    run<mpq_class, ipo::RationalPolyhedron>(scip, scip->getOptimizationOracleRational(),
+      scip->getSeparationOracleRational(), true, timeLimit, printEquations);
   }
   else
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
-    auto opt = scip->getOptimizationOracleDouble();
-    auto poly = std::make_shared<ipo::RealPolyhedron>(opt);
-
-    // Extract known equations from a separation oracle.
-    std::vector<ipo::Constraint<double>> knownEquations;
-    ipo::RealSeparationOracle::Query sepaQuery;
-    auto sepaResult = scip->getSeparationOracleDouble()->getInitial(sepaQuery);
-    for (const auto& constraint : sepaResult.constraints)
-    {
-      if (constraint.type() == ipo::ConstraintType::EQUATION)
-        knownEquations.push_back(constraint);
-    }
-
-    std::cout << "Starting affine hull computation in dimension " << poly->space()->dimension() << std::endl;
-    ipo::AffineHullQuery affQuery;
-    affQuery.timeLimit = timeLimit;
-    auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
-    std::cout << affResult << "\nAmbient dimension: " << poly->space()->dimension() << std::endl;
-    ipo::verifyAffineHullResult(poly, affResult);
-    if (printEquations)
-    {
-      for (auto& equation : affResult.equations)
-      {
-        bool isKnown = false;
-        for (const auto& knownEquation : knownEquations)
-        {
-          if (knownEquation == equation)
-          {
-            isKnown = true;
-            break;
-          }
-        }
-        if (!isKnown)
-          scaleIntegral(equation);
-        std::cout << (isKnown ? "Known " : "New ") << "equation "
-          << poly->space()->printConstraint(equation, true) << std::endl;
-      }
-    }
+    run<double, ipo::RealPolyhedron>(scip, scip->getOptimizationOracleDouble(), scip->getSeparationOracleDouble(),
+      false, timeLimit, printEquations);
   }
  
 

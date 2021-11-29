@@ -113,7 +113,7 @@ namespace ipo
   class RationalPolyhedron: public std::enable_shared_from_this<RationalPolyhedron>
   {
   public:
-    typedef double Number;
+    typedef mpq_class Number;
     typedef RationalOptimizationOracle OptimizationOracle;
     typedef RationalSeparationOracle SeparationOracle;
 

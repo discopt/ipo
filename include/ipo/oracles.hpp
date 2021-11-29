@@ -290,6 +290,8 @@ namespace ipo
 
     /// Outcome of query.
     OptimizationOutcome outcome;
+    /// Whether we know a finite lower bound.
+    bool hasPrimalBound;
     /// Best-known lower bound on the optimum.
     R primalBound;
     /// Whether we know a finite upper bound.
@@ -309,7 +311,7 @@ namespace ipo
 
     IPO_EXPORT
     CommonOptimizationReponse()
-      : outcome(OptimizationOutcome::FOUND_NOTHING), primalBound(0), hasDualBound(false),
+      : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
       dualBound(0), hitTimeLimit(false)
     {
 
@@ -321,9 +323,9 @@ namespace ipo
 
     IPO_EXPORT
     CommonOptimizationReponse(CommonOptimizationReponse&& other)
-      : outcome(other.outcome), primalBound(std::move(other.primalBound)),
-      hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)),
-      points(std::move(other.points)), rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
+      : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
+      hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
+      rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
     {
 
     }
@@ -336,6 +338,7 @@ namespace ipo
     inline CommonOptimizationReponse<R>& operator=(CommonOptimizationReponse<R>&& other)
     {
       outcome = other.outcome;
+      hasPrimalBound = other.hasPrimalBound;
       primalBound = std::move(other.primalBound);
       hasDualBound = other.hasDualBound;
       dualBound = std::move(other.dualBound);
@@ -353,6 +356,7 @@ namespace ipo
     inline CommonOptimizationReponse<R>& operator=(const CommonOptimizationReponse<R>& other)
     {
       outcome = other.outcome;
+      hasPrimalBound = other.hasPrimalBound;
       primalBound = other.primalBound;
       hasDualBound = other.hasDualBound;
       dualBound = other.dualBound;

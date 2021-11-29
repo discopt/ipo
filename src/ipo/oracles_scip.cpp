@@ -1,4 +1,4 @@
-#define IPO_DEBUG // Uncomment to print activity.
+// #define IPO_DEBUG // Uncomment to debug this file.
 
 #include <ipo/oracles_scip.hpp>
 

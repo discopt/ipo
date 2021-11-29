@@ -1,6 +1,6 @@
-#include <ipo/polyhedron.hpp>
+// #define IPO_DEBUG // Uncomment to debug this file.
 
-// #define IPO_DEBUG_POLYHEDRON_PRINT // Uncomment to debug activity.
+#include <ipo/polyhedron.hpp>
 
 #include <map>
 #include <deque>
@@ -89,6 +89,12 @@ namespace ipo
     }
 
     IPO_EXPORT
+    ~PolyhedronImplementation()
+    {
+      delete[] _hashVector;
+    }
+
+    IPO_EXPORT
     typename OptOracle::Response maximize(const R* objectiveVector,
       const typename OptOracle::Query& query)
     {
@@ -104,9 +110,9 @@ namespace ipo
 
         // Run current oracle.
 
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
         typename OptOracle::Response response = data.oracle->maximize(objectiveVector, query);
@@ -114,14 +120,14 @@ namespace ipo
 
         data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
 
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "    Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful.\n   ";
         if (query.hasMinPrimalBound())
           std::cout << " queried points better than " << query.minPrimalBound() << ";";
         std::cout << " response is " << response << ".\n" << std::flush;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
         // If the current oracle found a ray or a point, we stop.
         if (!response.wasSuccessful())
@@ -151,14 +157,14 @@ namespace ipo
 
         bestResponse = response;
 
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "    Did not find a solution of desired quality. Trying next oracle." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
       }
 
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "    Using last mentioned solution." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
       return bestResponse;
     }
@@ -182,9 +188,9 @@ namespace ipo
 
         // Run current oracle.
 
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted =
           std::chrono::system_clock::now();
@@ -192,11 +198,11 @@ namespace ipo
         double elapsed = std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
 
         data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
-#if defined (IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined (IPO_DEBUG)
         std::cout << "Oracle " << data.oracle->name() << " took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
         // If the current oracle found a ray or a point, we stop.
         if (!response.wasSuccessful())
@@ -393,10 +399,10 @@ namespace ipo
 
     void reduceCacheSize()
     {
-#if defined(IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined(IPO_DEBUG)
       std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size())
         << " of " << _maxCacheSize << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
     }
 
     struct QueryStatistics
@@ -502,11 +508,11 @@ namespace ipo
     RealOptimizationOracle::Response response;
     ++_queryCount;
 
-#if defined(IPO_DEBUG_POLYHEDRON_PRINT)
+#if defined(IPO_DEBUG)
     std::cout << "RealCacheOptimizationOracle::maximize() call #" << _queryCount
       << ", searching among " << _implementation->_pointProducts.size() << " points and "
       << _implementation->_rayProducts.size() << " rays." << std::endl;
-#endif /* IPO_DEBUG_POLYHEDRON_PRINT */
+#endif /* IPO_DEBUG */
 
     // Compute norm of objective vector.
     double objectiveNormalization = 0.0;
