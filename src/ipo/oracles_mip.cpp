@@ -226,7 +226,8 @@ namespace ipo
 
     RealOptimizationOracle::Query approximateQuery;
     approximateQuery.maxNumSolutions = query.maxNumSolutions;
-    approximateQuery.setMinPrimalBound(query.minPrimalBound().get_d());
+    if (query.hasMinPrimalBound())
+      approximateQuery.setMinPrimalBound(query.minPrimalBound().get_d());
     approximateQuery.timeLimit = query.timeLimit;
     
     RealOptimizationOracle::Response approximateResponse = approximateOracle->maximize(
