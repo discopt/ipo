@@ -63,6 +63,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptimizationOrac
         << poly->space()->printConstraint(equation, true) << std::endl;
     }
   }
+
+  
 }
 
 

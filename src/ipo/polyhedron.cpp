@@ -265,13 +265,30 @@ namespace ipo
       return _points.size() + _rays.size();
     }
 
-    std::pair<bool, std::shared_ptr<sparse_vector<double>>> getCachedSolution(
+    std::pair<bool, std::shared_ptr<sparse_vector<R>>> getCachedSolution(
       std::size_t index)
     {
       if (index < _rays.size())
-        return std::pair<bool, std::shared_ptr<sparse_vector<double>>>(false, _rays[index].vector);
-      return std::pair<bool, std::shared_ptr<sparse_vector<double>>>(true,
+        return std::pair<bool, std::shared_ptr<sparse_vector<R>>>(false, _rays[index].vector);
+      return std::pair<bool, std::shared_ptr<sparse_vector<R>>>(true,
         _points[index - _rays.size()].vector);
+    }
+    
+    typename SepaOracle::Response separate(const R* vector, bool isPoint, const typename SepaOracle::Query& query)
+    {
+      typename SepaOracle::Response response;
+
+      for (auto& sepa : _separation)
+      {
+        typename SepaOracle::Query currentQuery;
+        currentQuery.maxNumInequalities = query.maxNumInequalities - response.constraints.size();
+        auto currentResponse = sepa.oracle->separate(vector, isPoint, currentQuery);
+        response.constraints.insert(response.constraints.end(),
+          std::make_move_iterator(currentResponse.constraints.begin()),
+          std::make_move_iterator(currentResponse.constraints.end()));
+      }
+
+      return response;
     }
 
     struct CachedVector
@@ -400,8 +417,8 @@ namespace ipo
     void reduceCacheSize()
     {
 #if defined(IPO_DEBUG)
-      std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size())
-        << " of " << _maxCacheSize << std::endl;
+      std::cout << "We have to reduce the cache size. Currently " << (_points.size() + _rays.size()) << " of "
+        << _maxCacheSize << std::endl;
 #endif /* IPO_DEBUG */
     }
 
@@ -484,6 +501,7 @@ namespace ipo
     std::vector<CachedVector> _rays;
     std::map<double, std::size_t> _hashToRayIndex;
     std::vector<ProductVector> _rayProducts;
+
     /**
      * \brief Square of Euclidean distance above which points/rays are considered as different.
      */
@@ -632,7 +650,8 @@ namespace ipo
   typedef PolyhedronImplementation<double, RealOptimizationOracle, RealSeparationOracle,
     RealCacheOptimizationOracle> RealPolyhedronImplementation;
 
-  RealPolyhedron::RealPolyhedron(std::shared_ptr<Space> space)
+  RealPolyhedron::RealPolyhedron(std::shared_ptr<Space> space, const std::string& name)
+    : RealOptimizationOracle(name), RealSeparationOracle(name)
   {
     _space = space;
     std::vector<std::shared_ptr<RealOptimizationOracle>> optOracles;
@@ -641,6 +660,8 @@ namespace ipo
   }
 
   RealPolyhedron::RealPolyhedron(std::shared_ptr<RealOptimizationOracle> optOracle)
+    : RealOptimizationOracle("Polyhedron for " + optOracle->name()),
+    RealSeparationOracle("Polyhedron for " + optOracle->name())
   {
     _space = optOracle->space();
     std::vector<std::shared_ptr<RealOptimizationOracle>> optOracles;
@@ -650,6 +671,8 @@ namespace ipo
   }
 
   RealPolyhedron::RealPolyhedron(std::shared_ptr<RealSeparationOracle> sepaOracle)
+    : RealOptimizationOracle("Polyhedron for " + sepaOracle->name()),
+    RealSeparationOracle("Polyhedron for " + sepaOracle->name())
   {
     _space = sepaOracle->space();
     std::vector<std::shared_ptr<RealOptimizationOracle>> optOracles;
@@ -666,8 +689,7 @@ namespace ipo
   RealOptimizationOracle::Response RealPolyhedron::maximize(
     const double* objectiveVector, const RealOptimizationOracle::Query& query)
   {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->maximize(
-      objectiveVector, query);
+    return static_cast<RealPolyhedronImplementation*>(_implementation)->maximize(objectiveVector, query);
   }
 
   bool RealPolyhedron::cachePoint(std::shared_ptr<sparse_vector<double>> point)
@@ -689,6 +711,12 @@ namespace ipo
     std::size_t index)
   {
     return static_cast<RealPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
+  }
+
+  RealSeparationOracle::Response RealPolyhedron::separate(const double* vector, bool isPoint,
+      const RealSeparationOracle::Query& query)
+  {
+    return static_cast<RealPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
   }
 
 #if defined(IPO_WITH_GMP)
@@ -995,15 +1023,13 @@ namespace ipo
   RationalOptimizationOracle::Response RationalPolyhedron::maximize(
     const mpq_class* objectiveVector, const RationalOptimizationOracle::Query& query)
   {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximize(
-      objectiveVector, query);
+    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximize(objectiveVector, query);
   }
 
   RationalOptimizationOracle::Response RationalPolyhedron::maximize(const double* objectiveVector,
     const RationalOptimizationOracle::Query& query)
   {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximizeDouble(
-      objectiveVector, query);
+    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximizeDouble(objectiveVector, query);
   }
 
   bool RationalPolyhedron::cachePoint(std::shared_ptr<sparse_vector<mpq_class>> point)
@@ -1014,6 +1040,22 @@ namespace ipo
   bool RationalPolyhedron::cacheRay(std::shared_ptr<sparse_vector<mpq_class>> ray)
   {
     return static_cast<RationalPolyhedronImplementation*>(_implementation)->cacheRay(ray);
+  }
+
+  std::size_t RationalPolyhedron::numCachedSolutions() const
+  {
+    return static_cast<RationalPolyhedronImplementation*>(_implementation)->numCachedSolutions();
+  }
+
+  std::pair<bool, std::shared_ptr<sparse_vector<mpq_class>>> RationalPolyhedron::getCachedSolution(std::size_t index)
+  {
+    return static_cast<RationalPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
+  }
+
+  RationalSeparationOracle::Response RationalPolyhedron::separate(const mpq_class* vector, bool isPoint,
+    const RationalSeparationOracle::Query& query)
+  {
+    return static_cast<RationalPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
   }
 
 #endif /* IPO_WITH_GMP */

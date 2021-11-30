@@ -20,9 +20,9 @@ namespace ipo
   public:
     /**
      * \brief Constructs an oracle with given \p name.
-     * 
+     *
      * The parent constructor must set CommonOracle::_space properly.
-     * 
+     *
      * \param name Name of the oracle.
      */
 
@@ -88,14 +88,15 @@ namespace ipo
     std::size_t maxNumSolutions;
     /// Time limit for this oracle call.
     double timeLimit;
+
   protected:
     /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
     bool _hasMinPrimalBound;
     /**
-      * \brief Threshold for primal bound allowing the oracle to terminate.
-      *
-      * The oracle shall terminate if the primal bound is greater than or equal to this value.
-      */
+     * \brief Threshold for primal bound allowing the oracle to terminate.
+     *
+     * The oracle shall terminate if the primal bound is greater than or equal to this value.
+     **/
     R _minPrimalBound;
     /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
     bool _hasMaxDualBound;
@@ -103,13 +104,13 @@ namespace ipo
      * \brief Threshold for dual bound allowing the oracle to terminate.
      * 
      * The oracle shall terminate if the dual bound is less than or equal to this value.
-     */
+     **/
     R _maxDualBound;
 
   public:
     /**
-      * \brief Constructs the query structure.
-      */
+     * \brief Constructs the query structure.
+     **/
 
     IPO_EXPORT
     CommonOptimizationQuery()
@@ -182,7 +183,7 @@ namespace ipo
   {
     /**
      * \brief Structure for a returned point.
-     */
+     **/
     
     struct Point
     {
@@ -197,7 +198,7 @@ namespace ipo
        * Constructs the point. Point::objectiveValue has to be set properly by the caller.
        * 
        * \param vec Shared pointer to the point.
-       */
+       **/
 
       IPO_EXPORT
       Point(std::shared_ptr<sparse_vector<R>> vec)
@@ -211,7 +212,7 @@ namespace ipo
        * 
        * \param vec Shared pointer to the point.
        * \param value Objective value of the point.
-       */
+       **/
 
       IPO_EXPORT
       Point(std::shared_ptr<sparse_vector<R>> vec, const R& value)
@@ -223,7 +224,7 @@ namespace ipo
       /**
        * \brief Comparison for points. Points with larger Point::objectiveValue are considered
        *        smaller.
-       */
+       **/
 
       IPO_EXPORT
       inline bool operator<(const Point& other) const
@@ -234,7 +235,7 @@ namespace ipo
 
     /**
      * \brief Structure for a returned unbounded ray.
-     */
+     **/
 
     struct Ray
     {
@@ -248,7 +249,7 @@ namespace ipo
        * Constructs the ray. Ray::_norm is computed.
        * 
        * \param vec Shared pointer to the ray.
-       */
+       **/
 
       IPO_EXPORT
       Ray(std::shared_ptr<sparse_vector<R>> vec)
@@ -264,7 +265,7 @@ namespace ipo
        * 
        * \param vec Shared pointer to the ray.
        * \param norm Euclidean norm of the ray.
-       */
+       **/
 
       IPO_EXPORT
       Ray(std::shared_ptr<sparse_vector<R>> vec, double norm)
@@ -275,7 +276,7 @@ namespace ipo
 
       /**
        * \brief Returns the Euclidean norm of the ray.
-       */
+       **/
 
       IPO_EXPORT
       inline double norm() const
@@ -306,8 +307,8 @@ namespace ipo
     bool hitTimeLimit;
 
     /**
-      * \brief Constructs the result structure.
-      */
+     * \brief Constructs the result structure.
+     **/
 
     IPO_EXPORT
     CommonOptimizationReponse()
@@ -318,8 +319,8 @@ namespace ipo
     }
 
     /**
-      * \brief Move-construcs the response.
-      */
+     * \brief Move-construcs the response.
+     **/
 
     IPO_EXPORT
     CommonOptimizationReponse(CommonOptimizationReponse&& other)
@@ -331,8 +332,8 @@ namespace ipo
     }
 
     /**
-      * \brief Move-assignment operator.
-      */
+     * \brief Move-assignment operator.
+     **/
 
     IPO_EXPORT
     inline CommonOptimizationReponse<R>& operator=(CommonOptimizationReponse<R>&& other)
@@ -439,7 +440,7 @@ namespace ipo
   };
 
   /**
-   *\brief Structure for storing the response of a separation oracle.
+   * \brief Structure for storing the response of a separation oracle.
    **/
 
   template <typename R>
@@ -451,8 +452,8 @@ namespace ipo
     bool hitTimeLimit;
 
     /**
-      * \brief Constructs the result structure.
-      */
+     * \brief Constructs the result structure.
+     **/
 
     IPO_EXPORT
     CommonSeparationResponse()
@@ -462,8 +463,8 @@ namespace ipo
     }
 
     /**
-      * \brief Move-constructs response.
-      */
+     * \brief Move-constructs response.
+     **/
 
     IPO_EXPORT
     CommonSeparationResponse(CommonSeparationResponse&& other)
@@ -473,8 +474,8 @@ namespace ipo
     }
 
     /**
-      * \brief Move-assignment operator.
-      */
+     * \brief Move-assignment operator.
+     */
 
     IPO_EXPORT
     inline CommonSeparationResponse& operator=(CommonSeparationResponse&& other)
@@ -485,8 +486,8 @@ namespace ipo
     }
 
     /**
-      * \brief Assignment operator.
-      */
+     * \brief Assignment operator.
+     */
 
     IPO_EXPORT
     inline CommonSeparationResponse& operator=(const CommonSeparationResponse& other)
