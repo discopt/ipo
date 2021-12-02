@@ -34,6 +34,13 @@ namespace ipo
      */
 
     IPO_EXPORT
+    Space(std::vector<std::string>&& variableNames);
+
+    /**
+     * \brief Constructs a space with given variable names.
+     */
+
+    IPO_EXPORT
     Space(const std::vector<std::string>& variableNames);
 
     /**

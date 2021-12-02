@@ -398,7 +398,7 @@ namespace ipo
     SCIP_CALL_EXC( SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE) );
 
     _name = SCIPgetProbName(_scip);
-    _space = std::make_shared<Space>(variableNames);
+    _space = std::make_shared<Space>(std::move(variableNames));
 
     std::vector<bool> integrality(n);
     std::vector<std::pair<double, double>> bounds(n);

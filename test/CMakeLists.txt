@@ -11,6 +11,7 @@ add_executable(ipo_gtest
   test_affine_complement.cpp
   test_lu.cpp
   test_main.cpp
+  test_oracles_forest.cpp
   test_redundancy.cpp
   test_space.cpp)
 

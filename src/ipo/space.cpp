@@ -10,6 +10,12 @@ namespace ipo
 
   }
 
+  Space::Space(std::vector<std::string>&& variableNames)
+    : _variableNames(std::move(variableNames))
+  {
+
+  }
+
   Space::Space(const std::vector<std::string>& variableNames)
     : _variableNames(variableNames)
   {
