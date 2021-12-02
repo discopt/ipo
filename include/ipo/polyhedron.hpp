@@ -11,12 +11,12 @@
 namespace ipo
 {
 
-  class RealPolyhedron: public std::enable_shared_from_this<RealPolyhedron>, RealOptimizationOracle,
+  class RealPolyhedron: public std::enable_shared_from_this<RealPolyhedron>, OptimizationOracle<double>,
     RealSeparationOracle
   {
   public:
     typedef double Number;
-    typedef RealOptimizationOracle OptimizationOracle;
+    typedef OptimizationOracle<double> OptOracle;
     typedef RealSeparationOracle SeparationOracle;
 
     /// Deleted default constructor.
@@ -35,7 +35,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealPolyhedron(std::shared_ptr<RealOptimizationOracle> optimizationOracle);
+    RealPolyhedron(std::shared_ptr<OptOracle> optimizationOracle);
 
     /**
      * \brief Creates the polyhedron defined by the \p separationOracle.
@@ -70,8 +70,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealOptimizationOracle::Response maximize(const double* objectiveVector,
-      const RealOptimizationOracle::Query& query);
+    OptOracle::Response maximize(const double* objectiveVector,
+      const OptOracle::Query& query);
 
     /**
      * \brief Adds given point to cache.
@@ -131,7 +131,7 @@ namespace ipo
   {
   public:
     typedef mpq_class Number;
-    typedef RationalOptimizationOracle OptimizationOracle;
+    typedef OptimizationOracle<mpq_class> OptOracle;
     typedef RationalSeparationOracle SeparationOracle;
 
     /// Deleted default constructor.
@@ -150,7 +150,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RationalPolyhedron(std::shared_ptr<RationalOptimizationOracle> optimizationOracle);
+    RationalPolyhedron(std::shared_ptr<OptOracle> optimizationOracle);
 
     /**
      * \brief Creates the polyhedron defined by the \p separationOracle.
@@ -185,8 +185,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RationalOptimizationOracle::Response maximize(const mpq_class* objectiveVector,
-      const RationalOptimizationOracle::Query& query);
+    OptOracle::Response maximize(const mpq_class* objectiveVector,
+      const OptOracle::Query& query);
 
     /**
      * \brief Maximize a floating-point objective vector.
@@ -197,8 +197,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RationalOptimizationOracle::Response maximize(const double* objectiveVector,
-      const RationalOptimizationOracle::Query& query);
+    OptOracle::Response maximize(const double* objectiveVector,
+      const OptOracle::Query& query);
 
     /**
      * \brief Adds given point to cache.

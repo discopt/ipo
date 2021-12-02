@@ -565,7 +565,7 @@ namespace ipo
     std::vector<std::shared_ptr<sparse_vector<T>>>& resultPoints, double timeLimit,
     double& timeOracles)
   {
-    typename P::OptimizationOracle::Query oracleQuery;
+    typename P::OptOracle::Query oracleQuery;
     for (std::size_t v = 0; v < polyhedron->space()->dimension(); ++v)
       objective[v] = 0;
     oracleQuery.timeLimit = timeLimit;
@@ -760,7 +760,7 @@ namespace ipo
     for (const auto& iter : kernelVector)
       objective[iter.first] = iter.second;
 
-    typename P::OptimizationOracle::Query oracleQuery;
+    typename P::OptOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
       // We set a minimum required objective value to the common value plus an epsilon for
@@ -1007,7 +1007,7 @@ namespace ipo
 #endif /* !NDEBUG */
     }
 
-    typename P::OptimizationOracle::Query oracleQuery;
+    typename P::OptOracle::Query oracleQuery;
     if (!resultPoints.empty())
     {
       oracleQuery.setMinPrimalBound(-kernelVectorValue + epsilonConstraints * kernelVectorNorm);

@@ -129,10 +129,10 @@ namespace ipo
     }
   }
 
-  RationalOptimizationOracle::Response RationalMIPExtender::maximize(
-    std::shared_ptr<RealOptimizationOracle> approximateOracle,
+  OptimizationOracle<mpq_class>::Response RationalMIPExtender::maximize(
+    std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const double* objectiveVector,
-    const RationalOptimizationOracle::Query& query)
+    const OptimizationOracle<mpq_class>::Query& query)
   {
     std::vector<mpq_class> exactObjectiveVector(_integrality.size());
     for (std::size_t i = 0; i < _integrality.size(); ++i)
@@ -158,7 +158,7 @@ namespace ipo
     }
   }
 
-  void RationalMIPExtender::extractRay(RationalOptimizationOracle::Response& result)
+  void RationalMIPExtender::extractRay(OptimizationOracle<mpq_class>::Response& result)
   {
     _spx.getPrimalRayRational(_coefficients, _integrality.size());
     auto ray = std::make_shared<sparse_vector<mpq_class>>();
@@ -167,11 +167,11 @@ namespace ipo
       if (_coefficients[i] != 0)
         ray->push_back(i, mpq_class(_coefficients[i]));
     }
-    result.rays.push_back(RationalOptimizationOracle::Response::Ray(ray));
+    result.rays.push_back(OptimizationOracle<mpq_class>::Response::Ray(ray));
   }
 
   void RationalMIPExtender::preparePoint(
-    const RealOptimizationOracle::Response::Point& approximatePoint)
+    const OptimizationOracle<double>::Response::Point& approximatePoint)
   {
     // First, fix all integral columns to zero.
     for (std::size_t v = 0; v < _integrality.size(); ++v)
@@ -194,7 +194,7 @@ namespace ipo
     }
   }
   
-  void RationalMIPExtender::extractPoint(RationalOptimizationOracle::Response& result,
+  void RationalMIPExtender::extractPoint(OptimizationOracle<mpq_class>::Response& result,
     const mpq_class* objectiveVector)
   {
     _spx.getPrimalRational(_coefficients, _integrality.size());
@@ -212,25 +212,25 @@ namespace ipo
     }
     if (!objectiveVector)
       objectiveValue = mpq_class(*_spx.objValueRational().getMpqPtr());
-    result.points.push_back(RationalOptimizationOracle::Response::Point(point, objectiveValue));
+    result.points.push_back(OptimizationOracle<mpq_class>::Response::Point(point, objectiveValue));
   }
 
-  RationalOptimizationOracle::Response RationalMIPExtender::maximize(
-    std::shared_ptr<RealOptimizationOracle> approximateOracle,
+  OptimizationOracle<mpq_class>::Response RationalMIPExtender::maximize(
+    std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const mpq_class* objectiveVector,
-    const RationalOptimizationOracle::Query& query)
+    const OptimizationOracle<mpq_class>::Query& query)
   {
     std::vector<double> approximateObjectiveVector(_integrality.size());
     for (std::size_t v = 0; v < _integrality.size(); ++v)
       approximateObjectiveVector[v] = objectiveVector[v].get_d();
 
-    RealOptimizationOracle::Query approximateQuery;
+    OptimizationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumSolutions = query.maxNumSolutions;
     if (query.hasMinPrimalBound())
       approximateQuery.setMinPrimalBound(query.minPrimalBound().get_d());
     approximateQuery.timeLimit = query.timeLimit;
     
-    RealOptimizationOracle::Response approximateResponse = approximateOracle->maximize(
+    OptimizationOracle<double>::Response approximateResponse = approximateOracle->maximizeDouble(
       &approximateObjectiveVector[0], approximateQuery);
 
 #if defined(IPO_DEBUG)
@@ -238,7 +238,7 @@ namespace ipo
       << std::endl;
 #endif /* IPO_DEBUG */
 
-    RationalOptimizationOracle::Response response;
+    OptimizationOracle<mpq_class>::Response response;
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
     response.hasDualBound = approximateResponse.hasDualBound;
     response.dualBound = approximateResponse.dualBound;
@@ -355,9 +355,9 @@ namespace ipo
 
   RationalMIPExtendedOptimizationOracle::RationalMIPExtendedOptimizationOracle(
     RationalMIPExtender* extender,
-    std::shared_ptr<RealOptimizationOracle> approximateOracle,
+    std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const Constraint<mpq_class>& face)
-    : RationalOptimizationOracle("Rational " + approximateOracle->name()), _extender(extender),
+    : OptimizationOracle<mpq_class>("Rational " + approximateOracle->name()), _extender(extender),
     _approximateOracle(approximateOracle), _face(face)
   {
     assert(_extender);
@@ -371,17 +371,17 @@ namespace ipo
 
   }
 
-  RationalOptimizationOracle::Response RationalMIPExtendedOptimizationOracle::maximize(
+  OptimizationOracle<mpq_class>::Response RationalMIPExtendedOptimizationOracle::maximizeDouble(
     const double* objectiveVector,
-    const RationalOptimizationOracle::Query& query)
+    const OptimizationOracle<mpq_class>::Query& query)
   {
     _extender->setFace(&_face);
     return _extender->maximize(_approximateOracle, objectiveVector, query);
   }
 
-  RationalOptimizationOracle::Response RationalMIPExtendedOptimizationOracle::maximize(
+  OptimizationOracle<mpq_class>::Response RationalMIPExtendedOptimizationOracle::maximize(
     const mpq_class* objectiveVector,
-    const RationalOptimizationOracle::Query& query)
+    const OptimizationOracle<mpq_class>::Query& query)
   {
     _extender->setFace(&_face);
     return _extender->maximize(_approximateOracle, objectiveVector, query);

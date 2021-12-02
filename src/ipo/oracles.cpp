@@ -2,16 +2,24 @@
 
 namespace ipo
 {
-
-  RealOptimizationOracle::RealOptimizationOracle(const std::string& name)
-    : CommonOracle<double>(name)
+  
+  template <>
+  OptimizationOracle<double>::OptimizationOracle(const std::string& name)
+    : Oracle<double>(name)
   {
 
   }
 
+  template <>
+  OptimizationReponse<double> OptimizationOracle<double>::maximizeDouble(
+    const double* objectiveVector, const OptimizationQuery<double>& query)
+  {
+    return maximize(objectiveVector, query);
+  }
+
   template <typename R>
   static std::ostream& printOptimizationRepsonse(std::ostream& stream,
-    const CommonOptimizationReponse<R>& response)
+    const OptimizationReponse<R>& response)
   {
     switch(response.outcome)
     {
@@ -38,13 +46,13 @@ namespace ipo
     }
   }
 
-  std::ostream& operator<<(std::ostream& stream, const CommonOptimizationReponse<double>& response)
+  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<double>& response)
   {
     return printOptimizationRepsonse(stream, response);
   }
 
   RealSeparationOracle::RealSeparationOracle(const std::string& name)
-    : CommonOracle<double>(name)
+    : Oracle<double>(name)
   {
 
   }
@@ -57,29 +65,30 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  RationalOptimizationOracle::RationalOptimizationOracle(const std::string& name)
-    : CommonOracle<mpq_class>(name)
+  template <>
+  OptimizationOracle<mpq_class>::OptimizationOracle(const std::string& name)
+    : Oracle<mpq_class>(name)
   {
 
   }
 
-  RationalOptimizationOracle::Response RationalOptimizationOracle::maximize(
-    const double* objectiveVector, const RationalOptimizationOracle::Query& query)
+  template <>
+  OptimizationReponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
+    const double* objectiveVector, const OptimizationQuery<mpq_class>& query)
   {
-    std::vector<mpq_class> rationalObjectiveVector(_space->dimension());
-    for (std::size_t v = 0; v < _space->dimension(); ++v)
-      rationalObjectiveVector[v] = objectiveVector[v];
-    return maximize(&rationalObjectiveVector[0], query);
+    std::vector<mpq_class> convertedObjectiveVector(this->_space->dimension());
+    for (std::size_t v = 0; v < this->_space->dimension(); ++v)
+      convertedObjectiveVector[v] = objectiveVector[v];
+    return maximize(&convertedObjectiveVector[0], query);
   }
 
-  std::ostream& operator<<(std::ostream& stream,
-    const CommonOptimizationReponse<mpq_class>& response)
+  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<mpq_class>& response)
   {
     return printOptimizationRepsonse(stream, response);
   }
   
   RationalSeparationOracle::RationalSeparationOracle(const std::string& name)
-    : CommonOracle<mpq_class>(name)
+    : Oracle<mpq_class>(name)
   {
 
   }
@@ -101,4 +110,10 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
-}
+  typedef OptimizationOracle<double> OptimizationOracle_double;
+
+#if defined(IPO_WITH_GMP)
+  typedef OptimizationOracle<mpq_class> OptimizationOracle_mpq_class;
+#endif /* IPO_WITH_GMP */
+
+} /* namespace ipo */

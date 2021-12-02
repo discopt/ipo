@@ -565,7 +565,7 @@ namespace ipo
 
   SCIPRealOptimizationOracle::SCIPRealOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
-    : RealOptimizationOracle(solver->name()), _solver(solver), _face(face)
+    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
     _solver->addFace(&_face);
@@ -576,10 +576,10 @@ namespace ipo
     _solver->deleteFace(&_face);
   }
 
-  RealOptimizationOracle::Response SCIPRealOptimizationOracle::maximize(const double* objectiveVector,
-      const RealOptimizationOracle::Query& query)
+  OptimizationOracle<double>::Response SCIPRealOptimizationOracle::maximize(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query)
   {
-    RealOptimizationOracle::Response response;
+    OptimizationOracle<double>::Response response;
 
 #if defined(IPO_DEBUG)
     std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
@@ -670,7 +670,7 @@ namespace ipo
           if (!SCIPisZero(_solver->_scip, y))
             vector->push_back(i, y);
         }
-        response.rays.push_back(RealOptimizationOracle::Response::Ray(vector));
+        response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
         response.outcome = OptimizationOutcome::UNBOUNDED;
         break;
       }
@@ -698,7 +698,7 @@ namespace ipo
             if (!SCIPisZero(_solver->_scip, x))
               vector->push_back(i, x);
           }
-          response.points.push_back(RealOptimizationOracle::Response::Point(vector,
+          response.points.push_back(OptimizationOracle<double>::Response::Point(vector,
             objectiveVector * *vector));
         }
         if (status == SCIP_STATUS_TIMELIMIT)
@@ -729,7 +729,7 @@ namespace ipo
             if (!SCIPisZero(_solver->_scip, y))
               vector->push_back(i, y);
           }
-          response.rays.push_back(RealOptimizationOracle::Response::Ray(vector));
+          response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
           response.outcome = OptimizationOutcome::UNBOUNDED;
         }
       }
@@ -819,7 +819,7 @@ namespace ipo
             objectiveValue =+ objectiveVector[i] * x;
           }
         }
-        response.points.push_back(RealOptimizationOracle::Response::Point(vector, objectiveValue)); 
+        response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveValue)); 
       }
       else
       {

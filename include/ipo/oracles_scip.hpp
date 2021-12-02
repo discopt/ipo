@@ -256,7 +256,7 @@ namespace ipo
   * \brief OptimizationOracle based on the SCIP solver.
   */
 
-  class SCIPRealOptimizationOracle: public RealOptimizationOracle
+  class SCIPRealOptimizationOracle: public OptimizationOracle<double>
   {
   public:
 
@@ -287,8 +287,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RealOptimizationOracle::Response maximize(const double* objectiveVector,
-      const RealOptimizationOracle::Query& query);
+    virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query) override;
 
   protected:
     friend SCIPSolver;

@@ -34,7 +34,7 @@ TEST(SCIP, UnboundedReal)
   auto oracle = solver->getRealOptimizationOracle();
 
   double obj[] = {1.0, 1.0};
-  ipo::RealOptimizationOracle::Query query;
+  ipo::OptimizationOracle<double>::Query query;
   std::cout << "oracle->maximize()" << std::endl;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::UNBOUNDED);
@@ -76,7 +76,7 @@ TEST(SCIP, InfeasibleReal)
   auto oracle = solver->getRealOptimizationOracle();
 
   double obj[] = { 1.0, 2.0 };
-  ipo::RealOptimizationOracle::Query query;
+  ipo::OptimizationOracle<double>::Query query;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::INFEASIBLE);
   ASSERT_FALSE(response.hasDualBound);
@@ -171,7 +171,7 @@ TEST(SCIP, UnboundedRational)
   auto oracle = solver->getRationalOptimizationOracle();
 
   mpq_class obj[] = {1.0, 1.0};
-  ipo::RationalOptimizationOracle::Query query;
+  ipo::OptimizationOracle<mpq_class>::Query query;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::UNBOUNDED);
   ASSERT_FALSE(response.hasDualBound);
@@ -212,7 +212,7 @@ TEST(SCIP, InfeasibleRational)
   auto oracle = solver->getRationalOptimizationOracle();
 
   mpq_class obj[] = { 1, 2 };
-  ipo::RationalOptimizationOracle::Query query;
+  ipo::OptimizationOracle<mpq_class>::Query query;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::INFEASIBLE);
   ASSERT_FALSE(response.hasDualBound);

@@ -10,14 +10,340 @@
 
 namespace ipo
 {
-  /**
-  * \brief Base class for all IPO oracles.
-  */
 
-  template <typename R>
-  class CommonOracle
+  /// Outcome of a query to a RealOptimizationOracle or RationalOptimizationOracle.
+  enum class OptimizationOutcome
+  {
+    /// A timeout occured.
+    TIMEOUT = -1,
+    /// The oracle did not find a solution with objective value at least CommonOptimizationQuery::minPrimalBound.
+    FOUND_NOTHING = 0,
+    /// The oracle returned an unbounded ray.
+    UNBOUNDED = 1,
+    /// The oracle asserted that the polyhedron is empty.
+    INFEASIBLE = 2,
+    /// The oracle found a soluton of with objective value at least CommonOptimizationQuery::minPrimalBound.
+    FEASIBLE = 3
+  };
+
+  /**
+   * \brief Structure for storing additional information of a query to an optimization oracle.
+   **/
+
+  template <typename NumberType>
+  struct OptimizationQuery
   {
   public:
+    typedef NumberType Number;
+
+    /// Maximum number of solutions to return.
+    std::size_t maxNumSolutions;
+    /// Time limit for this oracle call.
+    double timeLimit;
+
+  protected:
+    /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
+    bool _hasMinPrimalBound;
+    /**
+     * \brief Threshold for primal bound allowing the oracle to terminate.
+     *
+     * The oracle shall terminate if the primal bound is greater than or equal to this value.
+     **/
+    Number _minPrimalBound;
+    /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
+    bool _hasMaxDualBound;
+    /**
+     * \brief Threshold for dual bound allowing the oracle to terminate.
+     * 
+     * The oracle shall terminate if the dual bound is less than or equal to this value.
+     **/
+    Number _maxDualBound;
+
+  public:
+    /**
+     * \brief Constructs the query structure.
+     **/
+
+    IPO_EXPORT
+    OptimizationQuery()
+      : maxNumSolutions(std::numeric_limits<std::size_t>::max()),
+      timeLimit(std::numeric_limits<double>::infinity()), _hasMinPrimalBound(false),
+      _minPrimalBound(0), _hasMaxDualBound(false), _maxDualBound(0)
+    {
+
+    }
+
+    IPO_EXPORT
+    bool hasMinPrimalBound() const
+    {
+      return _hasMinPrimalBound;
+    }
+
+    IPO_EXPORT
+    const Number& minPrimalBound() const
+    {
+      assert(_hasMinPrimalBound);
+      return _minPrimalBound;
+    }
+
+    IPO_EXPORT
+    void setMinPrimalBound(const Number& minPrimalBound)
+    {
+      _hasMinPrimalBound = true;
+      _minPrimalBound = minPrimalBound;
+    }
+
+    IPO_EXPORT
+    void removeMinPrimalBound()
+    {
+      _hasMinPrimalBound = false;
+    }
+
+    IPO_EXPORT
+    bool hasMaxDualBound() const
+    {
+      return _hasMaxDualBound;
+    }
+
+    IPO_EXPORT
+    const Number& maxDualBound() const
+    {
+      assert(_hasMaxDualBound);
+      return _maxDualBound;
+    }
+
+    IPO_EXPORT
+    void setMaxDualBound(const Number& maxDualBound)
+    {
+      _hasMaxDualBound = true;
+      _maxDualBound = maxDualBound;
+    }
+
+    IPO_EXPORT
+    void removeMaxDualBound()
+    {
+      _hasMaxDualBound = false;
+    }
+  };
+
+  /**
+   * \brief Structure for storing the response of an optimization oracle.
+   **/
+
+  template <typename NumberType>
+  struct OptimizationReponse
+  {
+    typedef NumberType Number;
+
+    /**
+     * \brief Structure for a returned point.
+     **/
+    
+    struct Point
+    {
+      /// Objective value of the point.
+      Number objectiveValue;
+      /// Shared pointer to the actual point.
+      std::shared_ptr<sparse_vector<Number>> vector;
+
+      /**
+       * \brief Constructs the point.
+       * 
+       * Constructs the point. Point::objectiveValue has to be set properly by the caller.
+       * 
+       * \param vec Shared pointer to the point.
+       **/
+
+      IPO_EXPORT
+      Point(std::shared_ptr<sparse_vector<Number>> vec)
+        : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
+      {
+
+      }
+
+      /**
+       * \brief Constructs the point.
+       * 
+       * \param vec Shared pointer to the point.
+       * \param value Objective value of the point.
+       **/
+
+      IPO_EXPORT
+      Point(std::shared_ptr<sparse_vector<Number>> vec, const Number& value)
+        : objectiveValue(value), vector(vec)
+      {
+
+      }
+
+      /**
+       * \brief Comparison for points. Points with larger Point::objectiveValue are considered
+       *        smaller.
+       **/
+
+      IPO_EXPORT
+      inline bool operator<(const Point& other) const
+      {
+        return objectiveValue > other.objectiveValue;
+      }
+    };
+
+    /**
+     * \brief Structure for a returned unbounded ray.
+     **/
+
+    struct Ray
+    {
+    public:
+      /// Shared pointer to the ray.
+      std::shared_ptr<sparse_vector<Number>> vector;
+
+      /**
+       * \brief Constructs the ray.
+       * 
+       * Constructs the ray. Ray::_norm is computed.
+       * 
+       * \param vec Shared pointer to the ray.
+       **/
+
+      IPO_EXPORT
+      Ray(std::shared_ptr<sparse_vector<Number>> vec)
+        : vector(vec), _norm(euclideanNorm(*vec))
+      {
+
+      }
+
+      /**
+       * \brief Constructs the ray.
+       * 
+       * Constructs the ray.
+       * 
+       * \param vec Shared pointer to the ray.
+       * \param norm Euclidean norm of the ray.
+       **/
+
+      IPO_EXPORT
+      Ray(std::shared_ptr<sparse_vector<Number>> vec, double norm)
+        : vector(vec), _norm(norm)
+      {
+        assert(norm == euclideanNorm(*vec));
+      }
+
+      /**
+       * \brief Returns the Euclidean norm of the ray.
+       **/
+
+      IPO_EXPORT
+      inline double norm() const
+      {
+        return _norm;
+      }
+
+    private:
+      /// Euclidean norm of the ray.
+      double _norm;
+    };
+
+    /// Outcome of query.
+    OptimizationOutcome outcome;
+    /// Whether we know a finite lower bound.
+    bool hasPrimalBound;
+    /// Best-known lower bound on the optimum.
+    Number primalBound;
+    /// Whether we know a finite upper bound.
+    bool hasDualBound;
+    /// Upper bound on the optimum.
+    Number dualBound;
+    /// Array with all points.
+    std::vector<Point> points;
+    /// Array with all rays.
+    std::vector<Ray> rays;
+    /// Whether the time limit was reached.
+    bool hitTimeLimit;
+
+    /**
+     * \brief Constructs the result structure.
+     **/
+
+    IPO_EXPORT
+    OptimizationReponse()
+      : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
+      dualBound(0), hitTimeLimit(false)
+    {
+
+    }
+
+    /**
+     * \brief Move-construcs the response.
+     **/
+
+    IPO_EXPORT
+    OptimizationReponse(OptimizationReponse&& other)
+      : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
+      hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
+      rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
+    {
+
+    }
+
+    /**
+     * \brief Move-assignment operator.
+     **/
+
+    IPO_EXPORT
+    inline OptimizationReponse<Number>& operator=(OptimizationReponse<Number>&& other)
+    {
+      outcome = other.outcome;
+      hasPrimalBound = other.hasPrimalBound;
+      primalBound = std::move(other.primalBound);
+      hasDualBound = other.hasDualBound;
+      dualBound = std::move(other.dualBound);
+      points = std::move(other.points);
+      rays = std::move(other.rays);
+      hitTimeLimit = other.hitTimeLimit;
+      return *this;
+    }
+
+    /**
+      * \brief Copy-assignment operator.
+      */
+
+    IPO_EXPORT
+    inline OptimizationReponse<Number>& operator=(const OptimizationReponse<Number>& other)
+    {
+      outcome = other.outcome;
+      hasPrimalBound = other.hasPrimalBound;
+      primalBound = other.primalBound;
+      hasDualBound = other.hasDualBound;
+      dualBound = other.dualBound;
+      points = other.points;
+      rays = other.rays;
+      hitTimeLimit = other.hitTimeLimit;
+      return *this;
+    }
+
+    /**
+     * \brief Whether the query was successful, i.e., no timeout or other error occured.
+     */
+
+    IPO_EXPORT
+    inline bool wasSuccessful() const
+    {
+      return outcome == OptimizationOutcome::INFEASIBLE
+        || outcome == OptimizationOutcome::UNBOUNDED
+        || outcome == OptimizationOutcome::FEASIBLE;
+    }
+  };
+
+  /**
+   * \brief Base class for all IPO oracles.
+   */
+
+  template <typename NumberType>
+  class Oracle
+  {
+  public:
+    typedef NumberType Number;
+
     /**
      * \brief Constructs an oracle with given \p name.
      *
@@ -27,7 +353,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    CommonOracle(const std::string& name)
+    Oracle(const std::string& name)
       : _name(name), _space(nullptr)
     {
 
@@ -61,336 +387,20 @@ namespace ipo
     std::shared_ptr<Space> _space;
   };
 
-  /// Outcome of a query to a RealOptimizationOracle or RationalOptimizationOracle.
-  enum class OptimizationOutcome
-  {
-    /// A timeout occured.
-    TIMEOUT = -1,
-    /// The oracle did not find a solution with objective value at least CommonOptimizationQuery::minPrimalBound.
-    FOUND_NOTHING = 0,
-    /// The oracle returned an unbounded ray.
-    UNBOUNDED = 1,
-    /// The oracle asserted that the polyhedron is empty.
-    INFEASIBLE = 2,
-    /// The oracle found a soluton of with objective value at least CommonOptimizationQuery::minPrimalBound.
-    FEASIBLE = 3
-  };
-
-  /**
-   * \brief Structure for storing additional information of a query to an optimization oracle.
-   **/
-
-  template <typename R>
-  struct CommonOptimizationQuery
-  {
-  public:
-    /// Maximum number of solutions to return.
-    std::size_t maxNumSolutions;
-    /// Time limit for this oracle call.
-    double timeLimit;
-
-  protected:
-    /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
-    bool _hasMinPrimalBound;
-    /**
-     * \brief Threshold for primal bound allowing the oracle to terminate.
-     *
-     * The oracle shall terminate if the primal bound is greater than or equal to this value.
-     **/
-    R _minPrimalBound;
-    /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
-    bool _hasMaxDualBound;
-    /**
-     * \brief Threshold for dual bound allowing the oracle to terminate.
-     * 
-     * The oracle shall terminate if the dual bound is less than or equal to this value.
-     **/
-    R _maxDualBound;
-
-  public:
-    /**
-     * \brief Constructs the query structure.
-     **/
-
-    IPO_EXPORT
-    CommonOptimizationQuery()
-      : maxNumSolutions(std::numeric_limits<std::size_t>::max()),
-      timeLimit(std::numeric_limits<double>::infinity()), _hasMinPrimalBound(false),
-      _minPrimalBound(0), _hasMaxDualBound(false), _maxDualBound(0)
-    {
-
-    }
-
-    IPO_EXPORT
-    bool hasMinPrimalBound() const
-    {
-      return _hasMinPrimalBound;
-    }
-
-    IPO_EXPORT
-    const R& minPrimalBound() const
-    {
-      assert(_hasMinPrimalBound);
-      return _minPrimalBound;
-    }
-
-    IPO_EXPORT
-    void setMinPrimalBound(const R& minPrimalBound)
-    {
-      _hasMinPrimalBound = true;
-      _minPrimalBound = minPrimalBound;
-    }
-
-    IPO_EXPORT
-    void removeMinPrimalBound()
-    {
-      _hasMinPrimalBound = false;
-    }
-
-    IPO_EXPORT
-    bool hasMaxDualBound() const
-    {
-      return _hasMaxDualBound;
-    }
-
-    IPO_EXPORT
-    const R& maxDualBound() const
-    {
-      assert(_hasMaxDualBound);
-      return _maxDualBound;
-    }
-
-    IPO_EXPORT
-    void setMaxDualBound(const R& maxDualBound)
-    {
-      _hasMaxDualBound = true;
-      _maxDualBound = maxDualBound;
-    }
-
-    IPO_EXPORT
-    void removeMaxDualBound()
-    {
-      _hasMaxDualBound = false;
-    }
-  };
-
-  /**
-   * \brief Structure for storing the response of an optimization oracle.
-   **/
-
-  template <typename R>
-  struct CommonOptimizationReponse
-  {
-    /**
-     * \brief Structure for a returned point.
-     **/
-    
-    struct Point
-    {
-      /// Objective value of the point.
-      R objectiveValue;
-      /// Shared pointer to the actual point.
-      std::shared_ptr<sparse_vector<R>> vector;
-
-      /**
-       * \brief Constructs the point.
-       * 
-       * Constructs the point. Point::objectiveValue has to be set properly by the caller.
-       * 
-       * \param vec Shared pointer to the point.
-       **/
-
-      IPO_EXPORT
-      Point(std::shared_ptr<sparse_vector<R>> vec)
-        : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
-      {
-
-      }
-
-      /**
-       * \brief Constructs the point.
-       * 
-       * \param vec Shared pointer to the point.
-       * \param value Objective value of the point.
-       **/
-
-      IPO_EXPORT
-      Point(std::shared_ptr<sparse_vector<R>> vec, const R& value)
-        : objectiveValue(value), vector(vec)
-      {
-
-      }
-
-      /**
-       * \brief Comparison for points. Points with larger Point::objectiveValue are considered
-       *        smaller.
-       **/
-
-      IPO_EXPORT
-      inline bool operator<(const Point& other) const
-      {
-        return objectiveValue > other.objectiveValue;
-      }
-    };
-
-    /**
-     * \brief Structure for a returned unbounded ray.
-     **/
-
-    struct Ray
-    {
-    public:
-      /// Shared pointer to the ray.
-      std::shared_ptr<sparse_vector<R>> vector;
-
-      /**
-       * \brief Constructs the ray.
-       * 
-       * Constructs the ray. Ray::_norm is computed.
-       * 
-       * \param vec Shared pointer to the ray.
-       **/
-
-      IPO_EXPORT
-      Ray(std::shared_ptr<sparse_vector<R>> vec)
-        : vector(vec), _norm(euclideanNorm(*vec))
-      {
-
-      }
-
-      /**
-       * \brief Constructs the ray.
-       * 
-       * Constructs the ray.
-       * 
-       * \param vec Shared pointer to the ray.
-       * \param norm Euclidean norm of the ray.
-       **/
-
-      IPO_EXPORT
-      Ray(std::shared_ptr<sparse_vector<R>> vec, double norm)
-        : vector(vec), _norm(norm)
-      {
-        assert(norm == euclideanNorm(*vec));
-      }
-
-      /**
-       * \brief Returns the Euclidean norm of the ray.
-       **/
-
-      IPO_EXPORT
-      inline double norm() const
-      {
-        return _norm;
-      }
-
-    private:
-      /// Euclidean norm of the ray.
-      double _norm;
-    };
-
-    /// Outcome of query.
-    OptimizationOutcome outcome;
-    /// Whether we know a finite lower bound.
-    bool hasPrimalBound;
-    /// Best-known lower bound on the optimum.
-    R primalBound;
-    /// Whether we know a finite upper bound.
-    bool hasDualBound;
-    /// Upper bound on the optimum.
-    R dualBound;
-    /// Array with all points.
-    std::vector<Point> points;
-    /// Array with all rays.
-    std::vector<Ray> rays;
-    /// Whether the time limit was reached.
-    bool hitTimeLimit;
-
-    /**
-     * \brief Constructs the result structure.
-     **/
-
-    IPO_EXPORT
-    CommonOptimizationReponse()
-      : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
-      dualBound(0), hitTimeLimit(false)
-    {
-
-    }
-
-    /**
-     * \brief Move-construcs the response.
-     **/
-
-    IPO_EXPORT
-    CommonOptimizationReponse(CommonOptimizationReponse&& other)
-      : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
-      hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
-      rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
-    {
-
-    }
-
-    /**
-     * \brief Move-assignment operator.
-     **/
-
-    IPO_EXPORT
-    inline CommonOptimizationReponse<R>& operator=(CommonOptimizationReponse<R>&& other)
-    {
-      outcome = other.outcome;
-      hasPrimalBound = other.hasPrimalBound;
-      primalBound = std::move(other.primalBound);
-      hasDualBound = other.hasDualBound;
-      dualBound = std::move(other.dualBound);
-      points = std::move(other.points);
-      rays = std::move(other.rays);
-      hitTimeLimit = other.hitTimeLimit;
-      return *this;
-    }
-
-    /**
-      * \brief Copy-assignment operator.
-      */
-
-    IPO_EXPORT
-    inline CommonOptimizationReponse<R>& operator=(const CommonOptimizationReponse<R>& other)
-    {
-      outcome = other.outcome;
-      hasPrimalBound = other.hasPrimalBound;
-      primalBound = other.primalBound;
-      hasDualBound = other.hasDualBound;
-      dualBound = other.dualBound;
-      points = other.points;
-      rays = other.rays;
-      hitTimeLimit = other.hitTimeLimit;
-      return *this;
-    }
-
-    /**
-     * \brief Whether the query was successful, i.e., no timeout or other error occured.
-     */
-
-    IPO_EXPORT
-    inline bool wasSuccessful() const
-    {
-      return outcome == OptimizationOutcome::INFEASIBLE
-        || outcome == OptimizationOutcome::UNBOUNDED
-        || outcome == OptimizationOutcome::FEASIBLE;
-    }
-  };
-
   /**
    * \brief Base class for optimization oracles in double arithmetic.
    */
 
-  class RealOptimizationOracle : public CommonOracle<double>
+  template <typename NumberType>
+  class OptimizationOracle : public Oracle<NumberType>
   {
   public:
+    typedef NumberType Number;
+
     /// The query structure for the oracle.
-    typedef CommonOptimizationQuery<double> Query;
+    typedef OptimizationQuery<NumberType> Query;
     /// The response structure for the oracle.
-    typedef CommonOptimizationReponse<double> Response;
+    typedef OptimizationReponse<NumberType> Response;
 
     /**
      * \brief Constructs the oracle.
@@ -401,10 +411,10 @@ namespace ipo
      */
 
     IPO_EXPORT
-    RealOptimizationOracle(const std::string& name);
+    OptimizationOracle(const std::string& name);
 
     /**
-     * \brief Maximize a floating-point objective vector.
+     * \brief Maximize an objective vector.
      *
      * \param objectiveVector Objective vector.
      * \param query Additional query information.
@@ -412,7 +422,18 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response maximize(const double* objectiveVector, const Query& query) = 0;
+    virtual Response maximize(const Number* objectiveVector, const Query& query) = 0;
+
+    /**
+     * \brief Maximize a double objective vector.
+     *
+     * \param objectiveVector Objective vector.
+     * \param query Additional query information.
+     * \return Optimization response.
+     **/
+
+    IPO_EXPORT
+    virtual Response maximizeDouble(const double* objectiveVector, const Query& query);
   };
 
   /**
@@ -514,8 +535,7 @@ namespace ipo
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream,
-    const CommonOptimizationReponse<double>& response);
+  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<double>& response);
 
   /**
    * \brief Base class for separation oracles in floating-point arithmetic.
@@ -524,7 +544,7 @@ namespace ipo
    * inequalities.
    */
 
-  class RealSeparationOracle: public CommonOracle<double>
+  class RealSeparationOracle: public Oracle<double>
   {
   public:
     /// Query structure.
@@ -575,62 +595,13 @@ namespace ipo
     const CommonSeparationResponse<double>& response);
 
 #if defined(IPO_WITH_GMP)
-  /**
-   * \brief Base class for optimization oracles in rational arithmetic.
-   */
-
-  class RationalOptimizationOracle : public CommonOracle<mpq_class>
-  {
-  public:
-    /// The query structure for the oracle.
-    typedef CommonOptimizationQuery<mpq_class> Query;
-    /// The response structure for the oracle.
-    typedef CommonOptimizationReponse<mpq_class> Response;
-
-    /**
-     * \brief Constructs the oracle.
-     * 
-     * Constructs the oracle. The parent constructor must set CommonOracle::_space properly.
-     * 
-     * \param name Name of the oracle.
-     */
-
-    IPO_EXPORT
-    RationalOptimizationOracle(const std::string& name);
-
-    /**
-     * \brief Maximize a rational objective vector.
-     *
-     * \param objectiveVector Objective vector.
-     * \param query Additional query information.
-     * \return Optimization response.
-     **/
-
-    IPO_EXPORT
-    virtual Response maximize(const mpq_class* objectiveVector, const Query& query) = 0;
-
-    /**
-     * \brief Maximize a floating-point objective vector.
-     * 
-     * The default implementation creates a rational
-     * objective from the floating-point one and calls RationalOptimizationOracle::maximize().
-     *
-     * \param objectiveVector Objective vector.
-     * \param query Additional query information.
-     * \return Optimization response.
-     **/
-
-    IPO_EXPORT
-    virtual Response maximize(const double* objectiveVector, const Query& query);
-  };
 
   /**
    * \brief Prints the response of a rational optimization oracle.
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream,
-    const CommonOptimizationReponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<mpq_class>& response);
 
   /**
    * \brief Base class for separation oracles in rational arithmetic.
@@ -639,9 +610,10 @@ namespace ipo
    * inequalities.
    */
 
-  class RationalSeparationOracle: public CommonOracle<mpq_class>
+  class RationalSeparationOracle: public Oracle<mpq_class>
   {
   public:
+
     /// Query structure.
     typedef CommonSeparationQuery Query;
     /// Response structure.
@@ -703,8 +675,7 @@ namespace ipo
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream,
-    const CommonSeparationResponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const CommonSeparationResponse<mpq_class>& response);
 
 #endif /* IPO_WITH_GMP */
 

@@ -30,7 +30,7 @@ namespace ipo
   ForestRealOptimizationOracle::ForestRealOptimizationOracle(std::size_t numNodes,
     std::pair<std::size_t, std::size_t>* edgesFirst, std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning,
     const std::string& name)
-    : RealOptimizationOracle(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
+    : OptimizationOracle<double>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
   {
     _numNodes = numNodes;
     std::vector<std::string> variableNames(edgesBeyond - edgesFirst);
@@ -53,8 +53,8 @@ namespace ipo
 
   }
 
-  RealOptimizationOracle::Response ForestRealOptimizationOracle::maximize(const double* objectiveVector,
-    const RealOptimizationOracle::Query& query)
+  OptimizationOracle<double>::Response ForestRealOptimizationOracle::maximize(const double* objectiveVector,
+    const OptimizationOracle<double>::Query& query)
   {
     std::vector<std::pair<double, std::size_t>> weights(_edges.size());
     for (size_t e = 0; e < _edges.size(); ++e)
@@ -93,13 +93,13 @@ namespace ipo
       optimum += weight;
     }
 
-    RealOptimizationOracle::Response response;
+    OptimizationOracle<double>::Response response;
     response.outcome = OptimizationOutcome::FEASIBLE;
     response.primalBound = optimum;
     response.hasPrimalBound = true;
     response.dualBound = optimum;
     response.hasDualBound = true;
-    response.points.push_back(RealOptimizationOracle::Response::Point(
+    response.points.push_back(OptimizationOracle<double>::Response::Point(
       std::make_shared<sparse_vector<double>>(optimalSolution, true), optimum));
 
     return response;
@@ -110,7 +110,7 @@ namespace ipo
   ForestRationalOptimizationOracle::ForestRationalOptimizationOracle(std::size_t numNodes,
     std::pair<std::size_t, std::size_t>* edgesFirst, std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning,
     const std::string& name)
-    : RationalOptimizationOracle(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
+    : OptimizationOracle<mpq_class>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
   {
     _numNodes = numNodes;
     std::vector<std::string> variableNames(edgesBeyond - edgesFirst);
@@ -133,8 +133,8 @@ namespace ipo
 
   }
 
-  RationalOptimizationOracle::Response ForestRationalOptimizationOracle::maximize(const mpq_class* objectiveVector,
-    const RationalOptimizationOracle::Query& query)
+  OptimizationOracle<mpq_class>::Response ForestRationalOptimizationOracle::maximize(const mpq_class* objectiveVector,
+    const OptimizationOracle<mpq_class>::Query& query)
   {
 #if defined(IPO_DEBUG)
     std::cout << "ForestRationalOptimizationOracle::maximize() called with objective vector (";
@@ -180,13 +180,13 @@ namespace ipo
       optimum += weight;
     }
 
-    RationalOptimizationOracle::Response response;
+    OptimizationOracle<mpq_class>::Response response;
     response.outcome = OptimizationOutcome::FEASIBLE;
     response.primalBound = optimum;
     response.hasPrimalBound = true;
     response.dualBound = optimum;
     response.hasDualBound = true;
-    response.points.push_back(RationalOptimizationOracle::Response::Point(
+    response.points.push_back(OptimizationOracle<mpq_class>::Response::Point(
       std::make_shared<sparse_vector<mpq_class>>(optimalSolution, true), optimum));
 
     return response;

@@ -3,9 +3,6 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#if defined(IPO_WITH_GMP)
-#include <gmpxx.h>
-#endif /* IPO_WITH_GMP */
 
 IPO_EXPORT
 double squaredEuclideanNorm(double* vector, std::size_t size);

@@ -43,10 +43,10 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RationalOptimizationOracle::Response maximize(
-      std::shared_ptr<RealOptimizationOracle> approximateOracle,
+    virtual OptimizationOracle<mpq_class>::Response maximize(
+      std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const double* objectiveVector,
-      const RationalOptimizationOracle::Query& query);
+      const OptimizationOracle<mpq_class>::Query& query);
 
     /**
      * \brief Maximize a rational objective vector.
@@ -57,22 +57,22 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RationalOptimizationOracle::Response maximize(
-      std::shared_ptr<RealOptimizationOracle> approximateOracle,
+    virtual OptimizationOracle<mpq_class>::Response maximize(
+      std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const mpq_class* objectiveVector,
-      const RationalOptimizationOracle::Query& query);
+      const OptimizationOracle<mpq_class>::Query& query);
 
   private:
     void setZeroObjective();
 
     void prepareRay();
 
-    void extractRay(RationalOptimizationOracle::Response& result);
+    void extractRay(OptimizationOracle<mpq_class>::Response& result);
 
     void preparePoint(
-      const RealOptimizationOracle::Response::Point& approximatePoint);
+      const OptimizationOracle<double>::Response::Point& approximatePoint);
 
-    void extractPoint(RationalOptimizationOracle::Response& result,
+    void extractPoint(OptimizationOracle<mpq_class>::Response& result,
       const mpq_class* objectiveVector);
 
   protected:
@@ -85,28 +85,28 @@ namespace ipo
     Constraint<mpq_class>* _currentFace;
   };
 
-  class RationalMIPExtendedOptimizationOracle: public RationalOptimizationOracle
+  class RationalMIPExtendedOptimizationOracle: public OptimizationOracle<mpq_class>
   {
   public:
     IPO_EXPORT
     RationalMIPExtendedOptimizationOracle(RationalMIPExtender* extender,
-      std::shared_ptr<RealOptimizationOracle> approximateOracle,
+      std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<mpq_class>& face);
 
     IPO_EXPORT
     virtual ~RationalMIPExtendedOptimizationOracle();
 
     IPO_EXPORT
-    RationalOptimizationOracle::Response maximize(const mpq_class* objectiveVector,
-      const RationalOptimizationOracle::Query& query) override;
+    OptimizationOracle<mpq_class>::Response maximize(const mpq_class* objectiveVector,
+      const OptimizationOracle<mpq_class>::Query& query) override;
 
     IPO_EXPORT
-    RationalOptimizationOracle::Response maximize(const double* objectiveVector,
-      const RationalOptimizationOracle::Query& query) override;
+    OptimizationOracle<mpq_class>::Response maximizeDouble(const double* objectiveVector,
+      const OptimizationOracle<mpq_class>::Query& query) override;
 
   protected:
     RationalMIPExtender* _extender;
-    std::shared_ptr<RealOptimizationOracle> _approximateOracle;
+    std::shared_ptr<OptimizationOracle<double>> _approximateOracle;
     Constraint<mpq_class> _face;
   };
 

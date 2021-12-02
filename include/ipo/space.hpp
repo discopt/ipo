@@ -71,13 +71,13 @@ namespace ipo
     }
 
     /**
-     * \brief Returns the name of the given \p variable.
+     * \brief Returns the name of the given \p variableIndex.
      */
 
     IPO_EXPORT
-    inline const std::string& operator[](std::size_t variable) const
+    inline const std::string& variable(std::size_t variableIndex) const
     {
-      return _variableNames[variable];
+      return _variableNames[variableIndex];
     }
 
     /**

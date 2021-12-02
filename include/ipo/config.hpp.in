@@ -7,3 +7,7 @@
 #cmakedefine IPO_WITH_GMP
 #cmakedefine IPO_WITH_SOPLEX
 #cmakedefine IPO_WITH_SCIP
+
+#if defined(IPO_WITH_GMP)
+#include <gmpxx.h>
+#endif /* IPO_WITH_GMP */

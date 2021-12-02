@@ -7,7 +7,7 @@
 namespace ipo
 {
 
-  class ForestRealOptimizationOracle: public RealOptimizationOracle
+  class ForestRealOptimizationOracle: public OptimizationOracle<double>
   {
   public:
     IPO_EXPORT
@@ -26,8 +26,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RealOptimizationOracle::Response maximize(const double* objectiveVector,
-      const RealOptimizationOracle::Query& query);
+    virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
+      const OptimizationOracle<double>::Query& query);
 
   protected:
     bool _spanning;
@@ -37,7 +37,7 @@ namespace ipo
   
 #if defined(IPO_WITH_GMP)
 
-  class ForestRationalOptimizationOracle: public RationalOptimizationOracle
+  class ForestRationalOptimizationOracle: public OptimizationOracle<mpq_class>
   {
   public:
     IPO_EXPORT
@@ -56,8 +56,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RationalOptimizationOracle::Response maximize(const mpq_class* objectiveVector,
-      const RationalOptimizationOracle::Query& query);
+    virtual OptimizationOracle<mpq_class>::Response maximize(const mpq_class* objectiveVector,
+      const OptimizationOracle<mpq_class>::Query& query);
 
   protected:
     bool _spanning;
