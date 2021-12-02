@@ -563,7 +563,7 @@ namespace ipo
     _currentFace = face;
   }
 
-  SCIPOptimizationOracleDouble::SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+  SCIPRealOptimizationOracle::SCIPRealOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
     : RealOptimizationOracle(solver->name()), _solver(solver), _face(face)
   {
@@ -571,12 +571,12 @@ namespace ipo
     _solver->addFace(&_face);
   }
 
-  SCIPOptimizationOracleDouble::~SCIPOptimizationOracleDouble()
+  SCIPRealOptimizationOracle::~SCIPRealOptimizationOracle()
   {
     _solver->deleteFace(&_face);
   }
 
-  RealOptimizationOracle::Response SCIPOptimizationOracleDouble::maximize(const double* objectiveVector,
+  RealOptimizationOracle::Response SCIPRealOptimizationOracle::maximize(const double* objectiveVector,
       const RealOptimizationOracle::Query& query)
   {
     RealOptimizationOracle::Response response;
@@ -649,7 +649,7 @@ namespace ipo
       SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
       if (retcode != SCIP_OKAY)
       {
-        std::cerr << "SCIPOptimizationOracleDouble received return code " << retcode
+        std::cerr << "SCIPRealOptimizationOracle received return code " << retcode
           << " from SCIPsolve() call." << std::endl;
       }
       solutionTime += SCIPgetTotalTime(_solver->_scip);
@@ -846,7 +846,7 @@ namespace ipo
     return response;
   }
 
-  SCIPSeparationOracleDouble::SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+  SCIPRealSeparationOracle::SCIPRealSeparationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
     : RealSeparationOracle(solver->name()), _solver(solver), _face(face)
   {
@@ -854,12 +854,12 @@ namespace ipo
     _solver->addFace(&_face);
   }
 
-  SCIPSeparationOracleDouble::~SCIPSeparationOracleDouble()
+  SCIPRealSeparationOracle::~SCIPRealSeparationOracle()
   {
     _solver->deleteFace(&_face);
   }
 
-  RealSeparationOracle::Response SCIPSeparationOracleDouble::getInitial(
+  RealSeparationOracle::Response SCIPRealSeparationOracle::getInitial(
     const RealSeparationOracle::Query& query)
   {
     RealSeparationOracle::Response result;
@@ -870,8 +870,8 @@ namespace ipo
     struct Visitor
     {
       std::shared_ptr<SCIPSolver> solver;
-      const SCIPSeparationOracleDouble::Query& query;
-      SCIPSeparationOracleDouble::Response& response;
+      const SCIPRealSeparationOracle::Query& query;
+      SCIPRealSeparationOracle::Response& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -904,7 +904,7 @@ namespace ipo
     return result;
   }
 
-  RealSeparationOracle::Response SCIPSeparationOracleDouble::separate(const double* vector,
+  RealSeparationOracle::Response SCIPRealSeparationOracle::separate(const double* vector,
     bool isPoint, const RealSeparationOracle::Query& query)
   {
     RealSeparationOracle::Response result;
@@ -916,8 +916,8 @@ namespace ipo
       std::shared_ptr<SCIPSolver> solver;
       const double* vector;
       bool isPoint;
-      const SCIPSeparationOracleDouble::Query& query;
-      SCIPSeparationOracleDouble::Response& response;
+      const SCIPRealSeparationOracle::Query& query;
+      SCIPRealSeparationOracle::Response& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 

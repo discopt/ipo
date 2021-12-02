@@ -110,13 +110,13 @@ int main(int argc, char** argv)
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   if (gmp)
   {
-    run<mpq_class, ipo::RationalPolyhedron>(scip, scip->getOptimizationOracleRational(),
-      scip->getSeparationOracleRational(), true, timeLimit, printEquations);
+    run<mpq_class, ipo::RationalPolyhedron>(scip, scip->getRationalOptimizationOracle(),
+      scip->getRationalSeparationOracle(), true, timeLimit, printEquations);
   }
   else
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
-    run<double, ipo::RealPolyhedron>(scip, scip->getOptimizationOracleDouble(), scip->getSeparationOracleDouble(),
+    run<double, ipo::RealPolyhedron>(scip, scip->getRealOptimizationOracle(), scip->getRealSeparationOracle(),
       false, timeLimit, printEquations);
   }
  

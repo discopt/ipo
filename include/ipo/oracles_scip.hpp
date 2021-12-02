@@ -24,11 +24,11 @@ namespace ipo
 {
   // Forward declarations.
 
-  class SCIPOptimizationOracleDouble;
-  class SCIPSeparationOracleDouble;
+  class SCIPRealOptimizationOracle;
+  class SCIPRealSeparationOracle;
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  typedef RationalMIPExtendedOptimizationOracle SCIPOptimizationOracleRational;
+  typedef RationalMIPExtendedOptimizationOracle SCIPRationalOptimizationOracle;
 
   typedef RationalMIPExtendedSeparationOracle SCIPSeparationOracleRational;
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
@@ -104,9 +104,9 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble()
+    inline std::shared_ptr<SCIPRealOptimizationOracle> getRealOptimizationOracle()
     {
-      return getOptimizationOracleDouble(alwaysSatisfiedConstraint<double>());
+      return getRealOptimizationOracle(alwaysSatisfiedConstraint<double>());
     }
 
     /**
@@ -114,10 +114,10 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracleDouble> getOptimizationOracleDouble(
+    inline std::shared_ptr<SCIPRealOptimizationOracle> getRealOptimizationOracle(
       const Constraint<double>& face)
     {
-      return std::make_shared<SCIPOptimizationOracleDouble>(shared_from_this(), face);
+      return std::make_shared<SCIPRealOptimizationOracle>(shared_from_this(), face);
     }
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
@@ -127,9 +127,9 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational()
+    inline std::shared_ptr<SCIPRationalOptimizationOracle> getRationalOptimizationOracle()
     {
-      return getOptimizationOracleRational(alwaysSatisfiedConstraint<mpq_class>());
+      return getRationalOptimizationOracle(alwaysSatisfiedConstraint<mpq_class>());
     }
 
     /**
@@ -137,12 +137,12 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPOptimizationOracleRational> getOptimizationOracleRational(
+    inline std::shared_ptr<SCIPRationalOptimizationOracle> getRationalOptimizationOracle(
       const Constraint<mpq_class>& face)
     {
       auto approximateFace = convertConstraint<double>(face);
-      auto approximateOracle = getOptimizationOracleDouble(approximateFace);
-      return std::make_shared<SCIPOptimizationOracleRational>(_extender, approximateOracle, face);
+      auto approximateOracle = getRealOptimizationOracle(approximateFace);
+      return std::make_shared<SCIPRationalOptimizationOracle>(_extender, approximateOracle, face);
     }
 
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
@@ -152,9 +152,9 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble()
+    inline std::shared_ptr<SCIPRealSeparationOracle> getRealSeparationOracle()
     {
-      return getSeparationOracleDouble(alwaysSatisfiedConstraint<double>());
+      return getRealSeparationOracle(alwaysSatisfiedConstraint<double>());
     }
 
     /**
@@ -162,10 +162,10 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleDouble> getSeparationOracleDouble(
+    inline std::shared_ptr<SCIPRealSeparationOracle> getRealSeparationOracle(
       const Constraint<double>& face)
     {
-      return std::make_shared<SCIPSeparationOracleDouble>(shared_from_this(), face);
+      return std::make_shared<SCIPRealSeparationOracle>(shared_from_this(), face);
     }
 
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
@@ -175,9 +175,9 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational()
+    inline std::shared_ptr<SCIPSeparationOracleRational> getRationalSeparationOracle()
     {
-      return getSeparationOracleRational(alwaysSatisfiedConstraint<mpq_class>());
+      return getRationalSeparationOracle(alwaysSatisfiedConstraint<mpq_class>());
     }
 
     /**
@@ -185,11 +185,11 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleRational> getSeparationOracleRational(
+    inline std::shared_ptr<SCIPSeparationOracleRational> getRationalSeparationOracle(
       const Constraint<mpq_class>& face)
     {
       auto approximateFace = convertConstraint<double>(face);
-      auto approximateOracle = getSeparationOracleDouble(approximateFace);
+      auto approximateOracle = getRealSeparationOracle(approximateFace);
       return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
     }
 
@@ -197,8 +197,8 @@ namespace ipo
 
   protected:
 
-    friend SCIPOptimizationOracleDouble;
-    friend SCIPSeparationOracleDouble;
+    friend SCIPRealOptimizationOracle;
+    friend SCIPRealSeparationOracle;
 
     /**
      * \brief Initializes the solver data.
@@ -256,7 +256,7 @@ namespace ipo
   * \brief OptimizationOracle based on the SCIP solver.
   */
 
-  class SCIPOptimizationOracleDouble: public RealOptimizationOracle
+  class SCIPRealOptimizationOracle: public RealOptimizationOracle
   {
   public:
 
@@ -268,7 +268,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPOptimizationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+    SCIPRealOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
       const Constraint<double>& face);
 
     /**
@@ -276,7 +276,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    virtual ~SCIPOptimizationOracleDouble();
+    virtual ~SCIPRealOptimizationOracle();
 
     /**
      * \brief Maximize an objective vector of type double.
@@ -303,7 +303,7 @@ namespace ipo
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
   */
 
-  class SCIPSeparationOracleDouble: public RealSeparationOracle
+  class SCIPRealSeparationOracle: public RealSeparationOracle
   {
   public:
     /**
@@ -314,7 +314,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPSeparationOracleDouble(std::shared_ptr<SCIPSolver> solver,
+    SCIPRealSeparationOracle(std::shared_ptr<SCIPSolver> solver,
       const Constraint<double>& face);
 
     /**
@@ -322,7 +322,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    virtual ~SCIPSeparationOracleDouble();
+    virtual ~SCIPRealSeparationOracle();
 
     /**
      * \brief Returns initially known inequalities.
@@ -348,7 +348,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RealSeparationOracle::Response separateDouble(const double* vector, bool isPoint,
+    virtual RealSeparationOracle::Response separateReal(const double* vector, bool isPoint,
       const RealSeparationOracle::Query& query = RealSeparationOracle::Query())
     {
       return separate(vector, isPoint, query);

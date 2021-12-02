@@ -3,7 +3,7 @@
 
 #include <scip/scipdefplugins.h>
 
-TEST(SCIP, UnboundedDouble)
+TEST(SCIP, UnboundedReal)
 {
   // x >= 0
   // y >= 0
@@ -31,7 +31,7 @@ TEST(SCIP, UnboundedDouble)
   SCIPreleaseVar(scip, &y);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracleDouble();
+  auto oracle = solver->getRealOptimizationOracle();
 
   double obj[] = {1.0, 1.0};
   ipo::RealOptimizationOracle::Query query;
@@ -47,7 +47,7 @@ TEST(SCIP, UnboundedDouble)
     0.5, 1.0e-9);
 }
 
-TEST(SCIP, InfeasibleDouble)
+TEST(SCIP, InfeasibleReal)
 {
   // x >= 0
   // y >= 0
@@ -73,7 +73,7 @@ TEST(SCIP, InfeasibleDouble)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracleDouble();
+  auto oracle = solver->getRealOptimizationOracle();
 
   double obj[] = { 1.0, 2.0 };
   ipo::RealOptimizationOracle::Query query;
@@ -82,7 +82,7 @@ TEST(SCIP, InfeasibleDouble)
   ASSERT_FALSE(response.hasDualBound);
 }
 
-TEST(SCIP, SeparateDouble)
+TEST(SCIP, SeparateReal)
 {
   // x in [-1.1,1.2]
   // y in [-1.3,1.4]
@@ -108,7 +108,7 @@ TEST(SCIP, SeparateDouble)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getSeparationOracleDouble();
+  auto oracle = solver->getRealSeparationOracle();
 
   double vector[] = { 1.0, 1.0 };
   ipo::RealSeparationOracle::Query query;
@@ -168,7 +168,7 @@ TEST(SCIP, UnboundedRational)
   SCIPreleaseVar(scip, &y);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracleRational();
+  auto oracle = solver->getRationalOptimizationOracle();
 
   mpq_class obj[] = {1.0, 1.0};
   ipo::RationalOptimizationOracle::Query query;
@@ -209,7 +209,7 @@ TEST(SCIP, InfeasibleRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracleRational();
+  auto oracle = solver->getRationalOptimizationOracle();
 
   mpq_class obj[] = { 1, 2 };
   ipo::RationalOptimizationOracle::Query query;
@@ -244,7 +244,7 @@ TEST(SCIP, SeparateRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getSeparationOracleRational();
+  auto oracle = solver->getRationalSeparationOracle();
 
   mpq_class vector[] = { 20, 20 };
   ipo::RationalSeparationOracle::Query query;
