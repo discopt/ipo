@@ -56,6 +56,9 @@ namespace ipo
       const std::vector<std::shared_ptr<SepaOracle>>& sepaOracles)
       : _space(space)
     {
+      if (space->dimension() == 0)
+        throw std::runtime_error("Tried to initialize polyhedron in 0-dimensional space.");
+      
       _cacheOptimization = std::make_shared<CacheOptOracle>(this); 
       _optimization.push_back(Data<OptOracle>(_cacheOptimization, true));
       for (auto& oracle : optOracles)

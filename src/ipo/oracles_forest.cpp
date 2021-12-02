@@ -1,3 +1,5 @@
+// #define IPO_DEBUG /* Uncomment to debug this file. */
+
 #include <ipo/oracles_forest.hpp>
 
 #include <sstream>
@@ -134,6 +136,13 @@ namespace ipo
   RationalOptimizationOracle::Response ForestRationalOptimizationOracle::maximize(const mpq_class* objectiveVector,
     const RationalOptimizationOracle::Query& query)
   {
+#if defined(IPO_DEBUG)
+    std::cout << "ForestRationalOptimizationOracle::maximize() called with objective vector (";
+    for (size_t v = 0; v < _space->dimension(); ++v)
+      std::cout << (v == 0 ? "" : ",") << objectiveVector[v];
+    std::cout << ")" << std::endl;
+#endif /* IPO_DEBUG */
+    
     std::vector<std::pair<mpq_class, std::size_t>> weights(_edges.size());
     for (size_t e = 0; e < _edges.size(); ++e)
       weights[e] = std::make_pair(objectiveVector[e], e);

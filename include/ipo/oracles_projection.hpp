@@ -26,25 +26,31 @@ namespace ipo
      * \param oracle     Oracle in the source space.
      */
 
+    IPO_EXPORT
     ProjectionRealOptimizationOracle(std::shared_ptr<RealOptimizationOracle> sourceOracle, const std::string& name = "");
 
     /**
      * \brief Destructor.
      */
 
+    IPO_EXPORT
     virtual ~ProjectionRealOptimizationOracle();
 
     /**
      * \brief Adds variable index \p sourceVariableIndex to the oracle.
      **/
 
+    IPO_EXPORT
     void addVariable(std::size_t sourceVariableIndex);
 
     /**
      * \brief Adds all those variables from the source oracle that match \p regex.
+     *
+     * \returns Number of matches.
      **/
 
-    void addVariables(const std::string& regex);
+    IPO_EXPORT
+    std::size_t addVariables(const std::string& regex);
 
   protected:
 
@@ -56,6 +62,7 @@ namespace ipo
      * \return Optimization response.
      **/
 
+    IPO_EXPORT
     virtual Response maximize(const double* objectiveVector, const Query& query);
 
   protected:
@@ -81,6 +88,7 @@ namespace ipo
      * \param oracle     Oracle in the source space.
      */
 
+    IPO_EXPORT
     ProjectionRationalOptimizationOracle(std::shared_ptr<RationalOptimizationOracle> sourceOracle,
       const std::string& name = "");
 
@@ -88,19 +96,24 @@ namespace ipo
      * \brief Destructor.
      */
 
+    IPO_EXPORT
     virtual ~ProjectionRationalOptimizationOracle();
 
     /**
      * \brief Adds variable index \p sourceVariableIndex to the oracle.
      **/
 
+    IPO_EXPORT
     void addVariable(std::size_t sourceVariableIndex);
 
     /**
      * \brief Adds all those variables from the source oracle that match \p regex.
+     *
+     * \returns Number of matches.
      **/
 
-    void addVariables(const std::string& regex);
+    IPO_EXPORT
+    std::size_t addVariables(const std::string& regex);
 
   protected:
 
@@ -112,6 +125,7 @@ namespace ipo
      * \return Optimization response.
      **/
 
+    IPO_EXPORT
     virtual Response maximize(const mpq_class* objectiveVector, const Query& query);
 
   protected:
