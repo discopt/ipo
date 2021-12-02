@@ -51,16 +51,25 @@ namespace ipo
     return printOptimizationRepsonse(stream, response);
   }
 
-  RealSeparationOracle::RealSeparationOracle(const std::string& name)
+  template <>
+  SeparationOracle<double>::SeparationOracle(const std::string& name)
     : Oracle<double>(name)
   {
 
   }
 
-  RealSeparationOracle::Response RealSeparationOracle::getInitial(
-    const RealSeparationOracle::Query& query)
+  template <>
+  SeparationResponse<double> SeparationOracle<double>::getInitial(
+    const SeparationQuery& query)
   {
     return Response();
+  }
+
+  template <>
+  SeparationResponse<double> SeparationOracle<double>::separateDouble(const double* vector,
+    bool isPoint, const Query& query)
+  {
+    return separate(vector, isPoint, query);
   }
 
 #if defined(IPO_WITH_GMP)
@@ -87,19 +96,22 @@ namespace ipo
     return printOptimizationRepsonse(stream, response);
   }
   
-  RationalSeparationOracle::RationalSeparationOracle(const std::string& name)
+  template<>
+  SeparationOracle<mpq_class>::SeparationOracle(const std::string& name)
     : Oracle<mpq_class>(name)
   {
 
   }
 
-  RationalSeparationOracle::Response RationalSeparationOracle::getInitial(
-    const RationalSeparationOracle::Query& query)
+  template <>
+  SeparationResponse<mpq_class> SeparationOracle<mpq_class>::getInitial(
+    const SeparationQuery& query)
   {
-    return Response();
+    return SeparationResponse<mpq_class>();
   }
 
-  RationalSeparationOracle::Response RationalSeparationOracle::separate(const double* vector,
+  template <>
+  SeparationResponse<mpq_class> SeparationOracle<mpq_class>::separateDouble(const double* vector,
     bool isPoint, const Query& query)
   {
     std::vector<mpq_class> rationalVector(_space->dimension());
@@ -111,9 +123,11 @@ namespace ipo
 #endif /* IPO_WITH_GMP */
 
   typedef OptimizationOracle<double> OptimizationOracle_double;
+  typedef SeparationOracle<double> SeparationOracle_double;
 
 #if defined(IPO_WITH_GMP)
   typedef OptimizationOracle<mpq_class> OptimizationOracle_mpq_class;
+  typedef SeparationOracle<mpq_class> SeparationOracle_mpq_class;
 #endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */

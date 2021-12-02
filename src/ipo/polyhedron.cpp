@@ -16,13 +16,13 @@ namespace ipo
   {
   public:
     RealCacheOptimizationOracle(
-      PolyhedronImplementation<double, OptimizationOracle<double>, RealSeparationOracle, RealCacheOptimizationOracle>* implementation);
+      PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>, RealCacheOptimizationOracle>* implementation);
 
     OptimizationOracle<double>::Response maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query) override;
 
   protected:
-    PolyhedronImplementation<double, OptimizationOracle<double>, RealSeparationOracle, RealCacheOptimizationOracle>* _implementation;
+    PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>, RealCacheOptimizationOracle>* _implementation;
     std::size_t _queryCount;
   };
 
@@ -32,7 +32,7 @@ namespace ipo
   {
   public:
     RationalCacheOptimizationOracle(
-      PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, RationalSeparationOracle,
+      PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
       RationalCacheOptimizationOracle>* implementation);
 
     OptimizationOracle<mpq_class>::Response maximize(const mpq_class* objectiveVector,
@@ -42,7 +42,7 @@ namespace ipo
       const OptimizationOracle<mpq_class>::Query& query) override;
 
   protected:
-    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, RationalSeparationOracle,
+    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
       RationalCacheOptimizationOracle>* _implementation;
     std::size_t _queryCount;
   };
@@ -516,7 +516,7 @@ namespace ipo
   };
   
   RealCacheOptimizationOracle::RealCacheOptimizationOracle(
-    PolyhedronImplementation<double, OptimizationOracle<double>, RealSeparationOracle,
+    PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>,
     RealCacheOptimizationOracle>* implementation)
     : OptimizationOracle<double>("cache"), _implementation(implementation), _queryCount(0)
   {
@@ -650,36 +650,36 @@ namespace ipo
     return response;
   }
 
-  typedef PolyhedronImplementation<double, OptimizationOracle<double>, RealSeparationOracle,
+  typedef PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>,
     RealCacheOptimizationOracle> RealPolyhedronImplementation;
 
   RealPolyhedron::RealPolyhedron(std::shared_ptr<Space> space, const std::string& name)
-    : OptimizationOracle<double>(name), RealSeparationOracle(name)
+    : OptimizationOracle<double>(name), SeparationOracle<double>(name)
   {
     _space = space;
     std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<RealSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
     _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
 
   RealPolyhedron::RealPolyhedron(std::shared_ptr<OptimizationOracle<double>> optOracle)
     : OptimizationOracle<double>("Polyhedron for " + optOracle->name()),
-    RealSeparationOracle("Polyhedron for " + optOracle->name())
+    SeparationOracle<double>("Polyhedron for " + optOracle->name())
   {
     _space = optOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<RealSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
     optOracles.push_back(optOracle);
     _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
 
-  RealPolyhedron::RealPolyhedron(std::shared_ptr<RealSeparationOracle> sepaOracle)
+  RealPolyhedron::RealPolyhedron(std::shared_ptr<SeparationOracle<double>> sepaOracle)
     : OptimizationOracle<double>("Polyhedron for " + sepaOracle->name()),
-    RealSeparationOracle("Polyhedron for " + sepaOracle->name())
+    SeparationOracle<double>("Polyhedron for " + sepaOracle->name())
   {
     _space = sepaOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<RealSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
     sepaOracles.push_back(sepaOracle);
     _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
@@ -716,8 +716,8 @@ namespace ipo
     return static_cast<RealPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
   }
 
-  RealSeparationOracle::Response RealPolyhedron::separate(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query)
+  SeparationResponse<double> RealPolyhedron::separate(const double* vector, bool isPoint,
+      const SeparationQuery& query)
   {
     return static_cast<RealPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
   }
@@ -725,7 +725,7 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
 
   RationalCacheOptimizationOracle::RationalCacheOptimizationOracle(
-    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, RationalSeparationOracle,
+    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
     RationalCacheOptimizationOracle>* implementation)
     : OptimizationOracle<mpq_class>("cache"), _implementation(implementation), _queryCount(0)
   {
@@ -989,14 +989,14 @@ namespace ipo
     return response;
   }
 
-  typedef PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, RationalSeparationOracle,
+  typedef PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
     RationalCacheOptimizationOracle> RationalPolyhedronImplementation;
 
   RationalPolyhedron::RationalPolyhedron(std::shared_ptr<Space> space)
   {
     _space = space;
     std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<RationalSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
     _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
 
@@ -1004,16 +1004,16 @@ namespace ipo
   {
     _space = optOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<RationalSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
     optOracles.push_back(optOracle);
     _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
 
-  RationalPolyhedron::RationalPolyhedron(std::shared_ptr<RationalSeparationOracle> sepaOracle)
+  RationalPolyhedron::RationalPolyhedron(std::shared_ptr<SeparationOracle<mpq_class>> sepaOracle)
   {
     _space = sepaOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<RationalSeparationOracle>> sepaOracles;
+    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
     sepaOracles.push_back(sepaOracle);
     _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
   }
@@ -1055,8 +1055,8 @@ namespace ipo
     return static_cast<RationalPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
   }
 
-  RationalSeparationOracle::Response RationalPolyhedron::separate(const mpq_class* vector, bool isPoint,
-    const RationalSeparationOracle::Query& query)
+  SeparationResponse<mpq_class> RationalPolyhedron::separate(const mpq_class* vector, bool isPoint,
+    const SeparationQuery& query)
   {
     return static_cast<RationalPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
   }

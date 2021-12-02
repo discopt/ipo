@@ -111,7 +111,7 @@ TEST(SCIP, SeparateReal)
   auto oracle = solver->getRealSeparationOracle();
 
   double vector[] = { 1.0, 1.0 };
-  ipo::RealSeparationOracle::Query query;
+  ipo::SeparationQuery query;
   auto response = oracle->separate(vector, true, query);
   ASSERT_FALSE(response.constraints.empty());
   ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
@@ -247,7 +247,7 @@ TEST(SCIP, SeparateRational)
   auto oracle = solver->getRationalSeparationOracle();
 
   mpq_class vector[] = { 20, 20 };
-  ipo::RationalSeparationOracle::Query query;
+  ipo::SeparationQuery query;
   auto response = oracle->separate(vector, true, query);
   ASSERT_FALSE(response.constraints.empty());
   ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);

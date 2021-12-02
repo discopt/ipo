@@ -110,11 +110,11 @@ namespace ipo
     Constraint<mpq_class> _face;
   };
 
-  class RationalMIPExtendedSeparationOracle: public RationalSeparationOracle
+  class RationalMIPExtendedSeparationOracle: public SeparationOracle<mpq_class>
   {
   public:
     IPO_EXPORT
-    RationalMIPExtendedSeparationOracle(std::shared_ptr<RealSeparationOracle> approximateOracle,
+    RationalMIPExtendedSeparationOracle(std::shared_ptr<SeparationOracle<double>> approximateOracle,
       const Constraint<mpq_class>& face);
 
     IPO_EXPORT
@@ -145,8 +145,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RationalSeparationOracle::Response separate(const double* vector, bool isPoint,
-      const RationalSeparationOracle::Query& query) override;
+    virtual SeparationResponse<mpq_class> separateDouble(const double* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery()) override;
 
     /**
      * \brief Separates a point/ray of the corresponding type.
@@ -160,11 +160,11 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RationalSeparationOracle::Response separate(const mpq_class* vector, bool isPoint,
-      const RationalSeparationOracle::Query& query) override;
+    virtual SeparationResponse<mpq_class> separate(const mpq_class* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery()) override;
 
   protected:
-    std::shared_ptr<RealSeparationOracle> _approximateOracle;
+    std::shared_ptr<SeparationOracle<double>> _approximateOracle;
     Constraint<mpq_class> _face;
   };
 

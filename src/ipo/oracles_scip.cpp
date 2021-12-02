@@ -848,7 +848,7 @@ namespace ipo
 
   SCIPRealSeparationOracle::SCIPRealSeparationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
-    : RealSeparationOracle(solver->name()), _solver(solver), _face(face)
+    : SeparationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
     _solver->addFace(&_face);
@@ -859,10 +859,10 @@ namespace ipo
     _solver->deleteFace(&_face);
   }
 
-  RealSeparationOracle::Response SCIPRealSeparationOracle::getInitial(
-    const RealSeparationOracle::Query& query)
+  SeparationResponse<double> SCIPRealSeparationOracle::getInitial(
+    const SeparationQuery& query)
   {
-    RealSeparationOracle::Response result;
+    SeparationResponse<double> result;
 
     if (query.maxNumInequalities > 0 && !_face.isAlwaysSatisfied())
       result.constraints.push_back(_face);
@@ -904,10 +904,10 @@ namespace ipo
     return result;
   }
 
-  RealSeparationOracle::Response SCIPRealSeparationOracle::separate(const double* vector,
-    bool isPoint, const RealSeparationOracle::Query& query)
+  SeparationResponse<double> SCIPRealSeparationOracle::separate(const double* vector,
+    bool isPoint, const SeparationQuery& query)
   {
-    RealSeparationOracle::Response result;
+    SeparationResponse<double> result;
 
     _solver->selectFace(&_face);
 

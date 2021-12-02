@@ -303,7 +303,7 @@ namespace ipo
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
   */
 
-  class SCIPRealSeparationOracle: public RealSeparationOracle
+  class SCIPRealSeparationOracle: public SeparationOracle<double>
   {
   public:
     /**
@@ -332,9 +332,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealSeparationOracle::Response getInitial(
-      const RealSeparationOracle::Query& query = RealSeparationOracle::Query())
-      override;
+    SeparationResponse<double> getInitial(const SeparationQuery& query = SeparationQuery()) override;
 
     /**
      * \brief Separates a point/ray with floating-point coordinates.
@@ -348,8 +346,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RealSeparationOracle::Response separateReal(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query = RealSeparationOracle::Query())
+    virtual SeparationResponse<double> separateReal(const double* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery())
     {
       return separate(vector, isPoint, query);
     }
@@ -366,8 +364,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual RealSeparationOracle::Response separate(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query = RealSeparationOracle::Query());
+    virtual SeparationResponse<double> separate(const double* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery());
 
   protected:
     friend SCIPSolver;

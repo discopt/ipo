@@ -12,12 +12,12 @@ namespace ipo
 {
 
   class RealPolyhedron: public std::enable_shared_from_this<RealPolyhedron>, OptimizationOracle<double>,
-    RealSeparationOracle
+    SeparationOracle<double>
   {
   public:
     typedef double Number;
     typedef OptimizationOracle<double> OptOracle;
-    typedef RealSeparationOracle SeparationOracle;
+    typedef SeparationOracle<double> SepaOracle;
 
     /// Deleted default constructor.
 
@@ -42,7 +42,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealPolyhedron(std::shared_ptr<RealSeparationOracle> separationOracle);
+    RealPolyhedron(std::shared_ptr<SepaOracle> separationOracle);
 
     /**
      * \brief Destructor.
@@ -114,8 +114,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RealSeparationOracle::Response separate(const double* vector, bool isPoint,
-      const RealSeparationOracle::Query& query = RealSeparationOracle::Query());
+    SeparationResponse<double> separate(const double* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery());
 
   protected:
 
@@ -132,7 +132,7 @@ namespace ipo
   public:
     typedef mpq_class Number;
     typedef OptimizationOracle<mpq_class> OptOracle;
-    typedef RationalSeparationOracle SeparationOracle;
+    typedef SeparationOracle<mpq_class> SepaOracle;
 
     /// Deleted default constructor.
 
@@ -157,7 +157,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RationalPolyhedron(std::shared_ptr<RationalSeparationOracle> separationOracle);
+    RationalPolyhedron(std::shared_ptr<SepaOracle> separationOracle);
 
     /**
      * \brief Destructor.
@@ -241,8 +241,8 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    RationalSeparationOracle::Response separate(const mpq_class* vector, bool isPoint,
-      const RationalSeparationOracle::Query& query = RationalSeparationOracle::Query());
+    SeparationResponse<mpq_class> separate(const mpq_class* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery());
 
   protected:
     /// Pointer to private implementation.

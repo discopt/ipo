@@ -388,8 +388,8 @@ namespace ipo
   }
 
   RationalMIPExtendedSeparationOracle::RationalMIPExtendedSeparationOracle(
-    std::shared_ptr<RealSeparationOracle> approximateOracle, const Constraint<mpq_class>& face)
-    : RationalSeparationOracle("Rational " + approximateOracle->name()),
+    std::shared_ptr<SeparationOracle<double>> approximateOracle, const Constraint<mpq_class>& face)
+    : SeparationOracle<mpq_class>("Rational " + approximateOracle->name()),
     _approximateOracle(approximateOracle), _face(face)
   {
     _space = approximateOracle->space();
@@ -400,15 +400,14 @@ namespace ipo
 
   }
 
-  RationalSeparationOracle::Response RationalMIPExtendedSeparationOracle::getInitial(
-    const RationalSeparationOracle::Query& query)
+  SeparationResponse<mpq_class> RationalMIPExtendedSeparationOracle::getInitial(const SeparationQuery& query)
   {
-    RealSeparationOracle::Query approximateQuery;
+    SeparationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumInequalities = query.maxNumInequalities;
     approximateQuery.timeLimit = query.timeLimit;
 
     auto approximateResponse = _approximateOracle->getInitial(approximateQuery);
-    RationalSeparationOracle::Response response;
+    SeparationOracle<mpq_class>::Response response;
     response.constraints.reserve(approximateResponse.numConstraints());
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
     for (const auto& constraint : approximateResponse.constraints)
@@ -417,15 +416,15 @@ namespace ipo
     return response;
   }
 
-  RationalSeparationOracle::Response RationalMIPExtendedSeparationOracle::separate(
-    const double* vector, bool isPoint, const RationalSeparationOracle::Query& query)
+  SeparationResponse<mpq_class> RationalMIPExtendedSeparationOracle::separateDouble(const double* vector, bool isPoint,
+    const SeparationQuery& query)
   {
-    RealSeparationOracle::Query approximateQuery;
+    SeparationOracle<double>::Query approximateQuery;
     approximateQuery.maxNumInequalities = query.maxNumInequalities;
     approximateQuery.timeLimit = query.timeLimit;
 
     auto approximateResponse = _approximateOracle->separate(vector, isPoint, approximateQuery);
-    RationalSeparationOracle::Response response;
+    SeparationOracle<mpq_class>::Response response;
     response.constraints.reserve(approximateResponse.numConstraints());
     response.hitTimeLimit = approximateResponse.hitTimeLimit;
     for (const auto& constraint : approximateResponse.constraints)
@@ -434,13 +433,13 @@ namespace ipo
     return response;
   }
 
-  RationalSeparationOracle::Response RationalMIPExtendedSeparationOracle::separate(
-    const mpq_class* vector, bool isPoint, const RationalSeparationOracle::Query& query)
+  SeparationResponse<mpq_class> RationalMIPExtendedSeparationOracle::separate(const mpq_class* vector, bool isPoint,
+    const SeparationQuery& query)
   {
     std::vector<double> tempVector(space()->dimension());
     for (std::size_t v = 0; v < space()->dimension(); ++v)
       tempVector[v] = vector[v].get_d();
-    return separate(&tempVector[0], isPoint, query);
+    return separateDouble(&tempVector[0], isPoint, query);
   }
 
 }

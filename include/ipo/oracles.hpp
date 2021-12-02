@@ -11,7 +11,7 @@
 namespace ipo
 {
 
-  /// Outcome of a query to a RealOptimizationOracle or RationalOptimizationOracle.
+  /// Outcome of a query to an OptimizationOracle.
   enum class OptimizationOutcome
   {
     /// A timeout occured.
@@ -440,7 +440,7 @@ namespace ipo
    * \brief Structure for storing the query to a separation oracle.
    **/
 
-  struct CommonSeparationQuery
+  struct SeparationQuery
   {
     /// Maximum number of solutions to return.
     std::size_t maxNumInequalities;
@@ -452,7 +452,7 @@ namespace ipo
       */
 
     IPO_EXPORT
-    CommonSeparationQuery()
+    SeparationQuery()
       : maxNumInequalities(std::numeric_limits<std::size_t>::max()),
       timeLimit(std::numeric_limits<double>::infinity())
     {
@@ -464,11 +464,13 @@ namespace ipo
    * \brief Structure for storing the response of a separation oracle.
    **/
 
-  template <typename R>
-  struct CommonSeparationResponse
+  template <typename NumberType>
+  struct SeparationResponse
   {
+    typedef NumberType Number;
+
     /// Array with constraints.
-    std::vector<Constraint<R>> constraints;
+    std::vector<Constraint<Number>> constraints;
     /// Whether the time limit was reached.
     bool hitTimeLimit;
 
@@ -477,7 +479,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    CommonSeparationResponse()
+    SeparationResponse()
       : hitTimeLimit(false)
     {
 
@@ -488,7 +490,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    CommonSeparationResponse(CommonSeparationResponse&& other)
+    SeparationResponse(SeparationResponse&& other)
       : constraints(std::move(other.constraints)), hitTimeLimit(other.hitTimeLimit)
     {
 
@@ -499,7 +501,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline CommonSeparationResponse& operator=(CommonSeparationResponse&& other)
+    inline SeparationResponse& operator=(SeparationResponse&& other)
     {
       constraints = std::move(other.constraints);
       hitTimeLimit = other.hitTimeLimit;
@@ -511,7 +513,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    inline CommonSeparationResponse& operator=(const CommonSeparationResponse& other)
+    inline SeparationResponse& operator=(const SeparationResponse& other)
     {
       constraints = other.constraints;
       hitTimeLimit = other.hitTimeLimit;
@@ -538,26 +540,29 @@ namespace ipo
   std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<double>& response);
 
   /**
-   * \brief Base class for separation oracles in floating-point arithmetic.
+   * \brief Base class for separation oracles.
    *
    * When queried with a point, the oracle returns any number (including none) of less-than-or-equal
    * inequalities.
    */
 
-  class RealSeparationOracle: public Oracle<double>
+  template <typename NumberType>
+  class SeparationOracle: public Oracle<NumberType>
   {
   public:
+    typedef NumberType Number;
+
     /// Query structure.
-    typedef CommonSeparationQuery Query;
+    typedef SeparationQuery Query;
     /// Response structure.
-    typedef CommonSeparationResponse<double> Response;
+    typedef SeparationResponse<Number> Response;
 
     /**
      * \brief Constructs the oracle.
      */
 
     IPO_EXPORT
-    RealSeparationOracle(const std::string& name);
+    SeparationOracle(const std::string& name);
 
     /**
      * \brief Returns initially known inequalities.
@@ -572,7 +577,7 @@ namespace ipo
     virtual Response getInitial(const Query& query = Query());
 
     /**
-     * \brief Separates a point/ray given in floating-point arithmetic.
+     * \brief Separates a point/ray.
      *
      * \param vector Array that maps coordinates to point/ray coordinates.
      * \param isPoint Whether a point shall be separated.
@@ -582,8 +587,23 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response separate(const double* vector, bool isPoint, const Query& query = Query()) = 0;
+    virtual Response separate(const Number* vector, bool isPoint, const Query& query = Query()) = 0;
 
+    /**
+     * \brief Separates a point/ray given in floating-point arithmetic.
+     *
+     * The default implementation converts the point/ray to a suitable arithmetic and calls 
+     * \ref SeparationOracle::separate.
+     *
+     * \param vector Array that maps coordinates to point/ray coordinates.
+     * \param isPoint Whether a point shall be separated.
+     * \param query Additional query information.
+     *
+     * \returns Reponse structure.
+     **/
+
+    IPO_EXPORT
+    virtual Response separateDouble(const double* vector, bool isPoint, const Query& query);
   };
 
   /**
@@ -592,7 +612,7 @@ namespace ipo
 
   IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream,
-    const CommonSeparationResponse<double>& response);
+    const SeparationResponse<double>& response);
 
 #if defined(IPO_WITH_GMP)
 
@@ -604,78 +624,11 @@ namespace ipo
   std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<mpq_class>& response);
 
   /**
-   * \brief Base class for separation oracles in rational arithmetic.
-   *
-   * When queried with a point, the oracle returns any number (including none) of less-than-or-equal
-   * inequalities.
-   */
-
-  class RationalSeparationOracle: public Oracle<mpq_class>
-  {
-  public:
-
-    /// Query structure.
-    typedef CommonSeparationQuery Query;
-    /// Response structure.
-    typedef CommonSeparationResponse<mpq_class> Response;
-
-    /**
-     * \brief Constructs the oracle.
-     */
-
-    IPO_EXPORT
-    RationalSeparationOracle(const std::string& name);
-
-    /**
-     * \brief Returns initially known inequalities.
-     * 
-     * The default implementation returns nothing.
-     *
-     * \param query Structure for query.
-     * \return Separation result.
-     **/
-
-    IPO_EXPORT
-    virtual Response getInitial(const Query& query = Query());
-
-    /**
-     * \brief Separates a point/ray given in rational arithmetic.
-     *
-     * \param vector Array that maps coordinates to point/ray coordinates.
-     * \param isPoint Whether a point shall be separated.
-     * \param query Additional query information.
-     *
-     * \returns Reponse structure.
-     **/
-
-    IPO_EXPORT
-    virtual Response separate(const mpq_class* vector, bool isPoint,
-      const Query& query = Query()) = 0;
-
-    /**
-     * \brief Separates a point/ray given in floating-point arithmetic.
-     *
-     * The default implementation converts the point/ray to rational arithmetic and calls 
-     * RationalSeparationOracle::separate.
-     *
-     * \param vector Array that maps coordinates to point/ray coordinates.
-     * \param isPoint Whether a point shall be separated.
-     * \param query Additional query information.
-     *
-     * \returns Reponse structure.
-     **/
-
-    IPO_EXPORT
-    virtual Response separate(const double* vector, bool isPoint, const Query& query);
-
-  };
-
-  /**
    * \brief Prints the response of a rational separation oracle.
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream, const CommonSeparationResponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const SeparationResponse<mpq_class>& response);
 
 #endif /* IPO_WITH_GMP */
 
