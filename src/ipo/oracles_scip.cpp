@@ -563,7 +563,37 @@ namespace ipo
     _currentFace = face;
   }
 
-  SCIPRealOptimizationOracle::SCIPRealOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
+  /**
+   * \brief Returns a double-arithmetic optimization oracle for the requested \p face.
+   */
+
+  template <>
+  IPO_EXPORT
+  std::shared_ptr<SCIPOptimizationOracle<double>> SCIPSolver::getOptimizationOracle<double>(
+    const Constraint<double>& face)
+  {
+    return std::make_shared<SCIPOptimizationOracle<double>>(shared_from_this(), face);
+  }
+
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+
+  /**
+   * \brief Returns a rational optimization oracle for the requested \p face.
+   **/
+
+  template <>
+  IPO_EXPORT
+  std::shared_ptr<SCIPOptimizationOracle<mpq_class>> SCIPSolver::getOptimizationOracle<mpq_class>(
+    const Constraint<mpq_class>& face)
+  {
+    auto approximateFace = convertConstraint<double>(face);
+    auto approximateOracle = getOptimizationOracle<double>(approximateFace);
+    return std::make_shared<SCIPOptimizationOracle<mpq_class>>(_extender, approximateOracle, face);
+  }
+
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+
+  SCIPOptimizationOracle<double>::SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
     : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
@@ -571,12 +601,44 @@ namespace ipo
     _solver->addFace(&_face);
   }
 
-  SCIPRealOptimizationOracle::~SCIPRealOptimizationOracle()
+  SCIPOptimizationOracle<double>::~SCIPOptimizationOracle()
   {
     _solver->deleteFace(&_face);
   }
 
-  OptimizationOracle<double>::Response SCIPRealOptimizationOracle::maximize(const double* objectiveVector,
+  /**
+   * \brief Returns a double arithmetic separation oracle for the \p face.
+   **/
+
+  template <>
+  IPO_EXPORT
+  std::shared_ptr<SCIPSeparationOracle<double>> SCIPSolver::getSeparationOracle<double>(
+    const Constraint<double>& face)
+  {
+    return std::make_shared<SCIPSeparationOracle<double>>(shared_from_this(), face);
+  }
+
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+
+  /**
+   * \brief Returns a rational arithmetic separation oracle for the \p face.
+   **/
+
+  template <>
+  IPO_EXPORT
+  std::shared_ptr<SCIPSeparationOracle<mpq_class>> SCIPSolver::getSeparationOracle<mpq_class>(
+    const Constraint<mpq_class>& face)
+  {
+//     return 
+//     auto approximateFace = convertConstraint<double>(face);
+//     auto approximateOracle = getSeparationOracle<double>(approximateFace);
+//     return std::make_shared<SCIPSeparationOracle<mpq_class>>(approximateOracle, face);
+    return std::make_shared<SCIPSeparationOracle<mpq_class>>(shared_from_this(), face);
+  }
+
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+
+  OptimizationOracle<double>::Response SCIPOptimizationOracle<double>::maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query)
   {
     OptimizationOracle<double>::Response response;
@@ -649,7 +711,7 @@ namespace ipo
       SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
       if (retcode != SCIP_OKAY)
       {
-        std::cerr << "SCIPRealOptimizationOracle received return code " << retcode
+        std::cerr << "SCIPOptimizationOracle<double> received return code " << retcode
           << " from SCIPsolve() call." << std::endl;
       }
       solutionTime += SCIPgetTotalTime(_solver->_scip);
@@ -846,20 +908,25 @@ namespace ipo
     return response;
   }
 
-  SCIPRealSeparationOracle::SCIPRealSeparationOracle(std::shared_ptr<SCIPSolver> solver,
+  
+  template <>
+  SCIPSeparationOracle<double>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
-    : SeparationOracle<double>(solver->name()), _solver(solver), _face(face)
+    : SeparationOracle<double>(solver->name()), _solver(solver), _face(face),
+    _approximateFace(face)
   {
     _space = solver->space();
-    _solver->addFace(&_face);
+    _solver->addFace(&_approximateFace);
   }
 
-  SCIPRealSeparationOracle::~SCIPRealSeparationOracle()
+  template <>
+  SCIPSeparationOracle<double>::~SCIPSeparationOracle()
   {
-    _solver->deleteFace(&_face);
+    _solver->deleteFace(&_approximateFace);
   }
 
-  SeparationResponse<double> SCIPRealSeparationOracle::getInitial(
+  template <>
+  SeparationResponse<double> SCIPSeparationOracle<double>::getInitial(
     const SeparationQuery& query)
   {
     SeparationResponse<double> result;
@@ -870,8 +937,8 @@ namespace ipo
     struct Visitor
     {
       std::shared_ptr<SCIPSolver> solver;
-      const SCIPRealSeparationOracle::Query& query;
-      SCIPRealSeparationOracle::Response& response;
+      const SeparationQuery& query;
+      SeparationResponse<double>& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -904,20 +971,21 @@ namespace ipo
     return result;
   }
 
-  SeparationResponse<double> SCIPRealSeparationOracle::separate(const double* vector,
+  template <>
+  SeparationResponse<double> SCIPSeparationOracle<double>::separate(const double* vector,
     bool isPoint, const SeparationQuery& query)
   {
     SeparationResponse<double> result;
 
-    _solver->selectFace(&_face);
+    _solver->selectFace(&_approximateFace);
 
     struct Visitor
     {
       std::shared_ptr<SCIPSolver> solver;
       const double* vector;
       bool isPoint;
-      const SCIPRealSeparationOracle::Query& query;
-      SCIPRealSeparationOracle::Response& response;
+      const SeparationQuery& query;
+      SeparationResponse<double>& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -974,4 +1042,219 @@ namespace ipo
     return result;
   }
 
+  template <>
+  SeparationResponse<double> SCIPSeparationOracle<double>::separateDouble(const double* vector,
+    bool isPoint, const SeparationQuery& query)
+  {
+    return separate(vector, isPoint, query);
+  }
+
+#if defined(IPO_WITH_GMP)
+
+  template <>
+  SCIPSeparationOracle<mpq_class>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
+    const Constraint<mpq_class>& face)
+    : SeparationOracle<mpq_class>(solver->name()), _solver(solver), _face(face),
+    _approximateFace(convertConstraint<double>(face))
+  {
+    _space = solver->space();
+    _solver->addFace(&_approximateFace);
+  }
+
+  template <>
+  SCIPSeparationOracle<mpq_class>::~SCIPSeparationOracle()
+  {
+    _solver->deleteFace(&_approximateFace);
+  }
+
+  template <>
+  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::getInitial(
+    const SeparationQuery& query)
+  {
+    SeparationResponse<mpq_class> result;
+
+    if (query.maxNumInequalities > 0 && !_face.isAlwaysSatisfied())
+      result.constraints.push_back(_face);
+
+    struct Visitor
+    {
+      std::shared_ptr<SCIPSolver> solver;
+      const SeparationQuery& query;
+      SeparationResponse<mpq_class>& response;
+      std::size_t iteration;
+      std::chrono::time_point<std::chrono::system_clock> started;
+
+      void operator()(const Constraint<double>& constraint)
+      {
+        // Did we reach a limit?
+        if (response.hitTimeLimit || response.constraints.size() == query.maxNumInequalities)
+          return;
+
+        iteration = (iteration + 1) % SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY;
+        if (iteration == 0)
+        {
+          std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+          if (duration.count() > query.timeLimit)
+          {
+            response.hitTimeLimit = true;
+            return;
+          }
+        }
+
+        response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+      }
+    };
+
+    Visitor visitor = { _solver, query, result, 0, std::chrono::system_clock::now() };
+
+    SCIPiterateBounds(_solver->_scip, _solver->_variablesToCoordinates, visitor, true);
+    SCIPiterateRows(_solver->_scip, _solver->_variablesToCoordinates, visitor, true);
+
+    return result;
+  }
+
+  template <>
+  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::separate(const mpq_class* vector,
+    bool isPoint, const SeparationQuery& query)
+  {
+    SeparationResponse<mpq_class> result;
+
+    _solver->selectFace(&_approximateFace);
+
+    struct Visitor
+    {
+      std::shared_ptr<SCIPSolver> solver;
+      const mpq_class* vector;
+      bool isPoint;
+      const SeparationQuery& query;
+      SeparationResponse<mpq_class>& response;
+      std::size_t iteration;
+      std::chrono::time_point<std::chrono::system_clock> started;
+
+      void operator()(const Constraint<double>& constraint)
+      {
+        // Did we reach a limit?
+        if (response.hitTimeLimit || response.constraints.size() == query.maxNumInequalities)
+          return;
+
+        iteration = (iteration + 1) % SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY;
+        if (iteration == 0)
+        {
+          std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+          if (duration.count() > query.timeLimit)
+          {
+            response.hitTimeLimit = true;
+            return;
+          }
+        }
+
+        // Set lhs/rhs to 0 if we are separating a ray.
+        double lhs, rhs;
+        if (!constraint.hasLhs())
+          lhs = -std::numeric_limits<double>::infinity();
+        else if (isPoint)
+          lhs = constraint.lhs();
+        else
+          lhs = 0.0;
+        if (!constraint.hasRhs())
+          rhs = std::numeric_limits<double>::infinity();
+        else if (isPoint)
+          rhs = constraint.rhs();
+        else
+          rhs = 0.0;
+
+        double activity = 0.0;
+        for (const auto& iter : constraint.vector())
+          activity += convertNumber<double>(vector[iter.first]) * iter.second;
+
+        if (!SCIPisFeasLE(solver->_scip, activity, rhs)
+          || !SCIPisFeasGE(solver->_scip, activity, lhs))
+        {
+          response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+        }
+      }
+    };
+
+    Visitor visitor = { _solver, vector, isPoint, query, result, 0,
+        std::chrono::system_clock::now() };
+
+    SCIPiterateBounds(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
+    SCIPiterateRows(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
+
+    return result;
+  }
+
+  template <>
+  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::separateDouble(const double* vector,
+    bool isPoint, const SeparationQuery& query)
+  {
+    SeparationResponse<mpq_class> result;
+
+    _solver->selectFace(&_approximateFace);
+
+    struct Visitor
+    {
+      std::shared_ptr<SCIPSolver> solver;
+      const double* vector;
+      bool isPoint;
+      const SeparationQuery& query;
+      SeparationResponse<mpq_class>& response;
+      std::size_t iteration;
+      std::chrono::time_point<std::chrono::system_clock> started;
+
+      void operator()(const Constraint<double>& constraint)
+      {
+        // Did we reach a limit?
+        if (response.hitTimeLimit || response.constraints.size() == query.maxNumInequalities)
+          return;
+
+        iteration = (iteration + 1) % SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY;
+        if (iteration == 0)
+        {
+          std::chrono::duration<double> duration = std::chrono::system_clock::now() - started;
+          if (duration.count() > query.timeLimit)
+          {
+            response.hitTimeLimit = true;
+            return;
+          }
+        }
+
+        // Set lhs/rhs to 0 if we are separating a ray.
+        double lhs, rhs;
+        if (!constraint.hasLhs())
+          lhs = -std::numeric_limits<double>::infinity();
+        else if (isPoint)
+          lhs = constraint.lhs();
+        else
+          lhs = 0.0;
+        if (!constraint.hasRhs())
+          rhs = std::numeric_limits<double>::infinity();
+        else if (isPoint)
+          rhs = constraint.rhs();
+        else
+          rhs = 0.0;
+
+        double activity = 0.0;
+        for (const auto& iter : constraint.vector())
+          activity += convertNumber<double>(vector[iter.first]) * iter.second;
+
+        if (!SCIPisFeasLE(solver->_scip, activity, rhs)
+          || !SCIPisFeasGE(solver->_scip, activity, lhs))
+        {
+          response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+        }
+      }
+    };
+
+    Visitor visitor = { _solver, vector, isPoint, query, result, 0,
+        std::chrono::system_clock::now() };
+
+    SCIPiterateBounds(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
+    SCIPiterateRows(_solver->_scip, _solver->_variablesToCoordinates, visitor, false);
+
+    return result;
+  }
+
+#endif /* IPO_WITH_GMP */
+  
 } /* namespace ipo */

@@ -12,7 +12,7 @@ namespace ipo
   public:
     IPO_EXPORT
     ForestRealOptimizationOracle(std::size_t numNodes, std::pair<std::size_t, std::size_t>* edgesFirst,
-      std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forests");
+      std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forest");
 
     IPO_EXPORT
     ~ForestRealOptimizationOracle();
@@ -42,7 +42,7 @@ namespace ipo
   public:
     IPO_EXPORT
     ForestRationalOptimizationOracle(std::size_t numNodes, std::pair<std::size_t, std::size_t>* edgesFirst,
-      std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forests");
+      std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forest");
 
     IPO_EXPORT
     ~ForestRationalOptimizationOracle();

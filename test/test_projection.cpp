@@ -16,7 +16,7 @@ TEST(Projection, OptimizationReal)
   auto sptreeOracle = std::make_shared<ipo::ForestRealOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], true);
   auto projectedOracle = std::make_shared<ipo::ProjectionRealOptimizationOracle>(sptreeOracle);
   ASSERT_EQ(projectedOracle->addVariables("x_[1-9].*"), 6);
-  auto projectedPolytope = std::make_shared<ipo::RealPolyhedron>(projectedOracle);
+  auto projectedPolytope = std::make_shared<ipo::Polyhedron<double>>(projectedOracle);
 
   auto result = ipo::affineHull(projectedPolytope);
   ASSERT_EQ(result.dimension, 6);
@@ -35,7 +35,7 @@ TEST(Projection, OptimizationRational)
   auto sptreeOracle = std::make_shared<ipo::ForestRationalOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], true);
   auto projectedOracle = std::make_shared<ipo::ProjectionRationalOptimizationOracle>(sptreeOracle);
   ASSERT_EQ(projectedOracle->addVariables("x_[1-9].*"), 6);
-  auto projectedPolytope = std::make_shared<ipo::RationalPolyhedron>(projectedOracle);
+  auto projectedPolytope = std::make_shared<ipo::Polyhedron<mpq_class>>(projectedOracle);
 
   auto result = ipo::affineHull(projectedPolytope);
   ASSERT_EQ(result.dimension, 6);

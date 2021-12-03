@@ -3,6 +3,8 @@ cmake_minimum_required(VERSION 3.5)
 project(IPO
    VERSION 2.0
    LANGUAGES CXX)
+   
+add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 option(GMP "Use GMP" ON)
 option(SHARED "Build shared libraries" ON)

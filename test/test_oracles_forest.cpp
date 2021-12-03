@@ -14,12 +14,12 @@ TEST(Forest, SpanningTreeReal)
   };
 
   auto forestOracle = std::make_shared<ipo::ForestRealOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], false);
-  auto forestPolytope = std::make_shared<ipo::RealPolyhedron>(forestOracle);
+  auto forestPolytope = std::make_shared<ipo::Polyhedron<double>>(forestOracle);
   ipo::RealAffineHullResult result = ipo::affineHull(forestPolytope);
   ASSERT_EQ(result.dimension, 9);
 
   auto sptreeOracle = std::make_shared<ipo::ForestRealOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], true);
-  auto sptreePolytope = std::make_shared<ipo::RealPolyhedron>(sptreeOracle);
+  auto sptreePolytope = std::make_shared<ipo::Polyhedron<double>>(sptreeOracle);
   result = ipo::affineHull(sptreePolytope);
   ASSERT_EQ(result.dimension, 7);
 }
@@ -35,12 +35,12 @@ TEST(Forest, SpanningTreeRational)
   };
 
   auto forestOracle = std::make_shared<ipo::ForestRationalOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], false);
-  auto forestPolytope = std::make_shared<ipo::RationalPolyhedron>(forestOracle);
+  auto forestPolytope = std::make_shared<ipo::Polyhedron<mpq_class>>(forestOracle);
   auto result = ipo::affineHull(forestPolytope);
   ASSERT_EQ(result.dimension, 9);
 
   auto sptreeOracle = std::make_shared<ipo::ForestRationalOptimizationOracle>(numNodes, &edges[0], &edges[numEdges], true);
-  auto sptreePolytope = std::make_shared<ipo::RationalPolyhedron>(sptreeOracle);
+  auto sptreePolytope = std::make_shared<ipo::Polyhedron<mpq_class>>(sptreeOracle);
   result = ipo::affineHull(sptreePolytope);
   ASSERT_EQ(result.dimension, 7);
 }

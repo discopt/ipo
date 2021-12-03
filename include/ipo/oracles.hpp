@@ -131,7 +131,7 @@ namespace ipo
    **/
 
   template <typename NumberType>
-  struct OptimizationReponse
+  struct OptimizationResponse
   {
     typedef NumberType Number;
 
@@ -265,7 +265,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    OptimizationReponse()
+    OptimizationResponse()
       : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
       dualBound(0), hitTimeLimit(false)
     {
@@ -277,7 +277,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    OptimizationReponse(OptimizationReponse&& other)
+    OptimizationResponse(OptimizationResponse&& other)
       : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
       hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
       rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
@@ -290,7 +290,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    inline OptimizationReponse<Number>& operator=(OptimizationReponse<Number>&& other)
+    inline OptimizationResponse<Number>& operator=(OptimizationResponse<Number>&& other)
     {
       outcome = other.outcome;
       hasPrimalBound = other.hasPrimalBound;
@@ -308,7 +308,7 @@ namespace ipo
       */
 
     IPO_EXPORT
-    inline OptimizationReponse<Number>& operator=(const OptimizationReponse<Number>& other)
+    inline OptimizationResponse<Number>& operator=(const OptimizationResponse<Number>& other)
     {
       outcome = other.outcome;
       hasPrimalBound = other.hasPrimalBound;
@@ -353,7 +353,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    Oracle(const std::string& name)
+    Oracle(const std::string& name = "")
       : _name(name), _space(nullptr)
     {
 
@@ -400,7 +400,7 @@ namespace ipo
     /// The query structure for the oracle.
     typedef OptimizationQuery<NumberType> Query;
     /// The response structure for the oracle.
-    typedef OptimizationReponse<NumberType> Response;
+    typedef OptimizationResponse<NumberType> Response;
 
     /**
      * \brief Constructs the oracle.
@@ -411,7 +411,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    OptimizationOracle(const std::string& name);
+    OptimizationOracle(const std::string& name = "");
 
     /**
      * \brief Maximize an objective vector.
@@ -537,7 +537,7 @@ namespace ipo
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<double>& response);
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response);
 
   /**
    * \brief Base class for separation oracles.
@@ -611,8 +611,7 @@ namespace ipo
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream,
-    const SeparationResponse<double>& response);
+  std::ostream& operator<<(std::ostream& stream, const SeparationResponse<double>& response);
 
 #if defined(IPO_WITH_GMP)
 
@@ -621,7 +620,7 @@ namespace ipo
    */
 
   IPO_EXPORT
-  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response);
 
   /**
    * \brief Prints the response of a rational separation oracle.

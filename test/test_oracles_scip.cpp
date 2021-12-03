@@ -31,7 +31,7 @@ TEST(SCIP, UnboundedReal)
   SCIPreleaseVar(scip, &y);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRealOptimizationOracle();
+  auto oracle = solver->getOptimizationOracle<double>();
 
   double obj[] = {1.0, 1.0};
   ipo::OptimizationOracle<double>::Query query;
@@ -73,7 +73,7 @@ TEST(SCIP, InfeasibleReal)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRealOptimizationOracle();
+  auto oracle = solver->getOptimizationOracle<double>();
 
   double obj[] = { 1.0, 2.0 };
   ipo::OptimizationOracle<double>::Query query;
@@ -108,7 +108,7 @@ TEST(SCIP, SeparateReal)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRealSeparationOracle();
+  auto oracle = solver->getSeparationOracle<double>();
 
   double vector[] = { 1.0, 1.0 };
   ipo::SeparationQuery query;
@@ -168,7 +168,7 @@ TEST(SCIP, UnboundedRational)
   SCIPreleaseVar(scip, &y);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRationalOptimizationOracle();
+  auto oracle = solver->getOptimizationOracle<mpq_class>();
 
   mpq_class obj[] = {1.0, 1.0};
   ipo::OptimizationOracle<mpq_class>::Query query;
@@ -209,7 +209,7 @@ TEST(SCIP, InfeasibleRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRationalOptimizationOracle();
+  auto oracle = solver->getOptimizationOracle<mpq_class>();
 
   mpq_class obj[] = { 1, 2 };
   ipo::OptimizationOracle<mpq_class>::Query query;
@@ -244,7 +244,7 @@ TEST(SCIP, SeparateRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getRationalSeparationOracle();
+  auto oracle = solver->getSeparationOracle<mpq_class>();
 
   mpq_class vector[] = { 20, 20 };
   ipo::SeparationQuery query;

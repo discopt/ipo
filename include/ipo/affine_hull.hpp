@@ -173,12 +173,12 @@ namespace ipo
 
   IPO_EXPORT
   RealAffineHullResult affineHull(
-    std::shared_ptr<RealPolyhedron> polyhedron,
+    std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query = AffineHullQuery(),
     const std::vector<Constraint<double>>& knownEquations = std::vector<Constraint<double>>());
 
   IPO_EXPORT
-  bool verifyAffineHullResult(std::shared_ptr<RealPolyhedron> polyhedron,
+  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron,
     const RealAffineHullResult& result);
 
 #if defined(IPO_WITH_GMP)
@@ -187,7 +187,7 @@ namespace ipo
 
   IPO_EXPORT
   RationalAffineHullResult affineHull(
-    std::shared_ptr<RationalPolyhedron> polyhedron,
+    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query = AffineHullQuery(),
     const std::vector<Constraint<mpq_class>>& knownEquations = std::vector<Constraint<mpq_class>>());
 

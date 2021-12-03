@@ -23,15 +23,12 @@
 namespace ipo
 {
   // Forward declarations.
+  
+  template <typename NumberType>
+  class SCIPOptimizationOracle;
 
-  class SCIPRealOptimizationOracle;
-  class SCIPRealSeparationOracle;
-
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  typedef RationalMIPExtendedOptimizationOracle SCIPRationalOptimizationOracle;
-
-  typedef RationalMIPExtendedSeparationOracle SCIPSeparationOracleRational;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+  template <typename NumberType>
+  class SCIPSeparationOracle;
 
   /**
    * \brief A SCIP solver instance.
@@ -103,102 +100,51 @@ namespace ipo
      * \brief Returns an optimization oracle for the polyhedron.
      */
 
+    template <typename NumberType>
     IPO_EXPORT
-    inline std::shared_ptr<SCIPRealOptimizationOracle> getRealOptimizationOracle()
+    inline std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle()
     {
-      return getRealOptimizationOracle(alwaysSatisfiedConstraint<double>());
+      return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
     }
 
     /**
      * \brief Returns an optimization oracle for the requested \p face.
      */
 
+    template <typename NumberType>
     IPO_EXPORT
-    inline std::shared_ptr<SCIPRealOptimizationOracle> getRealOptimizationOracle(
-      const Constraint<double>& face)
-    {
-      return std::make_shared<SCIPRealOptimizationOracle>(shared_from_this(), face);
-    }
-
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-
-    /**
-     * \brief Returns an optimization oracle for the polyhedron.
-     */
-
-    IPO_EXPORT
-    inline std::shared_ptr<SCIPRationalOptimizationOracle> getRationalOptimizationOracle()
-    {
-      return getRationalOptimizationOracle(alwaysSatisfiedConstraint<mpq_class>());
-    }
-
-    /**
-     * \brief Returns an optimization oracle for the requested \p face.
-     */
-
-    IPO_EXPORT
-    inline std::shared_ptr<SCIPRationalOptimizationOracle> getRationalOptimizationOracle(
-      const Constraint<mpq_class>& face)
-    {
-      auto approximateFace = convertConstraint<double>(face);
-      auto approximateOracle = getRealOptimizationOracle(approximateFace);
-      return std::make_shared<SCIPRationalOptimizationOracle>(_extender, approximateOracle, face);
-    }
-
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+    std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle(
+      const Constraint<NumberType>& face);
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
      */
 
+    template <typename NumberType>
     IPO_EXPORT
-    inline std::shared_ptr<SCIPRealSeparationOracle> getRealSeparationOracle()
+    inline std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle()
     {
-      return getRealSeparationOracle(alwaysSatisfiedConstraint<double>());
+      return getSeparationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
     }
 
     /**
      * \brief Returns a separation oracle for the \p face.
      */
 
+    template <typename NumberType>
     IPO_EXPORT
-    inline std::shared_ptr<SCIPRealSeparationOracle> getRealSeparationOracle(
-      const Constraint<double>& face)
-    {
-      return std::make_shared<SCIPRealSeparationOracle>(shared_from_this(), face);
-    }
-
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-
-    /**
-     * \brief Returns a separation oracle for the polyhedron.
-     */
-
-    IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleRational> getRationalSeparationOracle()
-    {
-      return getRationalSeparationOracle(alwaysSatisfiedConstraint<mpq_class>());
-    }
-
-    /**
-     * \brief Returns a separation oracle for the \p face.
-     */
-
-    IPO_EXPORT
-    inline std::shared_ptr<SCIPSeparationOracleRational> getRationalSeparationOracle(
-      const Constraint<mpq_class>& face)
-    {
-      auto approximateFace = convertConstraint<double>(face);
-      auto approximateOracle = getRealSeparationOracle(approximateFace);
-      return std::make_shared<SCIPSeparationOracleRational>(approximateOracle, face);
-    }
-
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+    std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle(
+      const Constraint<NumberType>& face);
 
   protected:
 
-    friend SCIPRealOptimizationOracle;
-    friend SCIPRealSeparationOracle;
+    friend SCIPOptimizationOracle<double>;
+    friend SCIPSeparationOracle<double>;
+
+#if defined(IPO_WITH_GMP)
+    friend SCIPOptimizationOracle<mpq_class>;
+    friend SCIPSeparationOracle<mpq_class>;
+#endif /* IPO_WITH_GMP */
 
     /**
      * \brief Initializes the solver data.
@@ -256,7 +202,8 @@ namespace ipo
   * \brief OptimizationOracle based on the SCIP solver.
   */
 
-  class SCIPRealOptimizationOracle: public OptimizationOracle<double>
+  template <>
+  class SCIPOptimizationOracle<double>: public OptimizationOracle<double>
   {
   public:
 
@@ -268,7 +215,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPRealOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
+    SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
       const Constraint<double>& face);
 
     /**
@@ -276,7 +223,7 @@ namespace ipo
      */
 
     IPO_EXPORT
-    virtual ~SCIPRealOptimizationOracle();
+    virtual ~SCIPOptimizationOracle();
 
     /**
      * \brief Maximize an objective vector of type double.
@@ -299,11 +246,25 @@ namespace ipo
     Constraint<double> _face;
   };
 
+  template <>
+  class SCIPOptimizationOracle<mpq_class>: public RationalMIPExtendedOptimizationOracle
+  {
+  public:
+    IPO_EXPORT
+    SCIPOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
+      const Constraint<mpq_class>& face)
+      : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
+    {
+      
+    }
+  };
+
   /**
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
   */
 
-  class SCIPRealSeparationOracle: public SeparationOracle<double>
+  template <typename NumberType>
+  class SCIPSeparationOracle: public SeparationOracle<NumberType>
   {
   public:
     /**
@@ -314,15 +275,15 @@ namespace ipo
      */
 
     IPO_EXPORT
-    SCIPRealSeparationOracle(std::shared_ptr<SCIPSolver> solver,
-      const Constraint<double>& face);
+    SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
+      const Constraint<NumberType>& face);
 
     /**
      * \brief Destructor.
      */
 
     IPO_EXPORT
-    virtual ~SCIPRealSeparationOracle();
+    virtual ~SCIPSeparationOracle();
 
     /**
      * \brief Returns initially known inequalities.
@@ -332,25 +293,7 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    SeparationResponse<double> getInitial(const SeparationQuery& query = SeparationQuery()) override;
-
-    /**
-     * \brief Separates a point/ray with floating-point coordinates.
-     *
-     * \param vector Array that maps coordinates to point/ray coordinates.
-     * \param query Structure for query.
-     * \param isPoint Whether a point shall be separated.
-     * \param result Structure for returning the result.
-     *
-     * \returns \c true if and only if the point/ray was separated.
-     **/
-
-    IPO_EXPORT
-    virtual SeparationResponse<double> separateReal(const double* vector, bool isPoint,
-      const SeparationQuery& query = SeparationQuery())
-    {
-      return separate(vector, isPoint, query);
-    }
+    SeparationResponse<NumberType> getInitial(const SeparationQuery& query = SeparationQuery()) override;
 
     /**
      * \brief Separates a point/ray of the corresponding type.
@@ -364,7 +307,22 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual SeparationResponse<double> separate(const double* vector, bool isPoint,
+    virtual SeparationResponse<NumberType> separate(const NumberType* vector, bool isPoint,
+      const SeparationQuery& query = SeparationQuery());
+
+    /**
+     * \brief Separates a point/ray with floating-point coordinates.
+     *
+     * \param vector Array that maps coordinates to point/ray coordinates.
+     * \param query Structure for query.
+     * \param isPoint Whether a point shall be separated.
+     * \param result Structure for returning the result.
+     *
+     * \returns \c true if and only if the point/ray was separated.
+     **/
+
+    IPO_EXPORT
+    virtual SeparationResponse<NumberType> separateDouble(const double* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery());
 
   protected:
@@ -373,7 +331,8 @@ namespace ipo
     /// The solver instance
     std::shared_ptr<SCIPSolver> _solver;
     /// The index of the face we are separating for.
-    Constraint<double> _face;
+    Constraint<NumberType> _face;
+    Constraint<double> _approximateFace;
   };
 
 } /* namespace ipo */

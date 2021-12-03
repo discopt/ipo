@@ -28,24 +28,24 @@ int printUsage(const std::string& program)
   return EXIT_FAILURE;
 }
 
-template <typename Number, typename Polyhedron, typename OptimizationOracle, typename ProjectionOracle,
-  typename SeparationOracle>
-void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptimizationOracle> baseOracle,
-  std::shared_ptr<SeparationOracle> sepa, bool gmp, double timeLimit, const std::string& projectionRegex,
+template <typename Number, typename Poly, typename OptOracle, typename ProjOracle,
+  typename SepaOracle>
+void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptOracle> baseOracle,
+  std::shared_ptr<SepaOracle> sepa, bool gmp, double timeLimit, const std::string& projectionRegex,
   bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior)
 {
   assert(!useDominant);
   assert(!useSubmissive);
-  std::shared_ptr<OptimizationOracle> projectionOracle;
+  std::shared_ptr<OptOracle> projectionOracle;
   if (projectionRegex.empty())
     projectionOracle = baseOracle;
   else
   {
-    auto oracle = std::make_shared<ProjectionOracle>(baseOracle);
+    auto oracle = std::make_shared<ProjOracle>(baseOracle);
     oracle->addVariables(projectionRegex);
     projectionOracle = oracle;
   }
-  auto poly = std::make_shared<Polyhedron>(projectionOracle);
+  auto poly = std::make_shared<ipo::Polyhedron<Number>>(projectionOracle);
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
 
@@ -54,7 +54,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptimizationOrac
   {
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<Number>> knownEquations;
-    typename SeparationOracle::Query sepaQuery;
+    typename SepaOracle::Query sepaQuery;
     auto sepaResult = sepa->getInitial(sepaQuery);
     for (const auto& constraint : sepaResult.constraints)
     {
@@ -90,6 +90,15 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<OptimizationOrac
   }
 }
 
+
+class Bar
+{
+public:
+  Bar()
+  {
+    std::cout << "Foo" << std::endl;
+  }
+};
 
 int main(int argc, char** argv)
 {
@@ -151,15 +160,15 @@ int main(int argc, char** argv)
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
   if (gmp)
   {
-    run<mpq_class, ipo::RationalPolyhedron, ipo::OptimizationOracle<mpq_class>, ipo::ProjectionRationalOptimizationOracle>(
-      scip, scip->getRationalOptimizationOracle(), scip->getRationalSeparationOracle(), true, timeLimit,
-      projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior);
+//     run<mpq_class, ipo::Polyhedron<mpq_class>, ipo::OptimizationOracle<mpq_class>, ipo::ProjectionRationalOptimizationOracle>(
+//       scip, scip->getRationalOptimizationOracle(), scip->getRationalSeparationOracle(), true, timeLimit,
+//       projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior);
   }
   else
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
-    run<double, ipo::RealPolyhedron, ipo::OptimizationOracle<double>, ipo::ProjectionRealOptimizationOracle>(
-      scip, scip->getRealOptimizationOracle(), scip->getRealSeparationOracle(), false, timeLimit,
+    run<double, ipo::Polyhedron<double>, ipo::OptimizationOracle<double>, ipo::ProjectionRealOptimizationOracle>(
+      scip, scip->getOptimizationOracle<double>(), scip->getSeparationOracle<double>(), false, timeLimit,
       projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior);
   }
  

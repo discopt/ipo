@@ -378,7 +378,7 @@ double euclideanNorm(const sparse_vector<T>& vector)
 }
 
 template<typename To, typename From>
-inline sparse_vector<To> convertTo(const sparse_vector<From>& vector)
+inline sparse_vector<To> convertSparseVector(const sparse_vector<From>& vector)
 {
   std::vector<std::pair<std::size_t, To>> entries;
   entries.reserve(vector.size());

@@ -202,12 +202,6 @@ namespace ipo
   IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const Constraint<mpq_class>& constraint);
 
-  IPO_EXPORT
-  Constraint<double> constraintToDouble(const Constraint<mpq_class>& constraint);
-
-  IPO_EXPORT
-  Constraint<mpq_class> constraintToRational(const Constraint<double>& constraint);
-
 #endif /* IPO_WITH_GMP */
 
   IPO_EXPORT
@@ -227,6 +221,6 @@ inline ipo::Constraint<To> convertConstraint(const ipo::Constraint<From>& from)
   To lhs = convertNumber<To, From>(from.lhs());
   To rhs = convertNumber<To, From>(from.rhs());
   return ipo::Constraint<To>(lhs,
-    std::make_shared<sparse_vector<To>>(convertTo<To, From>(from.vector())), rhs, from.type());
+    std::make_shared<sparse_vector<To>>(convertSparseVector<To, From>(from.vector())), rhs, from.type());
 }
 

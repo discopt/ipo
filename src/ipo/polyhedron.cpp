@@ -1,4 +1,4 @@
-// #define IPO_DEBUG // Uncomment to debug this file.
+// #define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/polyhedron.hpp>
 
@@ -9,48 +9,284 @@
 
 namespace ipo
 {
-  template <typename R, typename OptOracle, typename SepaOracle, typename CacheOptOracle>
+  template <typename NumberType>
   struct PolyhedronImplementation;
 
-  class RealCacheOptimizationOracle: public OptimizationOracle<double>
+  template <typename NumberType>
+  class CacheOptimizationOracle: public OptimizationOracle<NumberType>
   {
   public:
-    RealCacheOptimizationOracle(
-      PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>, RealCacheOptimizationOracle>* implementation);
+    typedef NumberType Number;
 
-    OptimizationOracle<double>::Response maximize(const double* objectiveVector,
-      const OptimizationOracle<double>::Query& query) override;
+    CacheOptimizationOracle(PolyhedronImplementation<Number>* implementation)
+      : OptimizationOracle<NumberType>("cache"), _implementation(implementation), _queryCount(0)
+    {
+      this->_space = implementation->space();
+    }
+
+    virtual OptimizationResponse<Number> maximize(const Number* objectiveVector,
+      const OptimizationQuery<Number>& query) override
+    {
+      typename OptimizationOracle<Number>::Response response;
+      ++_queryCount;
+
+#if defined(IPO_DEBUG)
+      std::cout << "CacheOptimizationOracle::maximize() call #" << _queryCount
+        << ", searching among " << _implementation->_pointProducts.size() << " points and "
+        << _implementation->_rayProducts.size() << " rays." << std::endl;
+#endif /* IPO_DEBUG */
+
+      // Compute norm of objective vector.
+      double objectiveNormalization = 0.0;
+      for (std::size_t v = 0; v < this->space()->dimension(); ++v)
+      {
+        double x = convertNumber<double>(objectiveVector[v]);
+        objectiveNormalization += x*x;
+      }
+      objectiveNormalization = sqrt(objectiveNormalization);
+
+      // TODO: Respect time limit.
+
+      // Compute scalar product with each normalized ray.
+      for (auto& rayProduct : _implementation->_rayProducts)
+      {
+        rayProduct.product = convertNumber<double>(objectiveVector * *_implementation->_rays[rayProduct.vectorIndex].vector);
+        rayProduct.product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
+      }
+
+      // Sort rays according to product.
+
+      if (query.maxNumSolutions < _implementation->_rayProducts.size())
+      {
+        std::nth_element(_implementation->_rayProducts.begin(),
+          _implementation->_rayProducts.begin() + query.maxNumSolutions - 1,
+          _implementation->_rayProducts.end());
+        std::sort(_implementation->_rayProducts.begin(),
+          _implementation->_rayProducts.begin() + query.maxNumSolutions - 1);
+      }
+      else
+        std::sort(_implementation->_rayProducts.begin(), _implementation->_rayProducts.end());
+
+      // Add best rays as long as they have sufficiently positive product.
+      double epsilon = objectiveNormalization * _implementation->_normalizedRayEpsilon;
+      for (auto& rayProduct : _implementation->_rayProducts)
+      {
+        // Exactly compute the product.
+        Number product = 0;
+        for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
+          product += objectiveVector[iter.first] * iter.second;
+        product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
+
+        if (product > epsilon)
+        {
+          response.outcome = OptimizationOutcome::UNBOUNDED;
+          response.rays.push_back(typename OptimizationResponse<Number>::Ray(
+            _implementation->_rays[rayProduct.vectorIndex].vector));
+          _implementation->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
+          if (response.rays.size() >= query.maxNumSolutions)
+            return response;
+        }
+        else
+        {
+          // Since we sorted, all subsequent rays will have a smaller scalar product.
+          break;
+        }
+      }
+
+      if (!response.rays.empty())
+        return response;
+
+      // Compute scalar product with each point.
+
+      for (auto& pointProduct : _implementation->_pointProducts)
+      {
+        pointProduct.product = convertNumber<double>(objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector);
+        pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
+      }
+
+      // Sort points according to product.
+
+      std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
+      if (maxNumPoints < _implementation->_pointProducts.size())
+      {
+        std::nth_element(_implementation->_pointProducts.begin(),
+          _implementation->_pointProducts.begin() + maxNumPoints - 1,
+          _implementation->_pointProducts.end());
+        std::sort(_implementation->_pointProducts.begin(),
+          _implementation->_pointProducts.begin() + maxNumPoints  - 1);
+      }
+      else
+        std::sort(_implementation->_pointProducts.begin(), _implementation->_pointProducts.end());
+
+      // Add best points as longs as they have sufficiently positive product.
+
+      double threshold;
+      if (query.hasMinPrimalBound())
+        threshold = convertNumber<double>(query.minPrimalBound());
+      else
+        threshold = -std::numeric_limits<double>::infinity();
+      for (auto& pointProduct : _implementation->_pointProducts)
+      {
+        Number product = 0;
+        for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
+          product += objectiveVector[iter.first] * iter.second;
+
+        if (product <= threshold)
+          break;
+
+        response.points.push_back(typename OptimizationResponse<Number>::Point(
+          _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
+        _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
+        if (response.points.size() >= maxNumPoints)
+          break;
+      }
+
+      if (!response.points.empty())
+      {
+        std::sort(response.points.begin(), response.points.end());
+        response.primalBound = response.points.front().objectiveValue;
+        response.outcome = OptimizationOutcome::FEASIBLE;
+      }
+
+      return response;
+    }
+
+    virtual OptimizationResponse<Number> maximizeDouble(
+      const double* objectiveVector, const OptimizationQuery<Number>& query) override
+    {
+      typename OptimizationOracle<Number>::Response response;
+      ++_queryCount;
+
+      // Compute norm of objective vector.
+      double objectiveNormalization = 0.0;
+      for (std::size_t v = 0; v < this->space()->dimension(); ++v)
+      {
+        double x = double(objectiveVector[v]);
+        objectiveNormalization += x*x;
+      }
+      objectiveNormalization = sqrt(objectiveNormalization);
+
+      // TODO: Respect time limit.
+
+      // Compute scalar product with each normalized ray.
+      for (auto& rayProduct : _implementation->_rayProducts)
+      {
+        rayProduct.product = objectiveVector * *_implementation->_rays[rayProduct.vectorIndex].vector;
+        rayProduct.product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
+      }
+
+      // Sort rays according to product.
+
+      if (query.maxNumSolutions < _implementation->_rayProducts.size())
+      {
+        std::nth_element(_implementation->_rayProducts.begin(),
+          _implementation->_rayProducts.begin() + query.maxNumSolutions - 1,
+          _implementation->_rayProducts.end());
+        std::sort(_implementation->_rayProducts.begin(),
+          _implementation->_rayProducts.begin() + query.maxNumSolutions - 1);
+      }
+      else
+        std::sort(_implementation->_rayProducts.begin(), _implementation->_rayProducts.end());
+
+      // Add best rays as long as they have sufficiently positive product.
+      double epsilon = objectiveNormalization * _implementation->_normalizedRayEpsilon;
+      for (auto& rayProduct : _implementation->_rayProducts)
+      {
+        // Exactly compute the product.
+        Number product = 0;
+        for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
+          product += objectiveVector[iter.first] * iter.second;
+        product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
+
+        if (product > epsilon)
+        {
+          response.outcome = OptimizationOutcome::UNBOUNDED;
+          response.rays.push_back(typename OptimizationResponse<Number>::Ray(
+            _implementation->_rays[rayProduct.vectorIndex].vector));
+          _implementation->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
+          if (response.rays.size() >= query.maxNumSolutions)
+            return response;
+        }
+        else
+        {
+          // Since we sorted, all subsequent rays will have a smaller scalar product.
+          break;
+        }
+      }
+
+      if (!response.rays.empty())
+        return response;
+
+      // Compute scalar product with each point.
+
+      for (auto& pointProduct : _implementation->_pointProducts)
+      {
+        pointProduct.product = objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector;
+        pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
+      }
+
+      // Sort points according to product.
+
+      std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
+      if (maxNumPoints < _implementation->_pointProducts.size())
+      {
+        std::nth_element(_implementation->_pointProducts.begin(),
+          _implementation->_pointProducts.begin() + maxNumPoints - 1,
+          _implementation->_pointProducts.end());
+        std::sort(_implementation->_pointProducts.begin(),
+          _implementation->_pointProducts.begin() + maxNumPoints  - 1);
+      }
+      else
+        std::sort(_implementation->_pointProducts.begin(), _implementation->_pointProducts.end());
+
+      // Add best points as longs as they have sufficiently positive product.
+
+      double threshold;
+      if (query.hasMinPrimalBound())
+      {
+        threshold = convertNumber<double>(query.minPrimalBound())
+          + objectiveNormalization * _implementation->_normalizedPointEpsilon;
+      }
+      else
+        threshold = -std::numeric_limits<double>::infinity();
+      for (auto& pointProduct : _implementation->_pointProducts)
+      {
+        Number product = 0;
+        for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
+          product += objectiveVector[iter.first] * iter.second;
+
+        if (product <= threshold)
+          break;
+
+        response.points.push_back(typename OptimizationResponse<Number>::Point(
+          _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
+        _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
+        if (response.points.size() >= maxNumPoints)
+          break;
+      }
+
+      if (!response.points.empty())
+      {
+        response.primalBound = response.points.front().objectiveValue;
+        response.outcome = OptimizationOutcome::FEASIBLE;
+      }
+
+      return response;
+    }
 
   protected:
-    PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>, RealCacheOptimizationOracle>* _implementation;
+    PolyhedronImplementation<Number>* _implementation;
     std::size_t _queryCount;
   };
 
-#if defined(IPO_WITH_GMP)
-
-  class RationalCacheOptimizationOracle: public OptimizationOracle<mpq_class>
-  {
-  public:
-    RationalCacheOptimizationOracle(
-      PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
-      RationalCacheOptimizationOracle>* implementation);
-
-    OptimizationOracle<mpq_class>::Response maximize(const mpq_class* objectiveVector,
-      const OptimizationOracle<mpq_class>::Query& query) override;
-
-    OptimizationOracle<mpq_class>::Response maximizeDouble(const double* objectiveVector,
-      const OptimizationOracle<mpq_class>::Query& query) override;
-
-  protected:
-    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
-      RationalCacheOptimizationOracle>* _implementation;
-    std::size_t _queryCount;
-  };
-#endif /* IPO_WITH_GMP */
-
-  template <typename R, typename OptOracle, typename SepaOracle, typename CacheOptOracle>
+  template <typename NumberType>
   struct PolyhedronImplementation
   {
+    typedef NumberType Number;
+    typedef OptimizationOracle<Number> OptOracle;
+    typedef SeparationOracle<Number> SepaOracle;
+    typedef CacheOptimizationOracle<Number> CacheOptOracle;
+
     PolyhedronImplementation(std::shared_ptr<Space> space,
       const std::vector<std::shared_ptr<OptOracle>>& optOracles,
       const std::vector<std::shared_ptr<SepaOracle>>& sepaOracles)
@@ -58,7 +294,7 @@ namespace ipo
     {
       if (space->dimension() == 0)
         throw std::runtime_error("Tried to initialize polyhedron in 0-dimensional space.");
-      
+
       _cacheOptimization = std::make_shared<CacheOptOracle>(this); 
       _optimization.push_back(Data<OptOracle>(_cacheOptimization, true));
       for (auto& oracle : optOracles)
@@ -98,11 +334,11 @@ namespace ipo
     }
 
     IPO_EXPORT
-    typename OptOracle::Response maximize(const R* objectiveVector,
+    typename OptOracle::Response maximize(const Number* objectiveVector,
       const typename OptOracle::Query& query)
     {
       // TODO: collect returned dual bounds and consider minimum among them.
-      
+
       sortOptimizationOracles();
 
       typename OptOracle::Response bestResponse;
@@ -245,7 +481,7 @@ namespace ipo
      * \returns \c true if point was not cached before.
      */
 
-    bool cachePoint(std::shared_ptr<sparse_vector<R>> point)
+    bool cachePoint(std::shared_ptr<sparse_vector<Number>> point)
     {
       return addToCache(_points, _hashToPointIndex, _pointProducts, point);
     }
@@ -258,7 +494,7 @@ namespace ipo
      * \returns \c true if ray was not cached before.
      */
 
-    bool cacheRay(std::shared_ptr<sparse_vector<R>> ray)
+    bool cacheRay(std::shared_ptr<sparse_vector<Number>> ray)
     {
       return addToCache(_rays, _hashToRayIndex, _rayProducts, ray);
     }
@@ -267,17 +503,22 @@ namespace ipo
     {
       return _points.size() + _rays.size();
     }
+    
+    inline std::shared_ptr<Space> space() const
+    {
+      return _space;
+    }
 
-    std::pair<bool, std::shared_ptr<sparse_vector<R>>> getCachedSolution(
+    std::pair<bool, std::shared_ptr<sparse_vector<Number>>> getCachedSolution(
       std::size_t index)
     {
       if (index < _rays.size())
-        return std::pair<bool, std::shared_ptr<sparse_vector<R>>>(false, _rays[index].vector);
-      return std::pair<bool, std::shared_ptr<sparse_vector<R>>>(true,
+        return std::pair<bool, std::shared_ptr<sparse_vector<Number>>>(false, _rays[index].vector);
+      return std::pair<bool, std::shared_ptr<sparse_vector<Number>>>(true,
         _points[index - _rays.size()].vector);
     }
     
-    typename SepaOracle::Response separate(const R* vector, bool isPoint, const typename SepaOracle::Query& query)
+    typename SepaOracle::Response separate(const Number* vector, bool isPoint, const typename SepaOracle::Query& query)
     {
       typename SepaOracle::Response response;
 
@@ -296,12 +537,12 @@ namespace ipo
 
     struct CachedVector
     {
-      std::shared_ptr<sparse_vector<R>> vector; /// The cached point/ray.
+      std::shared_ptr<sparse_vector<Number>> vector; /// The cached point/ray.
       double hash; /// The scalar product with the random vector used for hashing.
       std::size_t lastSuccess; /// Largest query number at which this vector was returned.
       double inverseNorm; /// Inverse of Euclidean norm of vector.
 
-      CachedVector(std::shared_ptr<sparse_vector<R>> vec, double hsh)
+      CachedVector(std::shared_ptr<sparse_vector<Number>> vec, double hsh)
         : vector(vec), hash(hsh), lastSuccess(0)
       {
         inverseNorm = euclideanNorm(*vec);
@@ -334,7 +575,7 @@ namespace ipo
      */
 
     bool addToCache(std::vector<CachedVector>& vectors, std::map<double, std::size_t>& hashToIndex,
-      std::vector<ProductVector>& products, std::shared_ptr<sparse_vector<R>>& vector)
+      std::vector<ProductVector>& products, std::shared_ptr<sparse_vector<Number>>& vector)
     {
       double hash = _hashVector * *vector;
       auto afterIter = hashToIndex.lower_bound(hash);
@@ -514,552 +755,71 @@ namespace ipo
     std::size_t _historySize;
     std::size_t _maxCacheSize;
   };
-  
-  RealCacheOptimizationOracle::RealCacheOptimizationOracle(
-    PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>,
-    RealCacheOptimizationOracle>* implementation)
-    : OptimizationOracle<double>("cache"), _implementation(implementation), _queryCount(0)
-  {
-    this->_space = implementation->_space;
-  }
 
-  OptimizationOracle<double>::Response RealCacheOptimizationOracle::maximize(
-    const double* objectiveVector, const OptimizationOracle<double>::Query& query)
-  {
-    OptimizationOracle<double>::Response response;
-    ++_queryCount;
-
-#if defined(IPO_DEBUG)
-    std::cout << "RealCacheOptimizationOracle::maximize() call #" << _queryCount
-      << ", searching among " << _implementation->_pointProducts.size() << " points and "
-      << _implementation->_rayProducts.size() << " rays." << std::endl;
-#endif /* IPO_DEBUG */
-
-    // Compute norm of objective vector.
-    double objectiveNormalization = 0.0;
-    for (std::size_t v = 0; v < this->space()->dimension(); ++v)
-    {
-      double x = double(objectiveVector[v]);
-      objectiveNormalization += x*x;
-    }
-    objectiveNormalization = sqrt(objectiveNormalization);
-
-    // TODO: Respect time limit.
-
-    // Compute scalar product with each normalized ray.
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      rayProduct.product = objectiveVector * *_implementation->_rays[rayProduct.vectorIndex].vector;
-      rayProduct.product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort rays according to product.
-
-    if (query.maxNumSolutions < _implementation->_rayProducts.size())
-    {
-      std::nth_element(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1,
-        _implementation->_rayProducts.end());
-      std::sort(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1);
-    }
-    else
-      std::sort(_implementation->_rayProducts.begin(), _implementation->_rayProducts.end());
-
-    // Add best rays as long as they have sufficiently positive product.
-    double epsilon = objectiveNormalization * _implementation->_normalizedRayEpsilon;
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      // Exactly compute the product.
-      double product = 0.0;
-      for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
-        product += objectiveVector[iter.first] * iter.second;
-      product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-
-      if (product > epsilon)
-      {
-        response.outcome = OptimizationOutcome::UNBOUNDED;
-        response.rays.push_back(OptimizationOracle<double>::Response::Ray(
-          _implementation->_rays[rayProduct.vectorIndex].vector));
-        _implementation->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
-        if (response.rays.size() >= query.maxNumSolutions)
-          return response;
-      }
-      else
-      {
-        // Since we sorted, all subsequent rays will have a smaller scalar product.
-        break;
-      }
-    }
-
-    if (!response.rays.empty())
-      return response;
-
-    // Compute scalar product with each point.
-
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      pointProduct.product = objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector;
-      pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort points according to product.
-
-    std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
-    if (maxNumPoints < _implementation->_pointProducts.size())
-    {
-      std::nth_element(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints - 1,
-        _implementation->_pointProducts.end());
-      std::sort(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints  - 1);
-    }
-    else
-      std::sort(_implementation->_pointProducts.begin(), _implementation->_pointProducts.end());
-
-    // Add best points as longs as they have sufficiently positive product.
-
-    double threshold;
-    if (query.hasMinPrimalBound())
-      threshold = convertNumber<double>(query.minPrimalBound());
-    else
-      threshold = -std::numeric_limits<double>::infinity();
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      double product = 0.0;
-      for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
-        product += objectiveVector[iter.first] * iter.second;
-
-      if (product <= threshold)
-        break;
-
-      response.points.push_back(OptimizationOracle<double>::Response::Point(
-        _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
-      _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
-      if (response.points.size() >= maxNumPoints)
-        break;
-    }
-
-    if (!response.points.empty())
-    {
-      std::sort(response.points.begin(), response.points.end());
-      response.primalBound = response.points.front().objectiveValue;
-      response.outcome = OptimizationOutcome::FEASIBLE;
-    }
-
-    return response;
-  }
-
-  typedef PolyhedronImplementation<double, OptimizationOracle<double>, SeparationOracle<double>,
-    RealCacheOptimizationOracle> RealPolyhedronImplementation;
-
-  RealPolyhedron::RealPolyhedron(std::shared_ptr<Space> space, const std::string& name)
-    : OptimizationOracle<double>(name), SeparationOracle<double>(name)
+  template<typename NumberType>
+  IPO_EXPORT
+  Polyhedron<NumberType>::Polyhedron(std::shared_ptr<Space> space, const std::string& name)
+    : OptimizationOracle<NumberType>(name), SeparationOracle<NumberType>(name)
   {
     _space = space;
-    std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
-    _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
+    std::vector<std::shared_ptr<OptimizationOracle<NumberType>>> optOracles;
+    std::vector<std::shared_ptr<SeparationOracle<NumberType>>> sepaOracles;
+    _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
   }
-
-  RealPolyhedron::RealPolyhedron(std::shared_ptr<OptimizationOracle<double>> optOracle)
-    : OptimizationOracle<double>("Polyhedron for " + optOracle->name()),
-    SeparationOracle<double>("Polyhedron for " + optOracle->name())
+  
+  template <typename NumberType>
+  IPO_EXPORT
+  Polyhedron<NumberType>::Polyhedron(std::shared_ptr<OptimizationOracle<NumberType>> optOracle)
+    : OptimizationOracle<NumberType>("Polyhedron for " + optOracle->name()),
+    SeparationOracle<NumberType>("Polyhedron for " + optOracle->name())
   {
     _space = optOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
+    std::vector<std::shared_ptr<OptimizationOracle<NumberType>>> optOracles;
+    std::vector<std::shared_ptr<SeparationOracle<NumberType>>> sepaOracles;
     optOracles.push_back(optOracle);
-    _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
+    _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
   }
 
-  RealPolyhedron::RealPolyhedron(std::shared_ptr<SeparationOracle<double>> sepaOracle)
-    : OptimizationOracle<double>("Polyhedron for " + sepaOracle->name()),
-    SeparationOracle<double>("Polyhedron for " + sepaOracle->name())
+  template <>
+  IPO_EXPORT
+  Polyhedron<mpq_class>::Polyhedron(std::shared_ptr<OptimizationOracle<mpq_class>> optOracle)
+    : OptimizationOracle<mpq_class>("Polyhedron for " + optOracle->name()),
+    SeparationOracle<mpq_class>("Polyhedron for " + optOracle->name())
   {
-    _space = sepaOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<double>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<double>>> sepaOracles;
-    sepaOracles.push_back(sepaOracle);
-    _implementation = new RealPolyhedronImplementation(_space, optOracles, sepaOracles);
+    _space = optOracle->space();
+    std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
+    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
+    optOracles.push_back(optOracle);
+    _implementation = new PolyhedronImplementation<mpq_class>(_space, optOracles, sepaOracles);
   }
 
-  RealPolyhedron::~RealPolyhedron()
+  template <typename Number>
+  Polyhedron<Number>::~Polyhedron()
   {
-    delete static_cast<RealPolyhedronImplementation*>(_implementation);
+    delete static_cast<PolyhedronImplementation<Number>*>(_implementation);
   }
 
-  OptimizationOracle<double>::Response RealPolyhedron::maximize(
-    const double* objectiveVector, const OptimizationOracle<double>::Query& query)
+  template <typename NumberType>
+  OptimizationResponse<NumberType> Polyhedron<NumberType>::maximize(
+    const NumberType* objectiveVector, const OptimizationQuery<NumberType>& query)
   {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->maximize(objectiveVector, query);
+    return static_cast<PolyhedronImplementation<NumberType>*>(_implementation)->maximize(objectiveVector,
+        query);
   }
 
-  bool RealPolyhedron::cachePoint(std::shared_ptr<sparse_vector<double>> point)
-  {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->cachePoint(point);
-  }
-
-  bool RealPolyhedron::cacheRay(std::shared_ptr<sparse_vector<double>> ray)
-  {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->cacheRay(ray);
-  }
-
-  std::size_t RealPolyhedron::numCachedSolutions() const
-  {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->numCachedSolutions();
-  }
-
-  std::pair<bool, std::shared_ptr<sparse_vector<double>>> RealPolyhedron::getCachedSolution(
-    std::size_t index)
-  {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
-  }
-
-  SeparationResponse<double> RealPolyhedron::separate(const double* vector, bool isPoint,
+  template <typename NumberType>
+  SeparationResponse<NumberType> Polyhedron<NumberType>::separate(const NumberType* vector, bool isPoint,
       const SeparationQuery& query)
   {
-    return static_cast<RealPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
+    return static_cast<PolyhedronImplementation<NumberType>*>(_implementation)->separate(vector, isPoint,
+        query);
   }
+
+  template class Polyhedron<double>;
 
 #if defined(IPO_WITH_GMP)
 
-  RationalCacheOptimizationOracle::RationalCacheOptimizationOracle(
-    PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
-    RationalCacheOptimizationOracle>* implementation)
-    : OptimizationOracle<mpq_class>("cache"), _implementation(implementation), _queryCount(0)
-  {
-    this->_space = implementation->_space;
-  }
-
-  OptimizationOracle<mpq_class>::Response RationalCacheOptimizationOracle::maximize(
-    const mpq_class* objectiveVector, const OptimizationOracle<mpq_class>::Query& query)
-  {
-    OptimizationOracle<mpq_class>::Response response;
-    ++_queryCount;
-
-    // Compute norm of objective vector.
-    double objectiveNormalization = 0.0;
-    for (std::size_t v = 0; v < this->space()->dimension(); ++v)
-    {
-      double x = convertNumber<double>(objectiveVector[v]);
-      objectiveNormalization += x*x;
-    }
-    objectiveNormalization = sqrt(objectiveNormalization);
-
-    // TODO: Respect time limit.
-
-    // Compute scalar product with each normalized ray.
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      rayProduct.product = 0.0;
-      for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
-      {
-        rayProduct.product += convertNumber<double>(objectiveVector[iter.first])
-          * convertNumber<double>(iter.second);
-      }
-      rayProduct.product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort rays according to product.
-
-    if (query.maxNumSolutions < _implementation->_rayProducts.size())
-    {
-      std::nth_element(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1,
-        _implementation->_rayProducts.end());
-      std::sort(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1);
-    }
-    else
-      std::sort(_implementation->_rayProducts.begin(), _implementation->_rayProducts.end());
-
-    // Add best rays as long as they have sufficiently positive product.
-    double epsilon = objectiveNormalization * _implementation->_normalizedRayEpsilon;
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      // Compute the product exactly.
-      mpq_class product = 0;
-      for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
-        product += objectiveVector[iter.first] * iter.second;
-      product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-
-      if (product > epsilon)
-      {
-        response.outcome = OptimizationOutcome::UNBOUNDED;
-        response.rays.push_back(OptimizationOracle<mpq_class>::Response::Ray(
-          _implementation->_rays[rayProduct.vectorIndex].vector));
-        _implementation->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
-        if (response.rays.size() >= query.maxNumSolutions)
-          return response;
-      }
-      else
-      {
-        // Since we sorted, all subsequent rays will have a smaller scalar product.
-        break;
-      }
-    }
-
-    if (!response.rays.empty())
-      return response;
-
-    // Compute scalar product with each point.
-
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      pointProduct.product = 0.0;
-      for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
-      {
-        pointProduct.product += convertNumber<double>(objectiveVector[iter.first])
-          * convertNumber<double>(iter.second);
-      }
-      pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort points according to product.
-
-    std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
-    if (maxNumPoints < _implementation->_pointProducts.size())
-    {
-      std::nth_element(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints - 1,
-        _implementation->_pointProducts.end());
-      std::sort(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints  - 1);
-    }
-    else
-      std::sort(_implementation->_pointProducts.begin(), _implementation->_pointProducts.end());
-
-    // Add best points as longs as they have sufficiently positive product.
-
-    double threshold;
-    if (query.hasMinPrimalBound())
-    {
-      threshold = convertNumber<double>(query.minPrimalBound())
-        + objectiveNormalization * _implementation->_normalizedPointEpsilon;
-    }
-    else
-      threshold = -std::numeric_limits<double>::infinity();
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      if (response.points.size() >= maxNumPoints)
-        break;
-      if (std::isfinite(threshold))
-      {
-        mpq_class product = 0;
-        for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
-          product += objectiveVector[iter.first] * iter.second;
-        if (convertNumber<double>(product) <= threshold)
-          break;
-      }
-      response.points.push_back(OptimizationOracle<mpq_class>::Response::Point(
-        _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
-      _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
-    }
-
-    if (!response.points.empty())
-    {
-      response.primalBound = response.points.front().objectiveValue;
-      response.outcome = OptimizationOutcome::FEASIBLE;
-    }
-
-    return response;
-  }
-
-  OptimizationOracle<mpq_class>::Response RationalCacheOptimizationOracle::maximizeDouble(
-    const double* objectiveVector, const OptimizationOracle<mpq_class>::Query& query)
-  {
-    OptimizationOracle<mpq_class>::Response response;
-    ++_queryCount;
-
-    // Compute norm of objective vector.
-    double objectiveNormalization = 0.0;
-    for (std::size_t v = 0; v < this->space()->dimension(); ++v)
-    {
-      double x = double(objectiveVector[v]);
-      objectiveNormalization += x*x;
-    }
-    objectiveNormalization = sqrt(objectiveNormalization);
-
-    // TODO: Respect time limit.
-
-    // Compute scalar product with each normalized ray.
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      rayProduct.product = objectiveVector * *_implementation->_rays[rayProduct.vectorIndex].vector;
-      rayProduct.product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort rays according to product.
-
-    if (query.maxNumSolutions < _implementation->_rayProducts.size())
-    {
-      std::nth_element(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1,
-        _implementation->_rayProducts.end());
-      std::sort(_implementation->_rayProducts.begin(),
-        _implementation->_rayProducts.begin() + query.maxNumSolutions - 1);
-    }
-    else
-      std::sort(_implementation->_rayProducts.begin(), _implementation->_rayProducts.end());
-
-    // Add best rays as long as they have sufficiently positive product.
-    double epsilon = objectiveNormalization * _implementation->_normalizedRayEpsilon;
-    for (auto& rayProduct : _implementation->_rayProducts)
-    {
-      // Exactly compute the product.
-      mpq_class product = 0;
-      for (const auto& iter : *_implementation->_rays[rayProduct.vectorIndex].vector)
-        product += objectiveVector[iter.first] * iter.second;
-      product *= _implementation->_rays[rayProduct.vectorIndex].inverseNorm;
-
-      if (product > epsilon)
-      {
-        response.outcome = OptimizationOutcome::UNBOUNDED;
-        response.rays.push_back(OptimizationOracle<mpq_class>::Response::Ray(
-          _implementation->_rays[rayProduct.vectorIndex].vector));
-        _implementation->_rays[rayProduct.vectorIndex].lastSuccess = _queryCount;
-        if (response.rays.size() >= query.maxNumSolutions)
-          return response;
-      }
-      else
-      {
-        // Since we sorted, all subsequent rays will have a smaller scalar product.
-        break;
-      }
-    }
-
-    if (!response.rays.empty())
-      return response;
-
-    // Compute scalar product with each point.
-
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      pointProduct.product = objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector;
-      pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
-    }
-
-    // Sort points according to product.
-
-    std::size_t maxNumPoints = query.maxNumSolutions - response.rays.size();
-    if (maxNumPoints < _implementation->_pointProducts.size())
-    {
-      std::nth_element(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints - 1,
-        _implementation->_pointProducts.end());
-      std::sort(_implementation->_pointProducts.begin(),
-        _implementation->_pointProducts.begin() + maxNumPoints  - 1);
-    }
-    else
-      std::sort(_implementation->_pointProducts.begin(), _implementation->_pointProducts.end());
-
-    // Add best points as longs as they have sufficiently positive product.
-
-    double threshold;
-    if (query.hasMinPrimalBound())
-    {
-      threshold = convertNumber<double>(query.minPrimalBound())
-        + objectiveNormalization * _implementation->_normalizedPointEpsilon;
-    }
-    else
-      threshold = -std::numeric_limits<double>::infinity();
-    for (auto& pointProduct : _implementation->_pointProducts)
-    {
-      mpq_class product = 0;
-      for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
-        product += objectiveVector[iter.first] * iter.second;
-
-      if (product <= threshold)
-        break;
-
-      response.points.push_back(OptimizationOracle<mpq_class>::Response::Point(
-        _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
-      _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
-      if (response.points.size() >= maxNumPoints)
-        break;
-    }
-
-    if (!response.points.empty())
-    {
-      response.primalBound = response.points.front().objectiveValue;
-      response.outcome = OptimizationOutcome::FEASIBLE;
-    }
-
-    return response;
-  }
-
-  typedef PolyhedronImplementation<mpq_class, OptimizationOracle<mpq_class>, SeparationOracle<mpq_class>,
-    RationalCacheOptimizationOracle> RationalPolyhedronImplementation;
-
-  RationalPolyhedron::RationalPolyhedron(std::shared_ptr<Space> space)
-  {
-    _space = space;
-    std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
-    _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
-  }
-
-  RationalPolyhedron::RationalPolyhedron(std::shared_ptr<OptimizationOracle<mpq_class>> optOracle)
-  {
-    _space = optOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
-    optOracles.push_back(optOracle);
-    _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
-  }
-
-  RationalPolyhedron::RationalPolyhedron(std::shared_ptr<SeparationOracle<mpq_class>> sepaOracle)
-  {
-    _space = sepaOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
-    sepaOracles.push_back(sepaOracle);
-    _implementation = new RationalPolyhedronImplementation(_space, optOracles, sepaOracles);
-  }
-
-  RationalPolyhedron::~RationalPolyhedron()
-  {
-    delete static_cast<RationalPolyhedronImplementation*>(_implementation);
-  }
-
-  OptimizationOracle<mpq_class>::Response RationalPolyhedron::maximize(
-    const mpq_class* objectiveVector, const OptimizationOracle<mpq_class>::Query& query)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximize(objectiveVector, query);
-  }
-
-  OptimizationOracle<mpq_class>::Response RationalPolyhedron::maximize(const double* objectiveVector,
-    const OptimizationOracle<mpq_class>::Query& query)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->maximizeDouble(objectiveVector, query);
-  }
-
-  bool RationalPolyhedron::cachePoint(std::shared_ptr<sparse_vector<mpq_class>> point)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->cachePoint(point);
-  }
-
-  bool RationalPolyhedron::cacheRay(std::shared_ptr<sparse_vector<mpq_class>> ray)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->cacheRay(ray);
-  }
-
-  std::size_t RationalPolyhedron::numCachedSolutions() const
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->numCachedSolutions();
-  }
-
-  std::pair<bool, std::shared_ptr<sparse_vector<mpq_class>>> RationalPolyhedron::getCachedSolution(std::size_t index)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->getCachedSolution(index);
-  }
-
-  SeparationResponse<mpq_class> RationalPolyhedron::separate(const mpq_class* vector, bool isPoint,
-    const SeparationQuery& query)
-  {
-    return static_cast<RationalPolyhedronImplementation*>(_implementation)->separate(vector, isPoint, query);
-  }
+  template class Polyhedron<mpq_class>;
 
 #endif /* IPO_WITH_GMP */
 

@@ -801,14 +801,14 @@ namespace ipo
       affineComplement._debugAdd(convertTo<U>(*firstRay.vector), 0,
         kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      int error = affineComplement.add(convertTo<U>(*firstRay.vector), 0,
+      int error = affineComplement.add(convertSparseVector<U>(*firstRay.vector), 0,
         kernelVectorColumn, query.epsilonFactorization);
       if (error != INTERNAL_OKAY)
         return error;
       
       if (pAffineComplement)
       {
-        error = pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
+        error = pAffineComplement->add(convertSparseVector<double>(*firstRay.vector), 0,
           kernelVectorColumn, query.epsilonFactorization);
         if (error != INTERNAL_OKAY)
           return error;
@@ -826,16 +826,16 @@ namespace ipo
         resultPoints.push_back(bestPoint.vector);
         timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-        affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
+        affineComplement._debugAdd(convertSparseVector<U>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-        int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+        int error = affineComplement.add(convertSparseVector<U>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), query.epsilonFactorization);
         if (error != INTERNAL_OKAY)
           return error;
         if (pAffineComplement)
         {
-          error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+          error = pAffineComplement->add(convertSparseVector<double>(*bestPoint.vector), 1,
             polyhedron->space()->dimension(), query.epsilonFactorization);
           if (error != INTERNAL_OKAY)
             return error;
@@ -867,16 +867,16 @@ namespace ipo
       resultPoints.push_back(bestPoint.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-      affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
+      affineComplement._debugAdd(convertSparseVector<U>(*bestPoint.vector), 1,
         polyhedron->space()->dimension(), objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+      int error = affineComplement.add(convertSparseVector<U>(*bestPoint.vector), 1,
         polyhedron->space()->dimension(), query.epsilonFactorization);
       if (error != INTERNAL_OKAY)
         return error;
       if (pAffineComplement)
       {
-        error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+        error = pAffineComplement->add(convertSparseVector<double>(*bestPoint.vector), 1,
           polyhedron->space()->dimension(), query.epsilonFactorization);
         if (error != INTERNAL_OKAY)
           return error;
@@ -903,16 +903,16 @@ namespace ipo
           resultPoints.push_back(otherPoint.vector);
           timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-          affineComplement._debugAdd(convertTo<U>(*otherPoint.vector), 1, kernelVectorColumn,
+          affineComplement._debugAdd(convertSparseVector<U>(*otherPoint.vector), 1, kernelVectorColumn,
             objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-          int error = affineComplement.add(convertTo<U>(*otherPoint.vector), 1, kernelVectorColumn,
+          int error = affineComplement.add(convertSparseVector<U>(*otherPoint.vector), 1, kernelVectorColumn,
             query.epsilonFactorization);
           if (error != INTERNAL_OKAY)
             return error;
           if (pAffineComplement)
           {
-            error = pAffineComplement->add(convertTo<double>(*otherPoint.vector), 1,
+            error = pAffineComplement->add(convertSparseVector<double>(*otherPoint.vector), 1,
               kernelVectorColumn, query.epsilonFactorization);
             if (error != INTERNAL_OKAY)
               return error;
@@ -954,16 +954,16 @@ namespace ipo
           resultPoints.push_back(point.vector);
           timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-          affineComplement._debugAdd(convertTo<U>(*point.vector), 1, kernelVectorColumn,
+          affineComplement._debugAdd(convertSparseVector<U>(*point.vector), 1, kernelVectorColumn,
             objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-          int error = affineComplement.add(convertTo<U>(*point.vector), 1, kernelVectorColumn,
+          int error = affineComplement.add(convertSparseVector<U>(*point.vector), 1, kernelVectorColumn,
             query.epsilonFactorization);
           if (error != INTERNAL_OKAY)
             return error;
           if (pAffineComplement)
           {
-            error = pAffineComplement->add(convertTo<double>(*point.vector), 1,
+            error = pAffineComplement->add(convertSparseVector<double>(*point.vector), 1,
               kernelVectorColumn, query.epsilonFactorization);
             if (error != INTERNAL_OKAY)
               return error;
@@ -1042,16 +1042,16 @@ namespace ipo
       resultRays.push_back(firstRay.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-      affineComplement._debugAdd(convertTo<U>(*firstRay.vector), 0,
+      affineComplement._debugAdd(convertSparseVector<U>(*firstRay.vector), 0,
         kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      int error = affineComplement.add(convertTo<U>(*firstRay.vector), 0,
+      int error = affineComplement.add(convertSparseVector<U>(*firstRay.vector), 0,
         kernelVectorColumn, query.epsilonFactorization);
       if (error != INTERNAL_OKAY)
         return error;
       if (pAffineComplement)
       {
-        error = pAffineComplement->add(convertTo<double>(*firstRay.vector), 0,
+        error = pAffineComplement->add(convertSparseVector<double>(*firstRay.vector), 0,
           kernelVectorColumn, query.epsilonFactorization);
         if (error != INTERNAL_OKAY)
           return error;
@@ -1086,16 +1086,16 @@ namespace ipo
       resultPoints.push_back(bestPoint.vector);
       timeComponent = std::chrono::system_clock::now();
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-      affineComplement._debugAdd(convertTo<U>(*bestPoint.vector), 1,
+      affineComplement._debugAdd(convertSparseVector<U>(*bestPoint.vector), 1,
         kernelVectorColumn, objective);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
-      int error = affineComplement.add(convertTo<U>(*bestPoint.vector), 1,
+      int error = affineComplement.add(convertSparseVector<U>(*bestPoint.vector), 1,
         kernelVectorColumn, query.epsilonFactorization);
       if (error != INTERNAL_OKAY)
         return error;
       if (pAffineComplement)
       {
-        error = pAffineComplement->add(convertTo<double>(*bestPoint.vector), 1,
+        error = pAffineComplement->add(convertSparseVector<double>(*bestPoint.vector), 1,
           kernelVectorColumn, query.epsilonFactorization);
         if (error != INTERNAL_OKAY)
           return error;
@@ -1144,7 +1144,7 @@ namespace ipo
     return INTERNAL_OKAY;
   }
 
-  RealAffineHullResult affineHull(std::shared_ptr<RealPolyhedron> polyhedron,
+  RealAffineHullResult affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
     RealAffineHullResult result;
@@ -1400,7 +1400,7 @@ namespace ipo
     return result;
   }
 
-  bool verifyAffineHullResult(std::shared_ptr<RealPolyhedron> polyhedron,
+  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron,
     const RealAffineHullResult& result)
   {
     std::size_t n = polyhedron->space()->dimension();
@@ -1504,7 +1504,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
-  RationalAffineHullResult affineHull(std::shared_ptr<RationalPolyhedron> polyhedron,
+  RationalAffineHullResult affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
     RationalAffineHullResult result;
@@ -1641,7 +1641,7 @@ namespace ipo
             kernelVectors.back().vector = std::make_shared<sparse_vector<mpq_class>>();
             affineComplement.computeKernelVector(kernelVectors.back().column,
               *kernelVectors.back().vector, kernelVectors.back().rhs, 0);
-            *kernelVectors.back().approximateVector = convertTo<double>(
+            *kernelVectors.back().approximateVector = convertSparseVector<double>(
               *kernelVectors.back().vector);
             kernelVectors.back().approximateRhs = convertNumber<double>(
               kernelVectors.back().rhs);

@@ -19,8 +19,7 @@ namespace ipo
   public:
 
     IPO_EXPORT
-    RationalMIPExtender(const std::vector<bool>& integrality,
-      const std::vector<std::pair<double, double>>& bounds);
+    RationalMIPExtender(const std::vector<bool>& integrality, const std::vector<std::pair<double, double>>& bounds);
 
     IPO_EXPORT
     virtual ~RationalMIPExtender();

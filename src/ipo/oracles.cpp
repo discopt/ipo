@@ -11,7 +11,7 @@ namespace ipo
   }
 
   template <>
-  OptimizationReponse<double> OptimizationOracle<double>::maximizeDouble(
+  OptimizationResponse<double> OptimizationOracle<double>::maximizeDouble(
     const double* objectiveVector, const OptimizationQuery<double>& query)
   {
     return maximize(objectiveVector, query);
@@ -19,7 +19,7 @@ namespace ipo
 
   template <typename R>
   static std::ostream& printOptimizationRepsonse(std::ostream& stream,
-    const OptimizationReponse<R>& response)
+    const OptimizationResponse<R>& response)
   {
     switch(response.outcome)
     {
@@ -46,7 +46,7 @@ namespace ipo
     }
   }
 
-  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<double>& response)
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response)
   {
     return printOptimizationRepsonse(stream, response);
   }
@@ -82,7 +82,7 @@ namespace ipo
   }
 
   template <>
-  OptimizationReponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
+  OptimizationResponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
     const double* objectiveVector, const OptimizationQuery<mpq_class>& query)
   {
     std::vector<mpq_class> convertedObjectiveVector(this->_space->dimension());
@@ -91,7 +91,7 @@ namespace ipo
     return maximize(&convertedObjectiveVector[0], query);
   }
 
-  std::ostream& operator<<(std::ostream& stream, const OptimizationReponse<mpq_class>& response)
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response)
   {
     return printOptimizationRepsonse(stream, response);
   }
@@ -122,12 +122,12 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
-  typedef OptimizationOracle<double> OptimizationOracle_double;
-  typedef SeparationOracle<double> SeparationOracle_double;
+  template class OptimizationOracle<double>;
+  template class SeparationOracle<double>;
 
 #if defined(IPO_WITH_GMP)
-  typedef OptimizationOracle<mpq_class> OptimizationOracle_mpq_class;
-  typedef SeparationOracle<mpq_class> SeparationOracle_mpq_class;
+  template class OptimizationOracle<mpq_class>;
+  template class SeparationOracle<mpq_class>;
 #endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */
