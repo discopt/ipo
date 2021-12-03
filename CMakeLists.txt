@@ -34,6 +34,7 @@ add_library(ipo
   src/ipo/affine_hull.cpp
   src/ipo/arithmetic.cpp
   src/ipo/constraint.cpp
+  src/ipo/dominant.cpp
   src/ipo/lu.cpp
   src/ipo/oracles.cpp
   src/ipo/mip.cpp

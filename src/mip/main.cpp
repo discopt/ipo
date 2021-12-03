@@ -3,6 +3,7 @@
 
 #include <ipo/oracles_scip.hpp>
 #include <ipo/projection.hpp>
+#include <ipo/dominant.hpp>
 #include <ipo/affine_hull.hpp>
 
 int printUsage(const std::string& program)
@@ -33,8 +34,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   std::shared_ptr<ipo::SeparationOracle<Number>> sepa, bool gmp, double timeLimit, const std::string& projectionRegex,
   bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior)
 {
-  assert(!useDominant);
   assert(!useSubmissive);
+
   std::shared_ptr<ipo::OptimizationOracle<Number>> projectionOracle;
   if (projectionRegex.empty())
     projectionOracle = baseOracle;
@@ -43,7 +44,12 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     auto projection = std::make_shared<ipo::Projection<Number>>(baseOracle->space(), projectionRegex);
     projectionOracle = std::make_shared<ipo::ProjectionOptimizationOracle<Number>>(baseOracle, projection);
   }
-  auto poly = std::make_shared<ipo::Polyhedron<Number>>(projectionOracle);
+  std::shared_ptr<ipo::OptimizationOracle<Number>> dominantOracle;
+  if (useDominant)
+    dominantOracle = std::make_shared<ipo::DominantOptimizationOracle<Number>>(projectionOracle);
+  else
+    dominantOracle = projectionOracle;
+  auto poly = std::make_shared<ipo::Polyhedron<Number>>(dominantOracle);
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
 
