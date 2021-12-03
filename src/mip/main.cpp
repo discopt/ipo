@@ -2,7 +2,7 @@
 #include <sstream>
 
 #include <ipo/oracles_scip.hpp>
-#include <ipo/oracles_projection.hpp>
+#include <ipo/projection.hpp>
 #include <ipo/affine_hull.hpp>
 
 int printUsage(const std::string& program)

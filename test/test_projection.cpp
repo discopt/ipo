@@ -1,6 +1,6 @@
 #include <gtest/gtest.h>
 #include <ipo/oracles_forest.hpp>
-#include <ipo/oracles_projection.hpp>
+#include <ipo/projection.hpp>
 #include <ipo/affine_hull.hpp>
 
 TEST(Projection, OptimizationReal)

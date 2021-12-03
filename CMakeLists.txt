@@ -36,10 +36,10 @@ add_library(ipo
   src/ipo/constraint.cpp
   src/ipo/lu.cpp
   src/ipo/oracles.cpp
-  src/ipo/oracles_mip.cpp
-  src/ipo/oracles_projection.cpp
+  src/ipo/mip.cpp
   src/ipo/oracles_forest.cpp
   src/ipo/polyhedron.cpp
+  src/ipo/projection.cpp
   src/ipo/space.cpp
 )
 

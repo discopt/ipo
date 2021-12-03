@@ -6,7 +6,7 @@
 #ifdef IPO_WITH_SCIP
 
 #include <ipo/oracles.hpp>
-#include <ipo/oracles_mip.hpp>
+#include <ipo/mip.hpp>
 #include <ipo/constraint.hpp>
 #include <unordered_map>
 
