@@ -82,6 +82,21 @@ namespace ipo
       return _space;
     }
 
+    IPO_EXPORT
+    std::shared_ptr<sparse_vector<Number>> projectPoint(std::shared_ptr<sparse_vector<Number>> point);
+
+    IPO_EXPORT
+    std::shared_ptr<sparse_vector<Number>> projectRay(std::shared_ptr<sparse_vector<Number>> ray);
+
+    /**
+     * \brief Lifts an \p objective vector to \p liftedObjective.
+     * 
+     * \returns Lifted objective value of points that are projected to the origin.
+     **/
+
+    IPO_EXPORT
+    Number liftObjective(const Number* objective, std::vector<Number>& liftedObjective);
+
   protected:
     std::shared_ptr<Space> _space;                  /**< Defined space. */
     std::vector<sparse_vector<Number> > _mapLinear; /**< Vector containing the linear part of the projection map. */
@@ -94,84 +109,26 @@ namespace ipo
   std::vector<sparse_vector<mpq_class>> projectionEquations(const std::vector<sparse_vector<mpq_class>>& equations);
 #endif /* IPO_WITH_GMP */
 
-  class ProjectionRealOptimizationOracle: public OptimizationOracle<double>
+
+  template <typename NumberType>
+  class ProjectionOptimizationOracle: public OptimizationOracle<NumberType>
   {
   public:
+    typedef NumberType Number;
 
     /**
      * \brief Constructor for given projection and source oracle.
      *
      * Constructor for given \c projection and source \c oracle.
      *
-     * \param name       Name of the new oracle.
-     * \param projection Projection map.
      * \param oracle     Oracle in the source space.
-     */
-
-    IPO_EXPORT
-    ProjectionRealOptimizationOracle(std::shared_ptr<OptimizationOracle<double>> sourceOracle, const std::string& name = "");
-
-    /**
-     * \brief Destructor.
-     */
-
-    IPO_EXPORT
-    virtual ~ProjectionRealOptimizationOracle();
-
-    /**
-     * \brief Adds variable index \p sourceVariableIndex to the oracle.
-     **/
-
-    IPO_EXPORT
-    void addVariable(std::size_t sourceVariableIndex);
-
-    /**
-     * \brief Adds all those variables from the source oracle that match \p regex.
-     *
-     * \returns Number of matches.
-     **/
-
-    IPO_EXPORT
-    std::size_t addVariables(const std::string& regex);
-
-  protected:
-
-    /**
-     * \brief Maximize a floating-point objective vector.
-     *
-     * \param objectiveVector Objective vector.
-     * \param query Additional query information.
-     * \return Optimization response.
-     **/
-
-    IPO_EXPORT
-    virtual Response maximize(const double* objectiveVector, const Query& query);
-
-  protected:
-
-    std::shared_ptr<OptimizationOracle<double>> _sourceOracle; /**< Source oracle. */
-    std::vector<sparse_vector<double> > _projectionLinear; /**< Vector containing the linear part of the projection. */
-    std::vector<double> _projectionConstant; /**< Vector containing the absolute part of the projection. */
-  };
-
-#if defined(IPO_WITH_GMP)
-
-  class ProjectionRationalOptimizationOracle: public OptimizationOracle<mpq_class>
-  {
-  public:
-
-    /**
-     * \brief Constructor for given projection and source oracle.
-     *
-     * Constructor for given \c projection and source \c oracle.
-     *
-     * \param name       Name of the new oracle.
      * \param projection Projection map.
-     * \param oracle     Oracle in the source space.
+     * \param name       Name of the new oracle.
      */
 
     IPO_EXPORT
-    ProjectionRationalOptimizationOracle(std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle,
+    ProjectionOptimizationOracle(std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
+      std::shared_ptr<Projection<NumberType>> projection,
       const std::string& name = "");
 
     /**
@@ -179,25 +136,13 @@ namespace ipo
      */
 
     IPO_EXPORT
-    virtual ~ProjectionRationalOptimizationOracle();
-
-    /**
-     * \brief Adds variable index \p sourceVariableIndex to the oracle.
-     **/
+    virtual ~ProjectionOptimizationOracle();
 
     IPO_EXPORT
-    void addVariable(std::size_t sourceVariableIndex);
-
-    /**
-     * \brief Adds all those variables from the source oracle that match \p regex.
-     *
-     * \returns Number of matches.
-     **/
-
-    IPO_EXPORT
-    std::size_t addVariables(const std::string& regex);
-
-  protected:
+    inline std::shared_ptr<Projection<NumberType>> projection()
+    {
+      return _projection;
+    }
 
     /**
      * \brief Maximize a floating-point objective vector.
@@ -208,16 +153,14 @@ namespace ipo
      **/
 
     IPO_EXPORT
-    virtual Response maximize(const mpq_class* objectiveVector, const Query& query);
+    virtual OptimizationResponse<Number> maximize(const Number* objectiveVector,
+      const OptimizationQuery<NumberType>& query);
 
   protected:
 
-    std::shared_ptr<OptimizationOracle<mpq_class>> _sourceOracle; /**< Source oracle. */
-    std::vector<sparse_vector<mpq_class> > _projectionLinear; /**< Vector containing the linear part of the projection. */
-    std::vector<mpq_class> _projectionConstant; /**< Vector containing the absolute part of the projection. */
+    std::shared_ptr<Projection<Number>> _projection;
+    std::shared_ptr<OptimizationOracle<Number>> _sourceOracle; /**< Source oracle. */
   };
-
-#endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */
 

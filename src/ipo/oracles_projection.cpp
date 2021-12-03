@@ -14,12 +14,6 @@ namespace ipo
   }
 
   template <typename NumberType>
-  Projection<NumberType>::~Projection()
-  {
-
-  }
-
-  template <typename NumberType>
   Projection<NumberType>::Projection(std::shared_ptr<Space> space, const std::vector<std::size_t>& variableIndices)
     : _space(std::make_shared<Space>())
   {
@@ -28,6 +22,14 @@ namespace ipo
 
   template <typename NumberType>
   Projection<NumberType>::Projection(std::shared_ptr<Space> space, const std::string& regex)
+    : _space(std::make_shared<Space>())
+  {
+    addVariables(space, regex);
+  }
+
+  template <>
+  IPO_EXPORT
+  Projection<mpq_class>::Projection(std::shared_ptr<Space> space, const std::string& regex)
     : _space(std::make_shared<Space>())
   {
     addVariables(space, regex);
@@ -43,9 +45,22 @@ namespace ipo
   }
 
   template <typename NumberType>
+  Projection<NumberType>::~Projection()
+  {
+
+  }
+
+  template <>
+  IPO_EXPORT
+  Projection<mpq_class>::~Projection()
+  {
+
+  }
+
+  template <typename NumberType>
   void Projection<NumberType>::addVariable(std::shared_ptr<Space> space, std::size_t variableIndex)
   {
-    std::vector<std::size_t, NumberType> linear(1, std::make_pair(variableIndex, NumberType(1)));
+    std::vector<std::pair<std::size_t, NumberType>> linear(1, std::make_pair(variableIndex, NumberType(1)));
     _space->addVariable(space->variable(variableIndex));
     _mapLinear.push_back(sparse_vector<Number>(std::move(linear), false));
     _mapConstant.push_back(0);
@@ -77,77 +92,97 @@ namespace ipo
     return countMatches;
   }
 
+  template <typename NumberType>
+  std::shared_ptr<sparse_vector<NumberType>> Projection<NumberType>::projectPoint(
+    std::shared_ptr<sparse_vector<NumberType>> point)
+  {
+    auto result = std::make_shared<sparse_vector<NumberType>>();
+    for (size_t v = 0; v < space()->dimension(); ++v)
+    {
+      NumberType x = _mapConstant[v] + _mapLinear[v] * *point;
+      if (x)
+        result->push_back(v, x);
+    }
+    return result;
+  }
 
-  typedef Projection<double> Projection_double;
+  template <typename NumberType>
+  std::shared_ptr<sparse_vector<NumberType>> Projection<NumberType>::projectRay(
+    std::shared_ptr<sparse_vector<NumberType>> ray)
+  {
+    auto result = std::make_shared<sparse_vector<NumberType>>();
+    for (size_t v = 0; v < space()->dimension(); ++v)
+    {
+      NumberType x = _mapLinear[v] * *ray;
+      if (x)
+        result->push_back(v, x);
+    }
+    return result;
+  }
 
+  template <typename NumberType>
+  NumberType Projection<NumberType>::liftObjective(const NumberType* objective,
+    std::vector<NumberType>& liftedObjective)
+  {
+    for (auto& coef : liftedObjective)
+      coef = 0;
+    NumberType result = 0;
+    for (size_t v = 0; v < space()->dimension(); ++v)
+    {
+      if (objective[v])
+      {
+        for (auto coef : _mapLinear[v])
+          liftedObjective[coef.first] += objective[v] * coef.second;
+        result += objective[v] * _mapConstant[v];
+      }
+    }
+
+    return result;
+  }
+
+  template class Projection<double>;
 #if defined(IPO_WITH_GMP)
-  typedef Projection<mpq_class> Projection_mpq_class;
+  template class Projection<mpq_class>;
 #endif /* IPO_WITH_GMP */
-  
 
-  ProjectionRealOptimizationOracle::ProjectionRealOptimizationOracle(std::shared_ptr<OptimizationOracle<double>> sourceOracle,
+  template <typename NumberType>
+  ProjectionOptimizationOracle<NumberType>::ProjectionOptimizationOracle(
+    std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
+    std::shared_ptr<Projection<NumberType>> projection,
     const std::string& name)
-    : OptimizationOracle<double>(name.empty() ? ("projection of " + sourceOracle->name()) : sourceOracle->name()),
-    _sourceOracle(sourceOracle)
+    : OptimizationOracle<NumberType>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
+    _projection(projection), _sourceOracle(sourceOracle)
   {
-    _space = std::make_shared<Space>();
+    this->_space = _projection->space();
   }
 
-  ProjectionRealOptimizationOracle::~ProjectionRealOptimizationOracle()
+  template <>
+  IPO_EXPORT
+  ProjectionOptimizationOracle<mpq_class>::ProjectionOptimizationOracle(
+    std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle,
+    std::shared_ptr<Projection<mpq_class>> projection,
+    const std::string& name)
+    : OptimizationOracle<mpq_class>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
+    _projection(projection), _sourceOracle(sourceOracle)
+  {
+    this->_space = _projection->space();
+  }
+
+  template <typename NumberType>
+  ProjectionOptimizationOracle<NumberType>::~ProjectionOptimizationOracle()
   {
 
   }
 
-  void ProjectionRealOptimizationOracle::addVariable(const size_t sourceVariableIndex)
+  template <typename NumberType>
+  OptimizationResponse<NumberType> ProjectionOptimizationOracle<NumberType>::maximize(const NumberType* objectiveVector,
+    const OptimizationQuery<NumberType>& query)
   {
-    sparse_vector<double> vector;
-    vector.push_back(sourceVariableIndex, 1.0);
-    _projectionLinear.push_back(vector);
-    _projectionConstant.push_back(0.0);
-    space()->addVariable(_sourceOracle->space()->variable(sourceVariableIndex));
-  }
-
-  std::size_t ProjectionRealOptimizationOracle::addVariables(const std::string& regex)
-  {
-    std::regex re(regex);
-    Space& sourceSpace = *_sourceOracle->space();
-    std::size_t countMatches = 0;
-    for (std::size_t v = 0; v < sourceSpace.dimension(); ++v)
-    {
-#if defined(IPO_DEBUG)
-      std::cout << "Checking whether '" << sourceSpace[v] << "' matches '" << regex << "'." << std::endl;
-#endif /* IPO_DEBUG */
-      if (std::regex_match(sourceSpace.variable(v), re))
-      {
-        addVariable(v);
-        ++countMatches;
-      }
-    }
-    return countMatches;
-  }
-
-  OptimizationOracle<double>::Response ProjectionRealOptimizationOracle::maximize(const double* objectiveVector,
-    const Query& query)
-  {
-    size_t projDimension = space()->dimension();
-    size_t sourceDimension = _sourceOracle->space()->dimension();
-
     // Compute objective vector in space of source oracle.
-    auto liftedObjective = new double[sourceDimension];
-    for (size_t v = 0; v < sourceDimension; ++v)
-      liftedObjective[v] = 0.0;
-    double offset = 0; // Product of objective with constant part of projection map.
-    for (size_t v = 0; v < projDimension; ++v)
-    {
-      if (objectiveVector[v] != 0.0)
-      {
-        for (auto coef : _projectionLinear[v])
-          liftedObjective[coef.first] += coef.second * objectiveVector[v];
-        offset += objectiveVector[v] * _projectionConstant[v];
-      }
-    }
+    std::vector<NumberType> liftedObjective(_sourceOracle->space()->dimension());
+    NumberType offset = _projection->liftObjective(objectiveVector, liftedObjective);
 
-    OptimizationOracle<double>::Query liftedQuery;
+    OptimizationQuery<NumberType> liftedQuery;
     liftedQuery.maxNumSolutions = query.maxNumSolutions;
     liftedQuery.timeLimit = query.timeLimit;
     if (query.hasMinPrimalBound())
@@ -155,156 +190,34 @@ namespace ipo
     if (query.hasMaxDualBound())
       liftedQuery.setMaxDualBound(query.maxDualBound() + offset);
 
-    auto liftedResponse = _sourceOracle->maximize(liftedObjective, liftedQuery);
-    delete[] liftedObjective;
+    auto liftedResponse = _sourceOracle->maximize(&liftedObjective[0], liftedQuery);
 
-    OptimizationOracle<double>::Response response;
+    OptimizationResponse<NumberType> response;
     response.outcome = liftedResponse.outcome;
     if (!liftedResponse.points.empty())
     {
       for (auto point : liftedResponse.points)
       {
-        auto vector = std::make_shared<sparse_vector<double>>();
-        for (size_t v = 0; v < projDimension; ++v)
-        {
-          double x = _projectionConstant[v] + _projectionLinear[v] * *point.vector;
-          if (x != 0.0)
-            vector->push_back(v, x);
-        }
-        response.points.push_back(OptimizationOracle<double>::Response::Point(vector, point.objectiveValue + offset));
+        response.points.push_back(typename OptimizationResponse<NumberType>::Point(
+          _projection->projectPoint(point.vector), point.objectiveValue + offset));
       }
     }
     else if (!liftedResponse.rays.empty())
     {
       for (auto ray : liftedResponse.rays)
       {
-        auto vector = std::make_shared<sparse_vector<double>>();
-        for (size_t v = 0; v < projDimension; ++v)
-        {
-          double x = _projectionLinear[v] * *ray.vector;
-          if (x != 0.0)
-            vector->push_back(v, x);
-        }
-        response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
+        response.rays.push_back(typename OptimizationResponse<NumberType>::Ray(
+          _projection->projectRay(ray.vector)));
       }
     }
 
     return response;
   }
 
+  
+  template class ProjectionOptimizationOracle<double>;
 #if defined(IPO_WITH_GMP)
-
-  ProjectionRationalOptimizationOracle::ProjectionRationalOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle, const std::string& name)
-    : OptimizationOracle<mpq_class>(name.empty() ? ("projection of " + sourceOracle->name()) : sourceOracle->name()),
-    _sourceOracle(sourceOracle)
-  {
-    _space = std::make_shared<Space>();
-  }
-
-  ProjectionRationalOptimizationOracle::~ProjectionRationalOptimizationOracle()
-  {
-    
-  }
-
-  void ProjectionRationalOptimizationOracle::addVariable(const size_t sourceVariableIndex)
-  {
-    sparse_vector<mpq_class> vector;
-    vector.push_back(sourceVariableIndex, 1.0);
-    _projectionLinear.push_back(vector);
-    _projectionConstant.push_back(0.0);
-    space()->addVariable(_sourceOracle->space()->variable(sourceVariableIndex));
-  }
-
-  std::size_t ProjectionRationalOptimizationOracle::addVariables(const std::string& regex)
-  {
-    std::regex re(regex);
-    Space& sourceSpace = *_sourceOracle->space();
-    std::size_t countMatches = 0;
-    for (std::size_t v = 0; v < sourceSpace.dimension(); ++v)
-    {
-      if (std::regex_match(sourceSpace.variable(v), re))
-      {
-        addVariable(v);
-        ++countMatches;
-      }
-    }
-    return countMatches;
-  }
-
-  OptimizationOracle<mpq_class>::Response ProjectionRationalOptimizationOracle::maximize(const mpq_class* objectiveVector,
-    const Query& query)
-  {
-    size_t projDimension = space()->dimension();
-    size_t sourceDimension = _sourceOracle->space()->dimension();
-
-#if defined(IPO_DEBUG)
-    std::cout << "RationalOptimizationOracle::maximize() called with objective vector (";
-    for (size_t v = 0; v < projDimension; ++v)
-      std::cout << (v == 0 ? "" : ",") << objectiveVector[v];
-    std::cout << ")" << std::endl;
-#endif /* IPO_DEBUG */
-    
-    // Compute objective vector in space of source oracle.
-    auto liftedObjective = new mpq_class[sourceDimension];
-    for (size_t v = 0; v < sourceDimension; ++v)
-      liftedObjective[v] = 0.0;
-    mpq_class offset = 0; // Product of objective with constant part of projection map.
-    for (size_t v = 0; v < projDimension; ++v)
-    {
-      if (objectiveVector[v] != 0.0)
-      {
-        for (auto coef : _projectionLinear[v])
-          liftedObjective[coef.first] += objectiveVector[v] * coef.second;
-        offset += objectiveVector[v] * _projectionConstant[v];
-      }
-    }
-
-    OptimizationOracle<mpq_class>::Query liftedQuery;
-    liftedQuery.maxNumSolutions = query.maxNumSolutions;
-    liftedQuery.timeLimit = query.timeLimit;
-    if (query.hasMinPrimalBound())
-      liftedQuery.setMinPrimalBound(query.minPrimalBound() + offset);
-    if (query.hasMaxDualBound())
-      liftedQuery.setMaxDualBound(query.maxDualBound() + offset);
-
-    auto liftedResponse = _sourceOracle->maximize(liftedObjective, liftedQuery);
-    delete[] liftedObjective;
-
-    OptimizationOracle<mpq_class>::Response response;
-    response.outcome = liftedResponse.outcome;
-    if (!liftedResponse.points.empty())
-    {
-      for (auto point : liftedResponse.points)
-      {
-        auto vector = std::make_shared<sparse_vector<mpq_class>>();
-        for (size_t v = 0; v < projDimension; ++v)
-        {
-          mpq_class x = _projectionConstant[v] + _projectionLinear[v] * *point.vector;
-          if (x != 0.0)
-            vector->push_back(v, x);
-        }
-        response.points.push_back(OptimizationOracle<mpq_class>::Response::Point(vector, point.objectiveValue + offset));
-      }
-    }
-    else if (!liftedResponse.rays.empty())
-    {
-      for (auto ray : liftedResponse.rays)
-      {
-        auto vector = std::make_shared<sparse_vector<mpq_class>>();
-        for (size_t v = 0; v < projDimension; ++v)
-        {
-          mpq_class x = _projectionLinear[v] * *ray.vector;
-          if (x != 0.0)
-            vector->push_back(v, x);
-        }
-        response.rays.push_back(OptimizationOracle<mpq_class>::Response::Ray(vector));
-      }
-    }
-
-    return response;
-  }
-
+  template class ProjectionOptimizationOracle<mpq_class>;
 #endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */
