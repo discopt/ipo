@@ -3,7 +3,7 @@
 #include <ipo/projection.hpp>
 #include <ipo/affine_hull.hpp>
 
-TEST(Projection, OptimizationDouble)
+TEST(Submissive, OptimizationDouble)
 {
   typedef std::pair<std::size_t, std::size_t> E;
 
@@ -25,7 +25,7 @@ TEST(Projection, OptimizationDouble)
 
 #if defined(IPO_WITH_GMP)
 
-TEST(Projection, OptimizationRational)
+TEST(Submissive, OptimizationRational)
 {
   typedef std::pair<std::size_t, std::size_t> E;
 

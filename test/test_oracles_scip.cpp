@@ -3,7 +3,7 @@
 
 #include <scip/scipdefplugins.h>
 
-TEST(SCIP, UnboundedReal)
+TEST(SCIP, UnboundedDouble)
 {
   // x >= 0
   // y >= 0
@@ -47,7 +47,7 @@ TEST(SCIP, UnboundedReal)
     0.5, 1.0e-9);
 }
 
-TEST(SCIP, InfeasibleReal)
+TEST(SCIP, InfeasibleDouble)
 {
   // x >= 0
   // y >= 0
@@ -82,7 +82,7 @@ TEST(SCIP, InfeasibleReal)
   ASSERT_FALSE(response.hasDualBound);
 }
 
-TEST(SCIP, SeparateReal)
+TEST(SCIP, SeparateDouble)
 {
   // x in [-1.1,1.2]
   // y in [-1.3,1.4]

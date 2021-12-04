@@ -42,6 +42,7 @@ add_library(ipo
   src/ipo/polyhedron.cpp
   src/ipo/projection.cpp
   src/ipo/space.cpp
+  src/ipo/submissive.cpp
 )
 
 # SoPlex

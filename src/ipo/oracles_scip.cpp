@@ -629,10 +629,6 @@ namespace ipo
   std::shared_ptr<SCIPSeparationOracle<mpq_class>> SCIPSolver::getSeparationOracle<mpq_class>(
     const Constraint<mpq_class>& face)
   {
-//     return 
-//     auto approximateFace = convertConstraint<double>(face);
-//     auto approximateOracle = getSeparationOracle<double>(approximateFace);
-//     return std::make_shared<SCIPSeparationOracle<mpq_class>>(approximateOracle, face);
     return std::make_shared<SCIPSeparationOracle<mpq_class>>(shared_from_this(), face);
   }
 
@@ -1049,7 +1045,7 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
 
   template <>
   SCIPSeparationOracle<mpq_class>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
@@ -1255,6 +1251,6 @@ namespace ipo
     return result;
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   
 } /* namespace ipo */

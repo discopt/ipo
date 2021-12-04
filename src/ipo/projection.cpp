@@ -27,6 +27,8 @@ namespace ipo
     addVariables(space, regex);
   }
 
+#if defined(IPO_WITH_GMP)
+
   template <>
   IPO_EXPORT
   Projection<mpq_class>::Projection(std::shared_ptr<Space> space, const std::string& regex)
@@ -34,6 +36,8 @@ namespace ipo
   {
     addVariables(space, regex);
   }
+  
+#endif /* IPO_WITH_GMP */
 
   template <typename NumberType>
   void Projection<NumberType>::addVariable(const std::string& name, const sparse_vector<Number>& linear,
@@ -50,12 +54,16 @@ namespace ipo
 
   }
 
+#if defined(IPO_WITH_GMP)
+
   template <>
   IPO_EXPORT
   Projection<mpq_class>::~Projection()
   {
 
   }
+
+#endif /* IPO_WITH_GMP */
 
   template <typename NumberType>
   void Projection<NumberType>::addVariable(std::shared_ptr<Space> space, std::size_t variableIndex)
@@ -156,6 +164,8 @@ namespace ipo
     this->_space = _projection->space();
   }
 
+#if defined(IPO_WITH_GMP)
+
   template <>
   IPO_EXPORT
   ProjectionOptimizationOracle<mpq_class>::ProjectionOptimizationOracle(
@@ -167,6 +177,8 @@ namespace ipo
   {
     this->_space = _projection->space();
   }
+
+#endif /* IPO_WITH_GMP */
 
   template <typename NumberType>
   ProjectionOptimizationOracle<NumberType>::~ProjectionOptimizationOracle()
@@ -216,8 +228,11 @@ namespace ipo
 
   
   template class ProjectionOptimizationOracle<double>;
+
 #if defined(IPO_WITH_GMP)
+
   template class ProjectionOptimizationOracle<mpq_class>;
+
 #endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */

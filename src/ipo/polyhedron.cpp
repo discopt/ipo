@@ -780,6 +780,8 @@ namespace ipo
     _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
   }
 
+#if defined(IPO_WITH_GMP)
+  
   template <>
   IPO_EXPORT
   Polyhedron<mpq_class>::Polyhedron(std::shared_ptr<OptimizationOracle<mpq_class>> optOracle)
@@ -792,6 +794,8 @@ namespace ipo
     optOracles.push_back(optOracle);
     _implementation = new PolyhedronImplementation<mpq_class>(_space, optOracles, sepaOracles);
   }
+
+#endif /* IPO_WITH_GMP */
 
   template <typename Number>
   Polyhedron<Number>::~Polyhedron()

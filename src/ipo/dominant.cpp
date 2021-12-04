@@ -17,6 +17,8 @@ namespace ipo
     this->_space = sourceOracle->space();
   }
 
+#if defined(IPO_WITH_GMP)
+
   template <>
   IPO_EXPORT
   DominantOptimizationOracle<mpq_class>::DominantOptimizationOracle(
@@ -27,6 +29,8 @@ namespace ipo
   {
     this->_space = sourceOracle->space();
   }
+
+#endif /* IPO_WITH_GMP */
 
   template <typename NumberType>
   DominantOptimizationOracle<NumberType>::~DominantOptimizationOracle()

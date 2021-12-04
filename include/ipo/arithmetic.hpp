@@ -1,5 +1,7 @@
 #pragma once
 
+#include <cstddef>
+
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 

@@ -246,6 +246,8 @@ namespace ipo
     Constraint<double> _face;
   };
 
+#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+
   template <>
   class SCIPOptimizationOracle<mpq_class>: public RationalMIPExtendedOptimizationOracle
   {
@@ -258,6 +260,8 @@ namespace ipo
       
     }
   };
+
+#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
   /**
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.

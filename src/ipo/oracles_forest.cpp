@@ -27,10 +27,11 @@ namespace ipo
     return root;
   }
 
-  ForestRealOptimizationOracle::ForestRealOptimizationOracle(std::size_t numNodes,
+  template <typename NumberType>
+  ForestOptimizationOracle<NumberType>::ForestOptimizationOracle(std::size_t numNodes,
     std::pair<std::size_t, std::size_t>* edgesFirst, std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning,
     const std::string& name)
-    : OptimizationOracle<double>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
+    : OptimizationOracle<NumberType>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
   {
     _numNodes = numNodes;
     std::vector<std::string> variableNames(edgesBeyond - edgesFirst);
@@ -45,69 +46,14 @@ namespace ipo
       variableNames[e] = ss.str();
       ++edgesFirst;
     }
-    _space = std::make_shared<Space>(variableNames);
-  }
-
-  ForestRealOptimizationOracle::~ForestRealOptimizationOracle()
-  {
-
-  }
-
-  OptimizationOracle<double>::Response ForestRealOptimizationOracle::maximize(const double* objectiveVector,
-    const OptimizationOracle<double>::Query& query)
-  {
-    std::vector<std::pair<double, std::size_t>> weights(_edges.size());
-    for (size_t e = 0; e < _edges.size(); ++e)
-      weights[e] = std::make_pair(objectiveVector[e], e);
-
-    // Initialize singleton components.
-    std::vector<std::size_t> nodesComponentRoot(_numNodes, std::numeric_limits<std::size_t>::max());
-
-    // Sort edges by weight.
-    std::sort(weights.begin(), weights.end(),
-      [](const std::pair<double, std::size_t>& a, const std::pair<double, std::size_t>& b) -> bool
-      {
-        return a.first > b.first;
-      }
-    );
-
-    // Go through edges by descending weight and try to merge components.
-    std::vector<std::pair<std::size_t, double>> optimalSolution;
-    double optimum = 0;
-    for (size_t i = 0; i < weights.size(); ++i)
-    {
-      std::size_t edge = weights[i].second;
-      std::size_t u = getRepresentative(nodesComponentRoot, _edges[edge].first);
-      std::size_t v = getRepresentative(nodesComponentRoot, _edges[edge].second);
-
-      // If endnodes are the same component, we skip it.
-      if (u == v)
-        continue;
-
-      auto weight = weights[i].first;
-      if (!_spanning && weight < 0)
-        continue;
-
-      nodesComponentRoot[u] = v;
-      optimalSolution.push_back(std::make_pair(edge, 1.0));
-      optimum += weight;
-    }
-
-    OptimizationOracle<double>::Response response;
-    response.outcome = OptimizationOutcome::FEASIBLE;
-    response.primalBound = optimum;
-    response.hasPrimalBound = true;
-    response.dualBound = optimum;
-    response.hasDualBound = true;
-    response.points.push_back(OptimizationOracle<double>::Response::Point(
-      std::make_shared<sparse_vector<double>>(optimalSolution, true), optimum));
-
-    return response;
+    this->_space = std::make_shared<Space>(variableNames);
   }
 
 #if defined(IPO_WITH_GMP)
 
-  ForestRationalOptimizationOracle::ForestRationalOptimizationOracle(std::size_t numNodes,
+  template <>
+  IPO_EXPORT
+  ForestOptimizationOracle<mpq_class>::ForestOptimizationOracle(std::size_t numNodes,
     std::pair<std::size_t, std::size_t>* edgesFirst, std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning,
     const std::string& name)
     : OptimizationOracle<mpq_class>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
@@ -125,25 +71,33 @@ namespace ipo
       variableNames[e] = ss.str();
       ++edgesFirst;
     }
-    _space = std::make_shared<Space>(variableNames);
+    this->_space = std::make_shared<Space>(variableNames);
   }
 
-  ForestRationalOptimizationOracle::~ForestRationalOptimizationOracle()
+#endif /* IPO_WITH_GMP */
+
+  template <typename NumberType>
+  ForestOptimizationOracle<NumberType>::~ForestOptimizationOracle()
   {
 
   }
 
-  OptimizationOracle<mpq_class>::Response ForestRationalOptimizationOracle::maximize(const mpq_class* objectiveVector,
-    const OptimizationOracle<mpq_class>::Query& query)
+#if defined(IPO_WITH_GMP)
+
+  template <>
+  IPO_EXPORT
+  ForestOptimizationOracle<mpq_class>::~ForestOptimizationOracle()
   {
-#if defined(IPO_DEBUG)
-    std::cout << "ForestRationalOptimizationOracle::maximize() called with objective vector (";
-    for (size_t v = 0; v < _space->dimension(); ++v)
-      std::cout << (v == 0 ? "" : ",") << objectiveVector[v];
-    std::cout << ")" << std::endl;
-#endif /* IPO_DEBUG */
-    
-    std::vector<std::pair<mpq_class, std::size_t>> weights(_edges.size());
+
+  }
+
+#endif /* IPO_WITH_GMP */
+
+  template <typename NumberType>
+  OptimizationResponse<NumberType> ForestOptimizationOracle<NumberType>::maximize(const NumberType* objectiveVector,
+    const OptimizationQuery<NumberType>& query)
+  {
+    std::vector<std::pair<NumberType, std::size_t>> weights(_edges.size());
     for (size_t e = 0; e < _edges.size(); ++e)
       weights[e] = std::make_pair(objectiveVector[e], e);
 
@@ -152,15 +106,15 @@ namespace ipo
 
     // Sort edges by weight.
     std::sort(weights.begin(), weights.end(),
-      [](const std::pair<mpq_class, std::size_t>& a, const std::pair<mpq_class, std::size_t>& b) -> bool
+      [](const std::pair<NumberType, std::size_t>& a, const std::pair<NumberType, std::size_t>& b) -> bool
       {
         return a.first > b.first;
       }
     );
 
     // Go through edges by descending weight and try to merge components.
-    std::vector<std::pair<std::size_t, mpq_class>> optimalSolution;
-    mpq_class optimum = 0;
+    std::vector<std::pair<std::size_t, NumberType>> optimalSolution;
+    NumberType optimum = 0;
     for (size_t i = 0; i < weights.size(); ++i)
     {
       std::size_t edge = weights[i].second;
@@ -180,18 +134,22 @@ namespace ipo
       optimum += weight;
     }
 
-    OptimizationOracle<mpq_class>::Response response;
+    OptimizationResponse<NumberType> response;
     response.outcome = OptimizationOutcome::FEASIBLE;
     response.primalBound = optimum;
     response.hasPrimalBound = true;
     response.dualBound = optimum;
     response.hasDualBound = true;
-    response.points.push_back(OptimizationOracle<mpq_class>::Response::Point(
-      std::make_shared<sparse_vector<mpq_class>>(optimalSolution, true), optimum));
+    response.points.push_back(typename OptimizationResponse<NumberType>::Point(
+      std::make_shared<sparse_vector<NumberType>>(optimalSolution, true), optimum));
 
     return response;
   }
 
-#endif /* IPO_WITH_GMP */
+  template class ForestOptimizationOracle<double>;
+
+#if defined(IPO_WITH_GMP)
+  template class ForestOptimizationOracle<mpq_class>;
+#endif /* IPO_WITH_GMP */  
   
 } /* namespace ipo */

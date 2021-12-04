@@ -2,8 +2,6 @@
 
 #include <cmath>
 
-#if defined(IPO_WITH_GMP)
-
 double squaredEuclideanNorm(double* vector, std::size_t size)
 {
   double result = 0.0;
@@ -19,6 +17,8 @@ double euclideanNorm(double* vector, std::size_t size)
 {
   return sqrt(squaredEuclideanNorm(vector,size));
 }
+
+#if defined(IPO_WITH_GMP)
 
 void reconstructRational(mpq_ptr result, double x, double maxError)
 {
