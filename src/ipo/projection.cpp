@@ -164,6 +164,46 @@ namespace ipo
     this->_space = _projection->space();
   }
 
+  template <typename Number>
+  std::vector<Constraint<Number>> projectionEquationsImplementation(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& equations)
+  {
+    std::vector<Constraint<Number>> result;
+
+#if defined(IPO_DEBUG)
+    // TODO: Implement.
+#endif /* IPO_DEBUG */
+
+    return result;
+  }
+
+  template <typename Number>
+  std::vector<Constraint<Number>> projectionEquations(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& equations)
+  {
+    return projectionEquationsImplementation(projection, equations);
+  }
+
+  template <>
+  IPO_EXPORT
+  std::vector<Constraint<mpq_class>> projectionEquations(std::shared_ptr<Projection<mpq_class>> projection,
+    const std::vector<Constraint<mpq_class>>& equations)
+  {
+    return projectionEquationsImplementation(projection, equations);
+  }
+
+  /* Explicit template instantiation. */
+
+  template std::vector<Constraint<double>> projectionEquations(std::shared_ptr<Projection<double>> projection,
+    const std::vector<Constraint<double>>& equations);
+
+#if defined(IPO_WITH_GMP)
+
+  template std::vector<Constraint<mpq_class>> projectionEquations(std::shared_ptr<Projection<mpq_class>> projection,
+    const std::vector<Constraint<mpq_class>>& equations);
+
+#endif /* IPO_WITH_GMP */
+
 #if defined(IPO_WITH_GMP)
 
   template <>

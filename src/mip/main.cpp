@@ -37,12 +37,13 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   assert(!useSubmissive);
 
   std::shared_ptr<ipo::OptimizationOracle<Number>> projectionOracle;
+  std::shared_ptr<ipo::Projection<Number>> projectionMap;
   if (projectionRegex.empty())
     projectionOracle = baseOracle;
   else
   {
-    auto projection = std::make_shared<ipo::Projection<Number>>(baseOracle->space(), projectionRegex);
-    projectionOracle = std::make_shared<ipo::ProjectionOptimizationOracle<Number>>(baseOracle, projection);
+    projectionMap = std::make_shared<ipo::Projection<Number>>(baseOracle->space(), projectionRegex);
+    projectionOracle = std::make_shared<ipo::ProjectionOptimizationOracle<Number>>(baseOracle, projectionMap);
   }
   std::shared_ptr<ipo::OptimizationOracle<Number>> dominantOracle;
   if (useDominant)
@@ -60,11 +61,10 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     std::vector<ipo::Constraint<Number>> knownEquations;
     ipo::SeparationQuery sepaQuery;
     auto sepaResult = sepa->getInitial(sepaQuery);
-    for (const auto& constraint : sepaResult.constraints)
-    {
-//       if (constraint.type() == ipo::ConstraintType::EQUATION)
-//         knownEquations.push_back(constraint);
-    }
+    if (projectionRegex.empty())
+      knownEquations = sepaResult.constraints;
+    else
+      knownEquations = projectionEquations(projectionMap, sepaResult.constraints);    
 
     std::cerr << "Starting affine hull computation.\n" << std::flush;
     ipo::AffineHullQuery affQuery;

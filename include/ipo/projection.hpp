@@ -11,6 +11,12 @@
 
 namespace ipo
 {
+  /**
+   * \brief Projection map 
+   *
+   * \see \ref projectionEquations
+   */
+  
   template <typename NumberType>
   class Projection
   {
@@ -103,12 +109,26 @@ namespace ipo
     std::vector<Number> _mapConstant;               /**< Vector containing the absolute part of the projection map. */
   };
 
-  std::vector<sparse_vector<double>> projectionEquations(const std::vector<sparse_vector<double>>& equations);
+  /**
+   * \brief Projects a set of \p equations via \p projection.
+   *
+   * Computes a system of equations in the image space of \p projection that defines the projection of the affine space
+   * defined by \p equations.
+   *
+   * Suppose \p equations are \f$ Ax = b \f$ and \p projection is \f$ x \mapsto y = Tx + t \f$.
+   * Hence, we want to find out the orthogonal projection of the affine space defined by
+   *
+   * Iy - Tx = t
+   *      Ax = b
+   *
+   * This is achieved by carrying out pivots on columns corresponding to x-variables until the corresponding matrix is
+   * upper triangular. After that, the rows with only nonzeros on y-variables define the projected space.
+   **/
 
-#if defined(IPO_WITH_GMP)
-  std::vector<sparse_vector<mpq_class>> projectionEquations(const std::vector<sparse_vector<mpq_class>>& equations);
-#endif /* IPO_WITH_GMP */
-
+  template <typename Number>
+  IPO_EXPORT
+  std::vector<Constraint<Number>> projectionEquations(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& equations);
 
   template <typename NumberType>
   class ProjectionOptimizationOracle: public OptimizationOracle<NumberType>
