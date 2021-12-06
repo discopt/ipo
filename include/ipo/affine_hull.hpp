@@ -93,28 +93,7 @@ namespace ipo
   };
 
   template <typename Number>
-  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result)
-  {
-    if (result.dimension >= -1)
-      stream << "Dimension: " << result.dimension;
-    else
-    {
-      if (result.dimension == AFFINEHULL_ERROR_RUNNING)
-        stream << "Running. ";
-      else if (result.dimension == AFFINEHULL_ERROR_TIMEOUT)
-        stream << "Timeout. ";
-      else if (result.dimension == AFFINEHULL_ERROR_NUMERICS)
-        stream << "Numerical difficulties. ";
-      else
-        stream << "Unknown error. ";
-      stream << "Dimension in [" << result.lowerBound << "," << result.upperBound << "]";
-    }
-    stream << " (stats -- kernel vectors: " << result.numKernel << ")";
-    stream << " (running times -- total: " << result.timeTotal << ", oracles: " << result.timeOracles
-      << ", kernel: " << result.timeKernel << ", points/rays: " << result.timePointsRays
-      << ", equations: " << result.timeEquations << ")";
-    return stream;
-  }
+  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result);
 
   template <typename Number>
   IPO_EXPORT

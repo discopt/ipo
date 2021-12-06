@@ -1,3 +1,5 @@
+#define IPO_DEBUG /* Uncomment to debug this file. */
+
 #include <ipo/affine_hull.hpp>
 
 // #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
@@ -109,6 +111,32 @@ namespace ipo
   }
 
   template class AffineHullResult<double>;
+
+  template <typename Number>
+  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result)
+  {
+    if (result.dimension >= -1)
+      stream << "Dimension: " << result.dimension;
+    else
+    {
+      if (result.dimension == AFFINEHULL_ERROR_RUNNING)
+        stream << "Running. ";
+      else if (result.dimension == AFFINEHULL_ERROR_TIMEOUT)
+        stream << "Timeout. ";
+      else if (result.dimension == AFFINEHULL_ERROR_NUMERICS)
+        stream << "Numerical difficulties. ";
+      else
+        stream << "Unknown error. ";
+      stream << "Dimension in [" << result.lowerBound << "," << result.upperBound << "]";
+    }
+    stream << " (stats -- kernel vectors: " << result.numKernel << ")";
+    stream << " (running times -- total: " << result.timeTotal << ", oracles: " << result.timeOracles
+      << ", kernel: " << result.timeKernel << ", points/rays: " << result.timePointsRays
+      << ", equations: " << result.timeEquations << ")";
+    return stream;
+  }
+
+  template std::ostream& operator<<(std::ostream& stream, const AffineHullResult<double>& result);
 
   template <typename T>
   class AffineComplement
@@ -1579,6 +1607,8 @@ namespace ipo
 #if defined(IPO_WITH_GMP)
 
   template class AffineHullResult<mpq_class>;
+
+  template std::ostream& operator<<(std::ostream& stream, const AffineHullResult<mpq_class>& result);
 
   template <>
   IPO_EXPORT
