@@ -15,7 +15,7 @@ TEST(Forest, SpanningTreeDouble)
 
   auto forestOracle = std::make_shared<ipo::ForestOptimizationOracle<double>>(numNodes, &edges[0], &edges[numEdges], false);
   auto forestPolytope = std::make_shared<ipo::Polyhedron<double>>(forestOracle);
-  ipo::RealAffineHullResult result = ipo::affineHull(forestPolytope);
+  auto result = ipo::affineHull(forestPolytope);
   ASSERT_EQ(result.dimension, 9);
 
   auto sptreeOracle = std::make_shared<ipo::ForestOptimizationOracle<double>>(numNodes, &edges[0], &edges[numEdges], true);

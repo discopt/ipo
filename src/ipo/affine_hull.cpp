@@ -42,6 +42,74 @@ namespace ipo
     return *this;
   }
 
+  template <typename Number>
+  AffineHullResult<Number>::AffineHullResult()
+  {
+    dimension = AFFINEHULL_ERROR_RUNNING;
+    lowerBound = -1;
+    upperBound = std::numeric_limits<int>::max();
+    timeTotal = 0.0;
+    timeOracles = 0.0;
+    numKernel = 0;
+    timeKernel = 0.0;
+    timePointsRays = 0.0;
+    timeEquations = 0.0;
+  }
+
+  template <typename Number>
+  AffineHullResult<Number>::AffineHullResult(AffineHullResult<Number>&& other)
+    : points(std::move(other.points)), rays(std::move(other.rays)),
+    equations(std::move(other.equations))
+  {
+    dimension = other.dimension;
+    lowerBound = other.lowerBound;
+    upperBound = other.upperBound;
+    timeTotal = other.timeTotal;
+    timeOracles = other.timeOracles;
+    numKernel = other.numKernel;
+    timeKernel = other.timeKernel;
+    timePointsRays = other.timePointsRays;
+    timeEquations = other.timeEquations;
+  }
+
+  template <typename Number>
+  AffineHullResult<Number>& AffineHullResult<Number>::operator=(const AffineHullResult<Number>& other)
+  {
+    points = other.points;
+    rays = other.rays;
+    equations = other.equations;
+    dimension = other.dimension;
+    lowerBound = other.lowerBound;
+    upperBound = other.upperBound;
+    timeTotal = other.timeTotal;
+    timeOracles = other.timeOracles;
+    numKernel = other.numKernel;
+    timeKernel = other.timeKernel;
+    timePointsRays = other.timePointsRays;
+    timeEquations = other.timeEquations;
+    return *this;
+  }
+
+  template <typename Number>
+  AffineHullResult<Number>& AffineHullResult<Number>::operator=(AffineHullResult<Number>&& other)
+  {
+    points = std::move(other.points);
+    rays = std::move(other.rays);
+    equations = std::move(other.equations);
+    dimension = other.dimension;
+    lowerBound = other.lowerBound;
+    upperBound = other.upperBound;
+    timeTotal = other.timeTotal;
+    timeOracles = other.timeOracles;
+    numKernel = other.numKernel;
+    timeKernel = other.timeKernel;
+    timePointsRays = other.timePointsRays;
+    timeEquations = other.timeEquations;
+    return *this;
+  }
+
+  template class AffineHullResult<double>;
+
   template <typename T>
   class AffineComplement
   {
@@ -1144,10 +1212,11 @@ namespace ipo
     return INTERNAL_OKAY;
   }
 
-  RealAffineHullResult affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
+  template <>
+  AffineHullResult<double> affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
-    RealAffineHullResult result;
+    AffineHullResult<double> result;
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
@@ -1401,7 +1470,7 @@ namespace ipo
   }
 
   bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron,
-    const RealAffineHullResult& result)
+    const AffineHullResult<double>& result)
   {
     std::size_t n = polyhedron->space()->dimension();
 
@@ -1502,12 +1571,21 @@ namespace ipo
     return worstViolation <= 1.0e-6;
   }
 
+  template AffineHullResult<double> affineHull(
+    std::shared_ptr<Polyhedron<double>> polyhedron,
+    const AffineHullQuery& query,
+    const std::vector<Constraint<double>>& knownEquations);
+
 #if defined(IPO_WITH_GMP)
 
-  RationalAffineHullResult affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+  template class AffineHullResult<mpq_class>;
+
+  template <>
+  IPO_EXPORT
+  AffineHullResult<mpq_class> affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
   {
-    RationalAffineHullResult result;
+    AffineHullResult<mpq_class> result;
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
@@ -1769,6 +1847,11 @@ namespace ipo
     result.timeTotal = elapsedTime(timeStarted);
     return result;
   }
+
+  template AffineHullResult<mpq_class> affineHull(
+    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+    const AffineHullQuery& query,
+    const std::vector<Constraint<mpq_class>>& knownEquations);
 
 #endif /* IPO_WITH_GMP */
 
