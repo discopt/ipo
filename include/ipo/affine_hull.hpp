@@ -45,10 +45,8 @@ namespace ipo
     double epsilonCoefficient;
     double timeLimit; /// Time limit in seconds.
 
-    IPO_EXPORT
     AffineHullQuery();
 
-    IPO_EXPORT
     AffineHullQuery& operator=(const AffineHullQuery& other);
   };
 
@@ -74,16 +72,12 @@ namespace ipo
     std::vector<std::shared_ptr<sparse_vector<NumberType>>> rays; /// Rays of inner description.
     std::vector<Constraint<NumberType>> equations; /// Linearly independent equations.
 
-    IPO_EXPORT
     AffineHullResult();
 
-    IPO_EXPORT
     AffineHullResult(AffineHullResult<Number>&& other);
 
-    IPO_EXPORT
     AffineHullResult<Number>& operator=(const AffineHullResult<Number>& other);
 
-    IPO_EXPORT
     AffineHullResult<Number>& operator=(AffineHullResult<Number>&& other);
 
     inline bool success() const
@@ -96,14 +90,10 @@ namespace ipo
   std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result);
 
   template <typename Number>
-  IPO_EXPORT
   AffineHullResult<Number> affineHull(
-    std::shared_ptr<Polyhedron<Number>> polyhedron,
-    const AffineHullQuery& query = AffineHullQuery(),
+    std::shared_ptr<Polyhedron<Number>> polyhedron, const AffineHullQuery& query = AffineHullQuery(),
     const std::vector<Constraint<Number>>& knownEquations = std::vector<Constraint<Number>>());
 
-  IPO_EXPORT
-  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron,
-    const AffineHullResult<double>& result);
+  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron, const AffineHullResult<double>& result);
 
 } /* namespace ipo */

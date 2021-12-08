@@ -2,6 +2,8 @@
 
 namespace ipo
 {
+
+  IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<double>>& matrix,
     std::size_t* rowPermutation, std::size_t* columnPermutation)
   {
@@ -76,6 +78,7 @@ namespace ipo
 
 #if defined(IPO_WITH_GMP)
 
+  IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<mpq_class>>& matrix,
     std::size_t* rowPermutation, std::size_t* columnPermutation)
   {

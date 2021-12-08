@@ -1,9 +1,9 @@
-#define IPO_DEBUG /* Uncomment to debug this file. */
+// #define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/affine_hull.hpp>
 
 // #define IPO_DEBUG_AFFINE_HULL_CHECK // Uncomment to enable debug checks.
-// // #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
+// #define IPO_DEBUG_AFFINE_HULL_PRINT // Uncomment to print activity.
 
 #include <ipo/arithmetic.hpp>
 
@@ -142,6 +142,7 @@ namespace ipo
   class AffineComplement
   {
   public:
+    IPO_NO_EXPORT
     AffineComplement(std::size_t numVariables)
       : _numVariables(numVariables), _lu(),
       _columns(numVariables + 1), _lastColumn(0)
@@ -153,17 +154,20 @@ namespace ipo
       }
     }
 
+    IPO_NO_EXPORT
     inline std::size_t numVariables() const
     {
       return _numVariables;
     }
 
+    IPO_NO_EXPORT
     inline std::size_t rank() const
     {
       return _basisIndexToColumn.size();
     }
 
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
+    IPO_NO_EXPORT
     void _debugAdd(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
       const T* kernelVector)
     {
@@ -226,6 +230,7 @@ namespace ipo
     }
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
 
+    IPO_NO_EXPORT
     int add(const sparse_vector<T>& row, const T& last, std::size_t newBasicColumn,
       double epsilonFactorization)
     {
@@ -275,6 +280,7 @@ namespace ipo
       return INTERNAL_OKAY;
     }
 
+    IPO_NO_EXPORT
     void computeKernelVector(std::size_t column, sparse_vector<T>& result, T& rhs,
       double epsilonCoefficient)
     {
@@ -306,6 +312,7 @@ namespace ipo
         rhs = 0;
     }
 
+    IPO_NO_EXPORT
     std::size_t selectColumn()
     {
       std::size_t bestColumn = std::numeric_limits<std::size_t>::max();
@@ -327,6 +334,7 @@ namespace ipo
       return bestColumn;
     }
 
+    IPO_NO_EXPORT
     void markEquation(std::size_t column)
     {
       _columns[column].definesEquation = true;
@@ -347,6 +355,7 @@ namespace ipo
       std::vector<T> entries;
       bool definesEquation;
 
+      IPO_NO_EXPORT
       bool isBasic() const
       {
         return basisIndex < std::numeric_limits<std::size_t>::max();
@@ -384,6 +393,7 @@ namespace ipo
     for (auto equation : knownEquations)
     {
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+      std::cout << "Checking known equation " << equation << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
       auto convertedEquation = convertConstraint<U>(equation);
       auto redundancy = redundancyCheck.test(convertedEquation, euclideanNorm(convertedEquation.vector()));
@@ -436,8 +446,10 @@ namespace ipo
     std::size_t redundancyRank;
     bool isLast;
 
+    IPO_NO_EXPORT
     KernelVectorDouble() = default;
 
+    IPO_NO_EXPORT
     KernelVectorDouble(std::size_t col, bool valid, bool last)
       : column(col), rhs(0.0), norm(1.0), maxViolation(std::numeric_limits<double>::max()),
       sparsity(1), redundancyCoordinate(std::numeric_limits<std::size_t>::max()),
@@ -451,6 +463,7 @@ namespace ipo
       }
     }
 
+    IPO_NO_EXPORT
     void ensureValidity(const sparse_vector<double>& solution, double pointFactor, double epsilon)
     {
       if (vector)
@@ -463,6 +476,7 @@ namespace ipo
   };
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+  IPO_NO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const KernelVectorDouble& kv)
   {
     stream << "Kernel vector for column " << kv.column;
@@ -495,6 +509,7 @@ namespace ipo
   {
     double epsilon;
 
+    IPO_NO_EXPORT
     bool operator()(const KernelVectorDouble& a, const KernelVectorDouble& b) const
     {
       if (a.isLast && !b.isLast)
@@ -554,8 +569,10 @@ namespace ipo
     std::size_t redundancyRank;
     bool isLast;
 
+    IPO_NO_EXPORT
     KernelVectorRational() = default;
 
+    IPO_NO_EXPORT
     KernelVectorRational(std::size_t col, bool valid, bool last)
       : column(col), rhs(0), approximateRhs(1.0), norm(1.0),
       maxViolation(std::numeric_limits<double>::max()), sparsity(1),
@@ -572,6 +589,7 @@ namespace ipo
       }
     }
 
+    IPO_NO_EXPORT
     void ensureValidity(const sparse_vector<mpq_class>& solution, const mpq_class& pointFactor,
       double epsilon)
     {
@@ -586,6 +604,7 @@ namespace ipo
   };
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
+  IPO_NO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const KernelVectorRational& kv)
   {
     stream << "Kernel vector for column " << kv.column << ": ";
@@ -606,6 +625,7 @@ namespace ipo
   {
     double epsilon;
 
+    IPO_NO_EXPORT
     bool operator()(const KernelVectorRational& a, const KernelVectorRational& b) const
     {
       if (a.isLast && !b.isLast)
@@ -1251,7 +1271,7 @@ namespace ipo
     result.upperBound = n;
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-    std::cout << "affineHull<double>() called for ambient dimension " << n << std::endl;
+    std::cout << "affineHull<double>() called for ambient dimension " << n << ".\n" << std::flush;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     auto redundancyCheck = EquationRedundancyCheck<double>(n);
@@ -1622,7 +1642,7 @@ namespace ipo
     result.upperBound = n;
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-    std::cout << "affineHull<Rational>() called for ambient dimension " << n << std::endl;
+    std::cout << "affineHull<Rational>() called for ambient dimension " << n << ".\n" << std::flush;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     auto redundancyCheck = EquationRedundancyCheck<mpq_class>(n);

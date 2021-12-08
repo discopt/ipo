@@ -64,7 +64,6 @@ namespace ipo
      * \brief Constructs the query structure.
      **/
 
-    IPO_EXPORT
     OptimizationQuery()
       : maxNumSolutions(std::numeric_limits<std::size_t>::max()),
       timeLimit(std::numeric_limits<double>::infinity()), _hasMinPrimalBound(false),
@@ -73,53 +72,45 @@ namespace ipo
 
     }
 
-    IPO_EXPORT
     bool hasMinPrimalBound() const
     {
       return _hasMinPrimalBound;
     }
 
-    IPO_EXPORT
     const Number& minPrimalBound() const
     {
       assert(_hasMinPrimalBound);
       return _minPrimalBound;
     }
 
-    IPO_EXPORT
     void setMinPrimalBound(const Number& minPrimalBound)
     {
       _hasMinPrimalBound = true;
       _minPrimalBound = minPrimalBound;
     }
 
-    IPO_EXPORT
     void removeMinPrimalBound()
     {
       _hasMinPrimalBound = false;
     }
 
-    IPO_EXPORT
     bool hasMaxDualBound() const
     {
       return _hasMaxDualBound;
     }
 
-    IPO_EXPORT
     const Number& maxDualBound() const
     {
       assert(_hasMaxDualBound);
       return _maxDualBound;
     }
 
-    IPO_EXPORT
     void setMaxDualBound(const Number& maxDualBound)
     {
       _hasMaxDualBound = true;
       _maxDualBound = maxDualBound;
     }
 
-    IPO_EXPORT
     void removeMaxDualBound()
     {
       _hasMaxDualBound = false;
@@ -154,7 +145,6 @@ namespace ipo
        * \param vec Shared pointer to the point.
        **/
 
-      IPO_EXPORT
       Point(std::shared_ptr<sparse_vector<Number>> vec)
         : objectiveValue(-std::numeric_limits<double>::signaling_NaN()), vector(vec)
       {
@@ -168,7 +158,6 @@ namespace ipo
        * \param value Objective value of the point.
        **/
 
-      IPO_EXPORT
       Point(std::shared_ptr<sparse_vector<Number>> vec, const Number& value)
         : objectiveValue(value), vector(vec)
       {
@@ -180,7 +169,6 @@ namespace ipo
        *        smaller.
        **/
 
-      IPO_EXPORT
       inline bool operator<(const Point& other) const
       {
         return objectiveValue > other.objectiveValue;
@@ -205,7 +193,6 @@ namespace ipo
        * \param vec Shared pointer to the ray.
        **/
 
-      IPO_EXPORT
       Ray(std::shared_ptr<sparse_vector<Number>> vec)
         : vector(vec), _norm(euclideanNorm(*vec))
       {
@@ -221,7 +208,6 @@ namespace ipo
        * \param norm Euclidean norm of the ray.
        **/
 
-      IPO_EXPORT
       Ray(std::shared_ptr<sparse_vector<Number>> vec, double norm)
         : vector(vec), _norm(norm)
       {
@@ -232,7 +218,6 @@ namespace ipo
        * \brief Returns the Euclidean norm of the ray.
        **/
 
-      IPO_EXPORT
       inline double norm() const
       {
         return _norm;
@@ -264,7 +249,6 @@ namespace ipo
      * \brief Constructs the result structure.
      **/
 
-    IPO_EXPORT
     OptimizationResponse()
       : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
       dualBound(0), hitTimeLimit(false)
@@ -276,7 +260,6 @@ namespace ipo
      * \brief Move-construcs the response.
      **/
 
-    IPO_EXPORT
     OptimizationResponse(OptimizationResponse&& other)
       : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
       hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
@@ -289,7 +272,6 @@ namespace ipo
      * \brief Move-assignment operator.
      **/
 
-    IPO_EXPORT
     inline OptimizationResponse<Number>& operator=(OptimizationResponse<Number>&& other)
     {
       outcome = other.outcome;
@@ -307,7 +289,6 @@ namespace ipo
       * \brief Copy-assignment operator.
       */
 
-    IPO_EXPORT
     inline OptimizationResponse<Number>& operator=(const OptimizationResponse<Number>& other)
     {
       outcome = other.outcome;
@@ -325,7 +306,6 @@ namespace ipo
      * \brief Whether the query was successful, i.e., no timeout or other error occured.
      */
 
-    IPO_EXPORT
     inline bool wasSuccessful() const
     {
       return outcome == OptimizationOutcome::INFEASIBLE
@@ -352,7 +332,6 @@ namespace ipo
      * \param name Name of the oracle.
      */
 
-    IPO_EXPORT
     Oracle(const std::string& name = "")
       : _name(name), _space(nullptr)
     {
@@ -363,7 +342,6 @@ namespace ipo
      * \brief Returns the oracle's name.
      */
 
-    IPO_EXPORT
     inline const std::string& name() const
     {
       return _name;
@@ -373,7 +351,6 @@ namespace ipo
      * \brief Returns the oracle's ambient space.
      */
 
-    IPO_EXPORT
     inline std::shared_ptr<Space> space() const
     {
       return _space;
@@ -410,7 +387,6 @@ namespace ipo
      * \param name Name of the oracle.
      */
 
-    IPO_EXPORT
     OptimizationOracle(const std::string& name = "");
 
     /**
@@ -421,7 +397,6 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    IPO_EXPORT
     virtual Response maximize(const Number* objectiveVector, const Query& query) = 0;
 
     /**
@@ -432,7 +407,6 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    IPO_EXPORT
     virtual Response maximizeDouble(const double* objectiveVector, const Query& query);
   };
 
@@ -451,7 +425,6 @@ namespace ipo
       * \brief Constructs the query structure.
       */
 
-    IPO_EXPORT
     SeparationQuery()
       : maxNumInequalities(std::numeric_limits<std::size_t>::max()),
       timeLimit(std::numeric_limits<double>::infinity())
@@ -478,7 +451,6 @@ namespace ipo
      * \brief Constructs the result structure.
      **/
 
-    IPO_EXPORT
     SeparationResponse()
       : hitTimeLimit(false)
     {
@@ -489,7 +461,6 @@ namespace ipo
      * \brief Move-constructs response.
      **/
 
-    IPO_EXPORT
     SeparationResponse(SeparationResponse&& other)
       : constraints(std::move(other.constraints)), hitTimeLimit(other.hitTimeLimit)
     {
@@ -500,7 +471,6 @@ namespace ipo
      * \brief Move-assignment operator.
      */
 
-    IPO_EXPORT
     inline SeparationResponse& operator=(SeparationResponse&& other)
     {
       constraints = std::move(other.constraints);
@@ -512,7 +482,6 @@ namespace ipo
      * \brief Assignment operator.
      */
 
-    IPO_EXPORT
     inline SeparationResponse& operator=(const SeparationResponse& other)
     {
       constraints = other.constraints;
@@ -521,10 +490,9 @@ namespace ipo
     }
 
     /**
-      * \brief Returns the number of generated constraints.
-      */
+     * \brief Returns the number of generated constraints.
+     **/
 
-    IPO_EXPORT
     inline std::size_t numConstraints() const
     {
       return constraints.size();
@@ -536,7 +504,6 @@ namespace ipo
    * \brief Prints the response of a real optimization oracle.
    */
 
-  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response);
 
   /**
@@ -561,7 +528,6 @@ namespace ipo
      * \brief Constructs the oracle.
      */
 
-    IPO_EXPORT
     SeparationOracle(const std::string& name);
 
     /**
@@ -573,7 +539,6 @@ namespace ipo
      * \return Separation result.
      **/
 
-    IPO_EXPORT
     virtual Response getInitial(const Query& query = Query());
 
     /**
@@ -586,7 +551,6 @@ namespace ipo
      * \returns Reponse structure.
      **/
 
-    IPO_EXPORT
     virtual Response separate(const Number* vector, bool isPoint, const Query& query = Query()) = 0;
 
     /**
@@ -602,7 +566,6 @@ namespace ipo
      * \returns Reponse structure.
      **/
 
-    IPO_EXPORT
     virtual Response separateDouble(const double* vector, bool isPoint, const Query& query);
   };
 
@@ -610,7 +573,6 @@ namespace ipo
    * \brief Prints the response of a real separation oracle.
    */
 
-  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<double>& response);
 
 #if defined(IPO_WITH_GMP)
@@ -619,14 +581,12 @@ namespace ipo
    * \brief Prints the response of a rational optimization oracle.
    */
 
-  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response);
 
   /**
    * \brief Prints the response of a rational separation oracle.
    */
 
-  IPO_EXPORT
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<mpq_class>& response);
 
 #endif /* IPO_WITH_GMP */

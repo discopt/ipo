@@ -6,6 +6,7 @@
 
 #cmakedefine IPO_WITH_GMP
 #cmakedefine IPO_WITH_SOPLEX
+#cmakedefine IPO_WITH_GUROBI
 #cmakedefine IPO_WITH_SCIP
 
 #if defined(IPO_WITH_GMP)

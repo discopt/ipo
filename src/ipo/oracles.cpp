@@ -3,9 +3,9 @@
 namespace ipo
 {
   
-  template <>
-  OptimizationOracle<double>::OptimizationOracle(const std::string& name)
-    : Oracle<double>(name)
+  template <typename Number>
+  OptimizationOracle<Number>::OptimizationOracle(const std::string& name)
+    : Oracle<Number>(name)
   {
 
   }
@@ -17,8 +17,23 @@ namespace ipo
     return maximize(objectiveVector, query);
   }
 
+  
+#if defined(IPO_WITH_GMP)
+
+  template <>
+  OptimizationResponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
+    const double* objectiveVector, const OptimizationQuery<mpq_class>& query)
+  {
+    std::vector<mpq_class> convertedObjectiveVector(this->_space->dimension());
+    for (std::size_t v = 0; v < this->_space->dimension(); ++v)
+      convertedObjectiveVector[v] = objectiveVector[v];
+    return maximize(&convertedObjectiveVector[0], query);
+  }
+
+#endif /* IPO_WITH_GMP */
+
   template <typename R>
-  static std::ostream& printOptimizationRepsonse(std::ostream& stream,
+  static std::ostream& printOptimizationResponse(std::ostream& stream,
     const OptimizationResponse<R>& response)
   {
     switch(response.outcome)
@@ -48,21 +63,30 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response)
   {
-    return printOptimizationRepsonse(stream, response);
+    return printOptimizationResponse(stream, response);
   }
 
-  template <>
-  SeparationOracle<double>::SeparationOracle(const std::string& name)
-    : Oracle<double>(name)
+#if defined(IPO_WITH_GMP)
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response)
+  {
+    return printOptimizationResponse(stream, response);
+  }
+
+#endif /* IPO_WITH_GMP */
+
+  template <typename Number>
+  SeparationOracle<Number>::SeparationOracle(const std::string& name)
+    : Oracle<Number>(name)
   {
 
   }
 
-  template <>
-  SeparationResponse<double> SeparationOracle<double>::getInitial(
+  template <typename Number>
+  SeparationResponse<Number> SeparationOracle<Number>::getInitial(
     const SeparationQuery& query)
   {
-    return Response();
+    return SeparationResponse<Number>();
   }
 
   template <>
@@ -73,42 +97,6 @@ namespace ipo
   }
 
 #if defined(IPO_WITH_GMP)
-
-  template <>
-  OptimizationOracle<mpq_class>::OptimizationOracle(const std::string& name)
-    : Oracle<mpq_class>(name)
-  {
-
-  }
-
-  template <>
-  OptimizationResponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
-    const double* objectiveVector, const OptimizationQuery<mpq_class>& query)
-  {
-    std::vector<mpq_class> convertedObjectiveVector(this->_space->dimension());
-    for (std::size_t v = 0; v < this->_space->dimension(); ++v)
-      convertedObjectiveVector[v] = objectiveVector[v];
-    return maximize(&convertedObjectiveVector[0], query);
-  }
-
-  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response)
-  {
-    return printOptimizationRepsonse(stream, response);
-  }
-  
-  template<>
-  SeparationOracle<mpq_class>::SeparationOracle(const std::string& name)
-    : Oracle<mpq_class>(name)
-  {
-
-  }
-
-  template <>
-  SeparationResponse<mpq_class> SeparationOracle<mpq_class>::getInitial(
-    const SeparationQuery& query)
-  {
-    return SeparationResponse<mpq_class>();
-  }
 
   template <>
   SeparationResponse<mpq_class> SeparationOracle<mpq_class>::separateDouble(const double* vector,
@@ -126,8 +114,10 @@ namespace ipo
   template class SeparationOracle<double>;
 
 #if defined(IPO_WITH_GMP)
+
   template class OptimizationOracle<mpq_class>;
   template class SeparationOracle<mpq_class>;
+
 #endif /* IPO_WITH_GMP */
 
 } /* namespace ipo */

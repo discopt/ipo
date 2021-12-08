@@ -18,19 +18,14 @@ namespace ipo
   {
   public:
 
-    IPO_EXPORT
     RationalMIPExtender(const std::vector<bool>& integrality, const std::vector<std::pair<double, double>>& bounds);
 
-    IPO_EXPORT
     virtual ~RationalMIPExtender();
 
-    IPO_EXPORT
     void addConstraint(const Constraint<mpq_class>& constraint);
 
-    IPO_EXPORT
     void addConstraint(const Constraint<double>& constraint);
 
-    IPO_EXPORT
     void setFace(Constraint<mpq_class>* face);
 
     /**
@@ -41,7 +36,6 @@ namespace ipo
      * \return Optimization result.
      **/
 
-    IPO_EXPORT
     virtual OptimizationOracle<mpq_class>::Response maximize(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const double* objectiveVector,
@@ -55,7 +49,6 @@ namespace ipo
      * \return Optimization result.
      **/
 
-    IPO_EXPORT
     virtual OptimizationOracle<mpq_class>::Response maximize(
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const mpq_class* objectiveVector,
@@ -87,19 +80,15 @@ namespace ipo
   class RationalMIPExtendedOptimizationOracle: public OptimizationOracle<mpq_class>
   {
   public:
-    IPO_EXPORT
     RationalMIPExtendedOptimizationOracle(RationalMIPExtender* extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<mpq_class>& face);
 
-    IPO_EXPORT
     virtual ~RationalMIPExtendedOptimizationOracle();
 
-    IPO_EXPORT
     OptimizationOracle<mpq_class>::Response maximize(const mpq_class* objectiveVector,
       const OptimizationOracle<mpq_class>::Query& query) override;
 
-    IPO_EXPORT
     OptimizationOracle<mpq_class>::Response maximizeDouble(const double* objectiveVector,
       const OptimizationOracle<mpq_class>::Query& query) override;
 
@@ -112,11 +101,9 @@ namespace ipo
   class RationalMIPExtendedSeparationOracle: public SeparationOracle<mpq_class>
   {
   public:
-    IPO_EXPORT
     RationalMIPExtendedSeparationOracle(std::shared_ptr<SeparationOracle<double>> approximateOracle,
       const Constraint<mpq_class>& face);
 
-    IPO_EXPORT
     virtual ~RationalMIPExtendedSeparationOracle();
 
     /**
@@ -126,7 +113,6 @@ namespace ipo
      * \return Separation result.
      **/
 
-    IPO_EXPORT
     virtual Response getInitial(const Query& query);
 
     /**
@@ -143,7 +129,6 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
     virtual SeparationResponse<mpq_class> separateDouble(const double* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery()) override;
 
@@ -158,7 +143,6 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
     virtual SeparationResponse<mpq_class> separate(const mpq_class* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery()) override;
 

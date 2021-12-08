@@ -11,11 +11,9 @@ namespace ipo
   class ForestOptimizationOracle: public OptimizationOracle<NumberType>
   {
   public:
-    IPO_EXPORT
     ForestOptimizationOracle(std::size_t numNodes, std::pair<std::size_t, std::size_t>* edgesFirst,
       std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forest");
 
-    IPO_EXPORT
     ~ForestOptimizationOracle();
 
     /**
@@ -26,7 +24,6 @@ namespace ipo
      * \return Optimization result.
      **/
 
-    IPO_EXPORT
     virtual OptimizationResponse<NumberType> maximize(const NumberType* objectiveVector,
       const OptimizationQuery<NumberType>& query);
 

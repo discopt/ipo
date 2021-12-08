@@ -35,6 +35,8 @@ add_library(ipo
   src/ipo/arithmetic.cpp
   src/ipo/constraint.cpp
   src/ipo/dominant.cpp
+  src/ipo/facet.cpp
+  src/ipo/lp.cpp
   src/ipo/lu.cpp
   src/ipo/oracles.cpp
   src/ipo/mip.cpp
@@ -62,6 +64,14 @@ if(SOPLEX_FOUND)
   include_directories(
     ${SOPLEX_INCLUDE_DIRS}
   )
+endif()
+
+# LP solver.
+if (SOPLEX_FOUND)
+  set(LP_DOUBLE TRUE)
+  set(LP_DOUBLE_SOPLEX TRUE)
+  set(LP_GMP TRUE)
+  set(LP_GMP_SOPLEX TRUE)
 endif()
 
 # SCIP.
@@ -109,10 +119,6 @@ add_library(IPO::IPO ALIAS ipo)
 
 # This is required so that the exported target has the name IPO and not just ipo.
 set_target_properties(ipo PROPERTIES EXPORT_NAME IPO)
-
-# Hide non-exported symbols in shared library.
-set_target_properties(ipo PROPERTIES CXX_VISIBILITY_PRESET hidden)
-set_target_properties(ipo PROPERTIES VISIBILITY_INLINES_HIDDEN 1)
 
 # Set target properties.
 target_include_directories(ipo

@@ -28,7 +28,6 @@ namespace ipo
      * \param name       Name of the new oracle.
      */
 
-    IPO_EXPORT
     SubmissiveOptimizationOracle(std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
       const std::string& name = "");
 
@@ -36,7 +35,6 @@ namespace ipo
      * \brief Destructor.
      */
 
-    IPO_EXPORT
     virtual ~SubmissiveOptimizationOracle();
 
     /**
@@ -47,7 +45,6 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    IPO_EXPORT
     virtual OptimizationResponse<Number> maximize(const Number* objectiveVector,
       const OptimizationQuery<NumberType>& query);
 

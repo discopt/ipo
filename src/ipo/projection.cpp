@@ -6,41 +6,29 @@
 
 namespace ipo
 {
-  template <typename NumberType>
-  Projection<NumberType>::Projection()
+  template <typename Number>
+  Projection<Number>::Projection()
     : _space(std::make_shared<Space>())
   {
 
   }
 
-  template <typename NumberType>
-  Projection<NumberType>::Projection(std::shared_ptr<Space> space, const std::vector<std::size_t>& variableIndices)
+  template <typename Number>
+  Projection<Number>::Projection(std::shared_ptr<Space> space, const std::vector<std::size_t>& variableIndices)
     : _space(std::make_shared<Space>())
   {
     addVariables(space, variableIndices);
   }
 
-  template <typename NumberType>
-  Projection<NumberType>::Projection(std::shared_ptr<Space> space, const std::string& regex)
+  template <typename Number>
+  Projection<Number>::Projection(std::shared_ptr<Space> space, const std::string& regex)
     : _space(std::make_shared<Space>())
   {
     addVariables(space, regex);
   }
 
-#if defined(IPO_WITH_GMP)
-
-  template <>
-  IPO_EXPORT
-  Projection<mpq_class>::Projection(std::shared_ptr<Space> space, const std::string& regex)
-    : _space(std::make_shared<Space>())
-  {
-    addVariables(space, regex);
-  }
-  
-#endif /* IPO_WITH_GMP */
-
-  template <typename NumberType>
-  void Projection<NumberType>::addVariable(const std::string& name, const sparse_vector<Number>& linear,
+  template <typename Number>
+  void Projection<Number>::addVariable(const std::string& name, const sparse_vector<Number>& linear,
     const Number& constant)
   {
     _space->addVariable(name);
@@ -48,27 +36,16 @@ namespace ipo
     _mapConstant.push_back(constant);
   }
 
-  template <typename NumberType>
-  Projection<NumberType>::~Projection()
+  template <typename Number>
+  Projection<Number>::~Projection()
   {
 
   }
 
-#if defined(IPO_WITH_GMP)
-
-  template <>
-  IPO_EXPORT
-  Projection<mpq_class>::~Projection()
+  template <typename Number>
+  void Projection<Number>::addVariable(std::shared_ptr<Space> space, std::size_t variableIndex)
   {
-
-  }
-
-#endif /* IPO_WITH_GMP */
-
-  template <typename NumberType>
-  void Projection<NumberType>::addVariable(std::shared_ptr<Space> space, std::size_t variableIndex)
-  {
-    std::vector<std::pair<std::size_t, NumberType>> linear(1, std::make_pair(variableIndex, NumberType(1)));
+    std::vector<std::pair<std::size_t, Number>> linear(1, std::make_pair(variableIndex, Number(1)));
     _space->addVariable(space->variable(variableIndex));
     _mapLinear.push_back(sparse_vector<Number>(std::move(linear), false));
     _mapConstant.push_back(0);
@@ -100,41 +77,38 @@ namespace ipo
     return countMatches;
   }
 
-  template <typename NumberType>
-  std::shared_ptr<sparse_vector<NumberType>> Projection<NumberType>::projectPoint(
-    std::shared_ptr<sparse_vector<NumberType>> point)
+  template <typename Number>
+  std::shared_ptr<sparse_vector<Number>> Projection<Number>::projectPoint(std::shared_ptr<sparse_vector<Number>> point)
   {
-    auto result = std::make_shared<sparse_vector<NumberType>>();
+    auto result = std::make_shared<sparse_vector<Number>>();
     for (size_t v = 0; v < space()->dimension(); ++v)
     {
-      NumberType x = _mapConstant[v] + _mapLinear[v] * *point;
+      Number x = _mapConstant[v] + _mapLinear[v] * *point;
       if (x)
         result->push_back(v, x);
     }
     return result;
   }
 
-  template <typename NumberType>
-  std::shared_ptr<sparse_vector<NumberType>> Projection<NumberType>::projectRay(
-    std::shared_ptr<sparse_vector<NumberType>> ray)
+  template <typename Number>
+  std::shared_ptr<sparse_vector<Number>> Projection<Number>::projectRay(std::shared_ptr<sparse_vector<Number>> ray)
   {
-    auto result = std::make_shared<sparse_vector<NumberType>>();
+    auto result = std::make_shared<sparse_vector<Number>>();
     for (size_t v = 0; v < space()->dimension(); ++v)
     {
-      NumberType x = _mapLinear[v] * *ray;
+      Number x = _mapLinear[v] * *ray;
       if (x)
         result->push_back(v, x);
     }
     return result;
   }
 
-  template <typename NumberType>
-  NumberType Projection<NumberType>::liftObjective(const NumberType* objective,
-    std::vector<NumberType>& liftedObjective)
+  template <typename Number>
+  Number Projection<Number>::liftObjective(const Number* objective, std::vector<Number>& liftedObjective)
   {
     for (auto& coef : liftedObjective)
       coef = 0;
-    NumberType result = 0;
+    Number result = 0;
     for (size_t v = 0; v < space()->dimension(); ++v)
     {
       if (objective[v])
@@ -149,16 +123,19 @@ namespace ipo
   }
 
   template class Projection<double>;
+
 #if defined(IPO_WITH_GMP)
+
   template class Projection<mpq_class>;
+
 #endif /* IPO_WITH_GMP */
 
-  template <typename NumberType>
-  ProjectionOptimizationOracle<NumberType>::ProjectionOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
-    std::shared_ptr<Projection<NumberType>> projection,
+  template <typename Number>
+  ProjectionOptimizationOracle<Number>::ProjectionOptimizationOracle(
+    std::shared_ptr<OptimizationOracle<Number>> sourceOracle,
+    std::shared_ptr<Projection<Number>> projection,
     const std::string& name)
-    : OptimizationOracle<NumberType>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
+    : OptimizationOracle<Number>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
     _projection(projection), _sourceOracle(sourceOracle)
   {
     this->_space = _projection->space();
@@ -204,37 +181,21 @@ namespace ipo
 
 #endif /* IPO_WITH_GMP */
 
-#if defined(IPO_WITH_GMP)
-
-  template <>
-  IPO_EXPORT
-  ProjectionOptimizationOracle<mpq_class>::ProjectionOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle,
-    std::shared_ptr<Projection<mpq_class>> projection,
-    const std::string& name)
-    : OptimizationOracle<mpq_class>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
-    _projection(projection), _sourceOracle(sourceOracle)
-  {
-    this->_space = _projection->space();
-  }
-
-#endif /* IPO_WITH_GMP */
-
-  template <typename NumberType>
-  ProjectionOptimizationOracle<NumberType>::~ProjectionOptimizationOracle()
+  template <typename Number>
+  ProjectionOptimizationOracle<Number>::~ProjectionOptimizationOracle()
   {
 
   }
 
-  template <typename NumberType>
-  OptimizationResponse<NumberType> ProjectionOptimizationOracle<NumberType>::maximize(const NumberType* objectiveVector,
-    const OptimizationQuery<NumberType>& query)
+  template <typename Number>
+  OptimizationResponse<Number> ProjectionOptimizationOracle<Number>::maximize(const Number* objectiveVector,
+    const OptimizationQuery<Number>& query)
   {
     // Compute objective vector in space of source oracle.
-    std::vector<NumberType> liftedObjective(_sourceOracle->space()->dimension());
-    NumberType offset = _projection->liftObjective(objectiveVector, liftedObjective);
+    std::vector<Number> liftedObjective(_sourceOracle->space()->dimension());
+    Number offset = _projection->liftObjective(objectiveVector, liftedObjective);
 
-    OptimizationQuery<NumberType> liftedQuery;
+    OptimizationQuery<Number> liftedQuery;
     liftedQuery.maxNumSolutions = query.maxNumSolutions;
     liftedQuery.timeLimit = query.timeLimit;
     if (query.hasMinPrimalBound())
@@ -244,13 +205,13 @@ namespace ipo
 
     auto liftedResponse = _sourceOracle->maximize(&liftedObjective[0], liftedQuery);
 
-    OptimizationResponse<NumberType> response;
+    OptimizationResponse<Number> response;
     response.outcome = liftedResponse.outcome;
     if (!liftedResponse.points.empty())
     {
       for (auto point : liftedResponse.points)
       {
-        response.points.push_back(typename OptimizationResponse<NumberType>::Point(
+        response.points.push_back(typename OptimizationResponse<Number>::Point(
           _projection->projectPoint(point.vector), point.objectiveValue + offset));
       }
     }
@@ -258,7 +219,7 @@ namespace ipo
     {
       for (auto ray : liftedResponse.rays)
       {
-        response.rays.push_back(typename OptimizationResponse<NumberType>::Ray(
+        response.rays.push_back(typename OptimizationResponse<Number>::Ray(
           _projection->projectRay(ray.vector)));
       }
     }
@@ -266,7 +227,6 @@ namespace ipo
     return response;
   }
 
-  
   template class ProjectionOptimizationOracle<double>;
 
 #if defined(IPO_WITH_GMP)

@@ -20,32 +20,38 @@ namespace ipo
       T rhs;
     };
 
+    IPO_NO_EXPORT
     EquationRedundancyCheck(std::size_t numVariables)
       : _numVariables(numVariables), _lu()
     {
 
     }
 
+    IPO_NO_EXPORT
     inline std::size_t numVariables() const
     {
       return _numVariables;
     }
 
+    IPO_NO_EXPORT
     inline std::size_t rank() const
     {
       return _basis.size();
     }
 
+    IPO_NO_EXPORT
     inline Constraint<T>& getEquation(std::size_t e)
     {
       return _equations[e];
     }
 
+    IPO_NO_EXPORT
     Result test(const Constraint<T>& constraint) const
     {
       return test(constraint, euclideanNorm(constraint.vector()));
     }
 
+    IPO_NO_EXPORT
     Result test(const Constraint<T>& constraint, double norm) const
     {
       assert(constraint.type() == ConstraintType::EQUATION);
@@ -53,6 +59,7 @@ namespace ipo
       return test(constraint.vector(), norm, -constraint.rhs());
     }
 
+    IPO_NO_EXPORT
     bool add(const Constraint<T>& constraint, std::size_t maxCoordinate,
       double epsilonFactorization)
     {
@@ -131,11 +138,13 @@ namespace ipo
       }
     }
 
+    IPO_NO_EXPORT
     Result test(const sparse_vector<T>& vector) const
     {
       return test(vector, euclideanNorm(vector));
     }
 
+    IPO_NO_EXPORT
     Result test(const sparse_vector<T>& vector, double norm, const T& rhs = 0) const
     {
 #if defined(IPO_DEBUG_REDUNDANCY_PRINT)

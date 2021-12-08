@@ -17,21 +17,6 @@ namespace ipo
     this->_space = sourceOracle->space();
   }
 
-#if defined(IPO_WITH_GMP)
-
-  template <>
-  IPO_EXPORT
-  DominantOptimizationOracle<mpq_class>::DominantOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle,
-    const std::string& name)
-    : OptimizationOracle<mpq_class>(name.empty() ? ("Dominant(" + sourceOracle->name() + ")") : name),
-    _sourceOracle(sourceOracle)
-  {
-    this->_space = sourceOracle->space();
-  }
-
-#endif /* IPO_WITH_GMP */
-
   template <typename NumberType>
   DominantOptimizationOracle<NumberType>::~DominantOptimizationOracle()
   {

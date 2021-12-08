@@ -5,25 +5,27 @@
 #include <ipo/projection.hpp>
 #include <ipo/dominant.hpp>
 #include <ipo/affine_hull.hpp>
+#include <ipo/lp.hpp>
 
 int printUsage(const std::string& program)
 {
   std::cout << program << " [OPTIONS] FILE TASK...\n";
   std::cout << "Performs different computations on a polyhedron defined by FILE.\n";
   std::cout << "General options:\n";
-  std::cout << " -h         Show this help and exit.\n";
-  std::cout << " -t TIME    Abort computations after TIME seconds.\n";
+  std::cout << " -h       Show this help and exit.\n";
+  std::cout << " -t TIME  Abort computations after TIME seconds.\n";
   std::cout << "Oracle/polyhedron options:\n";
 #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  std::cout << " -g         Use exact arithmetic (GMP).\n";
+  std::cout << " -g       Use exact arithmetic (GMP).\n";
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
-  std::cout << " -p REGEX   Project the polyhedron on all variables matching REGEX.\n";
-  std::cout << " -d         Consider the dominant polyhedron.\n";
-  std::cout << " -s         Consider the submissive polyhedron.\n";
+  std::cout << " -p REGEX Project the polyhedron on all variables matching REGEX.\n";
+  std::cout << " -d       Consider the dominant polyhedron.\n";
+  std::cout << " -s       Consider the submissive polyhedron.\n";
   std::cout << "Tasks:\n";
-  std::cout << " dimension  Output the dimension\n";
-  std::cout << " equations  Output a complete system of valid equations.\n";
-  std::cout << " interior   Output a point in the relative interior.\n";
+  std::cout << " dimension       Output the dimension\n";
+  std::cout << " equations       Output a complete system of valid equations.\n";
+  std::cout << " interior        Output a point in the relative interior.\n";
+  std::cout << " instance-facets Outputs facets encountered in a cutting plane method for the instance's objective.\n";
   std::cout << std::flush;
 
   return EXIT_FAILURE;
@@ -32,7 +34,8 @@ int printUsage(const std::string& program)
 template <typename Number>
 void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::OptimizationOracle<Number>> baseOracle,
   std::shared_ptr<ipo::SeparationOracle<Number>> sepa, bool gmp, double timeLimit, const std::string& projectionRegex,
-  bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior)
+  bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior,
+  bool outputInstanceFacets)
 {
   assert(!useSubmissive);
 
@@ -54,17 +57,22 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
 
-  bool needAffineHull = outputDimension || outputEquations || outputInterior;
+  bool needAffineHull = outputDimension || outputEquations || outputInterior || outputInstanceFacets;
   if (needAffineHull)
   {
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<Number>> knownEquations;
-    ipo::SeparationQuery sepaQuery;
-    auto sepaResult = sepa->getInitial(sepaQuery);
+    auto sepaResult = sepa->getInitial();
+    for (const auto& cons : sepaResult.constraints)
+    {
+      if (cons.type() == ipo::ConstraintType::EQUATION)
+        knownEquations.push_back(cons);
+    }
+    std::vector<ipo::Constraint<Number>> projectedEquations;
     if (projectionRegex.empty())
-      knownEquations = sepaResult.constraints;
+      projectedEquations = knownEquations;
     else
-      knownEquations = projectionEquations(projectionMap, sepaResult.constraints);    
+      projectedEquations = projectionEquations(projectionMap, knownEquations);    
 
     std::cerr << "Starting affine hull computation.\n" << std::flush;
     ipo::AffineHullQuery affQuery;
@@ -92,6 +100,12 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
     }
   }
+
+  if (outputInstanceFacets)
+  {
+    ipo::LP<Number, false, false> lp;
+    lp.setSense(ipo::LPSense::MAXIMIZE);
+  }
 }
 
 
@@ -117,6 +131,7 @@ int main(int argc, char** argv)
   bool outputDimension = false;
   bool outputEquations = false;
   bool outputInterior = false;
+  bool outputInstanceFacets = false;
   for (int a = 1; a < argc; ++a)
   {
     const std::string arg = argv[a];
@@ -150,6 +165,8 @@ int main(int argc, char** argv)
       outputEquations = true;
     else if (arg == "interior")
       outputInterior = true;
+    else if (arg == "instance-facets")
+      outputInstanceFacets = true;
     else if (fileName.empty())
       fileName = arg;
     else
@@ -165,13 +182,13 @@ int main(int argc, char** argv)
   if (gmp)
   {
     run<mpq_class>(scip, scip->getOptimizationOracle<mpq_class>(), scip->getSeparationOracle<mpq_class>(), true,
-      timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior);
+      timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior, outputInstanceFacets);
   }
   else
 #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
   {
     run<double>(scip, scip->getOptimizationOracle<double>(), scip->getSeparationOracle<double>(), false,
-      timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior);
+      timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior, outputInstanceFacets);
   }
  
 

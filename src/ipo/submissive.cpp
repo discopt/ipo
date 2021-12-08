@@ -7,30 +7,14 @@
 namespace ipo
 {
 
-  template <typename NumberType>
-  SubmissiveOptimizationOracle<NumberType>::SubmissiveOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
-    const std::string& name)
-    : OptimizationOracle<NumberType>(name.empty() ? ("Submissive(" + sourceOracle->name() + ")") : name),
+  template <typename Number>
+  SubmissiveOptimizationOracle<Number>::SubmissiveOptimizationOracle(
+    std::shared_ptr<OptimizationOracle<Number>> sourceOracle, const std::string& name)
+    : OptimizationOracle<Number>(name.empty() ? ("Submissive(" + sourceOracle->name() + ")") : name),
     _sourceOracle(sourceOracle)
   {
     this->_space = sourceOracle->space();
   }
-
-#if defined(IPO_WITH_GMP)
-
-  template <>
-  IPO_EXPORT
-  SubmissiveOptimizationOracle<mpq_class>::SubmissiveOptimizationOracle(
-    std::shared_ptr<OptimizationOracle<mpq_class>> sourceOracle,
-    const std::string& name)
-    : OptimizationOracle<mpq_class>(name.empty() ? ("Submissive(" + sourceOracle->name() + ")") : name),
-    _sourceOracle(sourceOracle)
-  {
-    this->_space = sourceOracle->space();
-  }
-
-#endif /* IPO_WITH_GMP */
 
   template <typename NumberType>
   SubmissiveOptimizationOracle<NumberType>::~SubmissiveOptimizationOracle()

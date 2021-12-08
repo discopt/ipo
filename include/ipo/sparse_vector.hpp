@@ -257,7 +257,7 @@ T operator*(const sparse_vector<T>& a, const sparse_vector<U>& b)
     else
     {
       assert(ia->first == ib->first);
-      result += ia->second * convertNumber<T,U>(ib->second);
+      result += ia->second * ipo::convertNumber<T,U>(ib->second);
       ++ia;
       if (ia == a.end())
         return result;
@@ -274,7 +274,7 @@ T operator*(const sparse_vector<T>& a, const U* b)
 {
   T result(0);
   for (auto& iter : a)
-    result += iter.second * convertNumber<T>(b[iter.first]);
+    result += iter.second * ipo::convertNumber<T>(b[iter.first]);
   return result;
 }
 
@@ -283,7 +283,7 @@ T operator*(const T* a, const sparse_vector<U>& b)
 {
   T result(0);
   for (auto& iter : b)
-    result += a[iter.first] * convertNumber<T>(iter.second);
+    result += a[iter.first] * ipo::convertNumber<T>(iter.second);
   return result;
 }
 
@@ -315,7 +315,7 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
     {
       if (ia->first < ib->first)
       {
-        double x = convertNumber<double>(ia->second);
+        double x = ipo::convertNumber<double>(ia->second);
         result += x*x;
         ++ia;
         if (ia == a.end())
@@ -323,7 +323,7 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
       }
       else if (ia->first > ib->first)
       {
-        double x = convertNumber<double>(ib->second);
+        double x = ipo::convertNumber<double>(ib->second);
         result += x*x;
         ++ib;
         if (ib == b.end())
@@ -331,7 +331,7 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
       }
       else
       {
-        double x = convertNumber<double, T>(ia->second) - convertNumber<double, U>(ib->second);
+        double x = ipo::convertNumber<double, T>(ia->second) - ipo::convertNumber<double, U>(ib->second);
         result += x*x;
         ++ia;
         ++ib;
@@ -342,12 +342,12 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
   }
   for (; ia != a.end(); ++ia)
   {
-    double x = convertNumber<double>(ia->second);
+    double x = ipo::convertNumber<double>(ia->second);
     result += x*x;
   }
   for (; ib != b.end(); ++ib)
   {
-    double x = convertNumber<double>(ib->second);
+    double x = ipo::convertNumber<double>(ib->second);
     result += x*x;
   }
   return result;
@@ -365,7 +365,7 @@ double squaredEuclideanNorm(const sparse_vector<T>& vector)
   double result = 0.0;
   for (const auto& iter : vector)
   {
-    double x = convertNumber<double>(iter.second);
+    double x = ipo::convertNumber<double>(iter.second);
     result += x*x;
   }
   return result;
@@ -383,6 +383,6 @@ inline sparse_vector<To> convertSparseVector(const sparse_vector<From>& vector)
   std::vector<std::pair<std::size_t, To>> entries;
   entries.reserve(vector.size());
   for (const auto& iter : vector)
-    entries.push_back(std::make_pair(iter.first, convertNumber<To>(iter.second)));
+    entries.push_back(std::make_pair(iter.first, ipo::convertNumber<To>(iter.second)));
   return sparse_vector<To>(std::move(entries), false);
 }

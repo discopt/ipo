@@ -48,7 +48,6 @@ namespace ipo
      * to point to it.
      */
 
-    IPO_EXPORT
     SCIPSolver(SCIP*&& scip);
 
     /**
@@ -56,21 +55,18 @@ namespace ipo
      * a shared_ptr has to point to it.
      */
 
-    IPO_EXPORT
     SCIPSolver(const std::string& fileName);
 
     /**
      * \brief Destructor.
      */
 
-    IPO_EXPORT
     ~SCIPSolver();
 
     /**
      * \brief Returns the name of the instance.
      */
 
-    IPO_EXPORT
     inline const std::string& name() const
     {
       return _name;
@@ -80,7 +76,6 @@ namespace ipo
      * \brief Returns the associated ambient space.
      */
 
-    IPO_EXPORT
     inline std::shared_ptr<Space> space() const
     {
       return _space;
@@ -90,7 +85,6 @@ namespace ipo
      * \brief Returns the original (maximization) objective of the instance as a dense vector.
      */
 
-    IPO_EXPORT
     inline const double* instanceObjective() const
     {
       return _instanceObjective;
@@ -101,7 +95,6 @@ namespace ipo
      */
 
     template <typename NumberType>
-    IPO_EXPORT
     inline std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle()
     {
       return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
@@ -112,7 +105,6 @@ namespace ipo
      */
 
     template <typename NumberType>
-    IPO_EXPORT
     std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle(
       const Constraint<NumberType>& face);
 
@@ -121,7 +113,6 @@ namespace ipo
      */
 
     template <typename NumberType>
-    IPO_EXPORT
     inline std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle()
     {
       return getSeparationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
@@ -132,7 +123,6 @@ namespace ipo
      */
 
     template <typename NumberType>
-    IPO_EXPORT
     std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle(
       const Constraint<NumberType>& face);
 
@@ -150,26 +140,24 @@ namespace ipo
      * \brief Initializes the solver data.
      */
 
+    IPO_NO_EXPORT
     void initialize();
 
     /**
      * \brief Adds the given \p face to the list of known faces.
      */
 
-    IPO_EXPORT
     void addFace(Constraint<double>* face);
 
     /**
      * \brief Removes the given \p face from the list of known faces.
      */
 
-    IPO_EXPORT
     void deleteFace(Constraint<double>* face);
     /**
      * \brief Makes the given \p face the current one.
      */
 
-    IPO_EXPORT
     void selectFace(Constraint<double>* face);
 
 
@@ -214,7 +202,6 @@ namespace ipo
      * \param face The face we are optimizing over.
      */
 
-    IPO_EXPORT
     SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
       const Constraint<double>& face);
 
@@ -222,7 +209,6 @@ namespace ipo
      * \brief Destructor.
      */
 
-    IPO_EXPORT
     virtual ~SCIPOptimizationOracle();
 
     /**
@@ -233,7 +219,6 @@ namespace ipo
      * \return Optimization result.
      **/
 
-    IPO_EXPORT
     virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query) override;
 
@@ -252,7 +237,6 @@ namespace ipo
   class SCIPOptimizationOracle<mpq_class>: public RationalMIPExtendedOptimizationOracle
   {
   public:
-    IPO_EXPORT
     SCIPOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<mpq_class>& face)
       : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
@@ -278,7 +262,6 @@ namespace ipo
      * \param faceIndex Indexes the face we are separating for.
      */
 
-    IPO_EXPORT
     SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
       const Constraint<NumberType>& face);
 
@@ -286,7 +269,6 @@ namespace ipo
      * \brief Destructor.
      */
 
-    IPO_EXPORT
     virtual ~SCIPSeparationOracle();
 
     /**
@@ -296,7 +278,6 @@ namespace ipo
      * \return Separation result.
      **/
 
-    IPO_EXPORT
     SeparationResponse<NumberType> getInitial(const SeparationQuery& query = SeparationQuery()) override;
 
     /**
@@ -310,7 +291,6 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
     virtual SeparationResponse<NumberType> separate(const NumberType* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery());
 
@@ -325,7 +305,6 @@ namespace ipo
      * \returns \c true if and only if the point/ray was separated.
      **/
 
-    IPO_EXPORT
     virtual SeparationResponse<NumberType> separateDouble(const double* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery());
 

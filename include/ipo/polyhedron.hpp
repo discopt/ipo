@@ -27,28 +27,24 @@ namespace ipo
      * \brief Creates a polyhedron in given ambient \p space without any oracles.
      **/
 
-    IPO_EXPORT
     Polyhedron(std::shared_ptr<Space> space, const std::string& name = "");
 
     /**
      * \brief Creates the polyhedron defined by the \p optimizationOracle.
      **/
 
-    IPO_EXPORT
     Polyhedron(std::shared_ptr<OptOracle> optimizationOracle);
 
     /**
      * \brief Creates the polyhedron defined by the \p separationOracle.
      **/
 
-    IPO_EXPORT
     Polyhedron(std::shared_ptr<SepaOracle> separationOracle);
 
     /**
      * \brief Destructor.
      **/
 
-    IPO_EXPORT
     virtual ~Polyhedron();
 
     /**
@@ -59,7 +55,6 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    IPO_EXPORT
     virtual OptimizationResponse<Number> maximize(const Number* objectiveVector,
       const OptimizationQuery<Number>& query) override;
 
@@ -71,7 +66,6 @@ namespace ipo
      * \returns \c true if point was not cached before.
      **/
 
-    IPO_EXPORT
     bool cachePoint(std::shared_ptr<sparse_vector<Number>> point);
 
     /**
@@ -82,32 +76,27 @@ namespace ipo
      * \returns \c true if ray was not cached before.
      **/
 
-    IPO_EXPORT
     bool cacheRay(std::shared_ptr<sparse_vector<Number>> ray);
 
     /**
      * \brief Returns the number of cached points plus rays.
      **/
 
-    IPO_EXPORT
     std::size_t numCachedSolutions() const;
 
     /**
      * \brief Returns a pair of an indicator and the solution \p index, where the indicator is \c true if it is a point.
      **/
 
-    IPO_EXPORT
     std::pair<bool, std::shared_ptr<sparse_vector<Number>>> getCachedSolution(std::size_t index);
 
     /**
      * \brief Tries to separate the point or ray \p vector from the polyhedron by a hyperplane (inequality).
      **/
 
-    IPO_EXPORT
     virtual SeparationResponse<Number> separate(const Number* vector, bool isPoint,
       const SeparationQuery& query = SeparationQuery()) override;
 
-    IPO_EXPORT
     inline std::shared_ptr<Space> space() const
     {
       return _space;

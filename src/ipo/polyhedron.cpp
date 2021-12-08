@@ -327,13 +327,11 @@ namespace ipo
       _normalizedRayEpsilon = 1.0e-9;
     }
 
-    IPO_EXPORT
     ~PolyhedronImplementation()
     {
       delete[] _hashVector;
     }
 
-    IPO_EXPORT
     typename OptOracle::Response maximize(const Number* objectiveVector,
       const typename OptOracle::Query& query)
     {
@@ -757,7 +755,6 @@ namespace ipo
   };
 
   template<typename NumberType>
-  IPO_EXPORT
   Polyhedron<NumberType>::Polyhedron(std::shared_ptr<Space> space, const std::string& name)
     : OptimizationOracle<NumberType>(name), SeparationOracle<NumberType>(name)
   {
@@ -767,35 +764,17 @@ namespace ipo
     _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
   }
   
-  template <typename NumberType>
-  IPO_EXPORT
-  Polyhedron<NumberType>::Polyhedron(std::shared_ptr<OptimizationOracle<NumberType>> optOracle)
-    : OptimizationOracle<NumberType>("Polyhedron for " + optOracle->name()),
-    SeparationOracle<NumberType>("Polyhedron for " + optOracle->name())
+  template <typename Number>
+  Polyhedron<Number>::Polyhedron(std::shared_ptr<OptimizationOracle<Number>> optOracle)
+    : OptimizationOracle<Number>("Polyhedron for " + optOracle->name()),
+    SeparationOracle<Number>("Polyhedron for " + optOracle->name())
   {
     _space = optOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<NumberType>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<NumberType>>> sepaOracles;
+    std::vector<std::shared_ptr<OptimizationOracle<Number>>> optOracles;
+    std::vector<std::shared_ptr<SeparationOracle<Number>>> sepaOracles;
     optOracles.push_back(optOracle);
-    _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
+    _implementation = new PolyhedronImplementation<Number>(_space, optOracles, sepaOracles);
   }
-
-#if defined(IPO_WITH_GMP)
-  
-  template <>
-  IPO_EXPORT
-  Polyhedron<mpq_class>::Polyhedron(std::shared_ptr<OptimizationOracle<mpq_class>> optOracle)
-    : OptimizationOracle<mpq_class>("Polyhedron for " + optOracle->name()),
-    SeparationOracle<mpq_class>("Polyhedron for " + optOracle->name())
-  {
-    _space = optOracle->space();
-    std::vector<std::shared_ptr<OptimizationOracle<mpq_class>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<mpq_class>>> sepaOracles;
-    optOracles.push_back(optOracle);
-    _implementation = new PolyhedronImplementation<mpq_class>(_space, optOracles, sepaOracles);
-  }
-
-#endif /* IPO_WITH_GMP */
 
   template <typename Number>
   Polyhedron<Number>::~Polyhedron()
@@ -803,11 +782,11 @@ namespace ipo
     delete static_cast<PolyhedronImplementation<Number>*>(_implementation);
   }
 
-  template <typename NumberType>
-  OptimizationResponse<NumberType> Polyhedron<NumberType>::maximize(
-    const NumberType* objectiveVector, const OptimizationQuery<NumberType>& query)
+  template <typename Number>
+  OptimizationResponse<Number> Polyhedron<Number>::maximize(
+    const Number* objectiveVector, const OptimizationQuery<Number>& query)
   {
-    return static_cast<PolyhedronImplementation<NumberType>*>(_implementation)->maximize(objectiveVector,
+    return static_cast<PolyhedronImplementation<Number>*>(_implementation)->maximize(objectiveVector,
         query);
   }
 
