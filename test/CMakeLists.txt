@@ -8,13 +8,11 @@ endif()
 
 # Target for the googletest.
 add_executable(ipo_gtest
-  test_affine_complement.cpp
   test_dominant.cpp
   test_lu.cpp
   test_main.cpp
   test_oracles_forest.cpp
   test_projection.cpp
-  test_redundancy.cpp
   test_space.cpp
   test_submissive.cpp)
 
@@ -35,11 +33,12 @@ target_include_directories(ipo_gtest
 )
 
 # Add tests for non-exported functions only for static library.
-#if(NOT SHARED)
-#    target_sources(tu_gtest
-#       PRIVATE
-#          private.cpp)
-#endif()
+if(NOT SHARED)
+  target_sources(tu_gtest
+    PRIVATE
+      test_affine_complement.cpp
+      test_redundancy.cpp)
+endif()
 
 # Configure tu_gtest target.
 target_compile_features(ipo_gtest PRIVATE cxx_auto_type)

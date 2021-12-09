@@ -20,13 +20,13 @@
 
 namespace ipo
 {
-  IPO_EXPORT
+  IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<double>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 
 #if defined(IPO_WITH_GMP)
 
-  IPO_EXPORT
+  IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<mpq_class>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 

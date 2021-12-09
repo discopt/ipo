@@ -6,6 +6,7 @@
 #include <ipo/dominant.hpp>
 #include <ipo/affine_hull.hpp>
 #include <ipo/lp.hpp>
+#include <ipo/facet.hpp>
 
 int printUsage(const std::string& program)
 {
@@ -56,14 +57,19 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   auto poly = std::make_shared<ipo::Polyhedron<Number>>(dominantOracle);
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
-
+  
   bool needAffineHull = outputDimension || outputEquations || outputInterior || outputInstanceFacets;
+
+  ipo::SeparationResponse<Number> sepaResponse;
+  if (needAffineHull)
+    sepaResponse = sepa->getInitial();
+  
+  ipo::AffineHullResult<Number> affineHull;
   if (needAffineHull)
   {
     // Extract known equations from a separation oracle.
     std::vector<ipo::Constraint<Number>> knownEquations;
-    auto sepaResult = sepa->getInitial();
-    for (const auto& cons : sepaResult.constraints)
+    for (const auto& cons : sepaResponse.constraints)
     {
       if (cons.type() == ipo::ConstraintType::EQUATION)
         knownEquations.push_back(cons);
@@ -77,12 +83,12 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     std::cerr << "Starting affine hull computation.\n" << std::flush;
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
-    auto affResult = ipo::affineHull(poly, affQuery, knownEquations);
+    affineHull = ipo::affineHull(poly, affQuery, knownEquations);
     if (outputDimension)
-      std::cout << "Dimension: " << affResult.dimension << std::endl;
+      std::cout << "Dimension: " << affineHull.dimension << std::endl;
     if (outputEquations)
     {
-      for (auto& equation : affResult.equations)
+      for (auto& equation : affineHull.equations)
       {
         bool isKnown = false;
         for (const auto& knownEquation : knownEquations)
@@ -103,8 +109,86 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
   if (outputInstanceFacets)
   {
-    ipo::LP<Number, false, false> lp;
+    ipo::LP<Number> lp;
     lp.setSense(ipo::LPSense::MAXIMIZE);
+    std::size_t scipVar = 0;
+    for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
+    {
+      const std::string& name = poly->space()->variable(c);
+      while (baseOracle->space()->variable(scipVar) != name)
+      {
+        ++scipVar;
+        assert(scipVar < baseOracle->space()->dimension());
+      }
+      auto column = lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), Number(scip->instanceObjective()[scipVar]),
+        name);
+      assert(column == c);
+    }
+    lp.update();
+    
+    std::vector<ipo::LPColumn> nonzeroColumns;
+    std::vector<Number> nonzeroCoefficients;
+    for (const ipo::Constraint<Number>& cons : sepaResponse.constraints)
+    {
+      if (cons.vector().size() == 1)
+      {
+        auto& coefficient = *cons.vector().begin();
+        if (coefficient.second > 0)
+        {
+          if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
+            lp.changeUpper(coefficient.first, cons.rhs() / coefficient.second);
+          else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
+            lp.changeLower(coefficient.first, cons.lhs() / coefficient.second);
+          else
+            lp.changeBounds(coefficient.first, cons.lhs() / coefficient.second, cons.rhs() / coefficient.second);
+        }
+        else
+        {
+          if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
+            lp.changeLower(coefficient.first, cons.rhs() / coefficient.second);
+          else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
+            lp.changeUpper(coefficient.first, cons.lhs() / coefficient.second);
+          else
+            lp.changeBounds(coefficient.first, cons.rhs() / coefficient.second, cons.lhs() / coefficient.second); 
+        }
+      }
+      else
+      {
+        Number lhs = cons.hasLhs() ? cons.lhs() : lp.minusInfinity();
+        Number rhs = cons.hasRhs() ? cons.rhs() : lp.plusInfinity();
+        nonzeroColumns.clear();
+        nonzeroCoefficients.clear();
+        for (const auto& iter : cons.vector())
+        {
+          nonzeroColumns.push_back(iter.first);
+          nonzeroCoefficients.push_back(iter.second);
+        }
+        lp.addRow(lhs, nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], rhs);
+      }
+    }
+
+    ipo::FacetResult<Number> facetResult;
+
+    while (true)
+    {
+      auto status = lp.solve();
+      std::cout << "LP status: " << status << "." << std::endl;
+      if (status == ipo::LPStatus::OPTIMAL)
+      {
+        assert(lp.hasPrimalSolution());
+        std::vector<Number> solution = lp.getPrimalSolution();
+        for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
+        {
+          std::cout << poly->space()->variable(c) << " = " << solution[c] << std::endl;
+        }
+        
+        ipo::separatePoint(poly, affineHull, &solution[0]);
+      }
+
+      break;
+    }
+
+//     lp.write("test.lp");
   }
 }
 
