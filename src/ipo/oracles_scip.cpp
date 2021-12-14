@@ -1,5 +1,6 @@
 // #define IPO_DEBUG // Uncomment to debug this file.
 
+#include <ipo/constraint.hpp>
 #include <ipo/oracles_scip.hpp>
 
 // TODO: Remove objective limit and add event handler for primal and dual bound.
@@ -9,6 +10,7 @@
 #include <chrono>
 #include <sstream>
 #include <iostream>
+#include <unordered_map>
 
 #ifdef NDEBUG
   #undef NDEBUG
@@ -413,7 +415,7 @@ namespace ipo
         bounds[i].second = std::numeric_limits<double>::infinity();
     }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_LP)
     _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
@@ -428,7 +430,7 @@ namespace ipo
 
     Visitor visitor = { _extender };
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_LP */
     
     SCIP_EVENTHDLR* eventhdlr = NULL;
     SCIP_CALL_EXC( SCIPincludeEventhdlrBasic(_scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -444,9 +446,9 @@ namespace ipo
   {
     delete[] _instanceObjective;
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_LP)
     delete _extender;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_LP */
 
     for (auto& iter : _faceConstraints)
     {
@@ -575,7 +577,7 @@ namespace ipo
     return std::make_shared<SCIPOptimizationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_LP)
 
   /**
    * \brief Returns a rational optimization oracle for the requested \p face.
@@ -583,15 +585,15 @@ namespace ipo
 
   template <>
   IPO_EXPORT
-  std::shared_ptr<SCIPOptimizationOracle<mpq_class>> SCIPSolver::getOptimizationOracle<mpq_class>(
-    const Constraint<mpq_class>& face)
+  std::shared_ptr<SCIPOptimizationOracle<rational>> SCIPSolver::getOptimizationOracle<rational>(
+    const Constraint<rational>& face)
   {
     auto approximateFace = convertConstraint<double>(face);
     auto approximateOracle = getOptimizationOracle<double>(approximateFace);
-    return std::make_shared<SCIPOptimizationOracle<mpq_class>>(_extender, approximateOracle, face);
+    return std::make_shared<SCIPOptimizationOracle<rational>>(_extender, approximateOracle, face);
   }
 
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_LP */
 
   SCIPOptimizationOracle<double>::SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
@@ -618,7 +620,7 @@ namespace ipo
     return std::make_shared<SCIPSeparationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_LP)
 
   /**
    * \brief Returns a rational arithmetic separation oracle for the \p face.
@@ -626,13 +628,13 @@ namespace ipo
 
   template <>
   IPO_EXPORT
-  std::shared_ptr<SCIPSeparationOracle<mpq_class>> SCIPSolver::getSeparationOracle<mpq_class>(
-    const Constraint<mpq_class>& face)
+  std::shared_ptr<SCIPSeparationOracle<rational>> SCIPSolver::getSeparationOracle<rational>(
+    const Constraint<rational>& face)
   {
-    return std::make_shared<SCIPSeparationOracle<mpq_class>>(shared_from_this(), face);
+    return std::make_shared<SCIPSeparationOracle<rational>>(shared_from_this(), face);
   }
 
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_LP */
 
   OptimizationOracle<double>::Response SCIPOptimizationOracle<double>::maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query)
@@ -1045,12 +1047,12 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_LP)
 
   template <>
-  SCIPSeparationOracle<mpq_class>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
-    const Constraint<mpq_class>& face)
-    : SeparationOracle<mpq_class>(solver->name()), _solver(solver), _face(face),
+  SCIPSeparationOracle<rational>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
+    const Constraint<rational>& face)
+    : SeparationOracle<rational>(solver->name()), _solver(solver), _face(face),
     _approximateFace(convertConstraint<double>(face))
   {
     _space = solver->space();
@@ -1058,16 +1060,16 @@ namespace ipo
   }
 
   template <>
-  SCIPSeparationOracle<mpq_class>::~SCIPSeparationOracle()
+  SCIPSeparationOracle<rational>::~SCIPSeparationOracle()
   {
     _solver->deleteFace(&_approximateFace);
   }
 
   template <>
-  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::getInitial(
+  SeparationResponse<rational> SCIPSeparationOracle<rational>::getInitial(
     const SeparationQuery& query)
   {
-    SeparationResponse<mpq_class> result;
+    SeparationResponse<rational> result;
 
     if (query.maxNumInequalities > 0 && !_face.isAlwaysSatisfied())
       result.constraints.push_back(_face);
@@ -1076,7 +1078,7 @@ namespace ipo
     {
       std::shared_ptr<SCIPSolver> solver;
       const SeparationQuery& query;
-      SeparationResponse<mpq_class>& response;
+      SeparationResponse<rational>& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -1097,7 +1099,7 @@ namespace ipo
           }
         }
 
-        response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+        response.constraints.push_back(convertConstraint<rational>(constraint));
       }
     };
 
@@ -1110,20 +1112,20 @@ namespace ipo
   }
 
   template <>
-  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::separate(const mpq_class* vector,
+  SeparationResponse<rational> SCIPSeparationOracle<rational>::separate(const rational* vector,
     bool isPoint, const SeparationQuery& query)
   {
-    SeparationResponse<mpq_class> result;
+    SeparationResponse<rational> result;
 
     _solver->selectFace(&_approximateFace);
 
     struct Visitor
     {
       std::shared_ptr<SCIPSolver> solver;
-      const mpq_class* vector;
+      const rational* vector;
       bool isPoint;
       const SeparationQuery& query;
-      SeparationResponse<mpq_class>& response;
+      SeparationResponse<rational>& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -1166,7 +1168,7 @@ namespace ipo
         if (!SCIPisFeasLE(solver->_scip, activity, rhs)
           || !SCIPisFeasGE(solver->_scip, activity, lhs))
         {
-          response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+          response.constraints.push_back(convertConstraint<rational>(constraint));
         }
       }
     };
@@ -1181,10 +1183,10 @@ namespace ipo
   }
 
   template <>
-  SeparationResponse<mpq_class> SCIPSeparationOracle<mpq_class>::separateDouble(const double* vector,
+  SeparationResponse<rational> SCIPSeparationOracle<rational>::separateDouble(const double* vector,
     bool isPoint, const SeparationQuery& query)
   {
-    SeparationResponse<mpq_class> result;
+    SeparationResponse<rational> result;
 
     _solver->selectFace(&_approximateFace);
 
@@ -1194,7 +1196,7 @@ namespace ipo
       const double* vector;
       bool isPoint;
       const SeparationQuery& query;
-      SeparationResponse<mpq_class>& response;
+      SeparationResponse<rational>& response;
       std::size_t iteration;
       std::chrono::time_point<std::chrono::system_clock> started;
 
@@ -1237,7 +1239,7 @@ namespace ipo
         if (!SCIPisFeasLE(solver->_scip, activity, rhs)
           || !SCIPisFeasGE(solver->_scip, activity, lhs))
         {
-          response.constraints.push_back(convertConstraint<mpq_class>(constraint));
+          response.constraints.push_back(convertConstraint<rational>(constraint));
         }
       }
     };
@@ -1251,6 +1253,6 @@ namespace ipo
     return result;
   }
 
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_LP */
   
 } /* namespace ipo */

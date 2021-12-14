@@ -351,7 +351,7 @@ namespace ipo
      * \brief Returns the oracle's ambient space.
      */
 
-    inline std::shared_ptr<Space> space() const
+    virtual std::shared_ptr<Space> space() const
     {
       return _space;
     }
@@ -369,7 +369,7 @@ namespace ipo
    */
 
   template <typename NumberType>
-  class OptimizationOracle : public Oracle<NumberType>
+  class OptimizationOracle : virtual public Oracle<NumberType>
   {
   public:
     typedef NumberType Number;
@@ -514,7 +514,7 @@ namespace ipo
    */
 
   template <typename NumberType>
-  class SeparationOracle: public Oracle<NumberType>
+  class SeparationOracle: virtual public Oracle<NumberType>
   {
   public:
     typedef NumberType Number;
@@ -575,20 +575,20 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<double>& response);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   /**
    * \brief Prints the response of a rational optimization oracle.
    */
 
-  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response);
 
   /**
    * \brief Prints the response of a rational separation oracle.
    */
 
-  std::ostream& operator<<(std::ostream& stream, const SeparationResponse<mpq_class>& response);
+  std::ostream& operator<<(std::ostream& stream, const SeparationResponse<rational>& response);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

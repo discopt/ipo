@@ -76,10 +76,10 @@ namespace ipo
     return rank;
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   IPO_NO_EXPORT
-  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<mpq_class>>& matrix,
+  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<rational>>& matrix,
     std::size_t* rowPermutation, std::size_t* columnPermutation)
   {
     bool deleteRowPermutation = rowPermutation == 0;
@@ -105,7 +105,7 @@ namespace ipo
       {
         for (std::size_t c = rank; c < numColumns; ++c)
         {
-          double x = fabs(matrix[rowPermutation[r]][columnPermutation[c]].get_d());
+          double x = fabs(matrix[rowPermutation[r]][columnPermutation[c]].convert_to<double>());
           if (x > pivotAbsolute)
           {
             pivotAbsolute = x;
@@ -126,7 +126,7 @@ namespace ipo
       // Perform row operations.
       for (std::size_t r = rank+1; r < numRows; ++r)
       {
-        mpq_class factor = matrix[rowPermutation[r]][columnPermutation[rank]]
+        rational factor = matrix[rowPermutation[r]][columnPermutation[rank]]
           / matrix[rowPermutation[rank]][columnPermutation[rank]];
         if (factor != 0)
           continue;
@@ -134,7 +134,7 @@ namespace ipo
         std::size_t pr = rowPermutation[r];
         for (std::size_t c = rank; c < numColumns; ++c)
         {
-          mpq_class x = matrix[pr][columnPermutation[c]]
+          rational x = matrix[pr][columnPermutation[c]]
             - factor * matrix[rowPermutation[rank]][columnPermutation[c]];
           matrix[pr][columnPermutation[c]] = x;
         }
@@ -151,6 +151,6 @@ namespace ipo
     return rank;
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 }

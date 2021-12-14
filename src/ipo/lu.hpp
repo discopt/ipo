@@ -14,23 +14,19 @@
 #include <vector>
 #include <cmath>
 
-#if defined(IPO_WITH_GMP)
-#include <gmpxx.h>
-#endif /* IPO_WITH_GMP */
-
 namespace ipo
 {
   IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<double>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   IPO_NO_EXPORT
-  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<mpq_class>>& matrix,
+  std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<rational>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   /**
    * \brief Class for an LU factorization.

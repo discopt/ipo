@@ -21,7 +21,7 @@ TEST(Dominant, OptimizationDouble)
   ASSERT_EQ(result.dimension, 10);
 }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
 TEST(Dominant, OptimizationRational)
 {
@@ -33,12 +33,12 @@ TEST(Dominant, OptimizationRational)
     E(0,1), E(0,2), E(0,3), E(0,4), E(1,2), E(1,3), E(1,4), E(2,3), E(2,4), E(3,4)
   };
 
-  auto sptreeOracle = std::make_shared<ipo::ForestOptimizationOracle<mpq_class>>(numNodes, &edges[0], &edges[numEdges], true);
-  auto dominantOracle = std::make_shared<ipo::DominantOptimizationOracle<mpq_class>>(sptreeOracle);
-  auto poly = std::make_shared<ipo::Polyhedron<mpq_class>>(dominantOracle);
+  auto sptreeOracle = std::make_shared<ipo::ForestOptimizationOracle<ipo::rational>>(numNodes, &edges[0], &edges[numEdges], true);
+  auto dominantOracle = std::make_shared<ipo::DominantOptimizationOracle<ipo::rational>>(sptreeOracle);
+  auto poly = std::make_shared<ipo::Polyhedron<ipo::rational>>(dominantOracle);
 
   auto result = ipo::affineHull(poly);
   ASSERT_EQ(result.dimension, 10);
 }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */

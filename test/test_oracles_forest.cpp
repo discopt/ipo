@@ -24,7 +24,7 @@ TEST(Forest, SpanningTreeDouble)
   ASSERT_EQ(result.dimension, 7);
 }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
 TEST(Forest, SpanningTreeRational)
 {
@@ -36,15 +36,15 @@ TEST(Forest, SpanningTreeRational)
     E(0,1), E(0,2), E(0,3), E(0,4), E(1,2), E(2,3), E(3,4), E(4,1), E(5,6)
   };
 
-  auto forestOracle = std::make_shared<ipo::ForestOptimizationOracle<mpq_class>>(numNodes, &edges[0], &edges[numEdges], false);
-  auto forestPolytope = std::make_shared<ipo::Polyhedron<mpq_class>>(forestOracle);
+  auto forestOracle = std::make_shared<ipo::ForestOptimizationOracle<ipo::rational>>(numNodes, &edges[0], &edges[numEdges], false);
+  auto forestPolytope = std::make_shared<ipo::Polyhedron<ipo::rational>>(forestOracle);
   auto result = ipo::affineHull(forestPolytope);
   ASSERT_EQ(result.dimension, 9);
 
-  auto sptreeOracle = std::make_shared<ipo::ForestOptimizationOracle<mpq_class>>(numNodes, &edges[0], &edges[numEdges], true);
-  auto sptreePolytope = std::make_shared<ipo::Polyhedron<mpq_class>>(sptreeOracle);
+  auto sptreeOracle = std::make_shared<ipo::ForestOptimizationOracle<ipo::rational>>(numNodes, &edges[0], &edges[numEdges], true);
+  auto sptreePolytope = std::make_shared<ipo::Polyhedron<ipo::rational>>(sptreeOracle);
   result = ipo::affineHull(sptreePolytope);
   ASSERT_EQ(result.dimension, 7);
 }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */

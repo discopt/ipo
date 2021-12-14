@@ -45,7 +45,7 @@ namespace ipo
   }
 
   template <typename Number>
-  AffineHullResult<Number>::AffineHullResult()
+  AffineHull<Number>::AffineHull()
   {
     dimension = AFFINEHULL_ERROR_RUNNING;
     lowerBound = -1;
@@ -59,7 +59,7 @@ namespace ipo
   }
 
   template <typename Number>
-  AffineHullResult<Number>::AffineHullResult(AffineHullResult<Number>&& other)
+  AffineHull<Number>::AffineHull(AffineHull<Number>&& other)
     : points(std::move(other.points)), rays(std::move(other.rays)),
     equations(std::move(other.equations))
   {
@@ -75,7 +75,7 @@ namespace ipo
   }
 
   template <typename Number>
-  AffineHullResult<Number>& AffineHullResult<Number>::operator=(const AffineHullResult<Number>& other)
+  AffineHull<Number>& AffineHull<Number>::operator=(const AffineHull<Number>& other)
   {
     points = other.points;
     rays = other.rays;
@@ -93,7 +93,7 @@ namespace ipo
   }
 
   template <typename Number>
-  AffineHullResult<Number>& AffineHullResult<Number>::operator=(AffineHullResult<Number>&& other)
+  AffineHull<Number>& AffineHull<Number>::operator=(AffineHull<Number>&& other)
   {
     points = std::move(other.points);
     rays = std::move(other.rays);
@@ -110,10 +110,10 @@ namespace ipo
     return *this;
   }
 
-  template class AffineHullResult<double>;
+  template class AffineHull<double>;
 
   template <typename Number>
-  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result)
+  std::ostream& operator<<(std::ostream& stream, const AffineHull<Number>& result)
   {
     if (result.dimension >= -1)
       stream << "Dimension: " << result.dimension;
@@ -136,7 +136,7 @@ namespace ipo
     return stream;
   }
 
-  template std::ostream& operator<<(std::ostream& stream, const AffineHullResult<double>& result);
+  template std::ostream& operator<<(std::ostream& stream, const AffineHull<double>& result);
 
   template <typename T>
   class AffineComplement
@@ -553,13 +553,13 @@ namespace ipo
     }
   };
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   struct KernelVectorRational
   {
     std::size_t column;
-    std::shared_ptr<sparse_vector<mpq_class>> vector;
-    mpq_class rhs;
+    std::shared_ptr<sparse_vector<rational>> vector;
+    rational rhs;
     std::shared_ptr<sparse_vector<double>> approximateVector;
     double approximateRhs;
     double norm;
@@ -581,8 +581,8 @@ namespace ipo
     {
       if (valid && !last)
       {
-        vector = std::make_shared<sparse_vector<mpq_class>>();
-        vector->push_back(col, mpq_class(-1));
+        vector = std::make_shared<sparse_vector<rational>>();
+        vector->push_back(col, rational(-1));
         approximateVector = std::make_shared<sparse_vector<double>>();
         approximateVector->push_back(col, -1.0);        
         redundancyCoordinate = col;
@@ -590,12 +590,12 @@ namespace ipo
     }
 
     IPO_NO_EXPORT
-    void ensureValidity(const sparse_vector<mpq_class>& solution, const mpq_class& pointFactor,
+    void ensureValidity(const sparse_vector<rational>& solution, const rational& pointFactor,
       double epsilon)
     {
       if (vector)
       {
-        double violation = fabs(convertNumber<double, mpq_class>(
+        double violation = fabs(convertNumber<double, rational>(
           *vector * solution - rhs * pointFactor));
         if (violation > epsilon * norm)
           vector.reset();
@@ -674,7 +674,7 @@ namespace ipo
     }
   };
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   template <typename P, typename T, typename U>
   static void findLastPoint(std::shared_ptr<P> polyhedron, U* objective,
@@ -1261,10 +1261,10 @@ namespace ipo
   }
 
   template <>
-  AffineHullResult<double> affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
+  AffineHull<double> affineHull(std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query, const std::vector<Constraint<double>>& knownEquations)
   {
-    AffineHullResult<double> result;
+    AffineHull<double> result;
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
@@ -1316,7 +1316,7 @@ namespace ipo
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
 #if defined(IPO_DEBUG_AFFINE_HULL_CHECK)
-      verifyAffineHullResult(polyhedron, result);
+      verifyAffineHull(polyhedron, result);
 #endif /* IPO_DEBUG_AFFINE_HULL_CHECK */
 
       if (elapsedTime(timeStarted) >= query.timeLimit)
@@ -1518,7 +1518,7 @@ namespace ipo
   }
 
   bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron,
-    const AffineHullResult<double>& result)
+    const AffineHull<double>& result)
   {
     std::size_t n = polyhedron->space()->dimension();
 
@@ -1619,23 +1619,23 @@ namespace ipo
     return worstViolation <= 1.0e-6;
   }
 
-  template AffineHullResult<double> affineHull(
+  template AffineHull<double> affineHull(
     std::shared_ptr<Polyhedron<double>> polyhedron,
     const AffineHullQuery& query,
     const std::vector<Constraint<double>>& knownEquations);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  template class AffineHullResult<mpq_class>;
+  template class AffineHull<rational>;
 
-  template std::ostream& operator<<(std::ostream& stream, const AffineHullResult<mpq_class>& result);
+  template std::ostream& operator<<(std::ostream& stream, const AffineHull<rational>& result);
 
   template <>
   IPO_EXPORT
-  AffineHullResult<mpq_class> affineHull(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
-    const AffineHullQuery& query, const std::vector<Constraint<mpq_class>>& knownEquations)
+  AffineHull<rational> affineHull(std::shared_ptr<Polyhedron<rational>> polyhedron,
+    const AffineHullQuery& query, const std::vector<Constraint<rational>>& knownEquations)
   {
-    AffineHullResult<mpq_class> result;
+    AffineHull<rational> result;
     auto timeStarted = std::chrono::system_clock::now();
     auto timeComponent = std::chrono::system_clock::now();
     std::size_t n = polyhedron->space()->dimension();
@@ -1645,7 +1645,7 @@ namespace ipo
     std::cout << "affineHull<Rational>() called for ambient dimension " << n << ".\n" << std::flush;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-    auto redundancyCheck = EquationRedundancyCheck<mpq_class>(n);
+    auto redundancyCheck = EquationRedundancyCheck<rational>(n);
     auto approximateRedundancyCheck = EquationRedundancyCheck<double>(n);
     int filterResult = filterGivenEquation(redundancyCheck, knownEquations, &result.equations, 0,
       &approximateRedundancyCheck);
@@ -1670,9 +1670,9 @@ namespace ipo
       << redundancyCheck.rank() << "." << std::endl;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-    auto affineComplement = AffineComplement<mpq_class>(n);
+    auto affineComplement = AffineComplement<rational>(n);
     auto approximateAffineComplement = AffineComplement<double>(n);
-    std::vector<mpq_class> objective(n);
+    std::vector<rational> objective(n);
     KernelVectorRationalLess kernelVectorLess;
     kernelVectorLess.epsilon = query.epsilonLinearDependence;
     std::vector<KernelVectorRational> kernelVectors;
@@ -1766,7 +1766,7 @@ namespace ipo
           else
           {
             timeComponent = std::chrono::system_clock::now();
-            kernelVectors.back().vector = std::make_shared<sparse_vector<mpq_class>>();
+            kernelVectors.back().vector = std::make_shared<sparse_vector<rational>>();
             affineComplement.computeKernelVector(kernelVectors.back().column,
               *kernelVectors.back().vector, kernelVectors.back().rhs, 0);
             *kernelVectors.back().approximateVector = convertSparseVector<double>(
@@ -1830,7 +1830,7 @@ namespace ipo
       assert(kernelVector.maxViolation > 0);
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
-      mpq_class kernelVectorValue = 0;
+      rational kernelVectorValue = 0;
 
       int outcome = tryMaximization(polyhedron, affineComplement, &objective[0],
         kernelVectors, *kernelVector.vector, kernelVector.column, kernelVector.norm,
@@ -1898,11 +1898,11 @@ namespace ipo
     return result;
   }
 
-  template AffineHullResult<mpq_class> affineHull(
-    std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
+  template AffineHull<rational> affineHull(
+    std::shared_ptr<Polyhedron<rational>> polyhedron,
     const AffineHullQuery& query,
-    const std::vector<Constraint<mpq_class>>& knownEquations);
+    const std::vector<Constraint<rational>>& knownEquations);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

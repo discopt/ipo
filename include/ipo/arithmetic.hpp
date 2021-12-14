@@ -24,26 +24,36 @@ namespace ipo
     return from;
   }
 
-#if defined(IPO_WITH_GMP)
+} /* namespace ipo */
+
+#if defined(IPO_RATIONAL)
+
+#include <gmp.h>
+#include <boost/multiprecision/number.hpp>
+#include <boost/multiprecision/gmp.hpp>
+
+namespace ipo
+{
+  using rational = boost::multiprecision::number<boost::multiprecision::gmp_rational, boost::multiprecision::et_off>;
 
   template<>
-  inline mpq_class convertNumber<mpq_class>(const mpq_class& x)
+  inline rational convertNumber<rational>(const rational& x)
   {
     return x;
   }
 
   template<>
-  inline double convertNumber<double>(const mpq_class& x)
+  inline double convertNumber<double>(const rational& x)
   {
-    return x.get_d();
+    return x.convert_to<double>();
   }
 
-  mpq_class reconstructRational(double x, double maxError = 1.0e-9);
+  rational reconstructRational(double x, double maxError = 1.0e-9);
 
   void reconstructRational(mpq_ptr result, double x, double maxError = 1.0e-9 );
 
   template<>
-  inline mpq_class convertNumber<mpq_class>(const double& x)
+  inline rational convertNumber<rational>(const double& x)
   {
     return reconstructRational(x);
   }
@@ -53,14 +63,14 @@ namespace ipo
   public:
     IntegralScaler();
 
-    void operator()(const mpq_class& x);
+    void operator()(const rational& x);
 
-    const mpq_class& factor() const;
+    const rational& factor() const;
 
   private:
-    mpq_class _factor;
+    rational _factor;
   };
 
-#endif /* IPO_WITH_GMP */
-
 }
+
+#endif /* IPO_RATIONAL */

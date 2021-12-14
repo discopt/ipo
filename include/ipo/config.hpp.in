@@ -4,11 +4,17 @@
 #define IPO_VERSION_MINOR @IPO_VERSION_MINOR@
 #define IPO_VERSION_PATCH @IPO_VERSION_PATCH@
 
-#cmakedefine IPO_WITH_GMP
-#cmakedefine IPO_WITH_SOPLEX
-#cmakedefine IPO_WITH_GUROBI
-#cmakedefine IPO_WITH_SCIP
+#cmakedefine IPO_DOUBLE
+#cmakedefine IPO_DOUBLE_LP
+#cmakedefine IPO_DOUBLE_LP_SOPLEX
+#cmakedefine IPO_DOUBLE_LP_GUROBI
+#cmakedefine IPO_DOUBLE_MIP
+#cmakedefine IPO_DOUBLE_MIP_SCIP
+#cmakedefine IPO_DOUBLE_MIP_GUROBI
 
-#if defined(IPO_WITH_GMP)
-#include <gmpxx.h>
-#endif /* IPO_WITH_GMP */
+#cmakedefine IPO_RATIONAL
+#cmakedefine IPO_RATIONAL_LP
+#cmakedefine IPO_RATIONAL_LP_SOPLEX
+#cmakedefine IPO_RATIONAL_MIP
+#cmakedefine IPO_RATIONAL_MIP_SCIP
+#cmakedefine IPO_RATIONAL_MIP_GUROBI

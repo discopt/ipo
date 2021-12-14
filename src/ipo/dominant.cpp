@@ -43,9 +43,16 @@ namespace ipo
     return _sourceOracle->maximize(objectiveVector, query);
   }
   
+#if defined(IPO_DOUBLE)
+
   template class DominantOptimizationOracle<double>;
-#if defined(IPO_WITH_GMP)
-  template class DominantOptimizationOracle<mpq_class>;
-#endif /* IPO_WITH_GMP */
+
+#endif /* IPO_DOUBLE */
+
+#if defined(IPO_RATIONAL)
+
+  template class DominantOptimizationOracle<rational>;
+
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

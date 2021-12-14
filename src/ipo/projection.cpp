@@ -122,13 +122,17 @@ namespace ipo
     return result;
   }
 
+#if defined(IPO_DOUBLE)
+
   template class Projection<double>;
 
-#if defined(IPO_WITH_GMP)
+#endif /* IPO_DOUBLE */
 
-  template class Projection<mpq_class>;
+#if defined(IPO_RATIONAL)
 
-#endif /* IPO_WITH_GMP */
+  template class Projection<rational>;
+
+#endif /* IPO_RATIONAL */
 
   template <typename Number>
   ProjectionOptimizationOracle<Number>::ProjectionOptimizationOracle(
@@ -161,25 +165,17 @@ namespace ipo
     return projectionEquationsImplementation(projection, equations);
   }
 
-  template <>
-  IPO_EXPORT
-  std::vector<Constraint<mpq_class>> projectionEquations(std::shared_ptr<Projection<mpq_class>> projection,
-    const std::vector<Constraint<mpq_class>>& equations)
-  {
-    return projectionEquationsImplementation(projection, equations);
-  }
-
   /* Explicit template instantiation. */
 
   template std::vector<Constraint<double>> projectionEquations(std::shared_ptr<Projection<double>> projection,
     const std::vector<Constraint<double>>& equations);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  template std::vector<Constraint<mpq_class>> projectionEquations(std::shared_ptr<Projection<mpq_class>> projection,
-    const std::vector<Constraint<mpq_class>>& equations);
+  template std::vector<Constraint<rational>> projectionEquations(std::shared_ptr<Projection<rational>> projection,
+    const std::vector<Constraint<rational>>& equations);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   template <typename Number>
   ProjectionOptimizationOracle<Number>::~ProjectionOptimizationOracle()
@@ -229,10 +225,10 @@ namespace ipo
 
   template class ProjectionOptimizationOracle<double>;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  template class ProjectionOptimizationOracle<mpq_class>;
+  template class ProjectionOptimizationOracle<rational>;
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

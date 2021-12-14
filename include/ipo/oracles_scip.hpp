@@ -3,7 +3,7 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#ifdef IPO_WITH_SCIP
+#if defined(IPO_DOUBLE_MIP_SCIP) || defined(IPO_RATIONAL_MIP_SCIP)
 
 #include <ipo/oracles.hpp>
 #include <ipo/mip.hpp>
@@ -128,13 +128,19 @@ namespace ipo
 
   protected:
 
+#if defined(IPO_DOUBLE_MIP_SCIP)
+
     friend SCIPOptimizationOracle<double>;
     friend SCIPSeparationOracle<double>;
 
-#if defined(IPO_WITH_GMP)
-    friend SCIPOptimizationOracle<mpq_class>;
-    friend SCIPSeparationOracle<mpq_class>;
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_DOUBLE_MIP_SCIP */
+    
+#if defined(IPO_RATIONAL_MIP_SCIP)
+
+    friend SCIPOptimizationOracle<rational>;
+    friend SCIPSeparationOracle<rational>;
+
+#endif /* IPO_RATIONAL_MIP_SCIP */
 
     /**
      * \brief Initializes the solver data.
@@ -181,10 +187,12 @@ namespace ipo
     std::unordered_map<Constraint<double>*, SCIP_CONS*> _faceConstraints;
     BoundLimits _boundLimits;
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_MIP_SCIP)
     RationalMIPExtender* _extender;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_MIP_SCIP */
   };
+
+#if defined(IPO_DOUBLE_MIP_SCIP)
 
   /**
   * \brief OptimizationOracle based on the SCIP solver.
@@ -231,21 +239,23 @@ namespace ipo
     Constraint<double> _face;
   };
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#endif /* IPO_DOUBLE_MIP_SCIP */
+
+#if defined(IPO_RATIONAL_MIP_SCIP)
 
   template <>
-  class SCIPOptimizationOracle<mpq_class>: public RationalMIPExtendedOptimizationOracle
+  class SCIPOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
   {
   public:
     SCIPOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
-      const Constraint<mpq_class>& face)
+      const Constraint<rational>& face)
       : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
       
     }
   };
 
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_MIP_SCIP */
 
   /**
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
@@ -320,4 +330,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_WITH_SCIP */
+#endif /* IPO_DOUBLE_MIP_SCIP || IPO_RATIONAL_MIP_SCIP */

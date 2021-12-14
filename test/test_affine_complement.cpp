@@ -29,14 +29,14 @@ TEST(AffineHull, AffineComplement)
     ASSERT_EQ(ac.rank(), 3);
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
   std::cout << "===== AffineHull::AffineComplement::Rational ===== " << std::endl;
   {
-    auto ac = ipo::AffineComplement<mpq_class>(4);
+    auto ac = ipo::AffineComplement<ipo::rational>(4);
     ASSERT_EQ(ac.rank(), 0);
-    sparse_vector<mpq_class> vector;
+    sparse_vector<ipo::rational> vector;
 
-    vector.push_back(1, mpq_class(std::move(mpq_class(1))));
+    vector.push_back(1, ipo::rational(std::move(ipo::rational(1))));
     ac.add(vector, 1, 1, 0.0);
     ASSERT_EQ(ac.rank(), 1);
 
@@ -52,5 +52,5 @@ TEST(AffineHull, AffineComplement)
     ASSERT_EQ(ac.rank(), 3);
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 }

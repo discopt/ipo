@@ -55,7 +55,7 @@ namespace ipo
   const static int AFFINEHULL_ERROR_NUMERICS = -4;
 
   template <typename NumberType>
-  struct AffineHullResult
+  struct AffineHull
   {
     typedef NumberType Number;
 
@@ -72,13 +72,13 @@ namespace ipo
     std::vector<std::shared_ptr<sparse_vector<NumberType>>> rays; /// Rays of inner description.
     std::vector<Constraint<NumberType>> equations; /// Linearly independent equations.
 
-    AffineHullResult();
+    AffineHull();
 
-    AffineHullResult(AffineHullResult<Number>&& other);
+    AffineHull(AffineHull<Number>&& other);
 
-    AffineHullResult<Number>& operator=(const AffineHullResult<Number>& other);
+    AffineHull<Number>& operator=(const AffineHull<Number>& other);
 
-    AffineHullResult<Number>& operator=(AffineHullResult<Number>&& other);
+    AffineHull<Number>& operator=(AffineHull<Number>&& other);
 
     inline bool success() const
     {
@@ -87,13 +87,13 @@ namespace ipo
   };
 
   template <typename Number>
-  std::ostream& operator<<(std::ostream& stream, const AffineHullResult<Number>& result);
+  std::ostream& operator<<(std::ostream& stream, const AffineHull<Number>& result);
 
   template <typename Number>
-  AffineHullResult<Number> affineHull(
+  AffineHull<Number> affineHull(
     std::shared_ptr<Polyhedron<Number>> polyhedron, const AffineHullQuery& query = AffineHullQuery(),
     const std::vector<Constraint<Number>>& knownEquations = std::vector<Constraint<Number>>());
 
-  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron, const AffineHullResult<double>& result);
+  bool verifyAffineHullResult(std::shared_ptr<Polyhedron<double>> polyhedron, const AffineHull<double>& result);
 
 } /* namespace ipo */

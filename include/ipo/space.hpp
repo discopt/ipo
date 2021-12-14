@@ -125,49 +125,49 @@ namespace ipo
 
     std::string printConstraint(const Constraint<double>& constraint, bool rounded = false) const;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
     
-    void printVector(std::ostream& str, const sparse_vector<mpq_class>& vector,
+    void printVector(std::ostream& str, const sparse_vector<rational>& vector,
       bool rounded = false) const;
 
     inline void printVector(std::ostream& str,
-      const std::shared_ptr<sparse_vector<mpq_class>>& vector, bool rounded = false) const
+      const std::shared_ptr<sparse_vector<rational>>& vector, bool rounded = false) const
     {
       return printVector(str, *vector, rounded);
     }
 
-    std::string printVector(const sparse_vector<mpq_class>& vector, bool rounded = false) const;
+    std::string printVector(const sparse_vector<rational>& vector, bool rounded = false) const;
 
-    inline std::string printVector(const std::shared_ptr<sparse_vector<mpq_class>>& vector,
+    inline std::string printVector(const std::shared_ptr<sparse_vector<rational>>& vector,
       bool rounded = false) const
     {
       return printVector(*vector, rounded);
     }
 
-    void printLinearForm(std::ostream& str, const sparse_vector<mpq_class>& vector,
+    void printLinearForm(std::ostream& str, const sparse_vector<rational>& vector,
       bool rounded = false) const;
 
     inline void printLinearForm(std::ostream& str,
-      const std::shared_ptr<sparse_vector<mpq_class>>& vector, bool rounded = false) const
+      const std::shared_ptr<sparse_vector<rational>>& vector, bool rounded = false) const
     {
       return printLinearForm(str, *vector, rounded);
     }
 
-    std::string printLinearForm(const sparse_vector<mpq_class>& vector, bool rounded = false) const;
+    std::string printLinearForm(const sparse_vector<rational>& vector, bool rounded = false) const;
 
-    inline std::string printLinearForm(const std::shared_ptr<sparse_vector<mpq_class>>& vector,
+    inline std::string printLinearForm(const std::shared_ptr<sparse_vector<rational>>& vector,
       bool rounded = false) const
     {
       return printLinearForm(*vector, rounded);
     }
 
-    void printConstraint(std::ostream& str, const Constraint<mpq_class>& constraint,
+    void printConstraint(std::ostream& str, const Constraint<rational>& constraint,
       bool rounded = false) const;
 
-    std::string printConstraint(const Constraint<mpq_class>& constraint,
+    std::string printConstraint(const Constraint<rational>& constraint,
       bool rounded = false) const;
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   private:
     std::vector<std::string> _variableNames;

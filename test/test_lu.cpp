@@ -54,10 +54,10 @@ TEST(LinearAlgebra, LU)
     ASSERT_NEAR(column[2], -1.0/9, 1.0e-9);
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
   std::cout << "===== LinearAlgebra::IncrementalLUFactorization::Rational ===== " << std::endl;
   {
-    auto lu = ipo::IncrementalLUFactorization<mpq_class>();
+    auto lu = ipo::IncrementalLUFactorization<ipo::rational>();
 
     /* Test matrix: 
     *  1 2 3
@@ -65,8 +65,8 @@ TEST(LinearAlgebra, LU)
     *  7 8 0
     */
     
-    std::vector<mpq_class> row(3);
-    std::vector<mpq_class> column(3);
+    std::vector<ipo::rational> row(3);
+    std::vector<ipo::rational> column(3);
     lu.extend(&row[0], &column[0], 1, 0.0);
     row[0] = 4;
     column[0] = 2;
@@ -82,26 +82,27 @@ TEST(LinearAlgebra, LU)
     column[2] = 0;
     lu.solveLeft(&column[0]);
     lu.solveUpper(&column[0]);
-    ASSERT_EQ(column[0], mpq_class(-16,9));
-    ASSERT_EQ(column[1], mpq_class(14,9));
-    ASSERT_EQ(column[2], mpq_class(-1,9));
+    ASSERT_EQ(column[0], ipo::rational(-16,9));
+    ASSERT_EQ(column[1], ipo::rational(14,9));
+    ASSERT_EQ(column[2], ipo::rational(-1,9));
     column[0] = 0;
     column[1] = 1;
     column[2] = 0;
     lu.solveLeft(&column[0]);
     lu.solveUpper(&column[0]);
-    ASSERT_EQ(column[0], mpq_class(8,9));
-    ASSERT_EQ(column[1], mpq_class(-7,9));
-    ASSERT_EQ(column[2], mpq_class(2,9));
+    ASSERT_EQ(column[0], ipo::rational(8,9));
+    ASSERT_EQ(column[1], ipo::rational(-7,9));
+    ASSERT_EQ(column[2], ipo::rational(2,9));
     column[0] = 0;
     column[1] = 0;
     column[2] = 1;
     lu.solveLeft(&column[0]);
     lu.solveUpper(&column[0]);
-    ASSERT_EQ(column[0], mpq_class(-1,9));
-    ASSERT_EQ(column[1], mpq_class(2,9));
-    ASSERT_EQ(column[2], mpq_class(-1,9));
+    ASSERT_EQ(column[0], ipo::rational(-1,9));
+    ASSERT_EQ(column[1], ipo::rational(2,9));
+    ASSERT_EQ(column[2], ipo::rational(-1,9));
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
+
 }

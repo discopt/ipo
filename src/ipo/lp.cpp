@@ -1,17 +1,21 @@
 #include <ipo/lp.hpp>
 
+#include <ipo/arithmetic.hpp>
+
 #include <cmath>
 #include <string>
+#include <unordered_map>
+#include <ostream>
 
-
-#if defined(IPO_WITH_SOPLEX)
-#define SOPLEX_WITH_GMP
+#if defined(IPO_DOUBLE_LP_SOPLEX) || defined(IPO_RATIONAL_LP_SOPLEX)
 #include <soplex.h>
-#endif /* IPO_WITH_SOPLEX */
-
+#endif /* IPO_DOUBLE_LP_SOPLEX || IPO_RATIONAL_LP_SOPLEX */
 
 namespace ipo
 {
+
+#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+
   std::ostream& operator<<(std::ostream& stream, LPStatus status)
   {
     switch (status)
@@ -35,80 +39,10 @@ namespace ipo
     }
   }
 
-  template <bool Removable>
-  class ElementMapping
-  {
-  };
+#endif /* IPO_DOUBLE_LP */
 
-  template <>
-  class ElementMapping<true>
-  {
-  public:
-    ElementMapping()
-    {
+#if defined(IPO_DOUBLE_LP_SOPLEX) || defined(IPO_RATIONAL_LP_SOPLEX)
 
-    }
-
-    std::size_t externalToInternal(std::size_t external) const
-    {
-      assert(external < _externalToInternal.size());
-      assert(_externalToInternal[external] < std::numeric_limits<std::size_t>::max());
-      return _externalToInternal[external];
-    }
-
-    std::size_t internalToExternal(std::size_t internal) const
-    {
-      assert(internal < _internalToExternal.size()); 
-      return _internalToExternal[internal];
-    }
-
-    std::size_t add(std::size_t internal, std::size_t external)
-    {
-      assert(internal == _internalToExternal.size());
-      if (external == std::numeric_limits<std::size_t>::max())
-        external = _externalToInternal.size();
-      assert(external >= _externalToInternal.size()
-        || _externalToInternal[external] == std::numeric_limits<std::size_t>::max());
-      if (external >= _externalToInternal.size())
-        _externalToInternal.resize(external + 1, std::numeric_limits<std::size_t>::max());
-      else
-        assert(_externalToInternal[external] == std::numeric_limits<std::size_t>::max());
-      _externalToInternal[external] = internal;
-      _internalToExternal.push_back(external);
-      return external;
-    }
-
-  protected:
-    std::vector<std::size_t> _externalToInternal;
-    std::vector<std::size_t> _internalToExternal;
-  };
-
-  template <>
-  class ElementMapping<false>
-  {
-  public:
-    ElementMapping()
-    {
-
-    }
-
-    std::size_t externalToInternal(std::size_t external) const
-    {
-      return external;
-    }
-
-    std::size_t internalToExternal(std::size_t internal) const
-    {
-      return internal;
-    }
-
-    std::size_t add(std::size_t internal, std::size_t external)
-    { 
-      return internal;
-    }
-  };
-
-#if defined(IPO_WITH_SOPLEX)
   static
   bool createNameSet(soplex::NameSet& nameSet, const std::vector<std::string>& internalNames)
   {
@@ -122,22 +56,25 @@ namespace ipo
     return true;
   }
 
-#endif /* IPO_WITH_SOPLEX */
+#endif /* IPO_DOUBLE_LP_SOPLEX || IPO_RATIONAL_LP_SOPLEX */
 
-#if !defined(IPO_WITH_GUROBI) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
 
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
+  template <typename Number>
   class LPImplementation;
 
-  template <bool RowsRemovable, bool ColumnsRemovable>
-  class LPImplementation<double, RowsRemovable, ColumnsRemovable>
+#endif /* IPO_DOUBLE_LP */
+  
+#if defined(IPO_DOUBLE_LP_SOPLEX)
+  
+  template <>
+  class LPImplementation<double>
   {
   public:
     typedef double Number;
-    typedef ElementMapping<RowsRemovable> RowMapping;
-    typedef ElementMapping<ColumnsRemovable> ColumnMapping;
 
     LPImplementation()
+      : _nextRowKey(0), _nextColumnKey(0)
     {
       _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
       _spx.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
@@ -194,31 +131,21 @@ namespace ipo
       return !_primalSolution.empty();
     }
 
-    double getPrimalValue(LPColumn column) const
+    double getPrimalValue(int column) const
     {
-      size_t j = _columnMapping.externalToInternal(column);
-      assert(j < _primalSolution.size());
-      return _primalSolution[j];
+      return _primalSolution[column];
     }
 
-    std::vector<double> getPrimalSolution(const std::vector<LPColumn>& columns) const
+    std::vector<double> getPrimalSolution(const std::vector<int>& columns) const
     {
       std::vector<double> solution;
       if (columns.empty())
-      {
-        for (std::size_t j = 0; j < numColumns(); ++j)
-        {
-          LPColumn external = _columnMapping.internalToExternal(j);
-          if (external >= solution.size())
-            solution.resize(external + 1, 0);
-          solution[external] = _primalSolution[j];
-        }
-      }
+        return _primalSolution;
       else
       {
         solution.reserve(columns.size());
-        for (const auto column : columns)
-          solution.push_back(getPrimalValue(column));
+        for (std::size_t c = 0; c < columns.size(); ++c)
+          solution.push_back(_primalSolution[columns[c]]);
       }
       return solution;
     }
@@ -228,11 +155,9 @@ namespace ipo
       return !_dualSolution.empty();
     }
 
-    double getDualValue(LPRow row) const
+    double getDualValue(int row) const
     {
-      size_t i = _rowMapping.externalToInternal(row);
-      assert(i < _dualSolution.size());
-      return _dualSolution[i];
+      return _dualSolution[row];
     }
 
     void setSense(LPSense newSense)
@@ -242,42 +167,29 @@ namespace ipo
         newSense == LPSense::MAXIMIZE ? soplex::SoPlex::OBJSENSE_MAXIMIZE : soplex::SoPlex::OBJSENSE_MINIMIZE);
     }
 
-    LPColumn addColumn(
-      double lowerBound,
-      double upperBound,
-      double objectiveCoefficient,
-      const std::string& name,
-      LPColumn unusedColumn)
+    LPKey addColumn(double lowerBound, double upperBound, double objectiveCoefficient, const std::string& name)
     {
-      std::size_t internalColumn = numColumns();
-      _vector.clear();
-      _spx.addColReal(soplex::LPColBase<double>(objectiveCoefficient, _vector,
+      _sparse.clear();
+      _spx.addColReal(soplex::LPColBase<double>(objectiveCoefficient, _sparse,
         std::isnormal(upperBound) ? upperBound : soplex::infinity,
         std::isnormal(lowerBound) ? lowerBound : -soplex::infinity));
       _columnNames.push_back(name);
-      return _columnMapping.add(internalColumn, unusedColumn);
+      _columnKeys.push_back(_nextColumnKey);
+      _columnMap[_nextColumnKey] = _spx.numCols() - 1;
+      return LPKey(_nextColumnKey++);
     }
 
-    LPRow addRow(
-      double lhs,
-      std::size_t numNonzeros,
-      const LPColumn* nonzeroVariables,
-      const double* nonzeroCoefficients,
-      double rhs,
-      const std::string& name,
-      LPRow unusedRow)
+    LPKey addRow(double lhs, std::size_t numNonzeros, const int* nonzeroColumns, const double* nonzeroCoefficients,
+      double rhs, const std::string& name)
     {
-      std::size_t internalRow = numRows();
-      _vector.clear();
+      _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
-      {
-        std::size_t j = _columnMapping.externalToInternal(nonzeroVariables[i]);
-        assert(j < numColumns());
-        _vector.add(j, nonzeroCoefficients[i]);
-      }
-      _spx.addRowReal(soplex::LPRowBase<double>(lhs, _vector, rhs));
+        _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      _spx.addRowReal(soplex::LPRowBase<double>(lhs, _sparse, rhs));
       _rowNames.push_back(name);
-      return _rowMapping.add(internalRow, unusedRow);
+      _rowKeys.push_back(_nextRowKey);
+      _rowMap[_nextRowKey] = _spx.numRows() - 1;
+      return LPKey(_nextRowKey++);
     }
 
     void update()
@@ -285,24 +197,34 @@ namespace ipo
 
     }
 
-    void changeUpper(LPColumn column, double newUpperBound)
+    void changeUpper(int column, double newUpperBound)
     {
-      _spx.changeUpperReal(_columnMapping.externalToInternal(column), newUpperBound);
+      _spx.changeUpperReal(column, newUpperBound);
     }
 
-    void changeLower(LPColumn column, double newLowerBound)
+    void changeLower(int column, double newLowerBound)
     {
-      _spx.changeLowerReal(_columnMapping.externalToInternal(column), newLowerBound);
+      _spx.changeLowerReal(column, newLowerBound);
     }
 
-    void changeBounds(LPColumn column, double newLowerBound, double newUpperBound)
+    void changeBounds(int column, double newLowerBound, double newUpperBound)
     {
-      _spx.changeBoundsReal(_columnMapping.externalToInternal(column), newLowerBound, newUpperBound);
+      _spx.changeBoundsReal(column, newLowerBound, newUpperBound);
     }
 
-    void changeObjective(LPColumn column, double newObjectiveCoefficient)
+    void changeObjective(int column, double newObjectiveCoefficient)
     {
-      _spx.changeObjReal(_columnMapping.externalToInternal(column), newObjectiveCoefficient);
+      _spx.changeObjReal(column, newObjectiveCoefficient);
+    }
+
+    void changeRow(LPKey rowKey, const double lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+      const double* nonzeroCoefficients, const double rhs)
+    {
+      std::size_t row = _rowMap[rowKey.id];
+      std::cout << "changeRow affects row " << row << std::endl;
+      for (size_t i = 0; i < numNonzeros; ++i)
+        _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      _spx.changeRowReal(row, soplex::LPRowReal(lhs, _sparse, rhs));
     }
 
     void write(const std::string& fileName) const
@@ -335,44 +257,32 @@ namespace ipo
     }
 
   private:
-    RowMapping _rowMapping;
-    ColumnMapping _columnMapping;
+    std::vector<LPKey> _rowKeys;
+    std::vector<LPKey> _columnKeys;
+    int _nextRowKey;
+    int _nextColumnKey;
+    std::unordered_map<int, std::size_t> _rowMap;
+    std::unordered_map<int, std::size_t> _columnMap;
     std::vector<double> _primalSolution;
     std::vector<double> _primalRay;
     std::vector<double> _dualSolution;
     std::vector<double> _dualRay;
 
     soplex::SoPlex _spx;
-    soplex::DSVectorReal _vector;
+    soplex::DSVectorReal _sparse;
     std::vector<std::string> _rowNames;
     std::vector<std::string> _columnNames;
   };
 
-#if defined(IPO_WITH_SOPLEX) && defined(IPO_WITH_GMP)
+#endif /* IPO_DOUBLE_LP_SOPLEX */
+
+#if defined(IPO_RATIONAL_LP_SOPLEX)
   
-  template <bool RowsRemovable, bool ColumnsRemovable>
-  class LPImplementation<mpq_class, RowsRemovable, ColumnsRemovable>
+  template <>
+  class LPImplementation<rational>
   {
   public:
-    typedef mpq_class Number;
-    typedef ElementMapping<RowsRemovable> RowMapping;
-    typedef ElementMapping<ColumnsRemovable> ColumnMapping;
-
-  private:
-    soplex::Rational mpq2rational(const mpq_class& number)
-    {
-      mpq_t x;
-      mpq_init(x);
-      mpq_set(x, number.get_mpq_t());
-      soplex::Rational result(x);
-      mpq_clear(x);
-      return result;
-    }
-
-    mpq_class rational2mpq(const soplex::Rational& number)
-    {
-      return mpq_class(number.getMpqRef());
-    }
+    typedef rational Number;
 
   public:
     LPImplementation()
@@ -427,7 +337,7 @@ namespace ipo
       }
     }
 
-    double getObjectiveValue() const
+    rational getObjectiveValue() const
     {
       return const_cast<LPImplementation*>(this)->_spx.objValueRational();
     }
@@ -437,31 +347,21 @@ namespace ipo
       return !_primalSolution.empty();
     }
 
-    const mpq_class& getPrimalValue(LPColumn column) const
+    const rational& getPrimalValue(int column) const
     {
-      size_t j = _columnMapping.externalToInternal(column);
-      assert(j < _primalSolution.size());
-      return _primalSolution[j];
+      return _primalSolution[column];
     }
 
-    std::vector<mpq_class> getPrimalSolution(const std::vector<LPColumn>& columns) const
+    std::vector<rational> getPrimalSolution(const std::vector<int>& columns) const
     {
-      std::vector<mpq_class> solution;
+      std::vector<rational> solution;
       if (columns.empty())
-      {
-        for (std::size_t j = 0; j < numColumns(); ++j)
-        {
-          LPColumn external = _columnMapping.internalToExternal(j);
-          if (external >= solution.size())
-            solution.resize(external + 1, 0);
-          solution[external] = _primalSolution[j];
-        }
-      }
+        return _primalSolution;
       else
       {
         solution.reserve(columns.size());
-        for (const auto column : columns)
-          solution.push_back(getPrimalValue(column));
+        for (std::size_t c = 0; c < columns.size(); ++c)
+          solution.push_back(_primalSolution[columns[c]]);
       }
       return solution;
     }
@@ -471,11 +371,9 @@ namespace ipo
       return !_dualSolution.empty();
     }
 
-    const mpq_class& getDualValue(LPRow row) const
+    const rational& getDualValue(int row) const
     {
-      size_t i = _rowMapping.externalToInternal(row);
-      assert(i < _dualSolution.size());
-      return _dualSolution[i];
+      return _dualSolution[row];
     }
 
     void setSense(LPSense newSense)
@@ -485,41 +383,28 @@ namespace ipo
         newSense == LPSense::MAXIMIZE ? soplex::SoPlex::OBJSENSE_MAXIMIZE : soplex::SoPlex::OBJSENSE_MINIMIZE);
     }
 
-    LPColumn addColumn(
-      const mpq_class& lowerBound,
-      const mpq_class& upperBound,
-      const mpq_class& objectiveCoefficient,
-      const std::string& name,
-      LPColumn unusedColumn)
+    LPKey addColumn(const rational& lowerBound, const rational& upperBound,
+      const rational& objectiveCoefficient, const std::string& name)
     {
-      std::size_t internalColumn = numColumns();
       _sparse.clear();
-      _spx.addColRational(soplex::LPColBase<soplex::Rational>(mpq2rational(objectiveCoefficient), _sparse,
-        mpq2rational(upperBound), mpq2rational(lowerBound)));
+      _spx.addColRational(soplex::LPColBase<soplex::Rational>(objectiveCoefficient, _sparse, upperBound, lowerBound));
       _columnNames.push_back(name);
-      return _columnMapping.add(internalColumn, unusedColumn);
+      _columnKeys.push_back(_nextColumnKey);
+      _columnMap[_nextColumnKey] = _spx.numCols() - 1;
+      return _nextColumnKey++;
     }
 
-    LPRow addRow(
-      const mpq_class& lhs,
-      std::size_t numNonzeros,
-      const LPColumn* nonzeroVariables,
-      const mpq_class* nonzeroCoefficients,
-      const mpq_class& rhs,
-      const std::string& name,
-      LPRow unusedRow)
+    LPKey addRow(const rational& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+      const rational* nonzeroCoefficients, const rational& rhs, const std::string& name)
     {
-      std::size_t internalRow = numRows();
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
-      {
-        std::size_t j = _columnMapping.externalToInternal(nonzeroVariables[i]);
-        assert(j < numColumns());
-        _sparse.add(j, mpq2rational(nonzeroCoefficients[i]));
-      }
-      _spx.addRowRational(soplex::LPRowBase<soplex::Rational>(mpq2rational(lhs), _sparse, mpq2rational(rhs)));
+        _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      _spx.addRowRational(soplex::LPRowBase<soplex::Rational>(lhs, _sparse, rhs));
       _rowNames.push_back(name);
-      return _rowMapping.add(internalRow, unusedRow);
+      _rowKeys.push_back(_nextRowKey);
+      _rowMap[_nextRowKey] = _spx.numRows() - 1;
+      return _nextRowKey++;
     }
 
     void update()
@@ -527,25 +412,34 @@ namespace ipo
 
     }
 
-    void changeUpper(LPColumn column, const mpq_class& newUpperBound)
+    void changeUpper(int column, const rational& newUpperBound)
     {
-      _spx.changeUpperRational(_columnMapping.externalToInternal(column), mpq2rational(newUpperBound));
+      _spx.changeUpperRational(column, newUpperBound);
     }
 
-    void changeLower(LPColumn column, const mpq_class& newLowerBound)
+    void changeLower(int column, const rational& newLowerBound)
     {
-      _spx.changeLowerRational(_columnMapping.externalToInternal(column), mpq2rational(newLowerBound));
+      _spx.changeLowerRational(column, newLowerBound);
     }
 
-    void changeBounds(LPColumn column, const mpq_class& newLowerBound, const mpq_class& newUpperBound)
+    void changeBounds(int column, const rational& newLowerBound, const rational& newUpperBound)
     {
-      _spx.changeBoundsRational(_columnMapping.externalToInternal(column), mpq2rational(newLowerBound),
-        mpq2rational(newUpperBound));
+      _spx.changeBoundsRational(column, newLowerBound, newUpperBound);
     }
 
-    void changeObjective(LPColumn column, const mpq_class& newObjectiveCoefficient)
+    void changeObjective(int column, const rational& newObjectiveCoefficient)
     {
-      _spx.changeObjRational(_columnMapping.externalToInternal(column), mpq2rational(newObjectiveCoefficient));
+      _spx.changeObjRational(column, newObjectiveCoefficient);
+    }
+
+    void changeRow(LPKey rowKey, const rational& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+      const rational* nonzeroCoefficients, const rational& rhs)
+    {
+      std::size_t row = _rowMap[rowKey.id];
+      _sparse.clear();
+      for (size_t i = 0; i < numNonzeros; ++i)
+        _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      _spx.changeRowRational(row, soplex::LPRowRational(lhs, _sparse, rhs));
     }
 
     void write(const std::string& fileName) const
@@ -565,7 +459,7 @@ namespace ipo
         _spx.getPrimalRational(_dense);
         _primalSolution.resize(numColumns());
         for (std::size_t c = 0; c < _primalSolution.size(); ++c)
-          _primalSolution[c] = rational2mpq(_dense[c]);
+          _primalSolution[c] = _dense[c];
       }
       else
         _primalSolution.clear();
@@ -575,7 +469,7 @@ namespace ipo
         _spx.getPrimalRational(_dense);
         _dualSolution.resize(numRows());
         for (std::size_t r = 0; r < _dualSolution.size(); ++r)
-          _dualSolution[r] = rational2mpq(_dense[r]);
+          _dualSolution[r] = _dense[r];
       }
       else
         _dualSolution.clear();
@@ -584,12 +478,16 @@ namespace ipo
     }
 
   private:
-    RowMapping _rowMapping;
-    ColumnMapping _columnMapping;
-    std::vector<mpq_class> _primalSolution;
-    std::vector<mpq_class> _primalRay;
-    std::vector<mpq_class> _dualSolution;
-    std::vector<mpq_class> _dualRay;
+    std::vector<LPKey> _rowKeys;
+    std::vector<LPKey> _columnKeys;
+    int _nextRowKey;
+    int _nextColumnKey;
+    std::unordered_map<int, std::size_t> _rowMap;
+    std::unordered_map<int, std::size_t> _columnMap;
+    std::vector<rational> _primalSolution;
+    std::vector<rational> _primalRay;
+    std::vector<rational> _dualSolution;
+    std::vector<rational> _dualRay;
 
     soplex::SoPlex _spx;
     soplex::DVectorRational _dense;
@@ -598,11 +496,157 @@ namespace ipo
     std::vector<std::string> _columnNames;
   };
 
-#endif /* IPO_WITH_SOPLEX && IPO_WITH_GMP */
+#endif /* IPO_RATIONAL_LP_SOPLEX */
+
+#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+
+  template <typename Number>
+  LP<Number>::LP()
+  {
+    _implementation = new LPImplementation<Number>();
+  }
+
+  template <typename Number>
+  LP<Number>::~LP()
+  {
+    delete static_cast<LPImplementation<Number>*>(_implementation);
+  }
+
+  template <typename Number>
+  std::size_t LP<Number>::numRows() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->numRows();
+  }
+
+  template <typename Number>
+  std::size_t LP<Number>::numColumns() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->numColumns();
+  }
+
+  template <typename Number>
+  LPStatus LP<Number>::status() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->status();
+  }
+
+  template <typename Number>
+  Number LP<Number>::getObjectiveValue() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getObjectiveValue();
+  }
+
+  template <typename Number>
+  bool LP<Number>::hasPrimalSolution() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->hasPrimalSolution();
+  }
+
+  template <typename Number>
+  Number LP<Number>::getPrimalValue(int column) const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalValue(column);
+  }
+
+  template <typename Number>
+  std::vector<Number> LP<Number>::getPrimalSolution(const std::vector<int>& columns) const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalSolution(columns);
+  }
+
+  template <typename Number>
+  bool LP<Number>::hasDualSolution() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->hasDualSolution();
+  }
+
+  template <typename Number>
+  Number LP<Number>::getDualValue(int row) const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getDualValue(row);
+  }
+
+  template <typename Number>
+  void LP<Number>::setSense(LPSense newSense)
+  {
+    static_cast<LPImplementation<Number>*>(_implementation)->setSense(newSense);
+  }
+
+  template <typename Number>
+  LPKey LP<Number>::addColumn(const Number& lowerBound, const Number& upperBound, const Number& objectiveCoefficient,
+    const std::string& name)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->addColumn(lowerBound, upperBound,
+      objectiveCoefficient, name);
+  }
+
+  template <typename Number>
+  LPKey LP<Number>::addRow(const Number& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+    const Number* nonzeroCoefficients, const Number& rhs, const std::string& name)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->addRow(lhs, numNonzeros, nonzeroColumns,
+      nonzeroCoefficients, rhs, name);
+  }
+
+  template <typename Number>
+  void LP<Number>::update()
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->update();
+  }
+
+  template <typename Number>
+  void LP<Number>::changeUpper(int column, const Number& newUpperBound)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->changeUpper(column, newUpperBound);
+  }
+
+  template <typename Number>
+  void LP<Number>::changeLower(int column, const Number& newLowerBound)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->changeLower(column, newLowerBound);
+  }
+
+  template <typename Number>
+  void LP<Number>::changeBounds(int column, const Number& newLowerBound, const Number& newUpperBound)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->changeBounds(column, newLowerBound, newUpperBound);
+  }
+
+  template <typename Number>
+  void LP<Number>::changeObjective(int column, const Number& newObjectiveCoefficient)
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->changeObjective(column, newObjectiveCoefficient);
+  }
+
+  template <typename Number>
+  void LP<Number>::changeRow(LPKey rowKey, const Number& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+    const Number* nonzeroCoefficients, const Number& rhs)
+  {
+    static_cast<LPImplementation<Number>*>(_implementation)->changeRow(rowKey, lhs, numNonzeros, nonzeroColumns,
+      nonzeroCoefficients, rhs);
+  }
+
+  template <typename Number>
+  void LP<Number>::write(const std::string& fileName) const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->write(fileName);
+  }
+
+  template <typename Number>
+  LPStatus LP<Number>::solve()
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->solve();
+  }
+
+  template class LP<double>;
+
+#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
+
+#if defined(IPO_DOUBLE_LP)
 
   static double plusInfinityDouble = soplex::infinity;
   static double minusInfinityDouble = -soplex::infinity;
-  
+
   template <>
   const double& LP<double>::plusInfinity()
   {
@@ -614,184 +658,28 @@ namespace ipo
   {
     return minusInfinityDouble;
   };
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  LP<NumberType, RowsRemovable, ColumnsRemovable>::LP()
-  {
-    _implementation = new LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>();
-  }
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  LP<NumberType, RowsRemovable, ColumnsRemovable>::~LP()
-  {
-    delete static_cast<LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>*>(_implementation);
-  }
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  std::size_t LP<NumberType, RowsRemovable, ColumnsRemovable>::numRows() const
-  {
-    return static_cast<LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>*>(_implementation)->numRows();
-  }
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  std::size_t LP<NumberType, RowsRemovable, ColumnsRemovable>::numColumns() const
-  {
-    return static_cast<LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>*>(_implementation)->numColumns();
-  }
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  LPStatus LP<NumberType, RowsRemovable, ColumnsRemovable>::status() const
-  {
-    return static_cast<LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>*>(_implementation)->status();
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  Number LP<Number, RowsRemovable, ColumnsRemovable>::getObjectiveValue() const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->getObjectiveValue();
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  bool LP<Number, RowsRemovable, ColumnsRemovable>::hasPrimalSolution() const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->hasPrimalSolution();
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  Number LP<Number, RowsRemovable, ColumnsRemovable>::getPrimalValue(LPColumn column) const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->getPrimalValue(
-      column);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  std::vector<Number> LP<Number, RowsRemovable, ColumnsRemovable>::getPrimalSolution(
-    const std::vector<LPColumn>& columns) const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->getPrimalSolution(
-      columns);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  bool LP<Number, RowsRemovable, ColumnsRemovable>::hasDualSolution() const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->hasDualSolution();
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  Number LP<Number, RowsRemovable, ColumnsRemovable>::getDualValue(LPRow row) const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->getDualValue(row);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::setSense(LPSense newSense)
-  {
-    static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->setSense(newSense);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  LPColumn LP<Number, RowsRemovable, ColumnsRemovable>::addColumn(
-    const Number& lowerBound,
-    const Number& upperBound,
-    const Number& objectiveCoefficient,
-    const std::string& name,
-    LPColumn unusedColumn)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->addColumn(
-      lowerBound, upperBound, objectiveCoefficient, name, unusedColumn);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  LPRow LP<Number, RowsRemovable, ColumnsRemovable>::addRow(
-    const Number& lhs,
-    std::size_t numNonzeros,
-    const LPColumn* nonzeroVariables,
-    const Number* nonzeroCoefficients,
-    const Number& rhs,
-    const std::string& name,
-    LPRow unusedRow)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->addRow(
-      lhs, numNonzeros, nonzeroVariables, nonzeroCoefficients, rhs, name, unusedRow);
-  }
-
-  template <typename NumberType, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<NumberType, RowsRemovable, ColumnsRemovable>::update()
-  {
-    return static_cast<LPImplementation<NumberType, RowsRemovable, ColumnsRemovable>*>(_implementation)->update();
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::changeUpper(LPColumn column, const Number& newUpperBound)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->changeUpper(
-      column, newUpperBound);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::changeLower(LPColumn column, const Number& newLowerBound)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->changeLower(
-      column, newLowerBound);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::changeBounds(LPColumn column, const Number& newLowerBound,
-    const Number& newUpperBound)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->changeBounds(
-      column, newLowerBound, newUpperBound);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::changeObjective(LPColumn column, const Number& newObjectiveCoefficient)
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->changeObjective(
-      column, newObjectiveCoefficient);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  void LP<Number, RowsRemovable, ColumnsRemovable>::write(const std::string& fileName) const
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->write(fileName);
-  }
-
-  template <typename Number, bool RowsRemovable, bool ColumnsRemovable>
-  LPStatus LP<Number, RowsRemovable, ColumnsRemovable>::solve()
-  {
-    return static_cast<LPImplementation<Number, RowsRemovable, ColumnsRemovable>*>(_implementation)->solve();
-  }
-
-  template class LP<double, true, true>;
-  template class LP<double, true, false>;
-  template class LP<double, false, true>;
-  template class LP<double, false, false>;
-
-#endif /* !IPO_WITH_GUROBI && IPO_WITH_SOPLEX */
-
-#if defined(IPO_WITH_SOPLEX) && defined(IPO_WITH_GMP)
-
-  static mpq_class plusInfinityGMP = soplex::infinity;
-  static mpq_class minusInfinityGMP = -soplex::infinity;
-
-  template <>
-  const mpq_class& LP<mpq_class>::plusInfinity()
-  {
-    return plusInfinityGMP;
-  };
-
-  template <>
-  const mpq_class& LP<mpq_class>::minusInfinity()
-  {
-    return minusInfinityGMP;
-  };
-
-  template class LP<mpq_class, true, true>;
-  template class LP<mpq_class, true, false>;
-  template class LP<mpq_class, false, true>;
-  template class LP<mpq_class, false, false>;
-
-#endif /* IPO_WITH_SOPLEX && IPO_WITH_GMP */
   
-} /* namespace lp */
+#endif /* IPO_DOUBLE_LP */
+
+#if defined(IPO_RATIONAL_LP_SOPLEX)
+  
+  static rational plusInfinityRational = soplex::infinity;
+  static rational minusInfinityRational = -soplex::infinity;
+
+  template <>
+  const rational& LP<rational>::plusInfinity()
+  {
+    return plusInfinityRational;
+  };
+
+  template <>
+  const rational& LP<rational>::minusInfinity()
+  {
+    return minusInfinityRational;
+  };
+
+  template class LP<rational>;
+
+#endif /* IPO_RATIONAL_LP_SOPLEX */
+  
+} /* namespace ipo */

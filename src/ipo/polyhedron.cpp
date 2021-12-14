@@ -754,14 +754,14 @@ namespace ipo
     std::size_t _maxCacheSize;
   };
 
-  template<typename NumberType>
-  Polyhedron<NumberType>::Polyhedron(std::shared_ptr<Space> space, const std::string& name)
-    : OptimizationOracle<NumberType>(name), SeparationOracle<NumberType>(name)
+  template<typename Number>
+  Polyhedron<Number>::Polyhedron(std::shared_ptr<Space> space, const std::string& name)
+    : OptimizationOracle<Number>(name), SeparationOracle<Number>(name)
   {
-    _space = space;
-    std::vector<std::shared_ptr<OptimizationOracle<NumberType>>> optOracles;
-    std::vector<std::shared_ptr<SeparationOracle<NumberType>>> sepaOracles;
-    _implementation = new PolyhedronImplementation<NumberType>(_space, optOracles, sepaOracles);
+    Oracle<Number>::_space = space;
+    std::vector<std::shared_ptr<OptimizationOracle<Number>>> optOracles;
+    std::vector<std::shared_ptr<SeparationOracle<Number>>> sepaOracles;
+    _implementation = new PolyhedronImplementation<Number>(Oracle<Number>::_space, optOracles, sepaOracles);
   }
   
   template <typename Number>
@@ -769,11 +769,11 @@ namespace ipo
     : OptimizationOracle<Number>("Polyhedron for " + optOracle->name()),
     SeparationOracle<Number>("Polyhedron for " + optOracle->name())
   {
-    _space = optOracle->space();
+    Oracle<Number>::_space = optOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<Number>>> optOracles;
     std::vector<std::shared_ptr<SeparationOracle<Number>>> sepaOracles;
     optOracles.push_back(optOracle);
-    _implementation = new PolyhedronImplementation<Number>(_space, optOracles, sepaOracles);
+    _implementation = new PolyhedronImplementation<Number>(Oracle<Number>::_space, optOracles, sepaOracles);
   }
 
   template <typename Number>
@@ -798,12 +798,16 @@ namespace ipo
         query);
   }
 
+#if defined(IPO_DOUBLE)
+  
   template class Polyhedron<double>;
 
-#if defined(IPO_WITH_GMP)
+#endif /* IPO_DOUBLE */
 
-  template class Polyhedron<mpq_class>;
+#if defined(IPO_RATIONAL)
 
-#endif /* IPO_WITH_GMP */
+  template class Polyhedron<rational>;
+
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

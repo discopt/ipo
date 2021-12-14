@@ -63,12 +63,16 @@ namespace ipo
     return response;
   }
 
+#if defined(IPO_DOUBLE)
+
   template class SubmissiveOptimizationOracle<double>;
 
-#if defined(IPO_WITH_GMP)
+#endif /* IPO_DOUBLE */
 
-  template class SubmissiveOptimizationOracle<mpq_class>;
+#if defined(IPO_RATIONAL)
 
-#endif /* IPO_WITH_GMP */
+  template class SubmissiveOptimizationOracle<rational>;
+
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

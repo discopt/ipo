@@ -9,10 +9,6 @@
 #include <limits>
 #include <ostream>
 
-#if defined(IPO_WITH_GMP)
-#include <gmpxx.h>
-#endif /* IPO_WITH_GMP */
-
 namespace ipo
 {
   enum class ConstraintType
@@ -149,9 +145,11 @@ namespace ipo
 
     friend void scaleIntegral(Constraint<double>&);
 
-#if defined(IPO_WITH_GMP)
-    friend void scaleIntegral(Constraint<mpq_class>&);
-#endif /* IPO_WITH_GMP */
+#if defined(IPO_RATIONAL)
+
+    friend void scaleIntegral(Constraint<rational>&);
+
+#endif /* IPO_RATIONAL */
 
   protected:
     T _lhs;
@@ -176,19 +174,19 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  std::ostream& operator<<(std::ostream& stream, const Constraint<mpq_class>& constraint);
+  std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   void scaleIntegral(Constraint<double>& constraint);
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  void scaleIntegral(Constraint<mpq_class>& constraint);
+  void scaleIntegral(Constraint<rational>& constraint);
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 
   template <typename To, typename From>

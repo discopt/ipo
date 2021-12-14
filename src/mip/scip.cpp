@@ -2,11 +2,12 @@
 #include <sstream>
 
 #include <ipo/oracles_scip.hpp>
+#include <ipo/oracles_polar.hpp>
 #include <ipo/projection.hpp>
 #include <ipo/dominant.hpp>
+#include <ipo/submissive.hpp>
 #include <ipo/affine_hull.hpp>
 #include <ipo/lp.hpp>
-#include <ipo/facet.hpp>
 
 int printUsage(const std::string& program)
 {
@@ -16,9 +17,9 @@ int printUsage(const std::string& program)
   std::cout << " -h       Show this help and exit.\n";
   std::cout << " -t TIME  Abort computations after TIME seconds.\n";
   std::cout << "Oracle/polyhedron options:\n";
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  std::cout << " -g       Use exact arithmetic (GMP).\n";
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#if defined(IPO_RATIONAL)
+  std::cout << " -x       Use exact arithmetic oracles instead of double precision.\n";
+#endif /* IPO_RATIONAL */
   std::cout << " -p REGEX Project the polyhedron on all variables matching REGEX.\n";
   std::cout << " -d       Consider the dominant polyhedron.\n";
   std::cout << " -s       Consider the submissive polyhedron.\n";
@@ -38,8 +39,6 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior,
   bool outputInstanceFacets)
 {
-  assert(!useSubmissive);
-
   std::shared_ptr<ipo::OptimizationOracle<Number>> projectionOracle;
   std::shared_ptr<ipo::Projection<Number>> projectionMap;
   if (projectionRegex.empty())
@@ -54,6 +53,13 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     dominantOracle = std::make_shared<ipo::DominantOptimizationOracle<Number>>(projectionOracle);
   else
     dominantOracle = projectionOracle;
+
+  std::shared_ptr<ipo::OptimizationOracle<Number>> submissiveOracle;
+  if (useSubmissive)
+    submissiveOracle = std::make_shared<ipo::SubmissiveOptimizationOracle<Number>>(dominantOracle);
+  else
+    submissiveOracle = dominantOracle;
+
   auto poly = std::make_shared<ipo::Polyhedron<Number>>(dominantOracle);
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
@@ -64,7 +70,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   if (needAffineHull)
     sepaResponse = sepa->getInitial();
   
-  ipo::AffineHullResult<Number> affineHull;
+  ipo::AffineHull<Number> affineHull;
   if (needAffineHull)
   {
     // Extract known equations from a separation oracle.
@@ -106,7 +112,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
     }
   }
-
+  
   if (outputInstanceFacets)
   {
     ipo::LP<Number> lp;
@@ -120,13 +126,11 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         ++scipVar;
         assert(scipVar < baseOracle->space()->dimension());
       }
-      auto column = lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), Number(scip->instanceObjective()[scipVar]),
-        name);
-      assert(column == c);
+      lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), Number(scip->instanceObjective()[scipVar]), name);
     }
     lp.update();
     
-    std::vector<ipo::LPColumn> nonzeroColumns;
+    std::vector<int> nonzeroColumns;
     std::vector<Number> nonzeroCoefficients;
     for (const ipo::Constraint<Number>& cons : sepaResponse.constraints)
     {
@@ -167,12 +171,16 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
     }
 
-    ipo::FacetResult<Number> facetResult;
+    for (std::size_t v = 0; v < poly->space()->dimension(); ++v)
+      std::cout << poly->space()->variable(v) << std::endl;
+
+    auto polarOracle = std::make_shared<ipo::PolarSeparationOracle<Number>>(poly);
+    polarOracle->setAffineHull(affineHull);
 
     while (true)
     {
       auto status = lp.solve();
-      std::cout << "LP status: " << status << "." << std::endl;
+      std::cout << "Main LP status: " << status << "." << std::endl;
       if (status == ipo::LPStatus::OPTIMAL)
       {
         assert(lp.hasPrimalSolution());
@@ -181,8 +189,10 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         {
           std::cout << poly->space()->variable(c) << " = " << solution[c] << std::endl;
         }
-        
-        ipo::separatePoint(poly, affineHull, &solution[0]);
+
+        sepaResponse = polarOracle->separate(&solution[0], true);
+        for (const auto& cons : sepaResponse.constraints)
+          poly->space()->printConstraint(std::cout, cons);
       }
 
       break;
@@ -190,6 +200,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
 //     lp.write("test.lp");
   }
+
 }
 
 
@@ -204,9 +215,9 @@ public:
 
 int main(int argc, char** argv)
 {
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  bool gmp = false;
-#endif /* IPO_WITH_GMP && defined(IPO_WITH_SOPLEX) */
+#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+  bool exact = false;
+#endif /* IPO_DOUBLE && IPO_RATIONAL */
   double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
   std::string projectionRegex = "";
@@ -224,10 +235,10 @@ int main(int argc, char** argv)
       printUsage(argv[0]);
       return EXIT_SUCCESS;
     }
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-    else if (arg == "-g")
-      gmp = true;
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+    else if (arg == "-x")
+      exact = true;
+#endif /* IPO_DOUBLE && IPO_RATIONAL */
     else if (arg == "-t" && a+1 < argc)
     {
       std::stringstream ss(argv[a+1]);
@@ -262,18 +273,25 @@ int main(int argc, char** argv)
   }
 
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-  if (gmp)
+#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+  if (exact)
+#endif /* IPO_DOUBLE && IPO_RATIONAL */
   {
-    run<mpq_class>(scip, scip->getOptimizationOracle<mpq_class>(), scip->getSeparationOracle<mpq_class>(), true,
+#if defined(IPO_RATIONAL)
+    run<ipo::rational>(scip, scip->getOptimizationOracle<ipo::rational>(), scip->getSeparationOracle<ipo::rational>(), true,
       timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior, outputInstanceFacets);
+#endif /* IPO_RATIONAL */
   }
+#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
   else
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_DOUBLE && IPO_RATIONAL */
   {
+#if defined(IPO_DOUBLE)
     run<double>(scip, scip->getOptimizationOracle<double>(), scip->getSeparationOracle<double>(), false,
       timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior, outputInstanceFacets);
+#endif /* IPO_DOUBLE */
   }
+
  
 
 //   // Parameters

@@ -138,7 +138,7 @@ TEST(SCIP, SeparateDouble)
   ASSERT_NEAR(response.constraints[0].rhs(), 1.2, 1.0e-9);
 }
 
-#if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
+#if defined(IPO_RATIONAL_MIP_SCIP)
 
 TEST(SCIP, UnboundedRational)
 {
@@ -168,10 +168,10 @@ TEST(SCIP, UnboundedRational)
   SCIPreleaseVar(scip, &y);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracle<mpq_class>();
+  auto oracle = solver->getOptimizationOracle<ipo::rational>();
 
-  mpq_class obj[] = {1.0, 1.0};
-  ipo::OptimizationOracle<mpq_class>::Query query;
+  ipo::rational obj[] = {1.0, 1.0};
+  ipo::OptimizationOracle<ipo::rational>::Query query;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::UNBOUNDED);
   ASSERT_FALSE(response.hasDualBound);
@@ -180,7 +180,7 @@ TEST(SCIP, UnboundedRational)
   ASSERT_EQ(response.rays[0].vector->begin()->first, 0);
   ASSERT_EQ((response.rays[0].vector->begin()+1)->first, 1);
   ASSERT_EQ(response.rays[0].vector->begin()->second / (response.rays[0].vector->begin()+1)->second,
-    mpq_class(1, 2));
+    ipo::rational(1, 2));
 }
 
 TEST(SCIP, InfeasibleRational)
@@ -209,10 +209,10 @@ TEST(SCIP, InfeasibleRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getOptimizationOracle<mpq_class>();
+  auto oracle = solver->getOptimizationOracle<ipo::rational>();
 
-  mpq_class obj[] = { 1, 2 };
-  ipo::OptimizationOracle<mpq_class>::Query query;
+  ipo::rational obj[] = { 1, 2 };
+  ipo::OptimizationOracle<ipo::rational>::Query query;
   auto response = oracle->maximize(obj, query);
   ASSERT_EQ(response.outcome, ipo::OptimizationOutcome::INFEASIBLE);
   ASSERT_FALSE(response.hasDualBound);
@@ -244,14 +244,14 @@ TEST(SCIP, SeparateRational)
   SCIPreleaseCons(scip, &cons);
 
   auto solver = std::make_shared<ipo::SCIPSolver>(std::move(scip));
-  auto oracle = solver->getSeparationOracle<mpq_class>();
+  auto oracle = solver->getSeparationOracle<ipo::rational>();
 
-  mpq_class vector[] = { 20, 20 };
+  ipo::rational vector[] = { 20, 20 };
   ipo::SeparationQuery query;
   auto response = oracle->separate(vector, true, query);
   ASSERT_FALSE(response.constraints.empty());
   ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
-  ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
+  ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 
   vector[0] = 0.5;
   vector[1] = 0.5;
@@ -261,14 +261,14 @@ TEST(SCIP, SeparateRational)
   response = oracle->separate(vector, false, query);
   ASSERT_FALSE(response.constraints.empty());
   ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
-  ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
+  ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 
   vector[0] = 3.0;
   vector[1] = -3.0;
   response = oracle->separate(vector, true, query);
   ASSERT_FALSE(response.constraints.empty());
   ASSERT_EQ(response.constraints[0].type(), ipo::ConstraintType::LESS_OR_EQUAL);
-  ASSERT_EQ(response.constraints[0].rhs(), mpq_class(2));
+  ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 }
 
-#endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
+#endif /* IPO_RATIONAL_MIP_SCIP */

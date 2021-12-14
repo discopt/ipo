@@ -130,9 +130,9 @@ namespace ipo
     return str.str();
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  void Space::printVector(std::ostream& str, const sparse_vector<mpq_class>& vector,
+  void Space::printVector(std::ostream& str, const sparse_vector<rational>& vector,
     bool rounded) const
   {
     if (vector.empty())
@@ -141,15 +141,15 @@ namespace ipo
       return;
     }
   
-    sparse_vector<mpq_class>::const_iterator iter = vector.begin();
+    sparse_vector<rational>::const_iterator iter = vector.begin();
     assert(iter != vector.end());
 
     if (rounded)
     {
-      str << '(' << _variableNames[iter->first] << '=' << iter->second.get_d();
+      str << '(' << _variableNames[iter->first] << '=' << iter->second.convert_to<double>();
       ++iter;
       for (; iter != vector.end(); ++iter)
-        str << ',' << _variableNames[iter->first] << '=' << iter->second.get_d();
+        str << ',' << _variableNames[iter->first] << '=' << iter->second.convert_to<double>();
       str << ')';
     }
     else
@@ -162,14 +162,14 @@ namespace ipo
     }
   }   
 
-  std::string Space::printVector(const sparse_vector<mpq_class>& vector, bool rounded) const
+  std::string Space::printVector(const sparse_vector<rational>& vector, bool rounded) const
   {
     std::stringstream str;
     printVector(str, vector, rounded);
     return str.str();
   }
 
-  void Space::printLinearForm(std::ostream& str, const sparse_vector<mpq_class>& vector,
+  void Space::printLinearForm(std::ostream& str, const sparse_vector<rational>& vector,
       bool rounded) const
   {
     if (vector.empty())
@@ -178,15 +178,15 @@ namespace ipo
       return;
     }
 
-    sparse_vector<mpq_class>::const_iterator iter = vector.begin();
+    sparse_vector<rational>::const_iterator iter = vector.begin();
     assert(iter != vector.end());
-    const mpq_class& x0 = iter->second;
+    const rational& x0 = iter->second;
     if (x0 == -1)
       str << '-';
     else if (x0 != 1)
     {
       if (rounded)
-        str << x0.get_d();
+        str << x0.convert_to<double>();
       else
         str << x0;
     }
@@ -197,7 +197,7 @@ namespace ipo
     {
       for (; iter != vector.end(); ++iter)
       {
-        double xi = iter->second.get_d();
+        double xi = iter->second.convert_to<double>();
         if (xi == 1)
           str << " + ";
         else if (xi == -1)
@@ -213,7 +213,7 @@ namespace ipo
     {
       for (; iter != vector.end(); ++iter)
       {
-        const mpq_class& xi = iter->second;
+        const rational& xi = iter->second;
         if (xi == 1)
           str << " + ";
         else if (xi == -1)
@@ -227,14 +227,14 @@ namespace ipo
     }
   }
 
-  std::string Space::printLinearForm(const sparse_vector<mpq_class>& vector, bool rounded) const
+  std::string Space::printLinearForm(const sparse_vector<rational>& vector, bool rounded) const
   {
     std::stringstream str;
     printLinearForm(str, vector, rounded);
     return str.str();
   }
 
-  void Space::printConstraint(std::ostream& str, const Constraint<mpq_class>& constraint,
+  void Space::printConstraint(std::ostream& str, const Constraint<rational>& constraint,
     bool rounded) const
   {
     switch (constraint.type())
@@ -259,13 +259,13 @@ namespace ipo
     }
   }
 
-  std::string Space::printConstraint(const Constraint<mpq_class>& constraint, bool rounded) const
+  std::string Space::printConstraint(const Constraint<rational>& constraint, bool rounded) const
   {
     std::stringstream str;
     printConstraint(str, constraint, rounded);
     return str.str();
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 }

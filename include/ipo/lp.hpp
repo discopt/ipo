@@ -1,13 +1,17 @@
 #pragma once
 
-#include <vector>
-
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
+#include <ipo/arithmetic.hpp>
+
+#include <vector>
+#include <iostream>
+
+#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
 
 namespace ipo
 {
-
+  
   enum LPSense
   {
     MINIMIZE = -1,
@@ -27,10 +31,28 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, LPStatus status);
 
-  typedef std::size_t LPRow;
-  typedef std::size_t LPColumn;
+  struct LPKey
+  {
+    int id;
 
-  template <typename NumberType, bool RowsRemovable = false, bool ColumnsRemovable = false>
+    LPKey()
+      : id(-1)
+    {
+
+    }
+
+    LPKey(int id)
+    {
+      this->id = id;
+    }
+
+    bool isValid() const
+    {
+      return id;
+    }
+  };
+
+  template <typename NumberType>
   class LP
   {
   public:
@@ -54,48 +76,47 @@ namespace ipo
 
     bool hasPrimalSolution() const;
 
-    Number getPrimalValue(LPColumn column) const;
+    Number getPrimalValue(int column) const;
 
-    std::vector<Number> getPrimalSolution(const std::vector<LPColumn>& columns = std::vector<LPColumn>()) const;
+    std::vector<Number> getPrimalSolution(const std::vector<int>& columns = std::vector<int>()) const;
 
     bool hasDualSolution() const;
 
-    Number getDualValue(LPRow row) const;
+    Number getDualValue(int row) const;
 
     void setSense(LPSense newSense);
-    
-    LPColumn addColumn(
+
+    LPKey addColumn(
       const Number& lowerBound,
       const Number& upperBound,
       const Number& objectiveCoefficient,
-      const std::string& name = "",
-      LPColumn unusedColumn = std::numeric_limits<std::size_t>::max());
+      const std::string& name = "");
 
-    LPRow addRow(
-      const Number& lhs,
-      std::size_t numNonzeros,
-      const LPColumn* nonzeroVariables,
-      const Number* nonzeroCoefficients,
-      const Number& rhs,
-      const std::string& name = "",
-      LPRow unusedRow = std::numeric_limits<std::size_t>::max());
+    LPKey addRow(const Number& lhs, std::size_t numNonzeros, const int* nonzeroVariables,
+      const Number* nonzeroCoefficients, const Number& rhs, const std::string& name = "");
 
     void update();
 
-    void changeUpper(LPColumn column, const Number& newUpperBound);
+    void changeUpper(int column, const Number& newUpperBound);
 
-    void changeLower(LPColumn column, const Number& newLowerBound);
+    void changeLower(int column, const Number& newLowerBound);
 
-    void changeBounds(LPColumn column, const Number& newLowerBound, const Number& newUpperBound);
+    void changeBounds(int column, const Number& newLowerBound, const Number& newUpperBound);
     
-    void changeObjective(LPColumn column, const Number& newObjectiveCoefficient);
+    void changeObjective(int column, const Number& newObjectiveCoefficient);
+
+    void changeRow(LPKey rowKey, const Number& lhs, std::size_t numNonzeros, const int* nonzeroVariables,
+      const Number* nonzeroCoefficients, const Number& rhs);
 
     void write(const std::string& fileName) const;
 
     LPStatus solve();
 
   private:
+
     void* _implementation;
   };
 
 } /* namespace ipo */
+
+#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */

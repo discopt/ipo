@@ -18,19 +18,19 @@ namespace ipo
   }
 
   
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   template <>
-  OptimizationResponse<mpq_class> OptimizationOracle<mpq_class>::maximizeDouble(
-    const double* objectiveVector, const OptimizationQuery<mpq_class>& query)
+  OptimizationResponse<rational> OptimizationOracle<rational>::maximizeDouble(
+    const double* objectiveVector, const OptimizationQuery<rational>& query)
   {
-    std::vector<mpq_class> convertedObjectiveVector(this->_space->dimension());
+    std::vector<rational> convertedObjectiveVector(this->_space->dimension());
     for (std::size_t v = 0; v < this->_space->dimension(); ++v)
       convertedObjectiveVector[v] = objectiveVector[v];
     return maximize(&convertedObjectiveVector[0], query);
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   template <typename R>
   static std::ostream& printOptimizationResponse(std::ostream& stream,
@@ -66,14 +66,14 @@ namespace ipo
     return printOptimizationResponse(stream, response);
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<mpq_class>& response)
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response)
   {
     return printOptimizationResponse(stream, response);
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   template <typename Number>
   SeparationOracle<Number>::SeparationOracle(const std::string& name)
@@ -96,28 +96,28 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
   template <>
-  SeparationResponse<mpq_class> SeparationOracle<mpq_class>::separateDouble(const double* vector,
+  SeparationResponse<rational> SeparationOracle<rational>::separateDouble(const double* vector,
     bool isPoint, const Query& query)
   {
-    std::vector<mpq_class> rationalVector(_space->dimension());
+    std::vector<rational> rationalVector(_space->dimension());
     for (std::size_t v = 0; v < _space->dimension(); ++v)
       rationalVector[v] = reconstructRational(vector[v]);
     return separate(&rationalVector[0], isPoint, query);
   }
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
   template class OptimizationOracle<double>;
   template class SeparationOracle<double>;
 
-#if defined(IPO_WITH_GMP)
+#if defined(IPO_RATIONAL)
 
-  template class OptimizationOracle<mpq_class>;
-  template class SeparationOracle<mpq_class>;
+  template class OptimizationOracle<rational>;
+  template class SeparationOracle<rational>;
 
-#endif /* IPO_WITH_GMP */
+#endif /* IPO_RATIONAL */
 
 } /* namespace ipo */

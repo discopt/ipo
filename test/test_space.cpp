@@ -31,7 +31,5 @@ TEST(LinearAlgebra, Space)
     vector.push_back(2, 1.0);
     ASSERT_EQ(space1.printVector(vector), "(y=-2,z=1)");
     ASSERT_EQ(space1.printLinearForm(vector), "-2<y> + <z>");
-
-    
   }
 }

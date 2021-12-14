@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.5)
 
-project(IPO
-   VERSION 2.0
-   LANGUAGES CXX)
+project(IPO VERSION 2.0 LANGUAGES CXX)
    
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
-option(GMP "Use GMP" ON)
+option(DOUBLE "Compile algorithms with double arithmetic." ON)
+option(RATIONAL "Compile algorithms with rational arithmetic; requires at least GMP and Boost 1.65" ON)
+option(SCIP "Use SCIP as a MIP solver." ON)
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
@@ -16,17 +16,82 @@ list(INSERT CMAKE_MODULE_PATH 0 ${CMAKE_SOURCE_DIR}/cmake)
 
 # Set default build type.
 if(NOT CMAKE_BUILD_TYPE)
-   set(CMAKE_BUILD_TYPE "Release"
-      CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
+  set(CMAKE_BUILD_TYPE "Release"
+    CACHE STRING "Choose the type of build, options are: Debug Release RelWithDebInfo MinSizeRel." FORCE)
 endif()
 message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Find dependencies.
-if(GMP)
-  find_package(GMPXX)
-  set(IPO_WITH_GMP ${GMP_FOUND} AND ${GMPXX_FOUND})
+
+if(DOUBLE)
+  set(IPO_DOUBLE TRUE)
 else()
-  set(IPO_WITH_GMP FALSE)
+  set(IPO_DOUBLE FALSE)
+endif()
+
+set(IPO_DOUBLE_LP FALSE)
+set(IPO_DOUBLE_LP_SOPLEX FALSE)
+set(IPO_DOUBLE_LP_GUROBI FALSE)
+set(IPO_DOUBLE_MIP FALSE)
+set(IPO_DOUBLE_MIP_SCIP FALSE)
+set(IPO_DOUBLE_MIP_GUROBI FALSE)
+set(IPO_RATIONAL FALSE)
+set(IPO_RATIONAL_LP FALSE)
+set(IPO_RATIONAL_LP_SOPLEX FALSE)
+set(IPO_RATIONAL_MIP FALSE)
+set(IPO_RATIONAL_MIP_SCIP FALSE)
+set(IPO_RATIONAL_MIP_GUROBI FALSE)
+
+if(RATIONAL)
+  find_package(GMP)
+  if(${GMP_FOUND})
+    find_package(Boost 1.65.0)
+    if (${Boost_FOUND})
+      set(IPO_RATIONAL TRUE)
+    else()
+      message(SEND_ERROR "ERROR: Option RATIONAL requires Boost library version 1.65.0 or greater.")
+      set(IPO_RATIONAL FALSE)
+    endif()
+  else()
+    message(SEND_ERROR "ERROR: Option RATIONAL requires GMP library.")
+    set(IPO_RATIONAL FALSE)
+  endif()
+else()
+  set(IPO_RATIONAL FALSE)
+endif()
+
+if(IPO_DOUBLE OR IPO_RATIONAL) # Search for SoPlex if requested.
+  find_package(SOPLEX QUIET)
+  if(SOPLEX_FOUND)
+    message(STATUS "Found SoPlex version ${SOPLEX_VERSION}.")
+    if(IPO_DOUBLE)
+      set(IPO_DOUBLE_LP TRUE)
+      set(IPO_DOUBLE_LP_SOPLEX TRUE)
+    endif()
+    if(IPO_RATIONAL)
+      set(IPO_RATIONAL_LP TRUE)
+      set(IPO_RATIONAL_LP_SOPLEX TRUE)
+    endif()
+  else()
+    message(STATUS "Could NOT find SoPlex. Please set SOPLEX_DIR to point to build or installation directory.")
+  endif()
+endif()
+
+if(SCIP AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for SCIP if requested.
+  find_package(SCIP QUIET)
+  if(SCIP_FOUND)
+    message(STATUS "Found SCIP version ${SCIP_VERSION} with include dir ${SCIP_INCLUDE_DIRS}.")
+    if(IPO_DOUBLE)
+      set(IPO_DOUBLE_MIP TRUE)
+      set(IPO_DOUBLE_MIP_SCIP TRUE)
+    endif()
+    if(IPO_RATIONAL_LP)
+      set(IPO_RATIONAL_MIP TRUE)
+      set(IPO_RATIONAL_MIP_SCIP TRUE)
+    endif()
+  else()
+    message(STATUS "Could NOT find SCIP. Please set SCIP_DIR to point to build or installation directory.")
+  endif()
 endif()
 
 # Target for the IPO library.
@@ -35,56 +100,27 @@ add_library(ipo
   src/ipo/arithmetic.cpp
   src/ipo/constraint.cpp
   src/ipo/dominant.cpp
-  src/ipo/facet.cpp
   src/ipo/lp.cpp
   src/ipo/lu.cpp
-  src/ipo/oracles.cpp
   src/ipo/mip.cpp
+  src/ipo/oracles.cpp
   src/ipo/oracles_forest.cpp
+  src/ipo/oracles_polar.cpp
   src/ipo/polyhedron.cpp
   src/ipo/projection.cpp
   src/ipo/space.cpp
   src/ipo/submissive.cpp
 )
 
-# SoPlex
-find_package(SOPLEX QUIET)
-if(SOPLEX_FOUND)
-  message(STATUS "Found SoPlex version ${SOPLEX_VERSION}.")
-else()
-  message(STATUS
-    "Could NOT find SoPlex. Please set SOPLEX_DIR to point to build or installation directory.")
-endif()
-set(IPO_WITH_SOPLEX ${SOPLEX_FOUND})
-if(SOPLEX_FOUND)
-  target_link_libraries(ipo
-    PRIVATE libsoplex-pic
-  )
+# Link to/include SoPlex.
+if(IPO_DOUBLE_LP_SOPLEX OR IPO_RATIONAL_LP_SOPLEX)
+  target_link_libraries(ipo PRIVATE libsoplex-pic)
   # TODO: target_include_directories(ipo ... did not work here.
-  include_directories(
-    ${SOPLEX_INCLUDE_DIRS}
-  )
+  include_directories(${SOPLEX_INCLUDE_DIRS})
 endif()
 
-# LP solver.
-if (SOPLEX_FOUND)
-  set(LP_DOUBLE TRUE)
-  set(LP_DOUBLE_SOPLEX TRUE)
-  set(LP_GMP TRUE)
-  set(LP_GMP_SOPLEX TRUE)
-endif()
-
-# SCIP.
-find_package(SCIP QUIET)
-if(SCIP_FOUND)
-  message(STATUS "Found SCIP version ${SCIP_VERSION}.")
-else()
-  message(STATUS
-    "Could NOT find SCIP. Please set SCIP_DIR to point to build or installation directory.")
-endif()
-set(IPO_WITH_SCIP ${SCIP_FOUND})
-if(SCIP_FOUND)
-  message(STATUS "SCIP found for include dir ${SCIP_INCLUDE_DIRS}")
+# Link to/include SCIP.
+if (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
   target_sources(ipo
     PRIVATE src/ipo/oracles_scip.cpp
   )
@@ -97,14 +133,11 @@ if(SCIP_FOUND)
   )
 endif()
 
-# Target for the ipo-mip binary.
-add_executable(ipo_mip
-  src/mip/main.cpp)
-target_link_libraries(ipo_mip
-  PRIVATE
-    IPO::IPO
-)
-set_target_properties(ipo_mip PROPERTIES OUTPUT_NAME ipo-mip)
+if(SCIP) # The ipo-scip binary.
+  add_executable(ipo_scip src/mip/scip.cpp)
+  target_link_libraries(ipo_scip PRIVATE IPO::IPO)
+  set_target_properties(ipo_scip PROPERTIES OUTPUT_NAME ipo-scip)
+endif()
 
 # Write compilation settings to ipo/config.hpp.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ipo/config.hpp.in ${CMAKE_BINARY_DIR}/ipo/config.hpp @ONLY)
@@ -133,21 +166,19 @@ target_include_directories(ipo
 target_compile_features(ipo PRIVATE cxx_auto_type)
 target_compile_options(ipo PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wall>)
 
-if(GMPXX_FOUND)
+if(IPO_RATIONAL)
   target_link_libraries(ipo
     INTERFACE
       GMP::GMP
-      GMP::GMPXX
   )
 endif()
 
 ### Installation ###
 include(GNUInstallDirs)
 
-install(TARGETS ipo_mip
-  RUNTIME
-    DESTINATION bin
-)
+if(SCIP)
+  install(TARGETS ipo_scip RUNTIME DESTINATION bin)
+endif()
 
 install(TARGETS ipo
   EXPORT ipo-targets
