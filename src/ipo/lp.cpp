@@ -292,6 +292,7 @@ namespace ipo
       _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
       _spx.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
       _spx.setRealParam(soplex::SoPlex::FEASTOL, 0.0);
+      _spx.setRealParam(soplex::SoPlex::OPTTOL, 0.0);
       _spx.setBoolParam(soplex::SoPlex::RATREC, true);
       _spx.setBoolParam(soplex::SoPlex::RATFAC, true);
     }
@@ -397,6 +398,7 @@ namespace ipo
     LPKey addRow(const rational& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
       const rational* nonzeroCoefficients, const rational& rhs, const std::string& name)
     {
+      assert(lhs <= rhs);
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
         _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);

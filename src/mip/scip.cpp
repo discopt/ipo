@@ -118,6 +118,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     ipo::LP<Number> lp;
     lp.setSense(ipo::LPSense::MAXIMIZE);
     std::size_t scipVar = 0;
+    bool first = true;
     for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
     {
       const std::string& name = poly->space()->variable(c);
@@ -127,7 +128,14 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         assert(scipVar < baseOracle->space()->dimension());
       }
       lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), Number(scip->instanceObjective()[scipVar]), name);
+      if (scip->instanceObjective()[scipVar])
+      {
+        std::cout << (first ? "Objective: " : " + ") << scip->instanceObjective()[scipVar] << "*"
+          << poly->space()->variable(scipVar);
+        first = false;
+      }
     }
+    std::cout << std::endl;
     lp.update();
     
     std::vector<int> nonzeroColumns;
@@ -194,7 +202,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       std::cout << "Main LP status: " << status << "." << std::endl;
       if (status == ipo::LPStatus::OPTIMAL)
       {
-        std::cout << "The optimum is " << lp.getObjectiveValue() << "." << std::endl;
+        std::cout << "The optimum is " << ipo::convertNumber<double>(lp.getObjectiveValue()) << "="
+          << lp.getObjectiveValue() << "." << std::endl;
         assert(lp.hasPrimalSolution());
         std::vector<Number> solution = lp.getPrimalSolution();
         for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
@@ -202,27 +211,32 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         std::cout << std::endl;
 
         sepaResponse = polarOracle->separate(&solution[0], true);
+        std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints:" << std::endl;
         for (const auto& cons : sepaResponse.constraints)
+        {
+          std::cout << "Adding constraint ";
           poly->space()->printConstraint(std::cout, cons);
+          std::cout << std::endl;
+          nonzeroColumns.clear();
+          nonzeroCoefficients.clear();
+          for (const auto& iter : cons.vector())
+          {
+            nonzeroColumns.push_back(iter.first);
+            nonzeroCoefficients.push_back(iter.second);
+          }
+          lp.addRow(cons.hasLhs() ? cons.lhs() : lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
+            &nonzeroCoefficients[0], cons.hasRhs() ? cons.rhs() : lp.plusInfinity());
+        }
+        if (sepaResponse.constraints.empty())
+          break;
       }
-
-      break;
+      else
+      {
+        assert(false);
+      }
     }
-
-//     lp.write("test.lp");
   }
-
 }
-
-
-class Bar
-{
-public:
-  Bar()
-  {
-    std::cout << "Foo" << std::endl;
-  }
-};
 
 int main(int argc, char** argv)
 {

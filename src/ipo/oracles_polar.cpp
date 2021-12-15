@@ -1,3 +1,5 @@
+#define IPO_DEBUG /* Uncomment to debug this file. */
+
 #include <ipo/oracles_polar.hpp>
 
 #include <ipo/lp.hpp>
@@ -29,13 +31,19 @@ namespace ipo
     {
       if (affineHull.dimension < 0)
         throw std::runtime_error("Trying to initialize PolarSeparationOracle for an infeasible polyhedron.");
-      
+
+#if defined(IPO_DEBUG)
+      std::cout << "Adding " << affineHull.points.size() << " points and " << affineHull.rays.size()
+        << " rays from affine hull." << std::endl;
+#endif /* IPO_DEBUG */
+
       std::vector<int> nonzeroColumns;
       std::vector<Number> nonzeroCoefficients;
-
       for (const auto& point : affineHull.points)
       {
+#if defined(IPO_DEBUG)
         std::cout << _optOracle->space()->printVector(*point) << std::endl;
+#endif /* IPO_DEBUG */
         nonzeroColumns.clear();
         nonzeroCoefficients.clear();
         for (const auto& iter : *point)
@@ -50,7 +58,9 @@ namespace ipo
       }
       for (const auto& ray : affineHull.rays)
       {
+#if defined(IPO_DEBUG)
         std::cout << _optOracle->space()->printVector(*ray) << std::endl;
+#endif /* IPO_DEBUG */
         nonzeroColumns.clear();
         nonzeroCoefficients.clear();
         for (const auto& iter : *ray)
@@ -114,19 +124,26 @@ namespace ipo
 
       while (true)
       {
-        _lp.write("separate.lp");
-
+#if defined(IPO_DEBUG)
         std::cout << "Solving Polar LP with " << _lp.numRows() << " constraints and " << _lp.numColumns()
           << " columns..." << std::flush;
+        _lp.write("PolarSeparationOracle.lp");
+#endif /* IPO_DEBUG */
         
         auto status = _lp.solve();
 
+#if defined(IPO_DEBUG)
         std::cout << " done. Status: " << status << "." << std::endl;
+#endif /* IPO_DEBUG */
         if (status == LPStatus::OPTIMAL)
         {
+#if defined(IPO_DEBUG)
           std::cout << "The (potentially invalid) inequality has violation " << convertNumber<double>(_lp.getObjectiveValue()) << "." << std::endl;
+#endif /* IPO_DEBUG */
           assert(_lp.hasPrimalSolution());
           std::vector<Number> solution = _lp.getPrimalSolution();
+
+#if defined(IPO_DEBUG)
           bool first = true;
           for (std::size_t c = 0; c < n; ++c)
           {
@@ -137,24 +154,33 @@ namespace ipo
             }
           }
           std::cout << " <= " << convertNumber<double>(solution[n]) << " = " << solution[n] << std::endl;
+#endif /* IPO_DEBUG */
 
           OptimizationQuery<Number> optQuery;
           optQuery.setMinPrimalBound(solution[n]);
+
+#if defined(IPO_DEBUG)
           std::cout << "Calling optimization oracle." << std::endl;
+#endif /* IPO_DEBUG */
           OptimizationResponse<Number> optResponse = _optOracle->maximize(&solution[0], optQuery);
 
+          auto violation = optResponse.primalBound - solution[n];
           if (optResponse.outcome == OptimizationOutcome::UNBOUNDED ||
-            (optResponse.outcome == OptimizationOutcome::FEASIBLE && (optResponse.primalBound > solution[n])))
+            (optResponse.outcome == OptimizationOutcome::FEASIBLE && violation > 0))
           {
+#if defined(IPO_DEBUG)
             std::cout << "Optimization oracle found a solution that violates the inequality by "
-              << convertNumber<double>(optResponse.primalBound - solution[n]) << " = "
-              << (optResponse.primalBound - solution[n]) << "." << std::endl;
+              << convertNumber<double>(violation) << " = "
+              << (violation) << "." << std::endl;
+#endif /* IPO_DEBUG */
             std::vector<int> nonzeroColumns;
             std::vector<Number> nonzeroCoefficients;
             for (const auto& point : optResponse.points)
             {
+#if defined(IPO_DEBUG)
               std::cout << _optOracle->space()->printVector(point.vector) << " with value "
                 << convertNumber<double>(point.objectiveValue) << std::endl;
+#endif /* IPO_DEBUG */
               nonzeroColumns.clear();
               nonzeroCoefficients.clear();
               for (const auto& iter : *point.vector)
@@ -169,7 +195,9 @@ namespace ipo
             }
             for (const auto& ray : optResponse.rays)
             {
+#if defined(IPO_DEBUG)
               std::cout << _optOracle->space()->printVector(ray.vector) << std::endl;
+#endif /* IPO_DEBUG */
               nonzeroColumns.clear();
               nonzeroCoefficients.clear();
               for (const auto& iter : *ray.vector)
@@ -183,7 +211,19 @@ namespace ipo
           }
           else
           {
+#if defined(IPO_DEBUG)
             std::cout << "Optimization oracle proved validity of inequality." << std::endl;
+#endif /* IPO_DEBUG */
+            if (_lp.getObjectiveValue() > 0)
+            {
+              auto vector = std::make_shared<sparse_vector<Number>>();
+              for (std::size_t v = 0; v < n; ++v)
+              {
+                if (solution[v])
+                  vector->push_back(v, solution[v]);
+              }
+              response.constraints.emplace_back(Constraint<Number>(vector, solution[n]));
+            }
             return response;
           }
         }

@@ -14,6 +14,7 @@ add_executable(ipo_gtest
   test_main.cpp
   test_oracles_forest.cpp
   test_projection.cpp
+  test_polar.cpp
   test_space.cpp
   test_submissive.cpp)
 
