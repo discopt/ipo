@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/polyhedron.hpp>
 
@@ -120,18 +120,17 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
-      double threshold;
-      if (query.hasMinPrimalBound())
-        threshold = convertNumber<double>(query.minPrimalBound());
-      else
-        threshold = -std::numeric_limits<double>::infinity();
       for (auto& pointProduct : _implementation->_pointProducts)
       {
         Number product = 0;
         for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
           product += objectiveVector[iter.first] * iter.second;
 
-        if (product <= threshold)
+#if defined(IPO_DEBUG)
+        std::cout << "Product with cached point is " << convertNumber<double>(product) << std::endl;
+#endif /* IPO_DEBUG */
+
+        if (query.hasMinPrimalBound() && (product <= query.minPrimalBound()))
           break;
 
         response.points.push_back(typename OptimizationResponse<Number>::Point(
@@ -786,8 +785,7 @@ namespace ipo
   OptimizationResponse<Number> Polyhedron<Number>::maximize(
     const Number* objectiveVector, const OptimizationQuery<Number>& query)
   {
-    return static_cast<PolyhedronImplementation<Number>*>(_implementation)->maximize(objectiveVector,
-        query);
+    return static_cast<PolyhedronImplementation<Number>*>(_implementation)->maximize(objectiveVector, query);
   }
 
   template <typename NumberType>

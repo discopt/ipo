@@ -112,7 +112,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
     }
   }
-  
+
   if (outputInstanceFacets)
   {
     ipo::LP<Number> lp;
@@ -171,8 +171,19 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
     }
 
-    for (std::size_t v = 0; v < poly->space()->dimension(); ++v)
-      std::cout << poly->space()->variable(v) << std::endl;
+    // Add new equations from affine hull computation.
+    for (const auto& equation : affineHull.equations)
+    {
+      Number rhs = equation.rhs();
+      nonzeroColumns.clear();
+      nonzeroCoefficients.clear();
+      for (const auto& iter : equation.vector())
+      {
+        nonzeroColumns.push_back(iter.first);
+        nonzeroCoefficients.push_back(iter.second);
+      }
+      lp.addRow(rhs, nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], rhs);
+    }
 
     auto polarOracle = std::make_shared<ipo::PolarSeparationOracle<Number>>(poly);
     polarOracle->setAffineHull(affineHull);
@@ -183,12 +194,12 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       std::cout << "Main LP status: " << status << "." << std::endl;
       if (status == ipo::LPStatus::OPTIMAL)
       {
+        std::cout << "The optimum is " << lp.getObjectiveValue() << "." << std::endl;
         assert(lp.hasPrimalSolution());
         std::vector<Number> solution = lp.getPrimalSolution();
         for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
-        {
-          std::cout << poly->space()->variable(c) << " = " << solution[c] << std::endl;
-        }
+          std::cout << (c == 0 ? "Solution vector: " : ", ") << poly->space()->variable(c) << "=" << solution[c];
+        std::cout << std::endl;
 
         sepaResponse = polarOracle->separate(&solution[0], true);
         for (const auto& cons : sepaResponse.constraints)

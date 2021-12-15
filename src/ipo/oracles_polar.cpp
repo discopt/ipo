@@ -27,6 +27,9 @@ namespace ipo
 
     void setAffineHull(const AffineHull<Number>& affineHull)
     {
+      if (affineHull.dimension < 0)
+        throw std::runtime_error("Trying to initialize PolarSeparationOracle for an infeasible polyhedron.");
+      
       std::vector<int> nonzeroColumns;
       std::vector<Number> nonzeroCoefficients;
 
@@ -109,26 +112,85 @@ namespace ipo
       _lp.changeRow(_normalizationRow, _lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
         &nonzeroCoefficients[0], 1);
 
-      _lp.write("separate.lp");
-
       while (true)
       {
+        _lp.write("separate.lp");
+
+        std::cout << "Solving Polar LP with " << _lp.numRows() << " constraints and " << _lp.numColumns()
+          << " columns..." << std::flush;
+        
         auto status = _lp.solve();
 
-        std::cout << "LP status: " << status << "." << std::endl;
+        std::cout << " done. Status: " << status << "." << std::endl;
         if (status == LPStatus::OPTIMAL)
         {
-          std::cout << "The constraint violation is " << convertNumber<double>(_lp.getObjectiveValue()) << "." << std::endl;
+          std::cout << "The (potentially invalid) inequality has violation " << convertNumber<double>(_lp.getObjectiveValue()) << "." << std::endl;
           assert(_lp.hasPrimalSolution());
           std::vector<Number> solution = _lp.getPrimalSolution();
+          bool first = true;
           for (std::size_t c = 0; c < n; ++c)
           {
-            std::cout << _optOracle->space()->variable(c) << " = " << solution[c] << std::endl;
+            if (solution[c])
+            {
+              std::cout << (first ? "Coefficients: " : " + ") << solution[c] << "*" << _optOracle->space()->variable(c);
+              first = false;
+            }
           }
-          std::cout << "beta = " << solution[n] << std::endl;
-        }
+          std::cout << " <= " << convertNumber<double>(solution[n]) << " = " << solution[n] << std::endl;
 
-        break;
+          OptimizationQuery<Number> optQuery;
+          optQuery.setMinPrimalBound(solution[n]);
+          std::cout << "Calling optimization oracle." << std::endl;
+          OptimizationResponse<Number> optResponse = _optOracle->maximize(&solution[0], optQuery);
+
+          if (optResponse.outcome == OptimizationOutcome::UNBOUNDED ||
+            (optResponse.outcome == OptimizationOutcome::FEASIBLE && (optResponse.primalBound > solution[n])))
+          {
+            std::cout << "Optimization oracle found a solution that violates the inequality by "
+              << convertNumber<double>(optResponse.primalBound - solution[n]) << " = "
+              << (optResponse.primalBound - solution[n]) << "." << std::endl;
+            std::vector<int> nonzeroColumns;
+            std::vector<Number> nonzeroCoefficients;
+            for (const auto& point : optResponse.points)
+            {
+              std::cout << _optOracle->space()->printVector(point.vector) << " with value "
+                << convertNumber<double>(point.objectiveValue) << std::endl;
+              nonzeroColumns.clear();
+              nonzeroCoefficients.clear();
+              for (const auto& iter : *point.vector)
+              {
+                nonzeroColumns.push_back(iter.first);
+                nonzeroCoefficients.push_back(iter.second);
+                _interior[iter.first] += iter.second;
+              }
+              nonzeroColumns.push_back(_interior.size());
+              nonzeroCoefficients.push_back(-1);
+              _lp.addRow(_lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
+            }
+            for (const auto& ray : optResponse.rays)
+            {
+              std::cout << _optOracle->space()->printVector(ray.vector) << std::endl;
+              nonzeroColumns.clear();
+              nonzeroCoefficients.clear();
+              for (const auto& iter : *ray.vector)
+              {
+                nonzeroColumns.push_back(iter.first);
+                nonzeroCoefficients.push_back(iter.second);
+                _interior[iter.first] += iter.second;
+              }
+              _lp.addRow(_lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
+            }
+          }
+          else
+          {
+            std::cout << "Optimization oracle proved validity of inequality." << std::endl;
+            return response;
+          }
+        }
+        else
+        {
+          assert(false);
+        }
       }
 
       return response;
@@ -184,153 +246,5 @@ namespace ipo
   template class PolarSeparationOracle<rational>;
 
 #endif /* IPO_RATIONAL_LP */
-  
-//   SeparationQuery::SeparationQuery()
-//     : epsilonConstraints(1.0e-6), timeLimit(std::numeric_limits<double>::infinity())
-//   {
-// 
-//   }
-// 
-//   SeparationQuery& SeparationQuery::operator=(const SeparationQuery& other)
-//   {
-//     epsilonConstraints = other.epsilonConstraints;
-//     timeLimit = other.timeLimit;
-//     return *this;
-//   }
-
-//   template <typename Number>
-//   Separated<Number>::Separated()
-//     : constraint(alwaysSatisfiedConstraint<Number>()), timeTotal(0.0)
-//   {
-// 
-//   }
-// 
-//   template <typename Number>
-//   Separated<Number>::Separated(Separated<Number>&& other)
-//     : constraint(std::move(other.constraint)), timeTotal(other.timeTotal), points(std::move(other.points)),
-//     rays(std::move(other.rays))
-//   {
-// 
-//   }
-// 
-//   template <typename Number>
-//   Separated<Number>& Separated<Number>::operator=(const Separated<Number>& other)
-//   {
-//     constraint = other.constraint;
-//     timeTotal = other.timeTotal;
-//     points = other.points;
-//     rays = other.rays;
-//     return *this;
-//   }
-// 
-//   template <typename Number>
-//   Separated<Number>& Separated<Number>::operator=(Separated<Number>&& other)
-//   {
-//     constraint = std::move(other.constraint);
-//     timeTotal = other.timeTotal;
-//     points = std::move(other.points);
-//     rays = std::move(other.rays);
-//     return *this;
-//   }
-// 
-//   template class Separated<double>;
-// 
-// #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-// 
-//   template class Separated<mpq_class>;
-// 
-// #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
-// 
-//   template <typename Number>
-//   Separated<Number> separatePoint(std::shared_ptr<Polyhedron<Number>> polyhedron,
-//     const AffineHullResult<Number>& affineHull, const Number* point, const SeparationQuery& query)
-//   {
-//     Separated<Number> result;
-// 
-//     LP<Number> lp;
-//     lp.setSense(ipo::LPSense::MAXIMIZE);
-//     size_t n = polyhedron->space()->dimension();
-//     for (size_t v = 0; v < n; ++v)
-//       lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), point[v], "alpha_" + polyhedron->space()->variable(v));
-//     ipo::LPColumn beta = lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), -1, "beta");
-// 
-//     std::vector<Number> interiorPoint(n,0);
-//     std::vector<ipo::LPColumn> nonzeroColumns;
-//     std::vector<Number> nonzeroCoefficients;
-// 
-//     for (const auto& point : affineHull.points)
-//     {
-//       std::cout << polyhedron->space()->printVector(*point) << std::endl;
-//       nonzeroColumns.clear();
-//       nonzeroCoefficients.clear();
-//       for (const auto& iter : *point)
-//       {
-//         nonzeroColumns.push_back(iter.first);
-//         nonzeroCoefficients.push_back(iter.second);
-//         interiorPoint[iter.first] += iter.second;
-//       }
-//       nonzeroColumns.push_back(beta);
-//       nonzeroCoefficients.push_back(-1);
-//       lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
-//     }
-//     for (const auto& ray : affineHull.rays)
-//     {
-//       std::cout << polyhedron->space()->printVector(*ray) << std::endl;
-//       nonzeroColumns.clear();
-//       nonzeroCoefficients.clear();
-//       for (const auto& iter : *ray)
-//       {
-//         nonzeroColumns.push_back(iter.first);
-//         nonzeroCoefficients.push_back(iter.second);
-//         interiorPoint[iter.first] += iter.second;
-//       }
-//       lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
-//     }
-// 
-//     for (size_t v = 0; v < n; ++v)
-//     {
-//       interiorPoint[v] = point[v] - interiorPoint[v] / affineHull.points.size();
-//     }
-// 
-//     nonzeroColumns.clear();
-//     nonzeroCoefficients.clear();
-//     for (size_t v = 0; v < n; ++v)
-//     {
-//       if (interiorPoint[v])
-//       {
-//         nonzeroColumns.push_back(v);
-//         nonzeroCoefficients.push_back(interiorPoint[v]);
-//       }
-//     }
-//     lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 1);
-//  
-//     lp.write("separation.lp");
-//     auto status = lp.solve();
-// 
-//     std::cout << "LP status: " << status << "." << std::endl;
-//     if (status == ipo::LPStatus::OPTIMAL)
-//     {
-//       std::cout << "The constraint violation is " << ipo::convertNumber<double>(lp.getObjectiveValue()) << "." << std::endl;
-//       assert(lp.hasPrimalSolution());
-//       std::vector<Number> solution = lp.getPrimalSolution();
-//       for (std::size_t c = 0; c < n; ++c)
-//       {
-//         std::cout << polyhedron->space()->variable(c) << " = " << solution[c] << std::endl;
-//       }
-//       std::cout << "beta = " << solution[n] << std::endl;
-//     }
-// 
-//     return result;
-//   }
-// 
-//   template Separated<double> separatePoint(std::shared_ptr<Polyhedron<double>> polyhedron,
-//     const AffineHullResult<double>& affineHullResult, const double* point, const SeparationQuery& query);
-// 
-// #if defined(IPO_WITH_GMP) && defined(IPO_WITH_SOPLEX)
-// 
-//   template Separated<mpq_class> separatePoint(std::shared_ptr<Polyhedron<mpq_class>> polyhedron,
-//     const AffineHullResult<mpq_class>& affineHullResult, const mpq_class* point, const SeparationQuery& query);
-// 
-// #endif /* IPO_WITH_GMP && IPO_WITH_SOPLEX */
 
 } /* namespace ipo */

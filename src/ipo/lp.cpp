@@ -220,10 +220,10 @@ namespace ipo
     void changeRow(LPKey rowKey, const double lhs, std::size_t numNonzeros, const int* nonzeroColumns,
       const double* nonzeroCoefficients, const double rhs)
     {
-      std::size_t row = _rowMap[rowKey.id];
-      std::cout << "changeRow affects row " << row << std::endl;
+      _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
         _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      std::size_t row = _rowMap[rowKey.id];
       _spx.changeRowReal(row, soplex::LPRowReal(lhs, _sparse, rhs));
     }
 
@@ -435,10 +435,10 @@ namespace ipo
     void changeRow(LPKey rowKey, const rational& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
       const rational* nonzeroCoefficients, const rational& rhs)
     {
-      std::size_t row = _rowMap[rowKey.id];
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
         _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
+      std::size_t row = _rowMap[rowKey.id];
       _spx.changeRowRational(row, soplex::LPRowRational(lhs, _sparse, rhs));
     }
 
@@ -466,7 +466,7 @@ namespace ipo
       if (_spx.isDualFeasible())
       {
         _dense.reDim(numRows());
-        _spx.getPrimalRational(_dense);
+        _spx.getDualRational(_dense);
         _dualSolution.resize(numRows());
         for (std::size_t r = 0; r < _dualSolution.size(); ++r)
           _dualSolution[r] = _dense[r];
