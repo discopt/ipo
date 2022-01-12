@@ -641,7 +641,16 @@ namespace ipo
   {
     OptimizationOracle<double>::Response response;
 
+    std::size_t n = space()->dimension();
+
 #if defined(IPO_DEBUG)
+    std::cout << "Maximizing objective";
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      if (objectiveVector[v])
+        std::cout << " + " << objectiveVector[v] << "*" << space()->variable(v);
+    }
+    std::cout << ".\n";
     std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
     std::cout << "Setting Time limit to " << query.timeLimit << "." << std::endl;
 #endif /* IPO_DEBUG */
@@ -653,8 +662,6 @@ namespace ipo
       : query.timeLimit) );
 
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", query.maxNumSolutions) );
-
-    std::size_t n = space()->dimension();
 
     // Compute factor for scaling the objective vector down.
 
@@ -876,7 +883,7 @@ namespace ipo
           if (!SCIPisZero(_solver->_scip, x))
           {
             vector->push_back(i, x);
-            objectiveValue =+ objectiveVector[i] * x;
+            objectiveValue += objectiveVector[i] * x;
           }
         }
         response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveValue)); 
