@@ -89,7 +89,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     std::cerr << "Starting affine hull computation.\n" << std::flush;
     ipo::AffineHullQuery affQuery;
     affQuery.timeLimit = timeLimit;
-    affineHull = ipo::affineHull(poly, affQuery, knownEquations);
+    affineHull = ipo::affineHull(poly, affQuery, projectedEquations);
     if (outputDimension)
       std::cout << "Dimension: " << affineHull.dimension << std::endl;
     if (outputEquations)
@@ -97,9 +97,9 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       for (auto& equation : affineHull.equations)
       {
         bool isKnown = false;
-        for (const auto& knownEquation : knownEquations)
+        for (const auto& projectedEquation : projectedEquations)
         {
-          if (knownEquation == equation)
+          if (projectedEquation == equation)
           {
             isKnown = true;
             break;
@@ -140,42 +140,45 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     
     std::vector<int> nonzeroColumns;
     std::vector<Number> nonzeroCoefficients;
-    for (const ipo::Constraint<Number>& cons : sepaResponse.constraints)
+    if (projectionRegex.empty())
     {
-      if (cons.vector().size() == 1)
+      for (const ipo::Constraint<Number>& cons : sepaResponse.constraints)
       {
-        auto& coefficient = *cons.vector().begin();
-        if (coefficient.second > 0)
+        if (cons.vector().size() == 1)
         {
-          if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
-            lp.changeUpper(coefficient.first, cons.rhs() / coefficient.second);
-          else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
-            lp.changeLower(coefficient.first, cons.lhs() / coefficient.second);
+          auto& coefficient = *cons.vector().begin();
+          if (coefficient.second > 0)
+          {
+            if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
+              lp.changeUpper(coefficient.first, cons.rhs() / coefficient.second);
+            else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
+              lp.changeLower(coefficient.first, cons.lhs() / coefficient.second);
+            else
+              lp.changeBounds(coefficient.first, cons.lhs() / coefficient.second, cons.rhs() / coefficient.second);
+          }
           else
-            lp.changeBounds(coefficient.first, cons.lhs() / coefficient.second, cons.rhs() / coefficient.second);
+          {
+            if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
+              lp.changeLower(coefficient.first, cons.rhs() / coefficient.second);
+            else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
+              lp.changeUpper(coefficient.first, cons.lhs() / coefficient.second);
+            else
+              lp.changeBounds(coefficient.first, cons.rhs() / coefficient.second, cons.lhs() / coefficient.second); 
+          }
         }
         else
         {
-          if (cons.type() == ipo::ConstraintType::LESS_OR_EQUAL)
-            lp.changeLower(coefficient.first, cons.rhs() / coefficient.second);
-          else if (cons.type() == ipo::ConstraintType::GREATER_OR_EQUAL)
-            lp.changeUpper(coefficient.first, cons.lhs() / coefficient.second);
-          else
-            lp.changeBounds(coefficient.first, cons.rhs() / coefficient.second, cons.lhs() / coefficient.second); 
+          Number lhs = cons.hasLhs() ? cons.lhs() : lp.minusInfinity();
+          Number rhs = cons.hasRhs() ? cons.rhs() : lp.plusInfinity();
+          nonzeroColumns.clear();
+          nonzeroCoefficients.clear();
+          for (const auto& iter : cons.vector())
+          {
+            nonzeroColumns.push_back(iter.first);
+            nonzeroCoefficients.push_back(iter.second);
+          }
+          lp.addRow(lhs, nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], rhs);
         }
-      }
-      else
-      {
-        Number lhs = cons.hasLhs() ? cons.lhs() : lp.minusInfinity();
-        Number rhs = cons.hasRhs() ? cons.rhs() : lp.plusInfinity();
-        nonzeroColumns.clear();
-        nonzeroCoefficients.clear();
-        for (const auto& iter : cons.vector())
-        {
-          nonzeroColumns.push_back(iter.first);
-          nonzeroCoefficients.push_back(iter.second);
-        }
-        lp.addRow(lhs, nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], rhs);
       }
     }
 
@@ -199,10 +202,9 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     while (true)
     {
       auto status = lp.solve();
-      std::cout << "Main LP status: " << status << "." << std::endl;
       if (status == ipo::LPStatus::OPTIMAL)
       {
-        std::cout << "The optimum is " << ipo::convertNumber<double>(lp.getObjectiveValue()) << "="
+        std::cout << "\nThe LP optimum is " << ipo::convertNumber<double>(lp.getObjectiveValue()) << "="
           << lp.getObjectiveValue() << "." << std::endl;
         assert(lp.hasPrimalSolution());
         std::vector<Number> solution = lp.getPrimalSolution();
@@ -211,10 +213,39 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         std::cout << std::endl;
 
         sepaResponse = polarOracle->separate(&solution[0], true);
-        std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints:" << std::endl;
+        std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints." << std::endl;
         for (const auto& cons : sepaResponse.constraints)
         {
-          std::cout << "Adding constraint ";
+          std::cout << "  ";
+          poly->space()->printConstraint(std::cout, cons);
+          std::cout << std::endl;
+          nonzeroColumns.clear();
+          nonzeroCoefficients.clear();
+          for (const auto& iter : cons.vector())
+          {
+            nonzeroColumns.push_back(iter.first);
+            nonzeroCoefficients.push_back(iter.second);
+          }
+          lp.addRow(cons.hasLhs() ? cons.lhs() : lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
+            &nonzeroCoefficients[0], cons.hasRhs() ? cons.rhs() : lp.plusInfinity());
+        }
+        if (sepaResponse.constraints.empty())
+          break;
+      }
+      else if (status == ipo::LPStatus::UNBOUNDED)
+      {
+        std::cout << "\nThe LP is unbounded." << std::endl;
+        assert(lp.hasPrimalRay());
+        std::vector<Number> ray = lp.getPrimalRay();
+        for (std::size_t c = 0; c < poly->space()->dimension(); ++c)
+          std::cout << (c == 0 ? "Unbounded ray: " : ", ") << poly->space()->variable(c) << "=" << ray[c];
+        std::cout << std::endl;
+
+        sepaResponse = polarOracle->separate(&ray[0], false);
+        std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints." << std::endl;
+        for (const auto& cons : sepaResponse.constraints)
+        {
+          std::cout << "  ";
           poly->space()->printConstraint(std::cout, cons);
           std::cout << std::endl;
           nonzeroColumns.clear();
@@ -232,6 +263,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       }
       else
       {
+        std::cout << "\nMain LP has unhandled status " << status << "." << std::endl;
         assert(false);
       }
     }

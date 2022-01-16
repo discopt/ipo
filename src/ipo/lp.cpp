@@ -131,6 +131,11 @@ namespace ipo
       return !_primalSolution.empty();
     }
 
+    bool hasPrimalRay() const
+    {
+      return !_primalRay.empty();
+    }
+
     double getPrimalValue(int column) const
     {
       return _primalSolution[column];
@@ -148,6 +153,20 @@ namespace ipo
           solution.push_back(_primalSolution[columns[c]]);
       }
       return solution;
+    }
+
+    std::vector<double> getPrimalRay(const std::vector<int>& columns) const
+    {
+      std::vector<double> ray;
+      if (columns.empty())
+        return _primalRay;
+      else
+      {
+        ray.reserve(columns.size());
+        for (std::size_t c = 0; c < columns.size(); ++c)
+          ray.push_back(_primalRay[columns[c]]);
+      }
+      return ray;
     }
 
     bool hasDualSolution() const
@@ -238,6 +257,13 @@ namespace ipo
     LPStatus solve()
     {
       _spx.optimize();
+      if (_spx.status() == soplex::SPxSolverBase<double>::UNBOUNDED && !_spx.hasPrimalRay())
+      {
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_OFF);
+        _spx.optimize();
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+      }
+
       if (_spx.isPrimalFeasible())
       {
         _primalSolution.resize(numColumns());
@@ -245,6 +271,13 @@ namespace ipo
       }
       else
         _primalSolution.clear();
+      if (_spx.hasPrimalRay())
+      {
+        _primalRay.resize(numColumns());
+        _spx.getPrimalRayReal(&_primalRay[0], numColumns());
+      }
+      else
+        _primalRay.clear();
       if (_spx.isDualFeasible())
       {
         _dualSolution.resize(numRows());
@@ -348,6 +381,11 @@ namespace ipo
       return !_primalSolution.empty();
     }
 
+    bool hasPrimalRay() const
+    {
+      return !_primalRay.empty();
+    }
+
     const rational& getPrimalValue(int column) const
     {
       return _primalSolution[column];
@@ -365,6 +403,20 @@ namespace ipo
           solution.push_back(_primalSolution[columns[c]]);
       }
       return solution;
+    }
+
+    std::vector<rational> getPrimalRay(const std::vector<int>& columns) const
+    {
+      std::vector<rational> ray;
+      if (columns.empty())
+        return _primalRay;
+      else
+      {
+        ray.reserve(columns.size());
+        for (std::size_t c = 0; c < columns.size(); ++c)
+          ray.push_back(_primalRay[columns[c]]);
+      }
+      return ray;
     }
 
     bool hasDualSolution() const
@@ -455,6 +507,13 @@ namespace ipo
     LPStatus solve()
     {
       _spx.optimize();
+      if (_spx.status() == soplex::SPxSolverBase<double>::UNBOUNDED && !_spx.hasPrimalRay())
+      {
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_OFF);
+        _spx.optimize();
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+      }
+
       if (_spx.isPrimalFeasible())
       {
         _dense.reDim(numColumns());
@@ -465,6 +524,16 @@ namespace ipo
       }
       else
         _primalSolution.clear();
+      if (_spx.hasPrimalRay())
+      {
+        _dense.reDim(numColumns());
+        _spx.getPrimalRayRational(_dense);
+        _primalRay.resize(numColumns());
+        for (std::size_t c = 0; c < _primalRay.size(); ++c)
+          _primalRay[c] = _dense[c];
+      }
+      else
+        _primalRay.clear();
       if (_spx.isDualFeasible())
       {
         _dense.reDim(numRows());
@@ -545,6 +614,12 @@ namespace ipo
   }
 
   template <typename Number>
+  bool LP<Number>::hasPrimalRay() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->hasPrimalRay();
+  }
+
+  template <typename Number>
   Number LP<Number>::getPrimalValue(int column) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalValue(column);
@@ -554,6 +629,12 @@ namespace ipo
   std::vector<Number> LP<Number>::getPrimalSolution(const std::vector<int>& columns) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalSolution(columns);
+  }
+
+  template <typename Number>
+  std::vector<Number> LP<Number>::getPrimalRay(const std::vector<int>& columns) const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalRay(columns);
   }
 
   template <typename Number>

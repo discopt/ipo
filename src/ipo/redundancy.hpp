@@ -65,7 +65,7 @@ namespace ipo
     {
 #if defined(IPO_DEBUG_REDUNDANCY_PRINT)
       std::cout << "EquationRedundancyCheck::add(" << constraint << ", " << maxCoordinate << ", "
-        << epsilonFactorization << ")" << std::endl;
+        << epsilonFactorization << ") with " << numVariables() << " variables." << std::endl;
 #endif /* IPO_DEBUG_REDUNDANCY_PRINT */
         
 #if defined(IPO_DEBUG_REDUNDANCY_SAGE)

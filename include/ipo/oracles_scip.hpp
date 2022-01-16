@@ -91,6 +91,15 @@ namespace ipo
     }
 
     /**
+     * \brief Returns the original (maximization) objective offset of the instance.
+     */
+
+    inline double instanceObjectiveOffset() const
+    {
+      return _instanceObjective[_space->dimension()];
+    }
+
+    /**
      * \brief Returns an optimization oracle for the polyhedron.
      */
 

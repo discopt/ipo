@@ -50,7 +50,11 @@ namespace ipo
     case OptimizationOutcome::FEASIBLE:
       assert(response.rays.empty());
       stream << "{feasible, " << response.rays.size() << " rays, " << response.points.size()
-        << " points, opt in [" << convertNumber<double>(response.primalBound) << ",";
+        << " points, opt in [";
+      if (response.hasPrimalBound())
+        stream << convertNumber<double>(response.primalBound()) << ",";
+      else
+        stream << "-inf,";
       if (response.hasDualBound)
         stream << convertNumber<double>(response.dualBound) << "]";
       else

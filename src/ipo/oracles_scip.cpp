@@ -94,9 +94,9 @@ extern "C"
 
     SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
     if ((eventhdlrdata->minPrimalBound > -std::numeric_limits<double>::infinity()
-      && SCIPgetPrimalbound(scip) >= eventhdlrdata->minPrimalBound)
+      && SCIPgetPrimalbound(scip) - eventhdlrdata->minPrimalBound)
       || (eventhdlrdata->maxDualBound < std::numeric_limits<double>::infinity()
-      && SCIPgetDualbound(scip) <= eventhdlrdata->maxDualBound))
+      && SCIPisLE(scip, SCIPgetDualbound(scip), eventhdlrdata->maxDualBound)))
     {
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/totalnodes", SCIPgetNTotalNodes(scip)) );
     }
@@ -387,7 +387,7 @@ namespace ipo
     _variables.resize(n);
     std::vector<std::string> variableNames;
     variableNames.resize(n);
-    _instanceObjective = new double[n];
+    _instanceObjective = new double[n+1];
     SCIP_VAR** vars = SCIPgetOrigVars(_scip);
     double scale = SCIPgetObjsense(_scip) == SCIP_OBJSENSE_MAXIMIZE ? 1.0 : -1.0;
     for (std::size_t i = 0; i < n; ++i)
@@ -397,7 +397,9 @@ namespace ipo
       _variablesToCoordinates[vars[i]] = i;
       _instanceObjective[i] = scale * SCIPvarGetObj(vars[i]);
     }
+    _instanceObjective[n] = scale * SCIPgetOrigObjoffset(_scip);
     SCIP_CALL_EXC( SCIPsetObjsense(_scip, SCIP_OBJSENSE_MAXIMIZE) );
+    SCIP_CALL_EXC( SCIPaddOrigObjoffset(_scip, -SCIPgetOrigObjoffset(_scip)) );
 
     _name = SCIPgetProbName(_scip);
     _space = std::make_shared<Space>(std::move(variableNames));
@@ -637,7 +639,7 @@ namespace ipo
 #endif /* IPO_RATIONAL_LP */
 
   OptimizationOracle<double>::Response SCIPOptimizationOracle<double>::maximize(const double* objectiveVector,
-      const OptimizationOracle<double>::Query& query)
+    const OptimizationOracle<double>::Query& query)
   {
     OptimizationOracle<double>::Response response;
 
@@ -675,6 +677,9 @@ namespace ipo
 
     const double maxAllowedEntry = 10e5;
     double scalingFactor = 1.0 / std::max(1.0, maxEntry / maxAllowedEntry);
+#if defined(IPO_DEBUG)
+    std::cout << "Scaling objective vector by " << scalingFactor << "." << std::endl;
+#endif /* IPO_DEBUG */
 
     for (std::size_t i = 0; i < n; ++i)
     {
@@ -692,7 +697,7 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     _solver->_boundLimits.minPrimalBound = query.hasMinPrimalBound()
-      ? query.minPrimalBound() * scalingFactor : -std::numeric_limits<double>::infinity();
+      ? (query.minPrimalBound() * scalingFactor + 1.0e-6) : -std::numeric_limits<double>::infinity();
     _solver->_boundLimits.maxDualBound = query.hasMaxDualBound()
       ? query.maxDualBound() * scalingFactor : std::numeric_limits<double>::infinity();
 
@@ -765,12 +770,15 @@ namespace ipo
             if (!SCIPisZero(_solver->_scip, x))
               vector->push_back(i, x);
           }
+#if defined(IPO_DEBUG)
+          std::cout << "One solution has value " << (objectiveVector * *vector) << "." << std::endl;
+#endif /* IPO_DEBUG */
           response.points.push_back(OptimizationOracle<double>::Response::Point(vector,
             objectiveVector * *vector));
         }
         if (status == SCIP_STATUS_TIMELIMIT)
           response.hitTimeLimit = true;
-        response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
+        response.setPrimalBound(SCIPgetPrimalbound(_solver->_scip) / scalingFactor);
         response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
         response.hasDualBound = true;
         response.outcome = OptimizationOutcome::FEASIBLE;
@@ -805,7 +813,7 @@ namespace ipo
         response.hitTimeLimit = true;
         response.outcome = OptimizationOutcome::TIMEOUT;
         if (SCIPisFinite(SCIPgetPrimalbound(_solver->_scip)))
-          response.primalBound = SCIPgetPrimalbound(_solver->_scip) / scalingFactor;
+          response.setPrimalBound(SCIPgetPrimalbound(_solver->_scip) / scalingFactor);
         if (SCIPisFinite(SCIPgetDualbound(_solver->_scip)))
         {
           response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
@@ -848,7 +856,7 @@ namespace ipo
 
     if (!response.rays.empty() && response.points.empty())
     {
-      response.primalBound = std::numeric_limits<double>::infinity();
+      response.unsetPrimalBound();
 
       // We have to check feasibility.
 
@@ -886,12 +894,15 @@ namespace ipo
             objectiveValue += objectiveVector[i] * x;
           }
         }
+#if defined(IPO_DEBUG)
+        std::cout << "One solution has value " << objectiveValue << "." << std::endl;
+#endif /* IPO_DEBUG */
         response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveValue)); 
       }
       else
       {
         response.rays.clear();
-        response.primalBound = -std::numeric_limits<double>::infinity();
+        response.unsetPrimalBound();
       }
       SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
       SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
@@ -909,6 +920,10 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     std::sort(response.points.begin(), response.points.end());
+
+#if defined(IPO_DEBUG)
+    std::cout << "Returning response " << response << " with primal bound " << response.primalBound() << std::endl;
+#endif /* IPO_DEBUG */
 
     return response;
   }

@@ -120,6 +120,13 @@ namespace ipo
 
       // Add best points as longs as they have sufficiently positive product.
 
+      Number productEpsilon = 1.0e-9;
+      if (_implementation->_pointProducts.size() > 1)
+      {
+        Number productMax = _implementation->_pointProducts.front().product;
+        Number productMin = _implementation->_pointProducts.back().product;
+        productEpsilon = (productMax - productMin) / 1000;
+      }
       for (auto& pointProduct : _implementation->_pointProducts)
       {
         Number product = 0;
@@ -130,7 +137,7 @@ namespace ipo
         std::cout << "Product with cached point is " << convertNumber<double>(product) << std::endl;
 #endif /* IPO_DEBUG */
 
-        if (query.hasMinPrimalBound() && (product <= query.minPrimalBound()))
+        if (query.hasMinPrimalBound() && (product <= query.minPrimalBound() + productEpsilon))
           break;
 
         response.points.push_back(typename OptimizationResponse<Number>::Point(
@@ -143,7 +150,7 @@ namespace ipo
       if (!response.points.empty())
       {
         std::sort(response.points.begin(), response.points.end());
-        response.primalBound = response.points.front().objectiveValue;
+        response.setPrimalBound(response.points.front().objectiveValue);
         response.outcome = OptimizationOutcome::FEASIBLE;
       }
 
@@ -266,7 +273,7 @@ namespace ipo
 
       if (!response.points.empty())
       {
-        response.primalBound = response.points.front().objectiveValue;
+        response.setPrimalBound(response.points.front().objectiveValue);
         response.outcome = OptimizationOutcome::FEASIBLE;
       }
 
@@ -340,6 +347,7 @@ namespace ipo
 
       typename OptOracle::Response bestResponse;
       std::size_t lastOracle = 0;
+      typename OptOracle::Response response;
       for (; lastOracle < _optimization.size(); ++lastOracle)
       {
         Data<OptOracle>& data = _optimization[lastOracle];
@@ -347,17 +355,17 @@ namespace ipo
         // Run current oracle.
 
 #if defined (IPO_DEBUG)
-        std::cout << "\nCalling oracle <" << data.oracle->name() << ">." << std::endl;
+        std::cout << "\nCalling oracle #" << lastOracle << " <" << data.oracle->name() << ">." << std::endl;
 #endif /* IPO_DEBUG */
 
         std::chrono::time_point<std::chrono::system_clock> timeStarted = std::chrono::system_clock::now();
-        typename OptOracle::Response response = data.oracle->maximize(objectiveVector, query);
+        response = data.oracle->maximize(objectiveVector, query);
         double elapsed =  std::chrono::duration<double>(std::chrono::system_clock::now() - timeStarted).count();
-
+        
         data.updateHistory(elapsed, response.wasSuccessful(), _historySize);
 
 #if defined (IPO_DEBUG)
-        std::cout << "    Oracle " << data.oracle->name() << " took "
+        std::cout << "    Oracle <" << data.oracle->name() << "> took "
           << (data.sumRunningTime / data.history.size()) << "s averaged over " << data.history.size()
           << " queries " << data.sumSuccess << " of which were successful.\n   ";
         if (query.hasMinPrimalBound())
@@ -383,8 +391,9 @@ namespace ipo
 
         if (response.outcome == OptimizationOutcome::INFEASIBLE
           || response.outcome == OptimizationOutcome::UNBOUNDED
-          || (response.hasDualBound && response.primalBound == response.dualBound)
-          || !query.hasMinPrimalBound() || response.primalBound >= query.minPrimalBound())
+          || (response.hasDualBound && response.hasPrimalBound() && response.primalBound() == response.dualBound)
+          || !query.hasMinPrimalBound()
+          || (response.hasPrimalBound() && response.primalBound() > query.minPrimalBound()))
         {
           return response;
         }

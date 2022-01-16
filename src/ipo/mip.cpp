@@ -198,7 +198,7 @@ namespace ipo
 
       if (approximateResponse.outcome == OptimizationOutcome::INFEASIBLE)
       {
-        response.hasPrimalBound = false;
+        response.unsetPrimalBound();
         response.outcome = OptimizationOutcome::INFEASIBLE;
       }
       else if (approximateResponse.outcome == OptimizationOutcome::UNBOUNDED)
@@ -221,7 +221,7 @@ namespace ipo
         }
 
         // Also convert all points but without objective function.
-        response.hasPrimalBound = false;
+        response.unsetPrimalBound();
         if (!approximateResponse.points.empty())
         {
           setZeroObjective();
@@ -248,7 +248,7 @@ namespace ipo
         assert(response.rays.empty());
 
         response.outcome = approximateResponse.outcome;
-        response.hasPrimalBound = false;
+        response.unsetPrimalBound();
         for (const auto& point : approximateResponse.points)
         {
           preparePoint(point);
@@ -261,10 +261,9 @@ namespace ipo
             if (response.hasDualBound && value > response.dualBound)
               response.dualBound = value;
             if (response.outcome == OptimizationOutcome::FEASIBLE
-              && (!response.hasPrimalBound || value > response.primalBound))
+              && (!response.hasPrimalBound() || value > response.primalBound()))
             {
-              response.hasPrimalBound = true;
-              response.primalBound = value;
+              response.setPrimalBound(value);
             }
           }
           else if (status == soplex::SPxSolver::UNBOUNDED)
@@ -285,10 +284,10 @@ namespace ipo
         }
 
         if (response.outcome == OptimizationOutcome::FEASIBLE
-          && approximateResponse.outcome == OptimizationOutcome::FEASIBLE && !response.hasPrimalBound
-          && approximateQuery.hasMinPrimalBound() && approximateResponse.primalBound == approximateQuery.minPrimalBound())
+          && approximateResponse.outcome == OptimizationOutcome::FEASIBLE && !response.hasPrimalBound()
+          && approximateQuery.hasMinPrimalBound() && approximateResponse.primalBound() == approximateQuery.minPrimalBound())
         {
-          response.primalBound = query.minPrimalBound();
+          response.setPrimalBound(query.minPrimalBound());
         }
       }
 

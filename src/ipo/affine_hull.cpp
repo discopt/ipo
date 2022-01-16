@@ -1271,7 +1271,8 @@ namespace ipo
     result.upperBound = n;
 
 #if defined(IPO_DEBUG_AFFINE_HULL_PRINT)
-    std::cout << "affineHull<double>() called for ambient dimension " << n << ".\n" << std::flush;
+    std::cout << "affineHull<double>() called for ambient dimension " << n << " with " << knownEquations.size()
+      << " known equations.\n" << std::flush;
 #endif /* IPO_DEBUG_AFFINE_HULL_PRINT */
 
     auto redundancyCheck = EquationRedundancyCheck<double>(n);

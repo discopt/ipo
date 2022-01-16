@@ -200,9 +200,17 @@ namespace ipo
       liftedQuery.setMaxDualBound(query.maxDualBound() + offset);
 
     auto liftedResponse = _sourceOracle->maximize(&liftedObjective[0], liftedQuery);
+#if defined(IPO_DEBUG)
+    std::cout << "Lifted response = " << liftedResponse << std::endl;
+#endif /* IPO_DEBUG */
 
     OptimizationResponse<Number> response;
     response.outcome = liftedResponse.outcome;
+    if (liftedResponse.hasDualBound)
+    {
+      response.hasDualBound = true;
+      response.dualBound = liftedResponse.dualBound - offset;
+    }
     if (!liftedResponse.points.empty())
     {
       for (auto point : liftedResponse.points)
@@ -210,6 +218,7 @@ namespace ipo
         response.points.push_back(typename OptimizationResponse<Number>::Point(
           _projection->projectPoint(point.vector), point.objectiveValue + offset));
       }
+      response.setPrimalBound(response.points.front().objectiveValue);
     }
     else if (!liftedResponse.rays.empty())
     {
@@ -219,6 +228,10 @@ namespace ipo
           _projection->projectRay(ray.vector)));
       }
     }
+
+#if defined(IPO_DEBUG)
+    std::cout << "Projected response = " << response << std::endl;
+#endif /* IPO_DEBUG */
 
     return response;
   }

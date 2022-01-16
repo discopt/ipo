@@ -99,8 +99,7 @@ namespace ipo
 
     OptimizationResponse<Number> response;
     response.outcome = OptimizationOutcome::FEASIBLE;
-    response.primalBound = optimum;
-    response.hasPrimalBound = true;
+    response.setPrimalBound(optimum);
     response.dualBound = optimum;
     response.hasDualBound = true;
     response.points.push_back(typename OptimizationResponse<Number>::Point(

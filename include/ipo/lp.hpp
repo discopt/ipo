@@ -76,9 +76,13 @@ namespace ipo
 
     bool hasPrimalSolution() const;
 
+    bool hasPrimalRay() const;
+
     Number getPrimalValue(int column) const;
 
     std::vector<Number> getPrimalSolution(const std::vector<int>& columns = std::vector<int>()) const;
+
+    std::vector<Number> getPrimalRay(const std::vector<int>& columns = std::vector<int>()) const;
 
     bool hasDualSolution() const;
 

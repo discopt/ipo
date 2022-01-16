@@ -42,19 +42,19 @@ namespace ipo
     double timeLimit;
 
   protected:
-    /// Whether CommonOptimizationQuery::minPrimalBound has a meaning.
+    /// Whether _minPrimalBound has a meaning.
     bool _hasMinPrimalBound;
     /**
      * \brief Threshold for primal bound allowing the oracle to terminate.
      *
-     * The oracle shall terminate if the primal bound is greater than or equal to this value.
+     * The oracle may terminate if the primal bound is strictly greater than this value.
      **/
     Number _minPrimalBound;
-    /// Whether CommonOptimizationQuery::maxDualBound has a meaning.
+    /// Whether _maxDualBound has a meaning.
     bool _hasMaxDualBound;
     /**
      * \brief Threshold for dual bound allowing the oracle to terminate.
-     * 
+     *
      * The oracle shall terminate if the dual bound is less than or equal to this value.
      **/
     Number _maxDualBound;
@@ -82,6 +82,12 @@ namespace ipo
       assert(_hasMinPrimalBound);
       return _minPrimalBound;
     }
+
+    /**
+     * \brief Sets a minimum primal bound.
+     * 
+     * This means that the oracle must try to find solutions strictly larger than this value.
+     */
 
     void setMinPrimalBound(const Number& minPrimalBound)
     {
@@ -129,7 +135,7 @@ namespace ipo
     /**
      * \brief Structure for a returned point.
      **/
-    
+
     struct Point
     {
       /// Objective value of the point.
@@ -230,10 +236,6 @@ namespace ipo
 
     /// Outcome of query.
     OptimizationOutcome outcome;
-    /// Whether we know a finite lower bound.
-    bool hasPrimalBound;
-    /// Best-known lower bound on the optimum.
-    Number primalBound;
     /// Whether we know a finite upper bound.
     bool hasDualBound;
     /// Upper bound on the optimum.
@@ -250,8 +252,20 @@ namespace ipo
      **/
 
     OptimizationResponse()
-      : outcome(OptimizationOutcome::FOUND_NOTHING), hasPrimalBound(false), primalBound(0), hasDualBound(false),
-      dualBound(0), hitTimeLimit(false)
+      : outcome(OptimizationOutcome::FOUND_NOTHING), hasDualBound(false), dualBound(0), hitTimeLimit(false),
+      _hasPrimalBound(false), _primalBound(0)
+    {
+
+    }
+
+    /**
+     * \brief Copy-construcs the response.
+     **/
+
+    OptimizationResponse(const OptimizationResponse& other)
+      : outcome(other.outcome), hasDualBound(other.hasDualBound), dualBound(other.dualBound),
+      points(other.points), rays(other.rays), hitTimeLimit(other.hitTimeLimit),
+      _hasPrimalBound(other._hasPrimalBound), _primalBound(other._primalBound)
     {
 
     }
@@ -261,9 +275,9 @@ namespace ipo
      **/
 
     OptimizationResponse(OptimizationResponse&& other)
-      : outcome(other.outcome), hasPrimalBound(other.hasPrimalBound), primalBound(std::move(other.primalBound)),
-      hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)), points(std::move(other.points)),
-      rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit)
+      : outcome(other.outcome), hasDualBound(other.hasDualBound), dualBound(std::move(other.dualBound)),
+      points(std::move(other.points)), rays(std::move(other.rays)), hitTimeLimit(other.hitTimeLimit),
+      _hasPrimalBound(other._hasPrimalBound), _primalBound(std::move(other._primalBound))
     {
 
     }
@@ -275,8 +289,8 @@ namespace ipo
     inline OptimizationResponse<Number>& operator=(OptimizationResponse<Number>&& other)
     {
       outcome = other.outcome;
-      hasPrimalBound = other.hasPrimalBound;
-      primalBound = std::move(other.primalBound);
+      _hasPrimalBound = other._hasPrimalBound;
+      _primalBound = other._primalBound;
       hasDualBound = other.hasDualBound;
       dualBound = std::move(other.dualBound);
       points = std::move(other.points);
@@ -292,8 +306,8 @@ namespace ipo
     inline OptimizationResponse<Number>& operator=(const OptimizationResponse<Number>& other)
     {
       outcome = other.outcome;
-      hasPrimalBound = other.hasPrimalBound;
-      primalBound = other.primalBound;
+      _hasPrimalBound = other._hasPrimalBound;
+      _primalBound = other._primalBound;
       hasDualBound = other.hasDualBound;
       dualBound = other.dualBound;
       points = other.points;
@@ -312,6 +326,34 @@ namespace ipo
         || outcome == OptimizationOutcome::UNBOUNDED
         || outcome == OptimizationOutcome::FEASIBLE;
     }
+
+    void unsetPrimalBound()
+    {
+      _hasPrimalBound = false;
+    }
+
+    void setPrimalBound(const Number& primalBound)
+    {
+      _hasPrimalBound = true;
+      _primalBound = primalBound;
+    }
+
+    bool hasPrimalBound() const
+    {
+      return _hasPrimalBound;
+    }
+
+    const Number& primalBound() const
+    {
+      assert(_hasPrimalBound);
+      return _primalBound;
+    }
+
+  private:
+    /// Whether we know a finite lower bound.
+    bool _hasPrimalBound;
+    /// Best-known lower bound on the optimum.
+    Number _primalBound;
   };
 
   /**
@@ -342,7 +384,7 @@ namespace ipo
      * \brief Returns the oracle's name.
      */
 
-    inline const std::string& name() const
+    virtual const std::string& name() const
     {
       return _name;
     }

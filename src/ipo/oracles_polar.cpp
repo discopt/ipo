@@ -1,4 +1,4 @@
-#define IPO_DEBUG /* Uncomment to debug this file. */
+// #define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/oracles_polar.hpp>
 
@@ -22,7 +22,7 @@ namespace ipo
       _lp.setSense(ipo::LPSense::MAXIMIZE);
       for (size_t v = 0; v < _interior.size(); ++v)
         _lp.addColumn(_lp.minusInfinity(), _lp.plusInfinity(), 0, "alpha_" + optOracle->space()->variable(v));
-      _lp.addColumn(_lp.minusInfinity(), _lp.plusInfinity(), -1, "beta");
+      _lp.addColumn(_lp.minusInfinity(), _lp.plusInfinity(), 0, "beta");
       _lp.update();
       _normalizationRow = _lp.addRow(_lp.minusInfinity(), 0, NULL, NULL, _lp.plusInfinity());
     }
@@ -42,7 +42,8 @@ namespace ipo
       for (const auto& point : affineHull.points)
       {
 #if defined(IPO_DEBUG)
-        std::cout << _optOracle->space()->printVector(*point) << std::endl;
+        std::cout << "Point " << _optOracle->space()->printVector(*point) << " contributes to relative interior."
+          << std::endl;
 #endif /* IPO_DEBUG */
         nonzeroColumns.clear();
         nonzeroCoefficients.clear();
@@ -59,7 +60,8 @@ namespace ipo
       for (const auto& ray : affineHull.rays)
       {
 #if defined(IPO_DEBUG)
-        std::cout << _optOracle->space()->printVector(*ray) << std::endl;
+        std::cout << "Ray " << _optOracle->space()->printVector(*ray) << " contributes to relative interior."
+          << std::endl;
 #endif /* IPO_DEBUG */
         nonzeroColumns.clear();
         nonzeroCoefficients.clear();
@@ -73,12 +75,21 @@ namespace ipo
       }
 
       for (size_t v = 0; v < _interior.size(); ++v)
+      {
+#if defined(IPO_DEBUG)
+        std::cout << "Scaling relative interior point for var#" << v << " to " << _interior[v] << " / "
+          << affineHull.points.size() << " = ";
+#endif /* IPO_DEBUG */
         _interior[v] /= affineHull.points.size();
+#if defined(IPO_DEBUG)
+        std::cout << _interior[v] << "." << std::endl;
+#endif /* IPO_DEBUG */
+      }
     }
 
     /**
      * \brief Returns initially known inequalities.
-     * 
+     *
      * The default implementation returns nothing.
      *
      * \param query Structure for query.
@@ -107,12 +118,17 @@ namespace ipo
       std::size_t n = _interior.size();
       for (std::size_t v = 0; v < n; ++v)
         _lp.changeObjective(v, vector[v]);
+      _lp.changeObjective(n, isPoint ? -1 : 0);
 
       std::vector<int> nonzeroColumns;
       std::vector<Number> nonzeroCoefficients;
       for (std::size_t v = 0; v < n; ++v)
       {
-        Number coefficient = vector[v] - _interior[v];
+        Number coefficient = vector[v] - (isPoint ? _interior[v] : 0);
+#if defined(IPO_DEBUG)
+        std::cout << "Coefficient of var#" << v << " is " << vector[v] << " - " << (isPoint ? vector[v] : 0)
+          << " = " << coefficient << std::endl;
+#endif /* IPO_DEBUG */
         if (coefficient)
         {
           nonzeroColumns.push_back(v);
@@ -160,13 +176,13 @@ namespace ipo
           optQuery.setMinPrimalBound(solution[n]);
 
 #if defined(IPO_DEBUG)
-          std::cout << "Calling optimization oracle." << std::endl;
+          std::cout << "Calling optimization oracle with minimum primal bound " << solution[n] << "." << std::endl;
 #endif /* IPO_DEBUG */
           OptimizationResponse<Number> optResponse = _optOracle->maximize(&solution[0], optQuery);
 
-          auto violation = optResponse.primalBound - solution[n];
+          auto violation = optResponse.primalBound() - solution[n];
           if (optResponse.outcome == OptimizationOutcome::UNBOUNDED ||
-            (optResponse.outcome == OptimizationOutcome::FEASIBLE && violation > 0))
+            (optResponse.outcome == OptimizationOutcome::FEASIBLE && violation > 1.0e-9))
           {
 #if defined(IPO_DEBUG)
             std::cout << "Optimization oracle found a solution that violates the inequality by "
@@ -187,7 +203,6 @@ namespace ipo
               {
                 nonzeroColumns.push_back(iter.first);
                 nonzeroCoefficients.push_back(iter.second);
-                _interior[iter.first] += iter.second;
               }
               nonzeroColumns.push_back(_interior.size());
               nonzeroCoefficients.push_back(-1);
@@ -204,7 +219,6 @@ namespace ipo
               {
                 nonzeroColumns.push_back(iter.first);
                 nonzeroCoefficients.push_back(iter.second);
-                _interior[iter.first] += iter.second;
               }
               _lp.addRow(_lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
             }
@@ -212,6 +226,11 @@ namespace ipo
           else
           {
 #if defined(IPO_DEBUG)
+            std::cout << "Primal bound is " << optResponse.primalBound() << " and dual bound is ";
+            if (optResponse.hasDualBound)
+              std::cout << optResponse.dualBound << "." << std::endl;
+            else
+              std::cout << "infinity." << std::endl;
             std::cout << "Optimization oracle proved validity of inequality." << std::endl;
 #endif /* IPO_DEBUG */
             if (_lp.getObjectiveValue() > 0)
