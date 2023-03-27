@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+//#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/oracles_polar.hpp>
 
@@ -126,7 +126,7 @@ namespace ipo
       {
         Number coefficient = vector[v] - (isPoint ? _interior[v] : 0);
 #if defined(IPO_DEBUG)
-        std::cout << "Coefficient of var#" << v << " is " << vector[v] << " - " << (isPoint ? vector[v] : 0)
+        std::cout << "Coefficient of var#" << v << " is " << vector[v] << " - " << (isPoint ? _interior[v] : 0)
           << " = " << coefficient << std::endl;
 #endif /* IPO_DEBUG */
         if (coefficient)
@@ -194,8 +194,8 @@ namespace ipo
             for (const auto& point : optResponse.points)
             {
 #if defined(IPO_DEBUG)
-              std::cout << _optOracle->space()->printVector(point.vector) << " with value "
-                << convertNumber<double>(point.objectiveValue) << std::endl;
+//               std::cout << _optOracle->space()->printVector(point.vector) << " with value "
+//                 << convertNumber<double>(point.objectiveValue) << std::endl;
 #endif /* IPO_DEBUG */
               nonzeroColumns.clear();
               nonzeroCoefficients.clear();

@@ -94,10 +94,14 @@ extern "C"
 
     SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
     if ((eventhdlrdata->minPrimalBound > -std::numeric_limits<double>::infinity()
-      && SCIPgetPrimalbound(scip) - eventhdlrdata->minPrimalBound)
+      && SCIPgetPrimalbound(scip) - eventhdlrdata->minPrimalBound
+      && SCIPisLT(scip, SCIPgetDualbound(scip), SCIPinfinity(scip)))
       || (eventhdlrdata->maxDualBound < std::numeric_limits<double>::infinity()
       && SCIPisLE(scip, SCIPgetDualbound(scip), eventhdlrdata->maxDualBound)))
     {
+#if defined(IPO_DEBUG)
+      std::cout << "Setting node limit to current number of nodes to stop optimization." << std::endl;
+#endif /* IPO_DEBUG */
       SCIP_CALL( SCIPsetLongintParam(scip, "limits/totalnodes", SCIPgetNTotalNodes(scip)) );
     }
 
@@ -705,6 +709,7 @@ namespace ipo
 
     int oldMaxRounds;
     SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "presolving/maxrounds", &oldMaxRounds) );
+    SCIP_CALL_EXC( SCIPsetLongintParam(_solver->_scip, "limits/totalnodes", -1L) );
 
     for (int attempt = 1; attempt <= 2; ++attempt)
     {
@@ -724,6 +729,7 @@ namespace ipo
         std::cerr << "SCIPOptimizationOracle<double> received return code " << retcode
           << " from SCIPsolve() call." << std::endl;
       }
+      //std::cout << "SCIP solved MIP in " << SCIPgetSolvingTime(_solver->_scip) << "s." << std::endl;
       solutionTime += SCIPgetTotalTime(_solver->_scip);
 
 #if defined(IPO_DEBUG)
@@ -922,7 +928,11 @@ namespace ipo
     std::sort(response.points.begin(), response.points.end());
 
 #if defined(IPO_DEBUG)
-    std::cout << "Returning response " << response << " with primal bound " << response.primalBound() << std::endl;
+    std::cout << "Returning response " << response << " with primal bound ";
+    if (response.hasPrimalBound())
+      std::cout << response.primalBound() << std::endl;
+    else
+      std::cout << "+/-inf" << std::endl;
 #endif /* IPO_DEBUG */
 
     return response;

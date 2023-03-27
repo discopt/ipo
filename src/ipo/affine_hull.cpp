@@ -1529,14 +1529,14 @@ namespace ipo
     for (std::size_t p = 0; p < result.points.size(); ++p)
     {
       matrix[p].resize(n+1, 0.0);
-      for (const auto iter : *result.points[p])
+      for (auto iter : *result.points[p])
         matrix[p][iter.first] = iter.second;
       matrix[p].back() = 1.0;
     }
     for (std::size_t r = 0; r < result.rays.size(); ++r)
     {
       matrix[result.points.size() + r].resize(n+1, 0.0);
-      for (const auto iter : *result.rays[r])
+      for (auto iter : *result.rays[r])
         matrix[result.points.size() + r][iter.first] = iter.second;
     }
 
