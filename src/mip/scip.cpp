@@ -115,6 +115,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
   if (outputInstanceFacets)
   {
+#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
     ipo::LP<Number> lp;
     lp.setSense(ipo::LPSense::MAXIMIZE);
     std::size_t scipVar = 0;
@@ -267,6 +268,12 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         assert(false);
       }
     }
+
+#else /* of (IPO_DOUBLE_LP || IPO_RATIONAL_LP) */
+
+    std::cerr << "Option instance-facets requires an LP solver such as SoPlex." << std::endl;
+
+#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
   }
 }
 
@@ -334,10 +341,10 @@ int main(int argc, char** argv)
   if (exact)
 #endif /* IPO_DOUBLE && IPO_RATIONAL */
   {
-#if defined(IPO_RATIONAL)
+#if defined(IPO_RATIONAL) && defined(IPO_RATIONAL_MIP_SCIP)
     run<ipo::rational>(scip, scip->getOptimizationOracle<ipo::rational>(), scip->getSeparationOracle<ipo::rational>(), true,
       timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior, outputInstanceFacets);
-#endif /* IPO_RATIONAL */
+#endif /* IPO_RATIONAL && IPO_RATIONAL_MIP_SCIP */
   }
 #if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
   else
