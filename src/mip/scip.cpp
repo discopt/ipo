@@ -336,6 +336,12 @@ int main(int argc, char** argv)
     }
   }
 
+  if (fileName.empty())
+  {
+    std::cerr << "Invalid parameters. No filename provided." << std::endl;
+    return EXIT_FAILURE;
+  }
+
   auto scip = std::make_shared<ipo::SCIPSolver>(fileName);
 #if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
   if (exact)
