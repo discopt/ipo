@@ -120,7 +120,7 @@ if(IPO_DOUBLE_LP_SOPLEX OR IPO_RATIONAL_LP_SOPLEX)
 endif()
 
 # Link to/include SCIP.
-if (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+if (SCIP AND (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP))
   target_sources(ipo
     PRIVATE src/ipo/oracles_scip.cpp
   )
@@ -133,7 +133,7 @@ if (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
   )
 endif()
 
-if(SCIP) # The ipo-scip binary.
+if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP) # The ipo-scip binary.
   add_executable(ipo_scip src/mip/scip.cpp)
   target_link_libraries(ipo_scip PRIVATE IPO::IPO)
   set_target_properties(ipo_scip PROPERTIES OUTPUT_NAME ipo-scip)
@@ -176,7 +176,7 @@ endif()
 ### Installation ###
 include(GNUInstallDirs)
 
-if(SCIP)
+if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
   install(TARGETS ipo_scip RUNTIME DESTINATION bin)
 endif()
 
