@@ -1,4 +1,4 @@
-//#define IPO_DEBUG /* Uncomment to debug this file. */
+// #define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/oracles_polar.hpp>
 
@@ -135,7 +135,7 @@ namespace ipo
           nonzeroCoefficients.push_back(coefficient);
         }
       }
-      _lp.changeRow(_normalizationRow, _lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
+      _lp.changeRow(_normalizationRow, LP<Number>::minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
         &nonzeroCoefficients[0], 1);
 
       while (true)
@@ -145,8 +145,8 @@ namespace ipo
           << " columns..." << std::flush;
         _lp.write("PolarSeparationOracle.lp");
 #endif /* IPO_DEBUG */
-        
-        auto status = _lp.solve();
+
+        auto status = _lp.solve(true);
 
 #if defined(IPO_DEBUG)
         std::cout << " done. Status: " << status << "." << std::endl;
@@ -261,6 +261,7 @@ namespace ipo
     std::vector<Number> _interior;
     LP<Number> _lp;
     LPKey _normalizationRow;
+    size_t _minBasisSize;
   };
 
   template <typename Number>

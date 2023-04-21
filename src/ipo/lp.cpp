@@ -1,3 +1,5 @@
+// #define IPO_DEBUG /* Uncomment to debug this file. */
+
 #include <ipo/lp.hpp>
 
 #include <ipo/arithmetic.hpp>
@@ -6,6 +8,7 @@
 #include <string>
 #include <unordered_map>
 #include <ostream>
+#include <random>
 
 #if defined(IPO_DOUBLE_LP_SOPLEX) || defined(IPO_RATIONAL_LP_SOPLEX)
 #include <soplex.h>
@@ -254,15 +257,55 @@ namespace ipo
       _spx.writeFileReal(fileName.c_str(), validRowNames ? &rowNames : NULL, validColumnNames ? &columnNames : NULL);
     }
 
-    LPStatus solve()
+    LPStatus solve(bool extreme)
     {
+      soplex::DVectorReal objective;
+
+      if (extreme)
+      {
+        // Save current objective.
+        _spx.getObjReal(objective);
+
+        // Compute a tiny nonnegative combination of all constraints and add it on to of the objective.
+        const double PERTURBATION_DENOMINATOR = 1024 * 1024;
+        std::default_random_engine generator(0);
+        std::uniform_real_distribution<double> distribution;
+        soplex::DVectorReal perturbedObjective = objective;
+        for (int r = 0; r < _spx.numRowsReal(); ++r)
+        {
+          _spx.getRowVectorReal(r, _sparse);
+          const auto& vector = _sparse;
+          double lhs = _spx.lhsReal(r);
+          double rhs = _spx.rhsReal(r);
+          double lhsLambda = lhs > -soplex::infinity ? distribution(generator) : 0;
+          double rhsLambda = rhs < soplex::infinity ? distribution(generator) : 0;
+          if (lhsLambda == rhsLambda)
+            continue;
+          double lambda = (rhsLambda - lhsLambda) / PERTURBATION_DENOMINATOR;
+          for (int p = vector.size() - 1; p >= 0; --p)
+            perturbedObjective[vector.index(p)] += lambda * vector.value(p);
+        }
+
+        _spx.changeObjReal(perturbedObjective);
+      }
+
       _spx.optimize();
+      bool resetSimplifiedAuto = false;
       if (_spx.status() == soplex::SPxSolverBase<double>::UNBOUNDED && !_spx.hasPrimalRay())
       {
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_OFF);
         _spx.optimize();
-        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+        resetSimplifiedAuto = true;
       }
+
+      if (extreme)
+        _spx.changeObjReal(objective);
+      _spx.optimize();
+
+      _rowBasisStatus.resize(_spx.numRows());
+      _columnBasisStatus.resize(_spx.numCols());
+      _spx.getBasis(&_rowBasisStatus[0], &_columnBasisStatus[0]);
+
 
       if (_spx.isPrimalFeasible())
       {
@@ -286,6 +329,9 @@ namespace ipo
       else
         _dualSolution.clear();
 
+      if (resetSimplifiedAuto)
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+
       return status();
     }
 
@@ -305,6 +351,8 @@ namespace ipo
     soplex::DSVectorReal _sparse;
     std::vector<std::string> _rowNames;
     std::vector<std::string> _columnNames;
+    std::vector<soplex::SPxSolver::VarStatus> _rowBasisStatus;
+    std::vector<soplex::SPxSolver::VarStatus> _columnBasisStatus;
   };
 
 #endif /* IPO_DOUBLE_LP_SOPLEX */
@@ -504,15 +552,53 @@ namespace ipo
       _spx.writeFileRational(fileName.c_str(), validRowNames ? &rowNames : NULL, validColumnNames ? &columnNames : NULL);
     }
 
-    LPStatus solve()
+    LPStatus solve(bool extreme)
     {
+      soplex::DVectorRational objective;
+
+      if (extreme)
+      {
+        // Save current objective.
+        _spx.getObjRational(objective);
+
+        // Compute a tiny nonnegative combination of all constraints and add it on to of the objective.
+        const rational PERTURBATION_DENOMINATOR = 1024 * 1024 * 1024;
+        std::default_random_engine generator(0);
+        std::uniform_int_distribution<int> distribution(1, 1024);
+        soplex::DVectorRational perturbedObjective = objective;
+        for (int r = 0; r < _spx.numRows(); ++r)
+        {
+          const auto& vector = _spx.rowVectorRational(r);
+          auto lhs = _spx.lhsRational(r);
+          auto rhs = _spx.rhsRational(r);
+          int lhsLambda = lhs > -soplex::infinity ? distribution(generator) : 0;
+          int rhsLambda = rhs < soplex::infinity ? distribution(generator) : 0;
+          if (lhsLambda == rhsLambda)
+            continue;
+          rational lambda = (rhsLambda - lhsLambda) / PERTURBATION_DENOMINATOR;
+          for (int p = vector.size() - 1; p >= 0; --p)
+            perturbedObjective[vector.index(p)] += lambda * vector.value(p);
+        }
+
+        _spx.changeObjRational(perturbedObjective);
+      }
+
       _spx.optimize();
+      bool resetSimplifiedAuto = false;
       if (_spx.status() == soplex::SPxSolverBase<double>::UNBOUNDED && !_spx.hasPrimalRay())
       {
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_OFF);
         _spx.optimize();
-        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+        resetSimplifiedAuto = true;
       }
+
+      if (extreme)
+        _spx.changeObjRational(objective);
+      _spx.optimize();
+
+      _rowBasisStatus.resize(_spx.numRows());
+      _columnBasisStatus.resize(_spx.numCols());
+      _spx.getBasis(&_rowBasisStatus[0], &_columnBasisStatus[0]);
 
       if (_spx.isPrimalFeasible())
       {
@@ -545,6 +631,9 @@ namespace ipo
       else
         _dualSolution.clear();
 
+      if (resetSimplifiedAuto)
+        _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
+
       return status();
     }
 
@@ -565,6 +654,8 @@ namespace ipo
     soplex::DSVectorRational _sparse;
     std::vector<std::string> _rowNames;
     std::vector<std::string> _columnNames;
+    std::vector<soplex::SPxSolver::VarStatus> _rowBasisStatus;
+    std::vector<soplex::SPxSolver::VarStatus> _columnBasisStatus;
   };
 
 #endif /* IPO_RATIONAL_LP_SOPLEX */
@@ -716,9 +807,9 @@ namespace ipo
   }
 
   template <typename Number>
-  LPStatus LP<Number>::solve()
+  LPStatus LP<Number>::solve(bool extreme)
   {
-    return static_cast<LPImplementation<Number>*>(_implementation)->solve();
+    return static_cast<LPImplementation<Number>*>(_implementation)->solve(extreme);
   }
 
   template class LP<double>;

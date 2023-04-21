@@ -29,6 +29,14 @@ namespace ipo
     NUMERICS = 7,         ///< Aborted due to numerical difficulties.
   };
 
+  enum LPBasisStatus
+  {
+    BASIC = 0,
+    NONBASIC_LOWER = 1,
+    NONBASIC_UPPER = 2,
+    NONBASIC_ZERO = 3
+  };
+
   std::ostream& operator<<(std::ostream& stream, LPStatus status);
 
   struct LPKey
@@ -114,7 +122,7 @@ namespace ipo
 
     void write(const std::string& fileName) const;
 
-    LPStatus solve();
+    LPStatus solve(bool extreme = false);
 
   private:
 

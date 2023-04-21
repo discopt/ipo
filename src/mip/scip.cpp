@@ -98,22 +98,17 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       for (auto& equation : affineHull.equations)
       {
         bool isKnown = projectedEquationSet.exists(equation);
-//         for (const auto& projectedEquation : projectedEquations)
-//         {
-//           std::cerr << "Testing new equation " << poly->space()->printConstraint(equation, true)
-//             << " vs. known equation " << poly->space()->printConstraint(projectedEquation, true) << std::endl;
-//           if (projectedEquation == equation)
-//           {
-//             isKnown = true;
-//             break;
-//           }
-//         }
         if (!isKnown)
           scaleIntegral(equation);
         std::cout << (isKnown ? "Known " : "New ") << "equation "
           << poly->space()->printConstraint(equation, true) << std::endl;
       }
     }
+  }
+
+  if (outputInterior)
+  {
+    std::cout << "Output of interior point is not implemented, yet." << std::endl;
   }
 
   if (outputInstanceFacets)
