@@ -94,7 +94,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       std::cout << "Dimension: " << affineHull.dimension << std::endl;
     if (outputEquations)
     {
-      auto projectedEquationSet = ipo::ConstraintSet<Number>(projectionOracle->space()->dimension(), projectedEquations);
+      auto projectedEquationSet = ipo::ConstraintSet<Number>(projectionOracle->space()->dimension(),
+        projectedEquations);
       for (auto& equation : affineHull.equations)
       {
         bool isKnown = projectedEquationSet.exists(equation);
@@ -219,6 +220,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
           std::cout << "  ";
           poly->space()->printConstraint(std::cout, cons);
           std::cout << std::endl;
+
           nonzeroColumns.clear();
           nonzeroCoefficients.clear();
           for (const auto& iter : cons.vector())
@@ -243,11 +245,13 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
         sepaResponse = polarOracle->separate(&ray[0], false);
         std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints." << std::endl;
-        for (const auto& cons : sepaResponse.constraints)
+        for (auto& cons : sepaResponse.constraints)
         {
+          scaleIntegral(cons);
           std::cout << "  ";
           poly->space()->printConstraint(std::cout, cons);
           std::cout << std::endl;
+
           nonzeroColumns.clear();
           nonzeroCoefficients.clear();
           for (const auto& iter : cons.vector())

@@ -81,6 +81,8 @@ namespace ipo
     {
       _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
       _spx.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
+      _spx.setRealParam(soplex::SoPlex::FEASTOL, 1.0e-12);
+      _spx.setRealParam(soplex::SoPlex::OPTTOL, 1.0e-12);
     }
 
     ~LPImplementation()
