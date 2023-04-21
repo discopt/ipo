@@ -198,4 +198,129 @@ namespace ipo
       std::make_shared<sparse_vector<To>>(convertSparseVector<To, From>(from.vector())), rhs, from.type());
   }
 
+  template <typename Number>
+  class ConstraintSet
+  {
+  protected:
+    struct Payload
+    {
+      Constraint<Number> constraint; /// The actual constraint.
+      double hash; /// The scalar product of the normal vector with the random vector used for hashing.
+      double inverseNorm; /// Inverse of Euclidean norm of normal vector.
+
+      Payload(const Constraint<Number>& cons, double hsh)
+        : constraint(cons), hash(hsh)
+      {
+        inverseNorm = euclideanNorm(constraint.vector());
+        if (inverseNorm > 0.0)
+          inverseNorm = 1.0 / inverseNorm;
+      }
+    };
+
+    struct const_iterator
+    {
+      typename std::vector<Payload>::const_iterator iterator;
+
+      const_iterator(typename std::vector<Payload>::const_iterator iter)
+        : iterator(iter)
+      {
+
+      }
+
+      const Constraint<Number>& operator*() const
+      {
+        return iterator->constraint;
+      }
+
+      bool operator!=(const const_iterator& other) const
+      {
+        return iterator != other.iterator;
+      }
+      
+      const_iterator operator++()
+      {
+        ++iterator;
+        return *this;
+      }
+    };
+
+    bool exists(const Constraint<Number>& constraint, double hashProduct);
+
+    void force_push_back(const Constraint<Number>& constraint, double hashProduct)
+    {
+      Payload payload(constraint, hashProduct);
+      _data.emplace_back(payload);
+      _hashToIndex.insert(std::make_pair(hashProduct, _data.size() - 1));
+    }
+
+    size_t _n;
+    std::vector<Payload> _data;
+    double* _hashVector;
+    std::multimap<double, std::size_t> _hashToIndex;
+
+  public:
+    ConstraintSet(std::size_t ambientDimension)
+      : _n(ambientDimension)
+    {
+      _hashVector = generateRandomVectorSphere(ambientDimension);
+    }
+
+    ConstraintSet(std::size_t ambientDimension, const std::vector<Constraint<Number>>& constraints)
+      : _n(ambientDimension)
+    {
+      _hashVector = generateRandomVectorSphere(ambientDimension);
+
+      for (const auto& constraint : constraints)
+        push_back(constraint);
+    }
+
+    ~ConstraintSet()
+    {
+      delete[] _hashVector;
+    }
+
+    const_iterator begin() const
+    {
+      return const_iterator(_data.begin());
+    }
+
+    const_iterator end() const
+    {
+      return const_iterator(_data.end());
+    }
+
+    bool push_back(const Constraint<Number>& constraint)
+    {
+      double product = 0.0;
+      for (const auto& iter : constraint.vector())
+        product += convertNumber<double>(iter.second) * _hashVector[iter.first];
+      product = fabs(product);
+
+      if (exists(constraint, product))
+        return false;
+
+      force_push_back(constraint, product);
+      return true;
+    }
+
+    void force_push_back(const Constraint<Number>& constraint)
+    {
+      double product = 0.0;
+      for (const auto& iter : constraint.vector())
+        product += iter.second * _hashVector[iter.first];
+      product = fabs(product);
+
+      force_push_back(constraint, product);
+    }
+
+    bool exists(const Constraint<Number>& constraint)
+    {
+      double product = 0.0;
+      for (const auto& iter : constraint.vector())
+        product += convertNumber<double>(iter.second) * _hashVector[iter.first];
+      product = fabs(product);
+
+      return exists(constraint, product);
+    }
+  };
 }

@@ -4,7 +4,6 @@
 
 #include <map>
 #include <deque>
-#include <random>
 #include <chrono>
 
 namespace ipo
@@ -309,22 +308,7 @@ namespace ipo
         _separation.push_back(Data<SepaOracle>(oracle));
 
       // To find duplicates of points or rays, we need a random vector.
-
-      std::default_random_engine generator;
-      std::normal_distribution<double> distribution;
-      _hashVector = new double[_space->dimension()];
-      double squaredNorm = 0.0;
-      while (squaredNorm < 1.0e-3)
-      {
-        for (std::size_t v = 0; v < _space->dimension(); ++v)
-        {
-          double x = distribution(generator);
-          _hashVector[v] = x;
-          squaredNorm += x*x;
-        }
-      }
-      for (std::size_t v = 0; v < _space->dimension(); ++v)
-        _hashVector[v] /= squaredNorm;
+      _hashVector = generateRandomVectorSphere(_space->dimension());
       _squaredDuplicateEpsilon = 1.0e-12;
 
       _historySize = 256;

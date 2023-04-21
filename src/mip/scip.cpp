@@ -62,8 +62,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
   auto poly = std::make_shared<ipo::Polyhedron<Number>>(dominantOracle);
 
-  std::cerr << "Initialized oracle with ambient dimension " << poly->space()->dimension() << std::endl;
-  
+  std::cerr << "Initialized oracle with ambient dimension " << poly->space()-> dimension() << std::endl;
+
   bool needAffineHull = outputDimension || outputEquations || outputInterior || outputInstanceFacets;
 
   ipo::SeparationResponse<Number> sepaResponse;
@@ -94,17 +94,20 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       std::cout << "Dimension: " << affineHull.dimension << std::endl;
     if (outputEquations)
     {
+      auto projectedEquationSet = ipo::ConstraintSet<Number>(projectionOracle->space()->dimension(), projectedEquations);
       for (auto& equation : affineHull.equations)
       {
-        bool isKnown = false;
-        for (const auto& projectedEquation : projectedEquations)
-        {
-          if (projectedEquation == equation)
-          {
-            isKnown = true;
-            break;
-          }
-        }
+        bool isKnown = projectedEquationSet.exists(equation);
+//         for (const auto& projectedEquation : projectedEquations)
+//         {
+//           std::cerr << "Testing new equation " << poly->space()->printConstraint(equation, true)
+//             << " vs. known equation " << poly->space()->printConstraint(projectedEquation, true) << std::endl;
+//           if (projectedEquation == equation)
+//           {
+//             isKnown = true;
+//             break;
+//           }
+//         }
         if (!isKnown)
           scaleIntegral(equation);
         std::cout << (isKnown ? "Known " : "New ") << "equation "
@@ -138,7 +141,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     }
     std::cout << std::endl;
     lp.update();
-    
+
     std::vector<int> nonzeroColumns;
     std::vector<Number> nonzeroCoefficients;
     if (projectionRegex.empty())
@@ -215,8 +218,9 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
         sepaResponse = polarOracle->separate(&solution[0], true);
         std::cout << "Found " << sepaResponse.constraints.size() << " undominated constraints." << std::endl;
-        for (const auto& cons : sepaResponse.constraints)
+        for (ipo::Constraint<Number>& cons : sepaResponse.constraints)
         {
+          scaleIntegral(cons);
           std::cout << "  ";
           poly->space()->printConstraint(std::cout, cons);
           std::cout << std::endl;

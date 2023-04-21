@@ -354,6 +354,66 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
 }
 
 template <typename T, typename U>
+std::pair<double, double> squaredEuclideanDistanceSigned(const sparse_vector<T>& a, const sparse_vector<U>& b)
+{
+  std::pair<double, double> result(0.0, 0.0);
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  typename sparse_vector<U>::const_iterator ib = b.begin();
+  if (ia != a.end() && ib != b.end())
+  {
+    while (true)
+    {
+      if (ia->first < ib->first)
+      {
+        double x = ipo::convertNumber<double>(ia->second);
+        x *= x;
+        result.first += x;
+        result.second += x;
+        ++ia;
+        if (ia == a.end())
+          break;
+      }
+      else if (ia->first > ib->first)
+      {
+        double x = ipo::convertNumber<double>(ib->second);
+        x *= x;
+        result.first += x;
+        result.second += x;
+        ++ib;
+        if (ib == b.end())
+          break;
+      }
+      else
+      {
+        double x = ipo::convertNumber<double, T>(ia->second) - ipo::convertNumber<double, U>(ib->second);
+        result.first += x*x;
+        x = ipo::convertNumber<double, T>(ia->second) + ipo::convertNumber<double, U>(ib->second);
+        result.second += x*x;
+        ++ia;
+        ++ib;
+        if (ia == a.end() || ib == b.end())
+          break;
+      }
+    }
+  }
+  for (; ia != a.end(); ++ia)
+  {
+    double x = ipo::convertNumber<double>(ia->second);
+    x *= x;
+    result.first += x;
+    result.second += x;
+  }
+  for (; ib != b.end(); ++ib)
+  {
+    double x = ipo::convertNumber<double>(ib->second);
+    x *= x;
+    result.first += x;
+    result.second += x;
+  }
+  return result;
+}
+
+template <typename T, typename U>
 double euclideanDistance(const sparse_vector<T>& a, const sparse_vector<U>& b)
 {
   return sqrt(squaredEuclideanDistance(a, b));

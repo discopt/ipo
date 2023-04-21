@@ -3,6 +3,7 @@
 #include <ipo/arithmetic.hpp>
 
 #include <cmath>
+#include <random>
 
 #if defined(IPO_DEBUG)
 #include <iostream>
@@ -25,6 +26,28 @@ namespace ipo
   double euclideanNorm(double* vector, std::size_t size)
   {
     return sqrt(squaredEuclideanNorm(vector, size));
+  }
+
+  double* generateRandomVectorSphere(std::size_t size)
+  {
+    double* result = new double[size];
+    std::default_random_engine generator;
+    std::normal_distribution<double> distribution;
+    double squaredNorm = 0.0;
+    while (squaredNorm < 1.0e-3)
+    {
+      for (std::size_t v = 0; v < size; ++v)
+      {
+        double x = distribution(generator);
+        result[v] = x;
+        squaredNorm += x*x;
+      }
+    }
+    double norm = sqrt(squaredNorm);
+    for (std::size_t v = 0; v < size; ++v)
+      result[v] /= norm;
+
+    return result;
   }
 
 #if defined(IPO_RATIONAL)
@@ -117,15 +140,20 @@ namespace ipo
   }
 
   IntegralScaler::IntegralScaler()
-    : _factor(1, 1)
+    : _factor(1)
   {
 
   }
 
   void IntegralScaler::operator()(const rational& x)
   {
-    mpz_gcd(mpq_denref(_factor.backend().data()), mpq_denref(_factor.backend().data()), mpq_numref(x.backend().data()));
-    mpz_lcm(mpq_numref(_factor.backend().data()), mpq_numref(_factor.backend().data()), mpq_denref(x.backend().data()));
+    if (_factor == 1)
+      _factor = 1 / x;
+    else
+    {
+      mpz_gcd(mpq_denref(_factor.backend().data()), mpq_denref(_factor.backend().data()), mpq_numref(x.backend().data()));
+      mpz_lcm(mpq_numref(_factor.backend().data()), mpq_numref(_factor.backend().data()), mpq_denref(x.backend().data()));
+    }
   }
 
   const rational& IntegralScaler::factor() const

@@ -45,13 +45,13 @@ namespace ipo
     typedef SeparationResponse<Number> Response;
 
     PolarSeparationOracle(std::shared_ptr<OptimizationOracle<Number>> optOracle,
-      std::shared_ptr<SeparationOracle<Number>> sepaRelaxtionOracle = NULL, const std::string& name = "");
+      std::shared_ptr<SeparationOracle<Number>> sepaRelaxationOracle = NULL, const std::string& name = "");
 
     void setAffineHull(const AffineHull<Number>& affineHull);
 
     /**
      * \brief Returns initially known inequalities.
-     * 
+     *
      * The default implementation returns nothing.
      *
      * \param query Structure for query.

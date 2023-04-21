@@ -24,6 +24,8 @@ namespace ipo
     return from;
   }
 
+  double* generateRandomVectorSphere(std::size_t size);
+
 } /* namespace ipo */
 
 #if defined(IPO_RATIONAL)
