@@ -910,6 +910,7 @@ namespace ipo
       return INTERNAL_INFEASIBLE;
     else if (oracleResponse.outcome == OptimizationOutcome::UNBOUNDED)
     {
+      assert(!oracleResponse.rays.empty());
       const auto& firstRay = oracleResponse.rays.front();
       resultRays.push_back(firstRay.vector);
       timeComponent = std::chrono::system_clock::now();
@@ -1154,6 +1155,7 @@ namespace ipo
       throw std::runtime_error("Oracle for minimization claims infeasible.");
     else if (oracleResponse.outcome == OptimizationOutcome::UNBOUNDED)
     {
+      assert(!oracleResponse.rays.empty());
       const auto& firstRay = oracleResponse.rays.front();
       resultRays.push_back(firstRay.vector);
       timeComponent = std::chrono::system_clock::now();

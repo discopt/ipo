@@ -180,14 +180,19 @@ namespace ipo
 #endif /* IPO_DEBUG */
           OptimizationResponse<Number> optResponse = _optOracle->maximize(&solution[0], optQuery);
 
-          auto violation = optResponse.primalBound() - solution[n];
           if (optResponse.outcome == OptimizationOutcome::UNBOUNDED ||
-            (optResponse.outcome == OptimizationOutcome::FEASIBLE && violation > 1.0e-9))
+            (optResponse.outcome == OptimizationOutcome::FEASIBLE
+            && (optResponse.primalBound() - solution[n]) > 1.0e-9))
           {
 #if defined(IPO_DEBUG)
-            std::cout << "Optimization oracle found a solution that violates the inequality by "
-              << convertNumber<double>(violation) << " = "
-              << (violation) << "." << std::endl;
+            if (optResponse.outcome == OptimizationOutcome::UNBOUNDED)
+              std::cout << "Optimization oracle found an unbounded ray." << std::endl;
+            else
+            {
+              std::cout << "Optimization oracle found a solution that violates the inequality by "
+                << convertNumber<double>(optResponse.primalBound() - solution[n]) << " = "
+                << (optResponse.primalBound() - solution[n]) << "." << std::endl;
+            }
 #endif /* IPO_DEBUG */
             std::vector<int> nonzeroColumns;
             std::vector<Number> nonzeroCoefficients;

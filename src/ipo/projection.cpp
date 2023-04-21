@@ -187,6 +187,10 @@ namespace ipo
   OptimizationResponse<Number> ProjectionOptimizationOracle<Number>::maximize(const Number* objectiveVector,
     const OptimizationQuery<Number>& query)
   {
+#if defined(IPO_DEBUG)
+      std::cout << "ProjectionOptimizationOracle::maximize() called." << std::endl;
+#endif // IPO_DEBUG
+
     // Compute objective vector in space of source oracle.
     std::vector<Number> liftedObjective(_sourceOracle->space()->dimension());
     Number offset = _projection->liftObjective(objectiveVector, liftedObjective);

@@ -326,6 +326,10 @@ namespace ipo
       const typename OptOracle::Query& query)
     {
       // TODO: collect returned dual bounds and consider minimum among them.
+      
+#if defined(IPO_DEBUG)
+      std::cout << "Polyhedron::maximize() called." << std::endl;
+#endif // IPO_DEBUG
 
       sortOptimizationOracles();
 

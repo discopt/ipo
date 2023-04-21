@@ -60,7 +60,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   else
     submissiveOracle = dominantOracle;
 
-  auto poly = std::make_shared<ipo::Polyhedron<Number>>(dominantOracle);
+  auto poly = std::make_shared<ipo::Polyhedron<Number>>(submissiveOracle);
 
   std::cerr << "Initialized oracle with ambient dimension " << poly->space()-> dimension() << std::endl;
 
@@ -81,7 +81,10 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
         knownEquations.push_back(cons);
     }
     std::vector<ipo::Constraint<Number>> projectedEquations;
-    if (projectionRegex.empty())
+    if (useDominant || useSubmissive)
+    {
+    }
+    else if (projectionRegex.empty())
       projectedEquations = knownEquations;
     else
       projectedEquations = projectionEquations(projectionMap, knownEquations);    

@@ -645,6 +645,10 @@ namespace ipo
   OptimizationOracle<double>::Response SCIPOptimizationOracle<double>::maximize(const double* objectiveVector,
     const OptimizationOracle<double>::Query& query)
   {
+#if defined(IPO_DEBUG)
+      std::cout << "SCIPOptimizationOracle<double>::maximize() called." << std::endl;
+#endif // IPO_DEBUG
+
     OptimizationOracle<double>::Response response;
 
     std::size_t n = space()->dimension();
@@ -813,6 +817,10 @@ namespace ipo
           response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
           response.outcome = OptimizationOutcome::UNBOUNDED;
         }
+        else
+        {
+          assert(!"Not implemented: SCIP unbounded but without ray.");
+        }
       }
       else if (status == SCIP_STATUS_TIMELIMIT)
       {
@@ -876,6 +884,14 @@ namespace ipo
 #if defined(IPO_DEBUG)
       std::cout << "Solving feasibility problem." << std::endl;
 #endif /* IPO_DEBUG */
+      
+      int nsols = SCIPgetNSols(_solver->_scip);
+      for (int i = 0; i < nsols; ++i)
+      {
+        std::cout << "sol #" << i << std::endl;
+        SCIP_SOL* sol = SCIPgetSols(_solver->_scip)[i];
+        SCIPprintSol(_solver->_scip, sol, stdout, false);
+      }
 
       SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
 
@@ -894,6 +910,9 @@ namespace ipo
         for (std::size_t i = 0; i < n; ++i)
         {
           double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
+#if defined(IPO_DEBUG)
+        std::cout << "  x_" << i << " = " << x << "." << std::endl;
+#endif /* IPO_DEBUG */
           if (!SCIPisZero(_solver->_scip, x))
           {
             vector->push_back(i, x);
