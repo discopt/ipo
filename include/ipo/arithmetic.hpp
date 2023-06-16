@@ -73,6 +73,21 @@ namespace ipo
     rational _factor;
   };
 
+  inline double maxAbsoluteValue(const double* vector, std::size_t length)
+  {
+    double result = 0.0;
+    const double* px = vector;
+    while (length)
+    {
+      double x = fabs(*px);
+      if (x > result)
+        result = x;
+      ++px;
+      --length;
+    }
+    return result;
+  }
+
 }
 
 #endif /* IPO_RATIONAL */

@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/lp.hpp>
 
@@ -585,17 +585,27 @@ namespace ipo
         _spx.changeObjRational(perturbedObjective);
       }
 
+#if defined(IPO_DEBUG)
+      _spx.writeFileRational("LP-rational1.lp");
+#endif /* IPO_DEBUG */
+
       _spx.optimize();
       bool resetSimplifiedAuto = false;
       if (_spx.status() == soplex::SPxSolverBase<double>::UNBOUNDED && !_spx.hasPrimalRay())
       {
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_OFF);
+#if defined(IPO_DEBUG)
+        _spx.writeFileRational("LP-rational2.lp");
+#endif /* IPO_DEBUG */
         _spx.optimize();
         resetSimplifiedAuto = true;
       }
 
       if (extreme)
         _spx.changeObjRational(objective);
+#if defined(IPO_DEBUG)
+      _spx.writeFileRational("LP-rational3.lp");
+#endif /* IPO_DEBUG */
       _spx.optimize();
 
       _rowBasisStatus.resize(_spx.numRows());

@@ -94,7 +94,7 @@ extern "C"
 
     SCIP_EVENTHDLRDATA* eventhdlrdata = SCIPeventhdlrGetData(eventhdlr);
     if ((eventhdlrdata->minPrimalBound > -std::numeric_limits<double>::infinity()
-      && SCIPgetPrimalbound(scip) - eventhdlrdata->minPrimalBound
+      && SCIPgetPrimalbound(scip) > eventhdlrdata->minPrimalBound
       && SCIPisLT(scip, SCIPgetDualbound(scip), SCIPinfinity(scip)))
       || (eventhdlrdata->maxDualBound < std::numeric_limits<double>::infinity()
       && SCIPisLE(scip, SCIPgetDualbound(scip), eventhdlrdata->maxDualBound)))
@@ -228,6 +228,7 @@ namespace ipo
    * \p ranged Whether to returned ranged rows.
    */
 
+  static
   void SCIPiterateBounds(SCIP* scip,
     const std::unordered_map<SCIP_VAR*, std::size_t>& variablesToCoordinates,
     std::function<void(Constraint<double>&& constraint)> visitor, bool ranged)
@@ -281,6 +282,7 @@ namespace ipo
    * \p ranged Whether to returned ranged rows.
    */
 
+  static
   void SCIPiterateRows(SCIP* scip,
     const std::unordered_map<SCIP_VAR*, std::size_t>& variablesToCoordinates,
     std::function<void(Constraint<double>&& constraint)> visitor, bool ranged)
@@ -642,6 +644,69 @@ namespace ipo
 
 #endif /* IPO_RATIONAL_LP */
 
+  static
+  void extractPoints(SCIP* scip, std::vector<SCIP_VAR*>& variables, const double* objectiveVector,
+    OptimizationOracle<double>::Response& response)
+  {
+    std::size_t numSolutions = SCIPgetNSols(scip);
+    SCIP_SOL** solutions = SCIPgetSols(scip);
+    for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
+    {
+      SCIP_SOL* sol = solutions[solIndex];
+      auto vector = std::make_shared<sparse_vector<double>>();
+      bool isFinite = true;
+#if defined(IPO_DEBUG)
+      double maxAbsValue = 0.0;
+#endif /* IPO_DEBUG */
+      for (std::size_t i = 0; i < variables.size(); ++i)
+      {
+        double x = SCIPgetSolVal(scip, sol, variables[i]);
+        if (fabs(x) > 1.0e15)
+        {
+#if defined(IPO_DEBUG)
+          std::cout << "A solution had an extremely large entry: " << SCIPvarGetName(variables[i]) << "=" << x
+            << "." << std::endl;
+#endif /* IPO_DEBUG */
+          isFinite = false;
+          break;
+        }
+#if defined(IPO_DEBUG)
+        maxAbsValue = std::max(maxAbsValue, fabs(x));
+#endif /* IPO_DEBUG */
+        if (!SCIPisZero(scip, x))
+          vector->push_back(i, x);
+      }
+      if (isFinite)
+      {
+#if defined(IPO_DEBUG)
+        std::cout << "Extracted a solution with objective value " << (objectiveVector * *vector) << " and "
+          "absolute maximum entry " << maxAbsValue << "." << std::endl;
+#endif /* IPO_DEBUG */
+        response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveVector * *vector));
+      }
+    }
+  }
+
+  static
+  void extractRays(SCIP* scip, std::vector<SCIP_VAR*>& variables, OptimizationOracle<double>::Response& response)
+  {
+    if (SCIPhasPrimalRay(scip))
+    {
+      auto vector = std::make_shared<sparse_vector<double>>();
+      for (std::size_t i = 0; i < variables.size(); ++i)
+      {
+        double y = SCIPgetPrimalRayVal(scip, variables[i]);
+        if (!SCIPisZero(scip, y))
+          vector->push_back(i, y);
+      }
+      response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
+    }
+    else
+    {
+      throw std::runtime_error("SCIPOptimizationOracle<double>: SCIP reports unboundedness without ray!");
+    }
+  }
+
   OptimizationOracle<double>::Response SCIPOptimizationOracle<double>::maximize(const double* objectiveVector,
     const OptimizationOracle<double>::Query& query)
   {
@@ -666,37 +731,27 @@ namespace ipo
 #endif /* IPO_DEBUG */
     _solver->selectFace(&_face);
 
+    // SCIP settings.
+    int oldPresolvingMaxRounds;
+    double remainingTime = (query.timeLimit == std::numeric_limits<double>::infinity())
+      ? (SCIPinfinity(_solver->_scip)) : query.timeLimit;
+    SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "presolving/maxrounds", &oldPresolvingMaxRounds) );
     SCIP_CALL_EXC( SCIPsetLongintParam(_solver->_scip, "limits/totalnodes", -1L) );
-    SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
-      query.timeLimit == std::numeric_limits<double>::infinity() ? SCIPinfinity(_solver->_scip)
-      : query.timeLimit) );
-
+    SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time", remainingTime) );
     SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "limits/solutions", query.maxNumSolutions) );
 
-    // Compute factor for scaling the objective vector down.
-
-    double maxEntry = 0.0;
-    for (std::size_t i = 0; i < n; ++i)
-    {
-      double ci = fabs(objectiveVector[i]);
-      if (ci > maxEntry)
-        maxEntry = ci;
-    }
-
-    const double maxAllowedEntry = 10e5;
-    double scalingFactor = 1.0 / std::max(1.0, maxEntry / maxAllowedEntry);
+    // Scale the objective vector down before passing it to SCIP.
+    double objectiveScalingFactor = 1.0 / std::max(1.0, maxAbsoluteValue(objectiveVector, n) / 1.0e5 );
 #if defined(IPO_DEBUG)
-    std::cout << "Scaling objective vector by " << scalingFactor << "." << std::endl;
+    std::cout << "Scaling objective vector by " << objectiveScalingFactor << "." << std::endl;
 #endif /* IPO_DEBUG */
-
     for (std::size_t i = 0; i < n; ++i)
     {
       SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i],
-        objectiveVector[i] * scalingFactor) );
+        objectiveVector[i] * objectiveScalingFactor) );
     }
 
-    // Bound limits.
-
+    // Set bound limits of SCIP.
 #if defined(IPO_DEBUG)
     if (query.hasMinPrimalBound())
       std::cout << "minPrimalBound = " << query.minPrimalBound() << std::endl;
@@ -705,233 +760,197 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     _solver->_boundLimits.minPrimalBound = query.hasMinPrimalBound()
-      ? (query.minPrimalBound() * scalingFactor + 1.0e-6) : -std::numeric_limits<double>::infinity();
+      ? (query.minPrimalBound() * objectiveScalingFactor + 1.0e-6) : -std::numeric_limits<double>::infinity();
     _solver->_boundLimits.maxDualBound = query.hasMaxDualBound()
-      ? query.maxDualBound() * scalingFactor : std::numeric_limits<double>::infinity();
+      ? query.maxDualBound() * objectiveScalingFactor : std::numeric_limits<double>::infinity();
 
-    // Save presolve settings.
+    // First call to SCIP with presolving.
+#if defined(IPO_DEBUG)
+    std::cout << "Calling SCIP with presolving";
+    double timeLimit;
+    SCIP_CALL_EXC( SCIPgetRealParam(_solver->_scip, "limits/time", &timeLimit) );
+    if (SCIPisFinite(timeLimit))
+      std::cout << " using a time limit of " << timeLimit << "s";
+    std::cout << "." << std::endl;
+    SCIP_CALL_EXC( SCIPwriteOrigProblem(_solver->_scip, "SCIPOptimizationOracle-with-presolve.lp", 0, FALSE) );
+    SCIP_CALL_EXC( SCIPwriteParams(_solver->_scip, "SCIPOptimizationOracle-with-presolve.set", FALSE, TRUE) );
+#endif /* IPO_DEBUG */
 
-    int oldMaxRounds;
-    SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "presolving/maxrounds", &oldMaxRounds) );
-    SCIP_CALL_EXC( SCIPsetLongintParam(_solver->_scip, "limits/totalnodes", -1L) );
-
-    for (int attempt = 1; attempt <= 2; ++attempt)
+    remainingTime += SCIPgetTotalTime(_solver->_scip);
+    SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
+    if (retcode != SCIP_OKAY)
     {
+      std::stringstream message;
+      message << "SCIPOptimizationOracle<double>: received return code " << retcode << " from SCIPsolve() call.";
+      throw std::runtime_error(message.str());
+    }
+    remainingTime -= SCIPgetTotalTime(_solver->_scip);
+    SCIP_STATUS status = SCIPgetStatus(_solver->_scip);
+
 #if defined(IPO_DEBUG)
-      std::cout << "Solving optimization problem";
-      double timeLimit;
-      SCIP_CALL_EXC( SCIPgetRealParam(_solver->_scip, "limits/time", &timeLimit) );
-      if (SCIPisFinite(timeLimit))
-        std::cout << " with time limit " << timeLimit << "s";
-      std::cout << "." << std::endl;
+    std::cout << "SCIP with presolving returned with status " << status << ", primal bound "
+      << SCIPgetPrimalbound(_solver->_scip) << " and dual bound " << SCIPgetDualbound(_solver->_scip)
+      << "." << std::endl;
 #endif /* IPO_DEBUG */
 
-      double solutionTime = -SCIPgetTotalTime(_solver->_scip);
-      SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
-      if (retcode != SCIP_OKAY)
+    // Case distinction depending on status.
+    if (status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_TIMELIMIT)
+    {
+      assert(!SCIPhasPrimalRay(_solver->_scip));
+      assert(SCIPgetNSols(_solver->_scip) > 0);
+      extractPoints(_solver->_scip, _solver->_variables, objectiveVector, response);
+      response.setPrimalBound(SCIPgetPrimalbound(_solver->_scip) / objectiveScalingFactor);
+      response.dualBound = SCIPgetDualbound(_solver->_scip) / objectiveScalingFactor;
+      response.hasDualBound = true;
+      response.outcome = OptimizationOutcome::FEASIBLE;
+      response.hitTimeLimit = status == SCIP_STATUS_TIMELIMIT;
+      if (response.points.empty())
       {
-        std::cerr << "SCIPOptimizationOracle<double> received return code " << retcode
-          << " from SCIPsolve() call." << std::endl;
+        SCIP_CALL_EXC( SCIPwriteOrigProblem(_solver->_scip, "SCIPOptimizationOracle-all-sols-infinite.lp", 0,
+          FALSE) );
+        throw std::runtime_error("SCIPOptimizationOracle<double>: All SCIP solutions had an infinite entry."
+          " Wrote instance to file <SCIPOptimizationOracle-all-sols-infinite.lp>.");
       }
-      //std::cout << "SCIP solved MIP in " << SCIPgetSolvingTime(_solver->_scip) << "s." << std::endl;
-      solutionTime += SCIPgetTotalTime(_solver->_scip);
+    }
+    else if (status == SCIP_STATUS_INFEASIBLE)
+    {
+      response.outcome = OptimizationOutcome::INFEASIBLE;
+    }
+    else
+    {
+      if (status == SCIP_STATUS_INFORUNBD)
+      {
+        // For the second call we disable presolving.
+        SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+        SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+        SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", 0) );
+        SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time", remainingTime) );
 
+        // Second call to SCIP, without presolving.
 #if defined(IPO_DEBUG)
-      std::cout << "SCIP returned with return code " << retcode << ", status "
-        << SCIPgetStatus(_solver->_scip) << ", primal bound " << SCIPgetPrimalbound(_solver->_scip)
-        << " and dual bound " << SCIPgetDualbound(_solver->_scip) << "." << std::endl;
+        std::cout << "Calling SCIP without presolving.";
+        double timeLimit;
+        SCIP_CALL_EXC( SCIPgetRealParam(_solver->_scip, "limits/time", &timeLimit) );
+        if (SCIPisFinite(timeLimit))
+          std::cout << " with time limit " << timeLimit << "s";
+        std::cout << "." << std::endl;
 #endif /* IPO_DEBUG */
 
-      bool hasRay = SCIPhasPrimalRay(_solver->_scip);
-      if (hasRay)
-      {
-        auto vector = std::make_shared<sparse_vector<double>>();
-        for (std::size_t i = 0; i < n; ++i)
+        remainingTime += SCIPgetTotalTime(_solver->_scip);
+        SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
+        if (retcode != SCIP_OKAY)
         {
-          double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
-          if (!SCIPisZero(_solver->_scip, y))
-            vector->push_back(i, y);
+          std::stringstream message;
+          message << "SCIPOptimizationOracle<double>: received return code " << retcode << " from SCIPsolve() call.";
+          throw std::runtime_error(message.str());
         }
-        response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
-        response.outcome = OptimizationOutcome::UNBOUNDED;
-        break;
-      }
+        remainingTime -= SCIPgetTotalTime(_solver->_scip);
+        status = SCIPgetStatus(_solver->_scip);
 
-      SCIP_STATUS status = SCIPgetStatus(_solver->_scip);
-      if (status == SCIP_STATUS_UNBOUNDED && attempt == 2 && !hasRay)
-      {
-        throw std::runtime_error("SCIPOptimizationOracle: SCIP reports unboundedness without ray!");
-      }
-
-      std::size_t numSolutions = SCIPgetNSols(_solver->_scip);
-      if (status != SCIP_STATUS_INFORUNBD && status != SCIP_STATUS_UNBOUNDED && numSolutions > 0)
-      {
-        // Note that SCIP_STATUS_INFEASIBLE is fine since this is issued if the objective limit was
-        // reached. However, if solutions were found, we want to process them.
-
-        SCIP_SOL** solutions = SCIPgetSols(_solver->_scip);
-        for (std::size_t solIndex = 0; solIndex < numSolutions; ++solIndex)
-        {
-          SCIP_SOL* sol = solutions[solIndex];
-          auto vector = std::make_shared<sparse_vector<double>>();
-          for (std::size_t i = 0; i < n; ++i)
-          {
-            double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-            if (!SCIPisZero(_solver->_scip, x))
-              vector->push_back(i, x);
-          }
 #if defined(IPO_DEBUG)
-          std::cout << "One solution has value " << (objectiveVector * *vector) << "." << std::endl;
+        std::cout << "SCIP without presolving returned with status " << status << ", primal bound "
+          << SCIPgetPrimalbound(_solver->_scip) << " and dual bound " << SCIPgetDualbound(_solver->_scip)
+          << "." << std::endl;
 #endif /* IPO_DEBUG */
-          response.points.push_back(OptimizationOracle<double>::Response::Point(vector,
-            objectiveVector * *vector));
-        }
-        if (status == SCIP_STATUS_TIMELIMIT)
-          response.hitTimeLimit = true;
-        response.setPrimalBound(SCIPgetPrimalbound(_solver->_scip) / scalingFactor);
-        response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
-        response.hasDualBound = true;
-        response.outcome = OptimizationOutcome::FEASIBLE;
-#if defined(IPO_DEBUG)
-        std::cout << "Created response." << std::endl;
-#endif /* IPO_DEBUG */
-        break;
       }
-      else if (status == SCIP_STATUS_INFEASIBLE)
+
+      // Case distinction of status if first call was neither optimal, time limit nor infeasible.
+      if (status == SCIP_STATUS_INFEASIBLE)
       {
-        assert(numSolutions == 0);
         response.outcome = OptimizationOutcome::INFEASIBLE;
-        break;
       }
       else if (status == SCIP_STATUS_UNBOUNDED)
       {
-        if (SCIPhasPrimalRay(_solver->_scip))
+        assert(SCIPhasPrimalRay(_solver->_scip));
+        extractPoints(_solver->_scip, _solver->_variables, objectiveVector, response);
+        extractRays(_solver->_scip, _solver->_variables, response);
+        response.outcome = OptimizationOutcome::UNBOUNDED;
+
+        // We're unbounded but but don't have a point, so we solve a feasibility problem.
+        if (response.points.empty())
         {
-          auto vector = std::make_shared<sparse_vector<double>>();
+          SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+          SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+          SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", oldPresolvingMaxRounds) );
+          SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time", remainingTime) );
+
+          // Update objective vector.
           for (std::size_t i = 0; i < n; ++i)
+            SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
+
+          // Remove limits on primal and dual bounds.
+          _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
+          _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
+
+          // Third call to SCIP, for feasibility.
+#if defined(IPO_DEBUG)
+          std::cout << "Calling SCIP for feasibility.";
+          double timeLimit;
+          SCIP_CALL_EXC( SCIPgetRealParam(_solver->_scip, "limits/time", &timeLimit) );
+          if (SCIPisFinite(timeLimit))
+            std::cout << " with time limit " << timeLimit << "s";
+          std::cout << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+          remainingTime += SCIPgetTotalTime(_solver->_scip);
+          SCIP_RETCODE retcode = SCIPsolve(_solver->_scip);
+          if (retcode != SCIP_OKAY)
           {
-            double y = SCIPgetPrimalRayVal(_solver->_scip, _solver->_variables[i]);
-            if (!SCIPisZero(_solver->_scip, y))
-              vector->push_back(i, y);
+            std::stringstream message;
+            message << "SCIPOptimizationOracle<double>: received return code " << retcode << " from SCIPsolve() call.";
+            throw std::runtime_error(message.str());
           }
-          response.rays.push_back(OptimizationOracle<double>::Response::Ray(vector));
-          response.outcome = OptimizationOutcome::UNBOUNDED;
-        }
-        else
-        {
-          assert(!"Not implemented: SCIP unbounded but without ray.");
-        }
-      }
-      else if (status == SCIP_STATUS_TIMELIMIT)
-      {
-        response.hitTimeLimit = true;
-        response.outcome = OptimizationOutcome::TIMEOUT;
-        if (SCIPisFinite(SCIPgetPrimalbound(_solver->_scip)))
-          response.setPrimalBound(SCIPgetPrimalbound(_solver->_scip) / scalingFactor);
-        if (SCIPisFinite(SCIPgetDualbound(_solver->_scip)))
-        {
-          response.dualBound = SCIPgetDualbound(_solver->_scip) / scalingFactor;
-          response.hasDualBound = true;
-        }
-      }
-      else if (attempt == 2)
-      {
-        std::ostringstream ss;
-        ss << "SCIPOptimizationOracle: unhandled SCIP status code " << status << ".";
-        throw std::runtime_error(ss.str());
-      }
-
-      // Disable presolving for the second round.
-
-      SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", 0) );
-      SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
-      SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
-
-      // Adapt time limit.
+          remainingTime -= SCIPgetTotalTime(_solver->_scip);
+          status = SCIPgetStatus(_solver->_scip);
 
 #if defined(IPO_DEBUG)
-      std::cout << "Time limit is " << query.timeLimit << "." << std::endl;
-      std::cout << "SCIP used " << solutionTime << "s already." << std::endl;
-#endif
-      if (query.timeLimit < std::numeric_limits<double>::infinity())
-      {
-        SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time",
-          std::max(0.0, query.timeLimit - solutionTime)) );
-      }
-
-#if defined(IPO_DEBUG)
-      std::cout << "Disabling presolve for a second optimization attempt." << std::endl;
-#endif /* IPO_DEBUG */
-    }
-
-    SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", oldMaxRounds) );
-    SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
-    SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
-
-    if (!response.rays.empty() && response.points.empty())
-    {
-      response.unsetPrimalBound();
-
-      // We have to check feasibility.
-
-      for (std::size_t i = 0; i < n; ++i)
-        SCIP_CALL_EXC( SCIPchgVarObj(_solver->_scip, _solver->_variables[i], 0.0) );
-
-      // Remove limits on primal and dual bounds.
-      _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
-      _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
-
-#if defined(IPO_DEBUG)
-      std::cout << "Solving feasibility problem." << std::endl;
-#endif /* IPO_DEBUG */
-      
-      int nsols = SCIPgetNSols(_solver->_scip);
-      for (int i = 0; i < nsols; ++i)
-      {
-        std::cout << "sol #" << i << std::endl;
-        SCIP_SOL* sol = SCIPgetSols(_solver->_scip)[i];
-        SCIPprintSol(_solver->_scip, sol, stdout, false);
-      }
-
-      SCIP_CALL_EXC( SCIPsolve(_solver->_scip) );
-
-#if defined(IPO_DEBUG)
-      std::cout << "SCIP returned with status " << SCIPgetStatus(_solver->_scip) << "."
-        << std::endl;
-      SCIPprintTimingStatistics(_solver->_scip, stdout);
-      fflush(stdout);
+          std::cout << "SCIP for feasibility returned with status " << status << ", primal bound "
+            << SCIPgetPrimalbound(_solver->_scip) << " and dual bound " << SCIPgetDualbound(_solver->_scip)
+            << "." << std::endl;
 #endif /* IPO_DEBUG */
 
-      if (SCIPgetStatus(_solver->_scip) == SCIP_STATUS_OPTIMAL)
-      {
-        SCIP_SOL* sol = SCIPgetBestSol(_solver->_scip);
-        auto vector = std::make_shared<sparse_vector<double>>();
-        double objectiveValue = 0.0;
-        for (std::size_t i = 0; i < n; ++i)
-        {
-          double x = SCIPgetSolVal(_solver->_scip, sol, _solver->_variables[i]);
-#if defined(IPO_DEBUG)
-        std::cout << "  x_" << i << " = " << x << "." << std::endl;
-#endif /* IPO_DEBUG */
-          if (!SCIPisZero(_solver->_scip, x))
+          if (status == SCIP_STATUS_INFEASIBLE)
           {
-            vector->push_back(i, x);
-            objectiveValue += objectiveVector[i] * x;
+            response.rays.clear();
+            response.outcome = OptimizationOutcome::INFEASIBLE;
+          }
+          else if (status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_TIMELIMIT)
+          {
+            extractPoints(_solver->_scip, _solver->_variables, objectiveVector, response);
+            response.hitTimeLimit = status == SCIP_STATUS_TIMELIMIT;
+            if (response.points.empty())
+            {
+              std::stringstream message;
+              message << "SCIPOptimizationOracle<double>: "
+                "Feasbility SCIP has found points all of which have extremely large entries.";
+              throw std::runtime_error(message.str());
+            }
+          }
+          else
+          {
+            std::stringstream message;
+            message << "SCIPOptimizationOracle<double>: Unhandled SCIP status " << status << " in feasibility call.";
+            throw std::runtime_error(message.str());
           }
         }
-#if defined(IPO_DEBUG)
-        std::cout << "One solution has value " << objectiveValue << "." << std::endl;
-#endif /* IPO_DEBUG */
-        response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveValue)); 
       }
       else
       {
-        response.rays.clear();
-        response.unsetPrimalBound();
+        std::stringstream message;
+        message << "SCIPOptimizationOracle<double>: Unhandled SCIP status " << status;
+        if (status == SCIP_STATUS_OPTIMAL)
+          message << " (optimal) after a previous status " << SCIP_STATUS_INFORUNBD << " (infeasible/unbounded).";
+        else if (status == SCIP_STATUS_INFORUNBD)
+          message << " (infeasible/unbounded) even after disabling presolving.";
+        else
+          message << ".";
+        throw std::runtime_error(message.str());
       }
-      SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
-      SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
     }
+
+    SCIP_CALL_EXC( SCIPfreeSolve(_solver->_scip, true) );
+    SCIP_CALL_EXC( SCIPfreeTransform(_solver->_scip) );
+    SCIP_CALL_EXC( SCIPsetIntParam(_solver->_scip, "presolving/maxrounds", oldPresolvingMaxRounds) );
 
 #if !defined(NDEBUG)
     for (auto& point : response.points)
@@ -941,7 +960,7 @@ namespace ipo
 #endif /* !NDEBUG */
 
 #if defined(IPO_DEBUG)
-    std::cout << "Sorting points." << std::endl;
+    std::cout << "Sorting " << response.points.size() << " points." << std::endl;
 #endif /* IPO_DEBUG */
 
     std::sort(response.points.begin(), response.points.end());

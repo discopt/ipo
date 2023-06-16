@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <regex>
 
@@ -224,7 +224,7 @@ namespace ipo
       }
       response.setPrimalBound(response.points.front().objectiveValue);
     }
-    else if (!liftedResponse.rays.empty())
+    if (!liftedResponse.rays.empty())
     {
       for (auto ray : liftedResponse.rays)
       {

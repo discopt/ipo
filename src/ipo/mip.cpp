@@ -1,4 +1,4 @@
-// #define IPO_DEBUG // Uncomment to debug this file.
+//#define IPO_DEBUG // Uncomment to debug this file.
 
 #include <ipo/mip.hpp>
 
@@ -235,11 +235,21 @@ namespace ipo
               extractPoint(response, objectiveVector);
             else
             {
-              std::stringstream ss;
-              ss << "Error in RationalMIPExtender::maximize. Unbounded approximate oracle with point LP status "
-                << status << '.';
-              throw std::runtime_error(ss.str());
+#if defined(IPO_DEBUG)
+              std::cout << "RationalMIPExtender::maximize: conversion of point to rational failed!" << std::endl;
+              for (const auto& iter : *point.vector)
+              {
+                std::cout << "v_" << iter.first << " = " << iter.second << std::endl;
+              }
+#endif /* IPO_DEBUG */
             }
+          }
+          if (response.points.empty() && !approximateResponse.points.empty())
+          {
+            std::stringstream ss;
+            ss << "Error in RationalMIPExtender::maximize: Unbounded approximate oracle, but no points out of "
+              << approximateResponse.points.size() << " could be converted to rational ones!";
+            throw std::runtime_error(ss.str());
           }
         }
       }

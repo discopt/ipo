@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <regex>
 
