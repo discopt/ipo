@@ -717,6 +717,8 @@ namespace ipo
     OptimizationOracle<double>::Response response;
 
     std::size_t n = space()->dimension();
+    double remainingTime = (query.timeLimit == std::numeric_limits<double>::infinity())
+      ? (SCIPinfinity(_solver->_scip)) : query.timeLimit;
 
 #if defined(IPO_DEBUG)
     std::cout << "Maximizing objective";
@@ -727,14 +729,13 @@ namespace ipo
     }
     std::cout << ".\n";
     std::cout << "Setting SCIP face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
-    std::cout << "Setting Time limit to " << query.timeLimit << "." << std::endl;
+    std::cout << "Setting time limit to " << remainingTime << "." << std::endl;
+    std::cout << "Setting node limit to " << -1 << "." << std::endl;
 #endif /* IPO_DEBUG */
     _solver->selectFace(&_face);
 
     // SCIP settings.
     int oldPresolvingMaxRounds;
-    double remainingTime = (query.timeLimit == std::numeric_limits<double>::infinity())
-      ? (SCIPinfinity(_solver->_scip)) : query.timeLimit;
     SCIP_CALL_EXC( SCIPgetIntParam(_solver->_scip, "presolving/maxrounds", &oldPresolvingMaxRounds) );
     SCIP_CALL_EXC( SCIPsetLongintParam(_solver->_scip, "limits/totalnodes", -1L) );
     SCIP_CALL_EXC( SCIPsetRealParam(_solver->_scip, "limits/time", remainingTime) );
@@ -794,7 +795,7 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     // Case distinction depending on status.
-    if (status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_TIMELIMIT)
+    if (status == SCIP_STATUS_OPTIMAL || status == SCIP_STATUS_TIMELIMIT || status == SCIP_STATUS_TOTALNODELIMIT)
     {
       assert(!SCIPhasPrimalRay(_solver->_scip));
       assert(SCIPgetNSols(_solver->_scip) > 0);
@@ -942,6 +943,12 @@ namespace ipo
           message << " (optimal) after a previous status " << SCIP_STATUS_INFORUNBD << " (infeasible/unbounded).";
         else if (status == SCIP_STATUS_INFORUNBD)
           message << " (infeasible/unbounded) even after disabling presolving.";
+        else if (status == SCIP_STATUS_TOTALNODELIMIT)
+        {
+          SCIP_Longint numNodes;
+          SCIP_CALL_EXC( SCIPgetLongintParam(_solver->_scip, "limits/totalnodes", &numNodes) );
+          message << " (total node limit was " << numNodes << ").";
+        }
         else
           message << ".";
         throw std::runtime_error(message.str());
