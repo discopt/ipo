@@ -1,3 +1,5 @@
+#define IPO_DEBUG // Comment out to add debug information.
+
 #include <iostream>
 #include <sstream>
 
@@ -134,7 +136,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       if (scip->instanceObjective()[scipVar])
       {
         std::cout << (first ? "Objective: " : " + ") << scip->instanceObjective()[scipVar] << "*"
-          << poly->space()->variable(scipVar);
+          << baseOracle->space()->variable(scipVar);
         first = false;
       }
     }
