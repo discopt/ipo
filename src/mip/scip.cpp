@@ -14,9 +14,9 @@
 
 template <typename Number>
 void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::OptimizationOracle<Number>> baseOracle,
-  std::shared_ptr<ipo::SeparationOracle<Number>> sepa, bool gmp, double timeLimit, const std::string& projectionRegex,
-  bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations, bool outputInterior,
-  bool outputInstanceFacets, int outputRandomFacets)
+  std::shared_ptr<ipo::SeparationOracle<Number>> sepa, bool gmp, double timeLimit, int randomSeed,
+  const std::string& projectionRegex, bool useDominant, bool useSubmissive, bool outputDimension, bool outputEquations,
+  bool outputInterior, bool outputInstanceFacets, int outputRandomFacets)
 {
   std::shared_ptr<ipo::OptimizationOracle<Number>> projectionOracle;
   std::shared_ptr<ipo::Projection<Number>> projectionMap;
@@ -95,6 +95,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   }
 
   std::default_random_engine generator;
+  generator.seed(randomSeed);
   std::normal_distribution<double> normal_distribution;
   if (outputInstanceFacets || outputRandomFacets)
   {
@@ -299,6 +300,7 @@ int printUsage(const std::string& program)
   std::cout << "General options:\n";
   std::cout << " -h       Show this help and exit.\n";
   std::cout << " -t TIME  Abort computations after TIME seconds.\n";
+  std::cout << " -S SEED  Use SEED to initialize the random number generator.\n";
   std::cout << "Oracle/polyhedron options:\n";
 #if defined(IPO_RATIONAL)
   std::cout << " -x       Use exact arithmetic oracles instead of double precision.\n";
@@ -332,6 +334,7 @@ int main(int argc, char** argv)
   bool outputInterior = false;
   bool outputInstanceFacets = false;
   int outputRandomFacets = 0;
+  int randomSeed = 0;
   for (int a = 1; a < argc; ++a)
   {
     const std::string arg = argv[a];
@@ -348,6 +351,12 @@ int main(int argc, char** argv)
     {
       std::stringstream ss(argv[a+1]);
       ss >> timeLimit;
+      ++a;
+    }
+    else if (arg == "-S" && a+1 < argc)
+    {
+      std::stringstream ss(argv[a+1]);
+      ss >> randomSeed;
       ++a;
     }
     else if (arg == "-p" && a+1 < argc)
@@ -402,7 +411,7 @@ int main(int argc, char** argv)
   {
 #if defined(IPO_RATIONAL) && defined(IPO_RATIONAL_MIP_SCIP)
     run<ipo::rational>(scip, scip->getOptimizationOracle<ipo::rational>(), scip->getSeparationOracle<ipo::rational>(),
-      true, timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior,
+      true, timeLimit, randomSeed, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior,
       outputInstanceFacets, outputRandomFacets);
 #endif /* IPO_RATIONAL && IPO_RATIONAL_MIP_SCIP */
   }
@@ -412,7 +421,7 @@ int main(int argc, char** argv)
   {
 #if defined(IPO_DOUBLE)
     run<double>(scip, scip->getOptimizationOracle<double>(), scip->getSeparationOracle<double>(), false,
-      timeLimit, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior,
+      timeLimit, randomSeed, projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior,
       outputInstanceFacets, outputRandomFacets);
 #endif /* IPO_DOUBLE */
   }
