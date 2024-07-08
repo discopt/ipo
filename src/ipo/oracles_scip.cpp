@@ -389,6 +389,7 @@ namespace ipo
   void SCIPSolver::initialize()
   {
     SCIP_CALL_EXC( SCIPsetBoolParam(_scip, "misc/catchctrlc", false) );
+
     std::size_t n = SCIPgetNOrigVars(_scip);
     _variables.resize(n);
     std::vector<std::string> variableNames;

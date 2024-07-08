@@ -48,7 +48,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   ipo::SeparationResponse<Number> sepaResponse;
   if (needAffineHull)
     sepaResponse = sepa->getInitial();
-  
+
   ipo::AffineHull<Number> affineHull;
   if (needAffineHull)
   {
@@ -59,6 +59,8 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
       if (cons.type() == ipo::ConstraintType::EQUATION)
         knownEquations.push_back(cons);
     }
+
+    // Project the equations.
     std::vector<ipo::Constraint<Number>> projectedEquations;
     if (useDominant || useSubmissive)
     {
@@ -66,7 +68,9 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
     else if (projectionRegex.empty())
       projectedEquations = knownEquations;
     else
-      projectedEquations = projectionEquations(projectionMap, knownEquations);    
+      projectedEquations = projectionEquations(projectionMap, knownEquations);
+
+    // Execute actual affine hull algorithm.
 
     std::cerr << "Starting affine hull computation.\n" << std::flush;
     ipo::AffineHullQuery affQuery;
@@ -100,6 +104,7 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
   if (outputInstanceFacets || outputRandomFacets)
   {
 #if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+
     ipo::LP<Number> lp;
     lp.setSense(ipo::LPSense::MAXIMIZE);
     std::size_t scipVar = 0;
@@ -125,9 +130,17 @@ void run(std::shared_ptr<ipo::SCIPSolver> scip, std::shared_ptr<ipo::Optimizatio
 
     std::vector<int> nonzeroColumns;
     std::vector<Number> nonzeroCoefficients;
-    if (projectionRegex.empty())
+    if (!useSubmissive && !useDominant)
     {
-      for (const ipo::Constraint<Number>& cons : sepaResponse.constraints)
+      std::vector<ipo::Constraint<Number>> constraints;
+      if (!projectionRegex.empty())
+      {
+        constraints = ipo::projectionCompact(projectionMap, sepaResponse.constraints, false);
+      }
+      else
+        constraints = sepaResponse.constraints;
+
+      for (const ipo::Constraint<Number>& cons : constraints)
       {
         if (cons.vector().size() == 1)
         {

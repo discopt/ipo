@@ -1,6 +1,7 @@
 // #define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <regex>
+#include <unordered_map>
 
 #include <ipo/projection.hpp>
 
@@ -176,6 +177,92 @@ namespace ipo
     const std::vector<Constraint<rational>>& equations);
 
 #endif /* IPO_RATIONAL */
+
+
+
+  template <typename Number>
+  std::vector<Constraint<Number>> projectionCompactImplementation(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& constraints, bool onlyEquations)
+  {
+    std::vector<Constraint<Number>> result;
+
+    // TODO: Implement completely. A temporary workaround is to determine the set of source variables that are
+    //       projected orthogonally.
+
+    // Mapping from projectable variables to their image variables.
+    std::unordered_map<std::size_t, std::size_t> orthogonallyProjectedVariables;
+    for (size_t v = 0; v < projection->space()->dimension(); ++v)
+    {
+      const sparse_vector<Number>& linear = projection->mapLinear(v);
+      if (linear.size() == 1)
+        orthogonallyProjectedVariables.insert(std::make_pair(linear.begin()->first, v));
+    }
+
+    for (const Constraint<Number>& constraint : constraints)
+    {
+      if ( onlyEquations && constraint.type() != ConstraintType::EQUATION)
+        continue;
+
+      bool projectable = true;
+      std::vector<std::pair<std::size_t, Number>> nonzeros;
+      Number lhs = constraint.hasLhs() ? constraint.lhs() : Number(0);
+      Number rhs = constraint.hasRhs() ? constraint.rhs() : Number(0);
+      for (auto& term : constraint.vector())
+      {
+        auto iter = orthogonallyProjectedVariables.find(term.first);
+        if (iter == orthogonallyProjectedVariables.end())
+        {
+          projectable = false;
+          break;
+        }
+        else
+        {
+          const sparse_vector<Number>& linear = projection->mapLinear(iter->second);
+          const Number& factor = linear.begin()->second;
+          const Number& constant = projection->mapConstant(iter->second);
+          nonzeros.push_back(std::make_pair(iter->second, term.second / factor));
+          if (constraint.hasLhs())
+            lhs -= term.second * constant / factor;
+          if (constraint.hasRhs())
+            rhs -= term.second * constant / factor;
+        }
+      }
+      if (projectable)
+      {
+        result.emplace_back(Constraint<Number>(std::move(lhs),
+          std::make_shared<sparse_vector<Number>>(nonzeros, true), std::move(rhs), constraint.type()));
+      }
+    }
+
+#if defined(IPO_DEBUG)
+    // TODO: Implement.
+#endif /* IPO_DEBUG */
+
+    return result;
+  }
+
+  template <typename Number>
+  std::vector<Constraint<Number>> projectionCompact(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& constraints, bool onlyEquations)
+  {
+    return projectionCompactImplementation(projection, constraints, onlyEquations);
+  }
+
+  /* Explicit template instantiation. */
+
+  template std::vector<Constraint<double>> projectionCompact(std::shared_ptr<Projection<double>> projection,
+    const std::vector<Constraint<double>>& constraints, bool onlyEquations);
+
+#if defined(IPO_RATIONAL)
+
+  template std::vector<Constraint<rational>> projectionCompact(std::shared_ptr<Projection<rational>> projection,
+    const std::vector<Constraint<rational>>& constraints, bool onlyEquations);
+
+#endif /* IPO_RATIONAL */
+
+
+
+
 
   template <typename Number>
   ProjectionOptimizationOracle<Number>::~ProjectionOptimizationOracle()

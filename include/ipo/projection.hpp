@@ -50,6 +50,24 @@ namespace ipo
     ~Projection();
 
     /**
+     * \brief Linear part of the map.
+     */
+
+    inline const sparse_vector<Number>& mapLinear(std::size_t variable) const
+    {
+      return _mapLinear[variable];
+    }
+
+    /**
+     * \brief Constant part of the map.
+     */
+
+    inline const Number& mapConstant(std::size_t variable) const
+    {
+      return _mapConstant[variable];
+    }
+
+    /**
      * \brief Adds variable \p variableIndex from \p space by means of an orthogonal projection.
      **/
 
@@ -121,6 +139,21 @@ namespace ipo
   template <typename Number>
   std::vector<Constraint<Number>> projectionEquations(std::shared_ptr<Projection<Number>> projection,
     const std::vector<Constraint<Number>>& equations);
+
+  /**
+   * \brief Projects a set of \p inequalities via \p projection.
+   *
+   * Computes a system of inequalities in the image space of \p projection that defines a relaxation of the projection
+   * of the polyhedron defined by \p constraints.
+   *
+   * Suppose a constraint from \p constraints reads \f$ a^\intercal x \leq \beta \f$ and \p projection is
+   * \f$ x \mapsto y = Tx + t \f$ then we obtain \f$ c^\intercal y \leq \delta \f$ if
+   * \f$ c^\intercal T = a^\intercal \f$ and \f$ \delta - c^\intercal t = \beta \f$ holds.
+   **/
+
+  template <typename Number>
+  std::vector<Constraint<Number>> projectionCompact(std::shared_ptr<Projection<Number>> projection,
+    const std::vector<Constraint<Number>>& constraints, bool onlyEquations = false);
 
   template <typename NumberType>
   class ProjectionOptimizationOracle: public OptimizationOracle<NumberType>

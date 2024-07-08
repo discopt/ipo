@@ -96,11 +96,11 @@ endif()
 
 # Target for the IPO library.
 add_library(ipo
+  src/ipo/lp.cpp
   src/ipo/affine_hull.cpp
   src/ipo/arithmetic.cpp
   src/ipo/constraint.cpp
   src/ipo/dominant.cpp
-  src/ipo/lp.cpp
   src/ipo/lu.cpp
   src/ipo/mip.cpp
   src/ipo/oracles.cpp
