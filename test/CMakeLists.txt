@@ -44,7 +44,7 @@ endif()
 
 # Configure tu_gtest target.
 target_compile_features(ipo_gtest PRIVATE cxx_auto_type)
-target_link_libraries(ipo_gtest gtest_main IPO::IPO)
+target_link_libraries(ipo_gtest GTest::gtest_main IPO::IPO)
 if(SCIP_FOUND)
   target_link_libraries(ipo_gtest libscip)
 endif()
