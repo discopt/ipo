@@ -63,7 +63,7 @@ endif()
 if(IPO_DOUBLE OR IPO_RATIONAL) # Search for SoPlex if requested.
   find_package(SOPLEX QUIET)
   if(SOPLEX_FOUND)
-    message(STATUS "Found SoPlex version ${SOPLEX_VERSION}.")
+    message(STATUS "Found SoPlex version ${SOPLEX_VERSION} with include dir ${SOPLEX_INCLUDE_DIRS}.")
     if(IPO_DOUBLE)
       set(IPO_DOUBLE_LP TRUE)
       set(IPO_DOUBLE_LP_SOPLEX TRUE)
