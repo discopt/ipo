@@ -7,6 +7,7 @@
 
 #include <memory>
 #include <limits>
+#include <map>
 #include <ostream>
 
 namespace ipo
