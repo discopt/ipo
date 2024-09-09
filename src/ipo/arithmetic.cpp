@@ -50,6 +50,21 @@ namespace ipo
     return result;
   }
 
+  double maxAbsoluteValue(const double* vector, std::size_t length)
+  {
+    double result = 0.0;
+    const double* px = vector;
+    while (length)
+    {
+      double x = fabs(*px);
+      if (x > result)
+        result = x;
+      ++px;
+      --length;
+    }
+    return result;
+  }
+
 #if defined(IPO_RATIONAL)
 
   void reconstructRational(mpq_ptr result, double x, double maxError)

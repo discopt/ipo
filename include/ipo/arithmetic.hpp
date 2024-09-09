@@ -26,6 +26,8 @@ namespace ipo
 
   double* generateRandomVectorSphere(std::size_t size);
 
+  double maxAbsoluteValue(const double* vector, std::size_t length);
+
 } /* namespace ipo */
 
 #if defined(IPO_RATIONAL)
@@ -72,21 +74,6 @@ namespace ipo
   private:
     rational _factor;
   };
-
-  inline double maxAbsoluteValue(const double* vector, std::size_t length)
-  {
-    double result = 0.0;
-    const double* px = vector;
-    while (length)
-    {
-      double x = fabs(*px);
-      if (x > result)
-        result = x;
-      ++px;
-      --length;
-    }
-    return result;
-  }
 
 }
 
