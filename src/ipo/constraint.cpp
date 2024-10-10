@@ -176,10 +176,10 @@ namespace ipo
     {
       const Constraint<Number>& other = _data[firstIter->second].constraint;
       auto squaredDists = squaredEuclideanDistanceSigned(constraint.vector(), other.vector());
-      double lhsDiff = (constraint.hasLhs() && other.hasLhs()) ? constraint.lhs() - other.lhs() : 0.0;
-      double lhsSum = (constraint.hasLhs() && other.hasLhs()) ? constraint.lhs() + other.lhs() : 0.0;
-      double rhsDiff = (constraint.hasRhs() && other.hasRhs()) ? constraint.rhs() - other.rhs() : 0.0;
-      double rhsSum = (constraint.hasRhs() && other.hasRhs()) ? constraint.rhs() + other.rhs() : 0.0;
+      double lhsDiff = static_cast<double>((constraint.hasLhs() && other.hasLhs()) ? constraint.lhs() - other.lhs() : Number(0));
+      double lhsSum = static_cast<double>((constraint.hasLhs() && other.hasLhs()) ? constraint.lhs() + other.lhs() : Number(0));
+      double rhsDiff = static_cast<double>((constraint.hasRhs() && other.hasRhs()) ? constraint.rhs() - other.rhs() : Number(0));
+      double rhsSum = static_cast<double>((constraint.hasRhs() && other.hasRhs()) ? constraint.rhs() + other.rhs() : Number(0));
       squaredDists.first += lhsDiff * lhsDiff + rhsDiff * rhsDiff;
       squaredDists.second += lhsSum * lhsSum + rhsSum * rhsSum;
       if (squaredDists.first < bestSquaredDist)
