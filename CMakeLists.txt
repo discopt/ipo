@@ -167,14 +167,14 @@ endif()
 
 # The ipo-scip binary.
 if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
-  add_executable(ipo_scip src/mip/scip.cpp)
+  add_executable(ipo_scip src/mip/ipo_scip.cpp)
   target_link_libraries(ipo_scip PRIVATE IPO::IPO)
   set_target_properties(ipo_scip PROPERTIES OUTPUT_NAME ipo-scip)
 endif()
 
 # The ipo-gurobi binary.
 if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
-  add_executable(ipo_gurobi src/mip/gurobi.cpp)
+  add_executable(ipo_gurobi src/mip/ipo_gurobi.cpp)
   target_link_libraries(ipo_gurobi PRIVATE IPO::IPO)
   set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
 endif()
