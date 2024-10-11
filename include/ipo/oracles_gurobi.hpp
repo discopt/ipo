@@ -168,12 +168,6 @@ namespace ipo
 
 
   protected:
-    struct BoundLimits
-    {
-      double minPrimalBound;
-      double maxDualBound;
-    };
-
     /// Gurobi environment (might be \c NULL).
     GRBenv* _env;
     /// Actual Gurobi instance.
@@ -184,7 +178,6 @@ namespace ipo
     std::string _name;
     std::shared_ptr<Space> _space;
     Constraint<double>* _currentFace;
-    BoundLimits _boundLimits;
 
 #if defined(IPO_RATIONAL_MIP_GUROBI)
     RationalMIPExtender* _extender;

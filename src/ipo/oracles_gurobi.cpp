@@ -3,8 +3,6 @@
 #include <ipo/constraint.hpp>
 #include <ipo/oracles_gurobi.hpp>
 
-// TODO: Remove objective limit and add event handler for primal and dual bound.
-
 #include <cassert>
 #include <functional>
 #include <chrono>
@@ -24,9 +22,6 @@
 }
 
 static const int GUROBI_SEPARATION_CHECK_TIMELIMIT_FREQUENCY = 1000;
-
-// #define EVENTHDLR_NAME "boundchange"
-// #define EVENTHDLR_DESC "event handler for primal or dual bound change"
 
 namespace ipo
 {
@@ -301,15 +296,6 @@ namespace ipo
     Visitor visitor = { _extender };
     GRBiterateRows(_model, space(), visitor, true);
 #endif /* IPO_RATIONAL_LP */
-
-    // SCIP_EVENTHDLR* eventhdlr = NULL;
-    // SCIP_CALL_EXC( SCIPincludeEventhdlrBasic(_scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
-      // eventExecGlobalBoundChange, (SCIP_EVENTHDLRDATA*)(&_boundLimits)) );
-    // assert(eventhdlr != NULL);
-
-    // SCIP_CALL_EXC( SCIPsetEventhdlrCopy(_scip, eventhdlr, eventCopyGlobalBoundChange) );
-    // SCIP_CALL_EXC( SCIPsetEventhdlrInit(_scip, eventhdlr, eventInitGlobalBoundChange) );
-    // SCIP_CALL_EXC( SCIPsetEventhdlrExit(_scip, eventhdlr, eventExitGlobalBoundChange) );
   }
 
   GurobiSolver::~GurobiSolver()
@@ -539,7 +525,7 @@ namespace ipo
     const OptimizationOracle<double>::Query& query)
   {
 #if defined(IPO_DEBUG)
-      std::cout << "GurobiOptimizationOracle<double>::maximize() called." << std::endl;
+    std::cout << "GurobiOptimizationOracle<double>::maximize() called." << std::endl;
 #endif // IPO_DEBUG
 
     OptimizationOracle<double>::Response response;
@@ -556,7 +542,17 @@ namespace ipo
     }
     std::cout << ".\n";
     std::cout << "Setting Gurobi face to " << _face.vector() << " with rhs " << _face.rhs() << std::endl;
-    std::cout << "Setting time limit to " << remainingTime << "." << std::endl;
+    std::cout << "Setting time limit to " << remainingTime << "s." << std::endl;
+    if (query.hasMinPrimalBound())
+    {
+      std::cout << "Minimum primal bound is " << query.minPrimalBound() << ": may terminate if this value is exceeded."
+        << std::endl;
+    }
+    if (query.hasMaxDualBound())
+    {
+      std::cout << "Maximum dual bound is " << query.maxDualBound()
+        << ": may terminate if the dual bound is at most this value." << std::endl;
+    }
 #endif /* IPO_DEBUG */
 
     _solver->selectFace(&_face);
@@ -588,10 +584,21 @@ namespace ipo
       std::cout << "maxDualBound = " << query.maxDualBound() << std::endl;
 #endif /* IPO_DEBUG */
 
-    _solver->_boundLimits.minPrimalBound = query.hasMinPrimalBound()
-      ? (query.minPrimalBound() * objectiveScalingFactor + 1.0e-6) : -std::numeric_limits<double>::infinity();
-    _solver->_boundLimits.maxDualBound = query.hasMaxDualBound()
-      ? query.maxDualBound() * objectiveScalingFactor : std::numeric_limits<double>::infinity();
+    double oldBestObjStop = 0.0;
+    if (query.hasMinPrimalBound())
+    {
+      double optimalityTolerance;
+      GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_OPTIMALITYTOL, &optimalityTolerance) );
+      GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, &oldBestObjStop) );
+      GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP,
+        query.minPrimalBound() + optimalityTolerance) );
+    }
+    double oldBestBoundStop = 0.0;
+    if (query.hasMaxDualBound())
+    {
+      GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTBDSTOP, &oldBestBoundStop) );
+      GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTBDSTOP, query.maxDualBound()) );
+    }
 
     // First call to Gurobi with dual reductions.
 #if defined(IPO_DEBUG)
@@ -623,7 +630,7 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     // Case distinction depending on status.
-    if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT || status == GRB_NODE_LIMIT)
+    if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT || status == GRB_NODE_LIMIT || status == GRB_USER_OBJ_LIMIT)
     {
       GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJVAL, &primalBound) );
       extractPoints(_solver->_model, _space, objectiveVector, response);
@@ -692,6 +699,8 @@ namespace ipo
         {
           GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
           GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
+          if (query.hasMinPrimalBound())
+            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, oldBestObjStop) );
 
           // Update objective vector.
           for (std::size_t i = 0; i < n; ++i)
@@ -721,6 +730,8 @@ namespace ipo
           remainingTime -= runtime;
           GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
           GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
+          if (query.hasMinPrimalBound())
+            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, query.minPrimalBound()) );
 #if defined(IPO_DEBUG)
           std::cout << "Gurobi for feasibility returned with status " << status << " and dual bound " << dualBound
             << "." << std::endl;
@@ -835,6 +846,10 @@ namespace ipo
     }
 
     GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
+    if (query.hasMinPrimalBound())
+      GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, oldBestObjStop) );
+    if (query.hasMaxDualBound())
+      GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTBDSTOP, oldBestBoundStop) );
 
 #if !defined(NDEBUG)
     for (auto& point : response.points)

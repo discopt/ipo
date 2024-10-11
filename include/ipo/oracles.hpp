@@ -72,10 +72,25 @@ namespace ipo
 
     }
 
+    /**
+     * \brief Returns whether a threshold for the primal bound is set.
+     *
+     * The oracle may terminate if the primal bound is strictly greater than the value returned by
+     * \see minPrimalBound.
+     **/
+
     bool hasMinPrimalBound() const
     {
       return _hasMinPrimalBound;
     }
+
+    /**
+     * \brief Returns the threshold for primal bound allowing the oracle to terminate.
+     *
+     * The oracle may terminate if the primal bound is strictly greater than this value.
+     *
+     * \see hasMinPrimalBound for checking if such a value is specified.
+     **/
 
     const Number& minPrimalBound() const
     {
@@ -100,10 +115,25 @@ namespace ipo
       _hasMinPrimalBound = false;
     }
 
+    /**
+     * \brief Returns whether a threshold for the dual bound is set.
+     *
+     * The oracle shall terminate if the dual bound is less than or equal to the value returned by
+     * \see _maxDualBound.
+     **/
+
     bool hasMaxDualBound() const
     {
       return _hasMaxDualBound;
     }
+
+    /**
+     * \brief Returns the threshold for dual bound allowing the oracle to terminate.
+     *
+     * The oracle shall terminate if the dual bound is less than or equal to this value.
+     *
+     * \see hasMaxDualBound for checking if such a value is specified.
+     **/
 
     const Number& maxDualBound() const
     {
