@@ -60,14 +60,14 @@ extern "C"
   /** initialization method of event handler (called after problem was transformed) */
   static SCIP_DECL_EVENTINIT(eventInitGlobalBoundChange)
   {
-    assert(scip != NULL);
-    assert(eventhdlr != NULL);
+    assert(scip != nullptr);
+    assert(eventhdlr != nullptr);
     assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
     /* notify SCIP that your event handler wants to react on the event type best solution found */
     SCIP_CALL( SCIPcatchEvent( scip,
       SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr,
-      NULL, NULL) );
+      nullptr, nullptr) );
 
     return SCIP_OKAY;
   }
@@ -75,14 +75,14 @@ extern "C"
   /** deinitialization method of event handler (called before transformed problem is freed) */
   static SCIP_DECL_EVENTEXIT(eventExitGlobalBoundChange)
   {
-    assert(scip != NULL);
-    assert(eventhdlr != NULL);
+    assert(scip != nullptr);
+    assert(eventhdlr != nullptr);
     assert(strcmp(SCIPeventhdlrGetName(eventhdlr), EVENTHDLR_NAME) == 0);
 
     /* notify SCIP that your event handler wants to drop the event type best solution found */
     SCIP_CALL( SCIPdropEvent( scip,
       SCIP_EVENTTYPE_BESTSOLFOUND | SCIP_EVENTTYPE_NODESOLVED | SCIP_EVENTTYPE_LPSOLVED, eventhdlr,
-      NULL, -1) );
+      nullptr, -1) );
 
     return SCIP_OKAY;
   }
@@ -225,7 +225,7 @@ namespace ipo
    * Auxiliary method that iterates over the bound constraints of all variables calling \p visitor
    * with each of them as a constraint.
    *
-   * \p ranged Whether to returned ranged rows.
+   * \p ranged Whether to return ranged rows.
    */
 
   static
@@ -364,9 +364,9 @@ namespace ipo
   }
 
   SCIPSolver::SCIPSolver(SCIP*&& scip)
-    : _scip(scip), _currentFace(NULL)
+    : _scip(scip), _currentFace(nullptr)
   {
-    scip = NULL;
+    scip = nullptr;
 #if !defined(IPO_DEBUG)
     SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
 #endif /* !IPO_DEBUG */
@@ -374,14 +374,14 @@ namespace ipo
   }
 
   SCIPSolver::SCIPSolver(const std::string& fileName)
-    : _currentFace(NULL)
+    : _currentFace(nullptr)
   {
     SCIP_CALL_EXC( SCIPcreate(&_scip) );
     SCIP_CALL_EXC( SCIPincludeDefaultPlugins(_scip) );
 #if !defined(IPO_DEBUG)
     SCIP_CALL_EXC( SCIPsetIntParam(_scip, "display/verblevel", 0) );
 #endif /* !IPO_DEBUG */
-    SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), NULL) );
+    SCIP_CALL_EXC( SCIPreadProb(_scip, fileName.c_str(), nullptr) );
 
     initialize();
   }
@@ -441,10 +441,10 @@ namespace ipo
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
 #endif /* IPO_RATIONAL_LP */
     
-    SCIP_EVENTHDLR* eventhdlr = NULL;
+    SCIP_EVENTHDLR* eventhdlr = nullptr;
     SCIP_CALL_EXC( SCIPincludeEventhdlrBasic(_scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
       eventExecGlobalBoundChange, (SCIP_EVENTHDLRDATA*)(&_boundLimits)) );
-    assert(eventhdlr != NULL);
+    assert(eventhdlr != nullptr);
 
     SCIP_CALL_EXC( SCIPsetEventhdlrCopy(_scip, eventhdlr, eventCopyGlobalBoundChange) );
     SCIP_CALL_EXC( SCIPsetEventhdlrInit(_scip, eventhdlr, eventInitGlobalBoundChange) );
@@ -510,7 +510,7 @@ namespace ipo
     {
       throw std::runtime_error("Cannot use a ranged constraint or equation to define a face.");
     }
-    SCIP_CONS* cons = NULL;
+    SCIP_CONS* cons = nullptr;
     SCIP_CALL_EXC( SCIPcreateConsBasicLinear(_scip, &cons, consName, vars.size(), &vars[0],
       &coefficients[0], lhs, rhs));
     _faceConstraints.insert(std::make_pair(face, cons));
@@ -529,7 +529,7 @@ namespace ipo
       return;
 
     if (face == _currentFace)
-      selectFace(NULL);
+      selectFace(nullptr);
 
     auto iter = _faceConstraints.find(face);
     if (iter == _faceConstraints.end())
@@ -542,7 +542,7 @@ namespace ipo
   void SCIPSolver::selectFace(Constraint<double>* face)
   {
     if (face && face->isAlwaysSatisfied())
-      face = NULL;
+      face = nullptr;
 
     if (face == _currentFace)
     {

@@ -7,7 +7,7 @@ TEST(SCIP, UnboundedDouble)
 {
   // x >= 0
   // y >= 0
-  // y >= 2x + 1
+  // y == 2x + 1
 
   SCIP* scip;
   SCIPcreate(&scip);

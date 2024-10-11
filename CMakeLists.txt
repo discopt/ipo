@@ -6,7 +6,8 @@ add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
 option(DOUBLE "Compile algorithms with double arithmetic." ON)
 option(RATIONAL "Compile algorithms with rational arithmetic; requires at least GMP and Boost 1.65" ON)
-option(SCIP "Use SCIP as a MIP solver." ON)
+option(SCIP "Support SCIP as a MIP solver." ON)
+option(GUROBI "Support Gurobi as a MIP solver." ON)
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
@@ -94,6 +95,23 @@ if(SCIP AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for SCIP if requested.
   endif()
 endif()
 
+if(GUROBI AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for Gurobi if requested.
+  find_package(GUROBI QUIET)
+  if(GUROBI_FOUND)
+    message(STATUS "Found Gurobi version ${GUROBI_VERSION} with include dir ${GUROBI_INCLUDE_DIRS} and libraries ${GUROBI_LIBRARIES}.")
+    if(IPO_DOUBLE)
+      set(IPO_DOUBLE_MIP TRUE)
+      set(IPO_DOUBLE_MIP_GUROBI TRUE)
+    endif()
+    if(IPO_RATIONAL_LP)
+      set(IPO_RATIONAL_MIP TRUE)
+      set(IPO_RATIONAL_MIP_GUROBI TRUE)
+    endif()
+  else()
+    message(STATUS "Could NOT find Gurobi. Please set GUROBI_DIR to point to build or installation directory.")
+  endif()
+endif()
+
 # Target for the IPO library.
 add_library(ipo
   src/ipo/lp.cpp
@@ -119,7 +137,7 @@ if(IPO_DOUBLE_LP_SOPLEX OR IPO_RATIONAL_LP_SOPLEX)
   include_directories(${SOPLEX_INCLUDE_DIRS})
 endif()
 
-# Link to/include SCIP.
+# Whether to build the SCIP oracles.
 if (SCIP AND (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP))
   target_sources(ipo
     PRIVATE src/ipo/oracles_scip.cpp
@@ -133,10 +151,32 @@ if (SCIP AND (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP))
   )
 endif()
 
-if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP) # The ipo-scip binary.
+# Whether to build the Gurobi oracles.
+if (GUROBI AND (IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI))
+  target_sources(ipo
+    PRIVATE src/ipo/oracles_gurobi.cpp
+  )
+  target_link_libraries(ipo
+    PRIVATE ${GUROBI_LIBRARIES}
+  )
+  # TODO: target_include_directories(ipo ... did not work here.
+  include_directories(
+    ${GUROBI_INCLUDE_DIRS}
+  )
+endif()
+
+# The ipo-scip binary.
+if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
   add_executable(ipo_scip src/mip/scip.cpp)
   target_link_libraries(ipo_scip PRIVATE IPO::IPO)
   set_target_properties(ipo_scip PROPERTIES OUTPUT_NAME ipo-scip)
+endif()
+
+# The ipo-gurobi binary.
+if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+  add_executable(ipo_gurobi src/mip/gurobi.cpp)
+  target_link_libraries(ipo_gurobi PRIVATE IPO::IPO)
+  set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
 endif()
 
 # Write compilation settings to ipo/config.hpp.

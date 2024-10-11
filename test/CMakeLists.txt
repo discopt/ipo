@@ -24,6 +24,12 @@ if(SCIP_FOUND)
   )
 endif()
 
+if(GUROBI_FOUND)
+  target_sources(ipo_gtest
+    PRIVATE test_oracles_gurobi.cpp
+  )
+endif()
+
 # Set target properties.
 target_include_directories(ipo_gtest
   PUBLIC
@@ -47,6 +53,9 @@ target_compile_features(ipo_gtest PRIVATE cxx_auto_type)
 target_link_libraries(ipo_gtest GTest::gtest_main IPO::IPO)
 if(SCIP_FOUND)
   target_link_libraries(ipo_gtest libscip)
+endif()
+if(GUROBI_FOUND)
+  target_link_libraries(ipo_gtest ${GUROBI_LIBRARIES})
 endif()
 
 include(GoogleTest)

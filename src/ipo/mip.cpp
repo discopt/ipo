@@ -332,7 +332,7 @@ namespace ipo
       auto ray = std::make_shared<sparse_vector<rational>>();
       for (std::size_t i = 0; i < _integrality.size(); ++i)
       {
-        if (_coefficients[i] != 0)
+        if (mpq_sgn(_coefficients[i]) != 0)
           ray->push_back(i, rational(_coefficients[i]));
       }
       result.rays.push_back(OptimizationOracle<rational>::Response::Ray(ray));

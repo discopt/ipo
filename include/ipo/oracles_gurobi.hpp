@@ -3,65 +3,56 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#if defined(IPO_DOUBLE_MIP_SCIP) || defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_DOUBLE_MIP_GUROBI) || defined(IPO_RATIONAL_MIP_GUROBI)
 
 #include <ipo/oracles.hpp>
 #include <ipo/mip.hpp>
 #include <ipo/constraint.hpp>
 #include <unordered_map>
-
-// This is necessary due to a bug in SCIP. Whether some functionality is in a macro or not depends
-// on how you include it.
-#ifdef NDEBUG
-  #undef NDEBUG
-  #include <scip/scip.h>
-  #define NDEBUG
-#else
-  #include <scip/scip.h>
-#endif
+#include <gurobi_c.h>
 
 namespace ipo
 {
   // Forward declarations.
   
   template <typename NumberType>
-  class SCIPOptimizationOracle;
+  class GurobiOptimizationOracle;
 
   template <typename NumberType>
-  class SCIPSeparationOracle;
+  class GurobiSeparationOracle;
 
   /**
-   * \brief A SCIP solver instance.
+   * \brief A Gurobi solver instance.
    *
-   * A SCIP solver instance. Via \ref getOptimizationOracle and \ref getSeparationOracle one we
+   * A Gurobi solver instance. Via \ref getOptimizationOracle and \ref getSeparationOracle one we
    * create corresponding oracles.
    */
 
-  class SCIPSolver: public std::enable_shared_from_this<SCIPSolver>
+  class GurobiSolver: public std::enable_shared_from_this<GurobiSolver>
   {
   public:
 
     /**
-     * \brief Constructs a solver instance from a \c SCIP struct.
+     * \brief Constructs a solver instance from a \c Gurobi pointer.
      *
-     * Constructs a solver instance from a \c SCIP struct. Before using it, a shared_ptr has
-     * to point to it.
+     * Before using it, a shared_ptr has to point to it.
      */
 
-    SCIPSolver(SCIP*&& scip);
+    GurobiSolver(GRBmodel*&& model);
 
     /**
-     * \brief Constructs a solver instance from any file that SCIP can read. Before using it,
-     * a shared_ptr has to point to it.
+     * \brief Constructs a solver instance from any file that Gurobi can read.
+     *
+     * Before using it, a shared_ptr has to point to it.
      */
 
-    SCIPSolver(const std::string& fileName);
+    GurobiSolver(const std::string& fileName);
 
     /**
      * \brief Destructor.
      */
 
-    ~SCIPSolver();
+    ~GurobiSolver();
 
     /**
      * \brief Returns the name of the instance.
@@ -104,7 +95,7 @@ namespace ipo
      */
 
     template <typename NumberType>
-    inline std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle()
+    inline std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle()
     {
       return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
     }
@@ -114,7 +105,7 @@ namespace ipo
      */
 
     template <typename NumberType>
-    std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle(
+    std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
       const Constraint<NumberType>& face);
 
     /**
@@ -122,7 +113,7 @@ namespace ipo
      */
 
     template <typename NumberType>
-    inline std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle()
+    inline std::shared_ptr<GurobiSeparationOracle<NumberType>> getSeparationOracle()
     {
       return getSeparationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
     }
@@ -132,24 +123,24 @@ namespace ipo
      */
 
     template <typename NumberType>
-    std::shared_ptr<SCIPSeparationOracle<NumberType>> getSeparationOracle(
+    std::shared_ptr<GurobiSeparationOracle<NumberType>> getSeparationOracle(
       const Constraint<NumberType>& face);
 
   protected:
 
-#if defined(IPO_DOUBLE_MIP_SCIP)
+#if defined(IPO_DOUBLE_MIP_GUROBI)
 
-    friend SCIPOptimizationOracle<double>;
-    friend SCIPSeparationOracle<double>;
+    friend GurobiOptimizationOracle<double>;
+    friend GurobiSeparationOracle<double>;
 
-#endif /* IPO_DOUBLE_MIP_SCIP */
+#endif /* IPO_DOUBLE_MIP_GUROBI */
     
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_RATIONAL_MIP_GUROBI)
 
-    friend SCIPOptimizationOracle<rational>;
-    friend SCIPSeparationOracle<rational>;
+    friend GurobiOptimizationOracle<rational>;
+    friend GurobiSeparationOracle<rational>;
 
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_RATIONAL_MIP_GUROBI */
 
     /**
      * \brief Initializes the solver data.
@@ -182,33 +173,32 @@ namespace ipo
       double minPrimalBound;
       double maxDualBound;
     };
-    
-    /// Actual SCIP instance.
-    SCIP* _scip;
-    /// Maps coordinates to SCIP variables.
-    std::vector<SCIP_VAR*> _variables;
-    /// Maps SCIP variables to coordinates.
-    std::unordered_map<SCIP_VAR*, std::size_t> _variablesToCoordinates;
+
+    /// Gurobi environment (might be \c NULL).
+    GRBenv* _env;
+    /// Actual Gurobi instance.
+    GRBmodel* _model;
+    /// Maps Gurobi variables to coordinates.
+    std::unordered_map<std::size_t, std::size_t> _variablesToCoordinates;
     double* _instanceObjective;
     std::string _name;
     std::shared_ptr<Space> _space;
     Constraint<double>* _currentFace;
-    std::unordered_map<Constraint<double>*, SCIP_CONS*> _faceConstraints;
     BoundLimits _boundLimits;
 
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_RATIONAL_MIP_GUROBI)
     RationalMIPExtender* _extender;
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_RATIONAL_MIP_GUROBI */
   };
 
-#if defined(IPO_DOUBLE_MIP_SCIP)
+#if defined(IPO_DOUBLE_MIP_GUROBI)
 
   /**
-  * \brief OptimizationOracle based on the SCIP solver.
+  * \brief OptimizationOracle based on the Gurobi solver.
   */
 
   template <>
-  class SCIPOptimizationOracle<double>: public OptimizationOracle<double>
+  class GurobiOptimizationOracle<double>: public OptimizationOracle<double>
   {
   public:
 
@@ -219,14 +209,14 @@ namespace ipo
      * \param face The face we are optimizing over.
      */
 
-    SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
+    GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
       const Constraint<double>& face);
 
     /**
      * \brief Destructor.
      */
 
-    virtual ~SCIPOptimizationOracle();
+    virtual ~GurobiOptimizationOracle();
 
     /**
      * \brief Maximize an objective vector of type double.
@@ -240,23 +230,23 @@ namespace ipo
       const OptimizationOracle<double>::Query& query) override;
 
   protected:
-    friend SCIPSolver;
+    friend GurobiSolver;
 
     /// The solver instance
-    std::shared_ptr<SCIPSolver> _solver;
+    std::shared_ptr<GurobiSolver> _solver;
     /// The index of the face we are optimizing over.
     Constraint<double> _face;
   };
 
-#endif /* IPO_DOUBLE_MIP_SCIP */
+#endif /* IPO_DOUBLE_MIP_GUROBI */
 
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_RATIONAL_MIP_GUROBI)
 
   template <>
-  class SCIPOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
+  class GurobiOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
   {
   public:
-    SCIPOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
+    GurobiOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<rational>& face)
       : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
@@ -264,14 +254,14 @@ namespace ipo
     }
   };
 
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_RATIONAL_MIP_GUROBI */
 
   /**
-  * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
+  * \brief SeparationOracle for the LP relaxation based on the Gurobi solver.
   */
 
   template <typename NumberType>
-  class SCIPSeparationOracle: public SeparationOracle<NumberType>
+  class GurobiSeparationOracle: public SeparationOracle<NumberType>
   {
   public:
     /**
@@ -281,14 +271,14 @@ namespace ipo
      * \param faceIndex Indexes the face we are separating for.
      */
 
-    SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
+    GurobiSeparationOracle(std::shared_ptr<GurobiSolver> solver,
       const Constraint<NumberType>& face);
 
     /**
      * \brief Destructor.
      */
 
-    virtual ~SCIPSeparationOracle();
+    virtual ~GurobiSeparationOracle();
 
     /**
      * \brief Returns initially known inequalities.
@@ -328,10 +318,10 @@ namespace ipo
       const SeparationQuery& query = SeparationQuery()) override;
 
   protected:
-    friend SCIPSolver;
+    friend GurobiSolver;
 
     /// The solver instance
-    std::shared_ptr<SCIPSolver> _solver;
+    std::shared_ptr<GurobiSolver> _solver;
     /// The index of the face we are separating for.
     Constraint<NumberType> _face;
     Constraint<double> _approximateFace;
@@ -339,4 +329,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_DOUBLE_MIP_SCIP || IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_DOUBLE_MIP_GUROBI || IPO_RATIONAL_MIP_GUROBI */

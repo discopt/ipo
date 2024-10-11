@@ -136,7 +136,7 @@ namespace ipo
 
     bool isAlwaysSatisfied() const
     {
-      return _vector->empty() && _lhs <= 0 && _rhs >= 0;
+      return _vector->empty() && ((_lhs <= 0 && _rhs == 0) || (_lhs == 0 && _rhs >= 0));
     }
 
     bool isNeverSatisfied() const
@@ -163,7 +163,7 @@ namespace ipo
   Constraint<T> alwaysSatisfiedConstraint()
   {
     auto zero = std::make_shared<sparse_vector<T>>();
-    return Constraint<T>(zero, T(1));
+    return Constraint<T>(zero, T(0));
   }
 
   template <typename T>
