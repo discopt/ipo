@@ -179,6 +179,20 @@ if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
   set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
 endif()
 
+# The inverse-scip binary.
+if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+  add_executable(inverse_scip src/mip/inverse_scip.cpp)
+  target_link_libraries(inverse_scip PRIVATE IPO::IPO)
+  set_target_properties(inverse_scip PROPERTIES OUTPUT_NAME inverse-scip)
+endif()
+
+# The inverse-gurobi binary.
+if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+  add_executable(inverse_gurobi src/mip/inverse_gurobi.cpp)
+  target_link_libraries(inverse_gurobi PRIVATE IPO::IPO)
+  set_target_properties(inverse_gurobi PROPERTIES OUTPUT_NAME inverse-gurobi)
+endif()
+
 # Write compilation settings to ipo/config.hpp.
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/include/ipo/config.hpp.in ${CMAKE_BINARY_DIR}/ipo/config.hpp @ONLY)
 
@@ -217,7 +231,10 @@ endif()
 include(GNUInstallDirs)
 
 if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
-  install(TARGETS ipo_scip RUNTIME DESTINATION bin)
+  install(TARGETS ipo_scip inverse_scip RUNTIME DESTINATION bin)
+endif()
+if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+  install(TARGETS ipo_gurobi inverse_gurobi RUNTIME DESTINATION bin)
 endif()
 
 install(TARGETS ipo
