@@ -112,6 +112,12 @@ if(GUROBI AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for Gurobi if requested.
   endif()
 endif()
 
+# RapidXML
+find_package(RapidXML)
+if(RapidXML_FOUND)
+  message(STATUS "Found RapidXML ${RapidXML_VERSION}")
+endif()
+
 # Target for the IPO library.
 add_library(ipo
   src/ipo/lp.cpp
@@ -179,18 +185,22 @@ if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
   set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
 endif()
 
-# The inverse-scip binary.
-if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
-  add_executable(inverse_scip src/mip/inverse_scip.cpp)
-  target_link_libraries(inverse_scip PRIVATE IPO::IPO)
-  set_target_properties(inverse_scip PROPERTIES OUTPUT_NAME inverse-scip)
-endif()
+if(RapidXML_FOUND)
+  # The inverse-scip binary.
+  if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+    add_executable(inverse_scip src/mip/inverse_scip.cpp)
+    target_link_libraries(inverse_scip PRIVATE RapidXML::RapidXML)
+    target_link_libraries(inverse_scip PRIVATE IPO::IPO)
+    set_target_properties(inverse_scip PROPERTIES OUTPUT_NAME inverse-scip)
+  endif()
 
-# The inverse-gurobi binary.
-if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
-  add_executable(inverse_gurobi src/mip/inverse_gurobi.cpp)
-  target_link_libraries(inverse_gurobi PRIVATE IPO::IPO)
-  set_target_properties(inverse_gurobi PROPERTIES OUTPUT_NAME inverse-gurobi)
+  # The inverse-gurobi binary.
+  if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+    add_executable(inverse_gurobi src/mip/inverse_gurobi.cpp)
+    target_link_libraries(inverse_gurobi PRIVATE RapidXML::RapidXML)
+    target_link_libraries(inverse_gurobi PRIVATE IPO::IPO)
+    set_target_properties(inverse_gurobi PROPERTIES OUTPUT_NAME inverse-gurobi)
+  endif()
 endif()
 
 # Write compilation settings to ipo/config.hpp.
@@ -231,10 +241,16 @@ endif()
 include(GNUInstallDirs)
 
 if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
-  install(TARGETS ipo_scip inverse_scip RUNTIME DESTINATION bin)
+  install(TARGETS ipo_scip RUNTIME DESTINATION bin)
+  if(TARGET inverse_scip)
+    install(TARGETS inverse_scip RUNTIME DESTINATION bin)
+  endif()
 endif()
 if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
-  install(TARGETS ipo_gurobi inverse_gurobi RUNTIME DESTINATION bin)
+  install(TARGETS ipo_gurobi RUNTIME DESTINATION bin)
+  if(TARGET inverse_gurobi)
+    install(TARGETS inverse_gurobi RUNTIME DESTINATION bin)
+  endif()
 endif()
 
 install(TARGETS ipo
