@@ -3,7 +3,6 @@ import os
 import gurobipy
 from gurobipy import quicksum, GRB
 import random
-from xml.dom import minidom
 import gzip
 
 MAX_NUM_VARS = 12000
@@ -64,32 +63,17 @@ for instance_file in sys.argv[1:]:
       target_solution = target_solutions[gen]
       generating_objective = generating_objectives[gen]
 
-      document = minidom.Document()
-      xml_root = document.createElement('inverse-mip')
-      xml_root.setAttribute('dimension', f'{len(variables)}')
-      document.appendChild(xml_root)
-
-      xml_target_objective = document.createElement('target-objective')
-      xml_target_objective.setAttribute('norm', 'L1')
-      for var in variables:
-        xml_obj = document.createElement('variable')
-        xml_obj.setAttribute('name', var.varName)
-        xml_obj.setAttribute('coefficient', f'{target_objective[var.varName]}')
-        xml_target_objective.appendChild(xml_obj)
-      xml_root.appendChild(xml_target_objective)
-
-      xml_mip = document.createElement('mip')
-      xml_mip.setAttribute('sense', 'maximize')
-      xml_mip.setAttribute('file', instance_file)
-      xml_target_solution = document.createElement('target-solution')
-      for var in variables:
-        xml_sol = document.createElement('variable')
-        xml_sol.setAttribute('name', var.varName)
-        xml_sol.setAttribute('value', f'{target_solution[var.varName]}')
-        xml_sol.setAttribute('gen-objective', f'{generating_objective[var.varName]}')
-        xml_target_solution.appendChild(xml_sol)
-      xml_mip.appendChild(xml_target_solution)
-      xml_root.appendChild(xml_mip)
-
-      gzip.open(f'{instance_name}_t{gen+1}.xml.gz', 'wt').write(xml_root.toprettyxml())
+      with gzip.open(f'{instance_name}_t{gen+1}.xml.gz', 'wt') as f:
+        f.write(f'<inverse-mip dimension="{len(variables)}">\n')
+        f.write(f'  <target-objective norm="L1">\n')
+        for var in variables:
+          f.write(f'    <variable name="{var.varName}" coefficient="{target_objective[var.varName]}"/>\n')
+        f.write(f'  </target-objective>\n')
+        f.write(f'  <mip sense="maximize" file="{instance_file}">\n')
+        f.write(f'    <target-solution>\n')
+        for var in variables:
+          f.write(f'      <variable name="{var.varName}" value="{target_solution[var.varName]}" gen-objective="{generating_objective[var.varName]}"/>\n')
+        f.write(f'    </target-solution>\n')
+        f.write(f'  </mip>\n')
+        f.write(f'</inverse-mip>\n')
 
