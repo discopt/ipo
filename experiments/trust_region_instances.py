@@ -11,7 +11,7 @@ TIME_LIMIT = 600
 ATTEMPTS = 10
 MIN_SUCCESSFUL = 3
 
-env = gurobipy.Env(params={'outputFlag':0})
+env = gurobipy.Env(params={'outputFlag':0, 'threads':1})
 
 def sampleObjective(dimension):
   squaredNorm = 0.0
