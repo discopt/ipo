@@ -6,7 +6,9 @@
 
 int main(int argc, char** argv)
 {
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_RATIONAL) && !defined(IPO_DOUBLE)
+  bool exact = true;
+#else
   bool exact = false;
 #endif /* IPO_DOUBLE && IPO_RATIONAL */
   std::string fileName;
@@ -38,23 +40,23 @@ int main(int argc, char** argv)
     return EXIT_FAILURE;
   }
 
-  auto gurobi = std::make_shared<ipo::GurobiSolver>(fileName);
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_RATIONAL)
   if (exact)
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
   {
-#if defined(IPO_RATIONAL) && defined(IPO_RATIONAL_MIP_GUROBI)
-    inverse::run<ipo::rational>(gurobi->getOptimizationOracle<ipo::rational>());
-#endif /* IPO_RATIONAL && IPO_RATIONAL_MIP_GUROBI */
+    auto instance = inverse::readInverseProblem<ipo::GurobiSolver, ipo::rational>(fileName);
+
+    inverse::solve(instance);
   }
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
-  else
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
-  {
+#endif
+
 #if defined(IPO_DOUBLE)
-    inverse::run<double>(gurobi->getOptimizationOracle<double>());
-#endif /* IPO_DOUBLE */
+  if (!exact)
+  {
+    auto instance = inverse::readInverseProblem<ipo::GurobiSolver, double>(fileName);
+
+    inverse::solve(instance);
   }
+#endif
 
   return 0;
 }

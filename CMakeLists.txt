@@ -118,6 +118,9 @@ if(RapidXML_FOUND)
   message(STATUS "Found RapidXML ${RapidXML_VERSION}")
 endif()
 
+# Boost
+find_package(Boost COMPONENTS iostreams)
+
 # Target for the IPO library.
 add_library(ipo
   src/ipo/lp.cpp
@@ -185,11 +188,12 @@ if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
   set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
 endif()
 
-if(RapidXML_FOUND)
+if(RapidXML_FOUND AND Boost_IOSTREAMS_FOUND)
   # The inverse-scip binary.
   if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
     add_executable(inverse_scip src/mip/inverse_scip.cpp)
     target_link_libraries(inverse_scip PRIVATE RapidXML::RapidXML)
+    target_link_libraries(inverse_scip PRIVATE Boost::iostreams)
     target_link_libraries(inverse_scip PRIVATE IPO::IPO)
     set_target_properties(inverse_scip PROPERTIES OUTPUT_NAME inverse-scip)
   endif()
@@ -198,6 +202,7 @@ if(RapidXML_FOUND)
   if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
     add_executable(inverse_gurobi src/mip/inverse_gurobi.cpp)
     target_link_libraries(inverse_gurobi PRIVATE RapidXML::RapidXML)
+    target_link_libraries(inverse_gurobi PRIVATE Boost::iostreams)
     target_link_libraries(inverse_gurobi PRIVATE IPO::IPO)
     set_target_properties(inverse_gurobi PROPERTIES OUTPUT_NAME inverse-gurobi)
   endif()
