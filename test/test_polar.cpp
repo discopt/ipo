@@ -34,7 +34,7 @@ TEST(Polar, OptimizationRational)
   }
   lp.update();
   
-  std::vector<int> nonzeroColumns;
+  std::vector<std::size_t> nonzeroColumns;
   std::vector<ipo::rational> nonzeroCoefficients;
 
   auto polarOracle = std::make_shared<ipo::PolarSeparationOracle<ipo::rational>>(forestPolyhedron);

@@ -203,8 +203,8 @@ namespace ipo
       return LPKey(_nextColumnKey++);
     }
 
-    LPKey addRow(double lhs, std::size_t numNonzeros, const int* nonzeroColumns, const double* nonzeroCoefficients,
-      double rhs, const std::string& name)
+    LPKey addRow(double lhs, std::size_t numNonzeros, const std::size_t* nonzeroColumns,
+      const double* nonzeroCoefficients, double rhs, const std::string& name)
     {
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
@@ -497,7 +497,7 @@ namespace ipo
       return _nextColumnKey++;
     }
 
-    LPKey addRow(const rational& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+    LPKey addRow(const rational& lhs, std::size_t numNonzeros, const std::size_t* nonzeroColumns,
       const rational* nonzeroCoefficients, const rational& rhs, const std::string& name)
     {
       assert(lhs <= rhs);
@@ -767,7 +767,7 @@ namespace ipo
   }
 
   template <typename Number>
-  LPKey LP<Number>::addRow(const Number& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+  LPKey LP<Number>::addRow(const Number& lhs, std::size_t numNonzeros, const std::size_t* nonzeroColumns,
     const Number* nonzeroCoefficients, const Number& rhs, const std::string& name)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->addRow(lhs, numNonzeros, nonzeroColumns,

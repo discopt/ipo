@@ -37,7 +37,7 @@ namespace ipo
         << " rays from affine hull." << std::endl;
 #endif /* IPO_DEBUG */
 
-      std::vector<int> nonzeroColumns;
+      std::vector<std::size_t> nonzeroColumns;
       std::vector<Number> nonzeroCoefficients;
       for (const auto& point : affineHull.points)
       {
@@ -194,7 +194,7 @@ namespace ipo
                 << (optResponse.primalBound() - solution[n]) << "." << std::endl;
             }
 #endif /* IPO_DEBUG */
-            std::vector<int> nonzeroColumns;
+            std::vector<std::size_t> nonzeroColumns;
             std::vector<Number> nonzeroCoefficients;
             for (const auto& point : optResponse.points)
             {

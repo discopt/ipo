@@ -129,7 +129,7 @@ namespace ipo
       std::cerr << std::endl;
       lp.update();
 
-      std::vector<int> nonzeroColumns;
+      std::vector<std::size_t> nonzeroColumns;
       std::vector<Number> nonzeroCoefficients;
       if (!useSubmissive && !useDominant)
       {

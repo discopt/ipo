@@ -104,7 +104,7 @@ namespace ipo
       const Number& objectiveCoefficient,
       const std::string& name = "");
 
-    LPKey addRow(const Number& lhs, std::size_t numNonzeros, const int* nonzeroVariables,
+    LPKey addRow(const Number& lhs, std::size_t numNonzeros, const std::size_t* nonzeroVariables,
       const Number* nonzeroCoefficients, const Number& rhs, const std::string& name = "");
 
     void update();
