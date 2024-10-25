@@ -1,6 +1,7 @@
 #pragma once
 
 #include <cstddef>
+#include <sstream>
 
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
@@ -23,6 +24,8 @@ namespace ipo
   {
     return from;
   }
+
+  std::string formatNumberApprox(const double& x);
 
   double* generateRandomVectorSphere(std::size_t size);
 
@@ -51,6 +54,8 @@ namespace ipo
   {
     return x.convert_to<double>();
   }
+
+  std::string formatNumberApprox(const rational& x);
 
   rational reconstructRational(double x, double maxError = 1.0e-9);
 

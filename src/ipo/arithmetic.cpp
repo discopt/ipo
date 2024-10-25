@@ -28,6 +28,13 @@ namespace ipo
     return sqrt(squaredEuclideanNorm(vector, size));
   }
 
+  std::string formatNumberApprox(const double& x)
+  {
+    std::stringstream stream;
+    stream << x;
+    return stream.str();
+  }
+
   double* generateRandomVectorSphere(std::size_t size)
   {
     double* result = new double[size];
@@ -66,6 +73,16 @@ namespace ipo
   }
 
 #if defined(IPO_RATIONAL)
+
+  std::string formatNumberApprox(const rational& x)
+  {
+    std::stringstream stream;
+    double approximation = x.convert_to<double>();
+    stream << x;
+    if (fabs(approximation) > 1.0e6 || boost::multiprecision::denominator(x) != 1)
+      stream << "≈" << approximation;
+    return stream.str();
+  }
 
   void reconstructRational(mpq_ptr result, double x, double maxError)
   {
