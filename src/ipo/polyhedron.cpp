@@ -99,8 +99,8 @@ namespace ipo
 
       for (auto& pointProduct : _implementation->_pointProducts)
       {
-        pointProduct.product = convertNumber<double>(objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector);
-        pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
+        pointProduct.product = convertNumber<double>(objectiveVector *
+          *_implementation->_points[pointProduct.vectorIndex].vector);
       }
 
       // Sort points according to product.
@@ -124,23 +124,35 @@ namespace ipo
       {
         Number productMax = _implementation->_pointProducts.front().product;
         Number productMin = _implementation->_pointProducts.back().product;
-        productEpsilon = (productMax - productMin) / 1000;
+        productEpsilon = (productMax - productMin) * 1.0e-5;
       }
+
+#if defined(IPO_DEBUG)
+      std::cout << "Epsilon for objective space is " << productEpsilon << "." << std::endl;
+#endif /* IPO_DEBUG */
+
       for (auto& pointProduct : _implementation->_pointProducts)
       {
         Number product = 0;
         for (const auto& iter : *_implementation->_points[pointProduct.vectorIndex].vector)
           product += objectiveVector[iter.first] * iter.second;
 
+        if (query.hasMinPrimalBound() && (product <= query.minPrimalBound() + productEpsilon))
+        {
 #if defined(IPO_DEBUG)
-        std::cout << "Product with cached point is " << convertNumber<double>(product) << std::endl;
+          std::cout << "Product with cached point is " << convertNumber<double>(product) << " <= "
+            << (query.minPrimalBound() + productEpsilon) << " -> rejecting." << std::endl;
+#endif /* IPO_DEBUG */
+          break;
+        }
+
+#if defined(IPO_DEBUG)
+          std::cout << "Product with cached point is " << convertNumber<double>(product) << " -> accepting."
+            << std::endl;
 #endif /* IPO_DEBUG */
 
-        if (query.hasMinPrimalBound() && (product <= query.minPrimalBound() + productEpsilon))
-          break;
-
         response.points.push_back(typename OptimizationResponse<Number>::Point(
-          _implementation->_points[pointProduct.vectorIndex].vector, pointProduct.product));
+          _implementation->_points[pointProduct.vectorIndex].vector, product));
         _implementation->_points[pointProduct.vectorIndex].lastSuccess = _queryCount;
         if (response.points.size() >= maxNumPoints)
           break;
@@ -155,6 +167,7 @@ namespace ipo
 
       return response;
     }
+
 
     virtual OptimizationResponse<Number> maximizeDouble(
       const double* objectiveVector, const OptimizationQuery<Number>& query) override
@@ -227,7 +240,7 @@ namespace ipo
       for (auto& pointProduct : _implementation->_pointProducts)
       {
         pointProduct.product = objectiveVector * *_implementation->_points[pointProduct.vectorIndex].vector;
-        pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
+        // pointProduct.product *= _implementation->_points[pointProduct.vectorIndex].inverseNorm;
       }
 
       // Sort points according to product.
@@ -361,10 +374,6 @@ namespace ipo
         std::cout << " response is " << response << ".\n" << std::flush;
 #endif /* IPO_DEBUG */
 
-        // If the current oracle found a ray or a point, we stop.
-        if (!response.wasSuccessful())
-          continue;
-
         // Add points/rays to cache.
         if (!data.isCache)
         {
@@ -377,11 +386,14 @@ namespace ipo
             addToCache(_points, _hashToPointIndex, _pointProducts, point.vector);
         }
 
+        // If the current oracle found a ray or a point, we stop.
+        if (!response.wasSuccessful())
+          continue;
+
         if (response.outcome == OptimizationOutcome::INFEASIBLE
           || response.outcome == OptimizationOutcome::UNBOUNDED
           || (response.hasDualBound && response.hasPrimalBound() && response.primalBound() == response.dualBound)
-          || !query.hasMinPrimalBound()
-          || (response.hasPrimalBound() && response.primalBound() > query.minPrimalBound()))
+          || (query.hasMinPrimalBound() && response.hasPrimalBound() && response.primalBound() > query.minPrimalBound()))
         {
           return response;
         }
@@ -547,8 +559,8 @@ namespace ipo
 
     struct ProductVector
     {
-      std::size_t vectorIndex;
-      double product;
+      std::size_t vectorIndex; /// Index in cache's point/ray array.
+      double product; /// Product of vector with objective.
 
       ProductVector(std::size_t index)
         : vectorIndex(index), product(0)
