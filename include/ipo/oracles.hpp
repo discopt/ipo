@@ -110,6 +110,12 @@ namespace ipo
       _minPrimalBound = minPrimalBound;
     }
 
+    /**
+     * \brief Removes a minimum primal bound.
+     *
+     * This means that the oracle must not stop prematurely.
+     */
+
     void removeMinPrimalBound()
     {
       _hasMinPrimalBound = false;
@@ -152,6 +158,22 @@ namespace ipo
       _hasMaxDualBound = false;
     }
   };
+
+  /**
+   * \brief Prints the query details of a real optimization oracle.
+   */
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<double>& query);
+
+#if defined(IPO_RATIONAL)
+
+  /**
+   * \brief Prints the query details of a rational optimization oracle.
+   */
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<rational>& query);
+
+#endif /* IPO_RATIONAL */
 
   /**
    * \brief Structure for storing the response of an optimization oracle.
@@ -387,6 +409,21 @@ namespace ipo
   };
 
   /**
+   * \brief Prints the response of a real optimization oracle.
+   */
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response);
+
+#if defined(IPO_RATIONAL)
+
+  /**
+   * \brief Prints the response of a rational optimization oracle.
+   */
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response);
+
+#endif /* IPO_RATIONAL */
+  /**
    * \brief Base class for all IPO oracles.
    */
 
@@ -573,12 +610,6 @@ namespace ipo
   };
 
   /**
-   * \brief Prints the response of a real optimization oracle.
-   */
-
-  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response);
-
-  /**
    * \brief Base class for separation oracles.
    *
    * When queried with a point, the oracle returns any number (including none) of less-than-or-equal
@@ -648,12 +679,6 @@ namespace ipo
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<double>& response);
 
 #if defined(IPO_RATIONAL)
-
-  /**
-   * \brief Prints the response of a rational optimization oracle.
-   */
-
-  std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response);
 
   /**
    * \brief Prints the response of a rational separation oracle.

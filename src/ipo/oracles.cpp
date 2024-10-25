@@ -2,6 +2,50 @@
 
 namespace ipo
 {
+
+  template <typename R>
+  static std::ostream& printOptimizationQuery(std::ostream& stream,
+    const OptimizationQuery<R>& query)
+  {
+    stream << "{";
+    bool isFirst = true;
+    if (query.hasMinPrimalBound())
+    {
+      if (!isFirst)
+        stream << ", ";
+      stream << "only sol.values > " << formatNumberApprox(query.minPrimalBound());
+      isFirst = false;
+    }
+    if (query.hasMaxDualBound())
+    {
+      if (!isFirst)
+        stream << ", ";
+      stream << "stops if opt <= " << formatNumberApprox(query.maxDualBound());
+      isFirst = false;
+    }
+    if (query.timeLimit < std::numeric_limits<double>::infinity())
+    {
+      if (!isFirst)
+        stream << ", ";
+      stream << "timout at " << query.timeLimit << "s";
+      isFirst = false;
+    }
+    return stream << "}";
+  }
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<double>& query)
+  {
+    return printOptimizationQuery(stream, query);
+  }
+
+#if defined(IPO_RATIONAL)
+
+  std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<rational>& query)
+  {
+    return printOptimizationQuery(stream, query);
+  }
+
+#endif /* IPO_RATIONAL */
   
   template <typename Number>
   OptimizationOracle<Number>::OptimizationOracle(const std::string& name)
