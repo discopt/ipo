@@ -213,7 +213,7 @@ namespace ipo
   }
 
   GurobiSolver::GurobiSolver(const std::string& fileName)
-    : _currentFace(nullptr)
+    : _name(fileName), _currentFace(nullptr)
   {
     GUROBI_CALL_EXC( GRBemptyenv(&_env) );
 #if !defined(IPO_DEBUG)
@@ -425,6 +425,7 @@ namespace ipo
     : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
+    _name = solver->name() + " with Gurobi";
     _solver->addFace(&_face);
   }
 
