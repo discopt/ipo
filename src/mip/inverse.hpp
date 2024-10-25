@@ -4,6 +4,9 @@
 #include <sstream>
 #include <random>
 #include <unordered_map>
+#include <chrono>
+#include <ctime>
+#include <ratio>
 
 #include <rapidxml.hpp>
 #include <rapidxml_utils.hpp>
@@ -149,24 +152,171 @@ namespace inverse
   template<typename Solver, typename Number>
   void solve(const InverseMIP<Solver, Number>& instance)
   {
+    std::vector<std::size_t> nonzeroColumns;
+    std::vector<Number> nonzeroCoefficients;
+
     std::cout << "Solving inverse MIP <" << instance.name << ">." << std::endl;
 
     std::vector<std::shared_ptr<ipo::Polyhedron<Number>>> polyhedra;
+    std::shared_ptr<ipo::Space> space;
     for (std::size_t i = 0; i < instance.solvers.size(); ++i)
     {
       auto oracle = instance.solvers[i]->template getOptimizationOracle<Number>();
       polyhedra.push_back( std::make_shared<ipo::Polyhedron<Number>>(oracle));
+      space = oracle->space();
     }
 
-    for (std::size_t i = 0; i < instance.solvers.size(); ++i)
-    {
-      // TODO: For debugging purposes we start with the affine hull.
+    std::size_t n = space->dimension();
 
-      ipo::AffineHull<Number> affineHull;
-      std::cerr << "Starting affine hull computation.\n" << std::flush;
-      ipo::AffineHullQuery affQuery;
-      affineHull = ipo::affineHull(polyhedra[i], affQuery);
-      std::cout << "Dimension: " << affineHull.dimension << " / " << polyhedra[i]->space()->dimension() << std::endl;
+    ipo::LP<Number> lp;
+    lp.setSense(ipo::LPSense::MINIMIZE);
+    for (std::size_t v = 0; v < n; ++v)
+      lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), 0, space->variable(v));
+    std::size_t firstTargetSolutionValueColumn = lp.numColumns();
+    for (std::size_t p = 0; p < polyhedra.size(); ++p)
+    {
+      std::stringstream stream;
+      stream << "targetsolval#" << (p+1);
+      lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), 0, stream.str());
+    }
+    std::size_t firstNormColumn = lp.numColumns();
+    for (std::size_t v = 0; v < n; ++v)
+      lp.addColumn(0, lp.plusInfinity(), 1, "obj#" + space->variable(v));
+
+    std::vector<Number> targetObjectiveDense(n, 0);
+    for (auto iter : *instance.targetObjective)
+      targetObjectiveDense[iter.first] = iter.second;
+    for (std::size_t v = 0; v < n; ++v)
+    {
+      // x_i - targetobj_i <= obj#x_i   <=> -x_i + obj#x_i >= -c_i
+      Number coefs[2] = { -1, 1 };
+      std::size_t columns[2] = { v, firstNormColumn + v };
+      lp.addRow(-targetObjectiveDense[v], 2, columns, coefs, lp.plusInfinity(), "norm1#" + space->variable(v));
+
+      // -x_i + targetobj_i <= obj#x_i  <=> x_i + obj#x_i >= c_i
+      coefs[0] = 1;
+      lp.addRow(targetObjectiveDense[v], 2, columns, coefs, lp.plusInfinity(), "norm2#" + space->variable(v));
+    }
+
+    // y_p = \sum tgtsol^p_i x_i
+    for (std::size_t p = 0; p < polyhedra.size(); ++p)
+    {
+      nonzeroColumns.clear();
+      nonzeroCoefficients.clear();
+
+      for (auto iter : *instance.targetSolutions[p])
+      {
+        nonzeroColumns.push_back(iter.first);
+        nonzeroCoefficients.push_back(iter.second);
+      }
+      nonzeroColumns.push_back(firstTargetSolutionValueColumn + p);
+      nonzeroCoefficients.push_back(-1);
+      std::stringstream stream;
+      stream << "targetsolval#" << (p+1);
+      lp.addRow(0, nonzeroCoefficients.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0, stream.str());
+    }
+
+    std::size_t iteration = 0;
+    double timeLastLP = 0.0;
+    double timeTotalLP = 0.0;
+    while (true)
+    {
+      ++iteration;
+      // std::stringstream iterstr;
+      // iterstr << "inverse#" << iteration << ".lp";
+      // lp.write(iterstr.str());
+
+      auto status = lp.solve();
+      timeTotalLP += lp.getSolveTime();
+
+      if (status == ipo::LPStatus::OPTIMAL)
+      {
+        std::cout << "LP with " << lp.numColumns() << " variables and " << lp.numRows() << " rows solved in "
+          << lp.getSolveTime() << "s. Optimum is " << ipo::formatNumberApprox(lp.getObjectiveValue()) << "."
+          << std::endl;
+
+        assert(lp.hasPrimalSolution());
+        std::vector<Number> solutionObjective = lp.getPrimalSolution();
+        // for (std::size_t v = 0; v < n; ++v)
+        // {
+        //   if (solutionObjective[v] || targetObjectiveDense[v])
+        //   {
+        //     std::cout << "  Variable #" << v << " " << space->variable(v) << ": candidate = " << solutionObjective[v]
+        //       << ", target = " << targetObjectiveDense[v] << ", |diff| = "
+        //       << fabs(ipo::convertNumber<double>(solutionObjective[v] - targetObjectiveDense[v])) << std::endl;
+        //   }
+        // }
+
+        for (std::size_t p = 0; p < polyhedra.size(); ++p)
+        {
+          auto poly = polyhedra[p];
+          auto targetSolution = instance.targetSolutions[p];
+
+          Number targetSolutionValue = *targetSolution * solutionObjective;
+          std::vector<Number> targetSolutionDense(n, 0);
+          for (auto iter : *targetSolution)
+            targetSolutionDense[iter.first] = iter.second;
+          std::size_t targetSolutionSize = targetSolution->size();
+
+          ipo::OptimizationQuery<Number> optQuery;
+          // optQuery.setMinPrimalBound(targetSolutionValue);
+          std::cout << "Target solution has objective value " << ipo::formatNumberApprox(targetSolutionValue)
+            << std::endl;
+
+          std::cout << optQuery << std::endl;
+
+
+          const auto start = std::chrono::high_resolution_clock::now();
+          auto optResponse = poly->maximize(&solutionObjective[0], optQuery);
+          const auto end = std::chrono::high_resolution_clock::now();
+
+          std::cout << optResponse << " in "
+            << 1.e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "s." << std::endl;
+
+          for (const auto& point : optResponse.points)
+          {
+            std::size_t differenceVectorSize = targetSolutionSize + point.vector->size();
+            for (auto iter : *point.vector)
+            {
+              if (targetSolutionDense[iter.first] == iter.second)
+                differenceVectorSize -= 2;
+            }
+            nonzeroColumns.clear();
+            nonzeroCoefficients.clear();
+
+
+            // TODO: if (differenceVectorSize < point.vector->size()) then use that.
+
+            for (const auto& iter : *point.vector)
+            {
+              nonzeroColumns.push_back(iter.first);
+              nonzeroCoefficients.push_back(iter.second);
+            }
+            nonzeroColumns.push_back(firstTargetSolutionValueColumn + p);
+            nonzeroCoefficients.push_back(-1);
+
+            lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
+          }
+          for (const auto& ray : optResponse.rays)
+          {
+            nonzeroColumns.clear();
+            nonzeroCoefficients.clear();
+
+            for (const auto& iter : *ray.vector)
+            {
+              nonzeroColumns.push_back(iter.first);
+              nonzeroCoefficients.push_back(iter.second);
+            }
+
+            lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
+          }
+        }
+      }
+      else
+      {
+        std::cout << "LP status is " << status << std::endl;
+        break;
+      }
     }
   }
 
