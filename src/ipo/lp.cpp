@@ -268,7 +268,7 @@ namespace ipo
         // Save current objective.
         _spx.getObjReal(objective);
 
-        // Compute a tiny nonnegative combination of all constraints and add it on to of the objective.
+        // Compute a tiny nonnegative combination of all constraints and add it to the objective.
         const double PERTURBATION_DENOMINATOR = 1024 * 1024;
         std::default_random_engine generator(0);
         std::uniform_real_distribution<double> distribution;
@@ -335,6 +335,11 @@ namespace ipo
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
 
       return status();
+    }
+
+    double getSolveTime() const
+    {
+      return _spx.solveTime();
     }
 
   private:
@@ -649,6 +654,11 @@ namespace ipo
       return status();
     }
 
+    double getSolveTime() const
+    {
+      return _spx.solveTime();
+    }
+
   private:
     std::vector<LPKey> _rowKeys;
     std::vector<LPKey> _columnKeys;
@@ -822,6 +832,12 @@ namespace ipo
   LPStatus LP<Number>::solve(bool extreme)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->solve(extreme);
+  }
+
+  template <typename Number>
+  double LP<Number>::getSolveTime() const
+  {
+    return static_cast<LPImplementation<Number>*>(_implementation)->getSolveTime();
   }
 
   template class LP<double>;

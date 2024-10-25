@@ -124,6 +124,8 @@ namespace ipo
 
     LPStatus solve(bool extreme = false);
 
+    double getSolveTime() const;
+
   private:
 
     void* _implementation;
