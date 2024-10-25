@@ -195,8 +195,8 @@ namespace ipo
     {
       _sparse.clear();
       _spx.addColReal(soplex::LPColBase<double>(objectiveCoefficient, _sparse,
-        std::isnormal(upperBound) ? upperBound : soplex::infinity,
-        std::isnormal(lowerBound) ? lowerBound : -soplex::infinity));
+        std::isfinite(upperBound) ? upperBound : soplex::infinity,
+        std::isfinite(lowerBound) ? lowerBound : -soplex::infinity));
       _columnNames.push_back(name);
       _columnKeys.push_back(_nextColumnKey);
       _columnMap[_nextColumnKey] = _spx.numCols() - 1;
