@@ -287,6 +287,18 @@ T operator*(const T* a, const sparse_vector<U>& b)
   return result;
 }
 
+template <typename T, typename U>
+T operator*(const sparse_vector<T>& a, const std::vector<U>& b)
+{
+  return a * &b[0];
+}
+
+template <typename T, typename U>
+T operator*(const std::vector<T>& a, const sparse_vector<U>& b)
+{
+  return &a[0] * b;
+}
+
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
 {
