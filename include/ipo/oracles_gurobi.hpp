@@ -14,7 +14,7 @@
 namespace ipo
 {
   // Forward declarations.
-  
+
   template <typename NumberType>
   class GurobiOptimizationOracle;
 
@@ -187,8 +187,8 @@ namespace ipo
 #if defined(IPO_DOUBLE_MIP_GUROBI)
 
   /**
-  * \brief OptimizationOracle based on the Gurobi solver.
-  */
+   * \brief OptimizationOracle based on the Gurobi solver.
+   */
 
   template <>
   class GurobiOptimizationOracle<double>: public OptimizationOracle<double>

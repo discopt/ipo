@@ -77,7 +77,7 @@ namespace ipo
     typedef double Number;
 
     LPImplementation()
-      : _nextRowKey(0), _nextColumnKey(0)
+      : _nextRowKey(0), _nextColumnKey(0), _lastSolveTime(0.0)
     {
       _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
       _spx.setIntParam(soplex::SoPlex::VERBOSITY, soplex::SoPlex::VERBOSITY_ERROR);
@@ -93,7 +93,6 @@ namespace ipo
     std::size_t numRows() const
     {
       return _spx.numRows();
-
     }
 
     std::size_t numColumns() const
@@ -261,6 +260,7 @@ namespace ipo
 
     LPStatus solve(bool extreme)
     {
+      const auto startTime = std::chrono::high_resolution_clock::now();
       soplex::DVectorReal objective;
 
       if (extreme)
@@ -334,12 +334,15 @@ namespace ipo
       if (resetSimplifiedAuto)
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
 
+      const auto endTime = std::chrono::high_resolution_clock::now();
+      _lastSolveTime = 1.0e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
       return status();
     }
 
     double getSolveTime() const
     {
-      return _spx.solveTime();
+      return _lastSolveTime;
     }
 
   private:
@@ -360,6 +363,8 @@ namespace ipo
     std::vector<std::string> _columnNames;
     std::vector<soplex::SPxSolver::VarStatus> _rowBasisStatus;
     std::vector<soplex::SPxSolver::VarStatus> _columnBasisStatus;
+
+    double _lastSolveTime;
   };
 
 #endif /* IPO_DOUBLE_LP_SOPLEX */
@@ -374,6 +379,7 @@ namespace ipo
 
   public:
     LPImplementation()
+      : _lastSolveTime(0.0)
     {
       _spx.setIntParam(soplex::SoPlex::SOLVEMODE, soplex::SoPlex::SOLVEMODE_RATIONAL);
       _spx.setIntParam(soplex::SoPlex::SYNCMODE, soplex::SoPlex::SYNCMODE_AUTO);
@@ -563,6 +569,8 @@ namespace ipo
     {
       soplex::DVectorRational objective;
 
+      const auto startTime = std::chrono::high_resolution_clock::now();
+
       if (extreme)
       {
         // Save current objective.
@@ -651,12 +659,15 @@ namespace ipo
       if (resetSimplifiedAuto)
         _spx.setIntParam(soplex::SoPlex::SIMPLIFIER, soplex::SoPlex::SIMPLIFIER_AUTO);
 
+      const auto endTime = std::chrono::high_resolution_clock::now();
+      _lastSolveTime = 1.0e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(endTime - startTime).count();
+
       return status();
     }
 
     double getSolveTime() const
     {
-      return _spx.solveTime();
+      return _lastSolveTime;
     }
 
   private:
@@ -678,6 +689,8 @@ namespace ipo
     std::vector<std::string> _columnNames;
     std::vector<soplex::SPxSolver::VarStatus> _rowBasisStatus;
     std::vector<soplex::SPxSolver::VarStatus> _columnBasisStatus;
+
+    double _lastSolveTime;
   };
 
 #endif /* IPO_RATIONAL_LP_SOPLEX */

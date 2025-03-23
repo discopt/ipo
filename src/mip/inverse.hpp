@@ -217,23 +217,25 @@ namespace inverse
     }
 
     std::size_t iteration = 0;
-    double timeLastLP = 0.0;
+    double timeLP;
     double timeTotalLP = 0.0;
+    double timeTotalOracles = 0.0;
+    double timeTotalIterations = 0.0;
     while (true)
     {
+      const auto iteration_start = std::chrono::high_resolution_clock::now();
+
       ++iteration;
-      // std::stringstream iterstr;
-      // iterstr << "inverse#" << iteration << ".lp";
-      // lp.write(iterstr.str());
 
       auto status = lp.solve();
       timeTotalLP += lp.getSolveTime();
 
       if (status == ipo::LPStatus::OPTIMAL)
       {
-        std::cout << "LP with " << lp.numColumns() << " variables and " << lp.numRows() << " rows solved in "
-          << lp.getSolveTime() << "s. Optimum is " << ipo::formatNumberApprox(lp.getObjectiveValue()) << "."
-          << std::endl;
+        std::cout.setf( std::ios_base::fmtflags(), std::ios_base::floatfield );
+        std::cout << "LP #" << iteration << " with " << lp.numColumns() << " variables and " << lp.numRows() << " rows solved."
+          << " Optimum is " << ipo::formatNumberApprox(lp.getObjectiveValue()) << ". Time: "
+          << lp.getSolveTime() << "s. Total LP time: " << timeTotalLP << "s." << std::endl;
 
         assert(lp.hasPrimalSolution());
         std::vector<Number> solutionObjective = lp.getPrimalSolution();
@@ -265,13 +267,15 @@ namespace inverse
 
           std::cout << optQuery << std::endl;
 
-
           const auto start = std::chrono::high_resolution_clock::now();
           auto optResponse = poly->maximize(&solutionObjective[0], optQuery);
           const auto end = std::chrono::high_resolution_clock::now();
 
-          std::cout << optResponse << " in "
-            << 1.e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count() << "s." << std::endl;
+          double timeOracle = 1.e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(end - start).count();
+          timeTotalOracles += timeOracle;
+
+          std::cout << optResponse << " in " << timeOracle << "s. Total oracle time: " << timeTotalOracles << "s."
+            << std::endl;
 
           for (const auto& point : optResponse.points)
           {
@@ -283,7 +287,6 @@ namespace inverse
             }
             nonzeroColumns.clear();
             nonzeroCoefficients.clear();
-
 
             // TODO: if (differenceVectorSize < point.vector->size()) then use that.
 
@@ -317,6 +320,11 @@ namespace inverse
         std::cout << "LP status is " << status << std::endl;
         break;
       }
+
+      const auto iteration_end = std::chrono::high_resolution_clock::now();
+      double timeIteration = 1.e-3 * std::chrono::duration_cast<std::chrono::milliseconds>(iteration_end - iteration_start).count();
+      timeTotalIterations += timeIteration;
+      std::cout << "Iteration time: " << timeIteration << "s. Total iteration time: " << timeTotalIterations << "s.\n" << std::endl;
     }
   }
 

@@ -350,7 +350,6 @@ namespace ipo
       std::cout << "Disabling old face." << std::endl;
 #endif /* IPO_DEBUG */
 
-
       int faceConstraint = numConstraints - 1;
       GRBdelconstrs(_model, 1, &faceConstraint);
     }
@@ -577,7 +576,7 @@ namespace ipo
         objectiveVector[i] * objectiveScalingFactor) );
     }
 
-    // Set bound limits of SCIP.
+    // Set bound limits of Gurobi.
 #if defined(IPO_DEBUG)
     if (query.hasMinPrimalBound())
       std::cout << "minPrimalBound = " << query.minPrimalBound() << std::endl;
