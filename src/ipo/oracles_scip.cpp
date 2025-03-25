@@ -581,7 +581,8 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<SCIPOptimizationOracle<double>> SCIPSolver::getOptimizationOracle<double>(
-    const Constraint<double>& face)
+    const Constraint<double>& face, double trustRegionDistance,
+    std::shared_ptr<sparse_vector<double>> trustRegionCenter)
   {
     return std::make_shared<SCIPOptimizationOracle<double>>(shared_from_this(), face);
   }
@@ -595,7 +596,8 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<SCIPOptimizationOracle<rational>> SCIPSolver::getOptimizationOracle<rational>(
-    const Constraint<rational>& face)
+    const Constraint<rational>& face, double trustRegionDistance,
+    std::shared_ptr<sparse_vector<rational>> trustRegionCenter)
   {
     auto approximateFace = convertConstraint<double>(face);
     auto approximateOracle = getOptimizationOracle<double>(approximateFace);

@@ -11,7 +11,7 @@
 #include <unordered_map>
 
 /**
- * \brief Macro to raise a SCIPException in case of a SCIP error.
+ * \brief Macro to raise a GurobiException in case of a GUROBI error.
  **/
 
 #define GUROBI_CALL_EXC(x) \
@@ -26,9 +26,9 @@ static const int GUROBI_SEPARATION_CHECK_TIMELIMIT_FREQUENCY = 1000;
 namespace ipo
 {
   /**
-   * \brief Exception handling class for SCIP.
+   * \brief Exception handling class for Gurobi.
    *
-   * Represents a SCIP error in C++.
+   * Represents a Gurobi error in C++.
    **/
 
   class GurobiException: public std::exception
@@ -36,7 +36,7 @@ namespace ipo
   public:
 
     /**
-     * \brief Constructs a SCIPException from an error code.
+     * \brief Constructs a GurobiException from an error code.
      **/
 
     GurobiException(int retcode, const char* fileName, int line)
@@ -163,12 +163,9 @@ namespace ipo
    */
 
   static
-  void GRBiterateRows(GRBmodel* model, std::shared_ptr<Space> space,
+  void GRBiterateRows(GRBmodel* model, std::size_t numConstraints, std::shared_ptr<Space> space,
     std::function<void(Constraint<double>&& constraint)> visitor, bool ranged)
   {
-    int numConstraints;
-    GUROBI_CALL_EXC( GRBgetintattr(model, GRB_INT_ATTR_NUMCONSTRS, &numConstraints) );
-
     int numNonzeros;
     GUROBI_CALL_EXC( GRBgetconstrs(model, &numNonzeros, nullptr, nullptr, nullptr, 0, numConstraints) );
 
@@ -185,7 +182,7 @@ namespace ipo
 
     std::vector<std::pair<std::size_t, double>> unsortedEntries;
     sparse_vector<double> entries;
-    for (int c = 0; c < numConstraints; ++c)
+    for (std::size_t c = 0; c < numConstraints; ++c)
     {
       std::size_t beyond = slices[c + 1];
       unsortedEntries.clear();
@@ -203,7 +200,7 @@ namespace ipo
   }
 
   GurobiSolver::GurobiSolver(GRBmodel*&& model)
-    : _env(nullptr), _model(model), _currentFace(nullptr)
+    : _env(nullptr), _model(model), _currentFaceConstraint(nullptr)
   {
     model = nullptr;
 #if !defined(IPO_DEBUG)
@@ -213,7 +210,7 @@ namespace ipo
   }
 
   GurobiSolver::GurobiSolver(const std::string& fileName)
-    : _name(fileName), _currentFace(nullptr)
+    : _name(fileName), _currentFaceConstraint(nullptr)
   {
     GUROBI_CALL_EXC( GRBemptyenv(&_env) );
 #if !defined(IPO_DEBUG)
@@ -229,35 +226,38 @@ namespace ipo
   {
     GUROBI_CALL_EXC( GRBupdatemodel(_model) );
 
-    int n;
-    GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
+    int i;
+    GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &i) );
+    _numModelVariables = i;
+    GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &i) );
+    _numModelConstraints = i;
 
-    _instanceObjective = new double[n+1];
-    GUROBI_CALL_EXC( GRBgetdblattrarray(_model, GRB_DBL_ATTR_OBJ, 0, n, &_instanceObjective[0]) );
-    GUROBI_CALL_EXC( GRBgetdblattr(_model, GRB_DBL_ATTR_OBJCON, &_instanceObjective[n]) );
+    _instanceObjective = new double[_numModelVariables+1];
+    GUROBI_CALL_EXC( GRBgetdblattrarray(_model, GRB_DBL_ATTR_OBJ, 0, _numModelVariables, &_instanceObjective[0]) );
+    GUROBI_CALL_EXC( GRBgetdblattr(_model, GRB_DBL_ATTR_OBJCON, &_instanceObjective[_numModelVariables]) );
     int modelSense;
     GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_MODELSENSE, &modelSense) );
     std::vector<std::string> variableNames;
-    variableNames.resize(n);
+    variableNames.resize(_numModelVariables);
     char* name;
     GRBgetstrattr(_model, GRB_STR_ATTR_MODELNAME, &name);
     _name = name;
-    for (int i = 0; i < n; ++i)
+    for (std::size_t i = 0; i < _numModelVariables; ++i)
     {
       GUROBI_CALL_EXC( GRBgetstrattrelement(_model, GRB_STR_ATTR_VARNAME, i, &name) );
       variableNames[i] = name;
       _instanceObjective[i] *= -modelSense;
     }
-    _instanceObjective[n] *= -modelSense;
+    _instanceObjective[_numModelVariables] *= -modelSense;
     _space = std::make_shared<Space>(std::move(variableNames));
 
     // Make it a maximization problem.
     GUROBI_CALL_EXC( GRBsetintattr(_model, GRB_INT_ATTR_MODELSENSE, -1) );
 
     // Extract bounds and integrality for initializing the MIP extended.
-    std::vector<bool> integrality(n);
-    std::vector<std::pair<double, double>> bounds(n);
-    for (int i = 0; i < n; ++i)
+    std::vector<bool> integrality(_numModelVariables);
+    std::vector<std::pair<double, double>> bounds(_numModelVariables);
+    for (std::size_t i = 0; i < _numModelVariables; ++i)
     {
       char value;
       GUROBI_CALL_EXC( GRBgetcharattrelement(_model, GRB_CHAR_ATTR_VTYPE, i, &value) );
@@ -294,7 +294,7 @@ namespace ipo
     };
 
     Visitor visitor = { _extender };
-    GRBiterateRows(_model, space(), visitor, true);
+    GRBiterateRows(_model, _numModelConstraints, space(), visitor, true);
 #endif /* IPO_RATIONAL_LP */
   }
 
@@ -323,7 +323,7 @@ namespace ipo
     if (face->isAlwaysSatisfied())
       return;
 
-    if (face == _currentFace)
+    if (face == _currentFaceConstraint)
       selectFace(nullptr);
   }
 
@@ -332,7 +332,7 @@ namespace ipo
     if (face && face->isAlwaysSatisfied())
       face = nullptr;
 
-    if (face == _currentFace)
+    if (face == _currentFaceConstraint)
     {
 #if defined(IPO_DEBUG)
       std::cout << "Face is already selected." << std::endl;
@@ -344,7 +344,7 @@ namespace ipo
     GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &numConstraints) );
 
     // Remove from Gurobi model.
-    if (_currentFace)
+    if (_currentFaceConstraint)
     {
 #if defined(IPO_DEBUG)
       std::cout << "Disabling old face." << std::endl;
@@ -359,7 +359,6 @@ namespace ipo
 #if defined(IPO_DEBUG)
       printf("Enabling new face %p with lhs %f and rhs %f.\n", face, face->lhs(), face->rhs());
 #endif /* IPO_DEBUG */
-//       SCIP_CALL_EXC( SCIPaddCons(_scip, _faceConstraints.at(face)) );
 
       std::vector<int> indices(face->vector().size());
       std::vector<double> coefficients(face->vector().size());
@@ -386,7 +385,121 @@ namespace ipo
       GUROBI_CALL_EXC( GRBaddconstr(_model, face->vector().size(), &indices[0], &coefficients[0], '=', rhs, "face") );
     }
 
-    _currentFace = face;
+    _currentFaceConstraint = face;
+  }
+
+  void GurobiSolver::selectTrustRegion(std::shared_ptr<sparse_vector<double>> trustRegionCenter, double maxDistance)
+  {
+    if (_trustRegionCenter == trustRegionCenter)
+    {
+      if (_trustRegionCenter && (maxDistance != _trustRegionMaxDistance))
+      {
+        GUROBI_CALL_EXC( GRBsetdblattrelement(_model, GRB_DBL_ATTR_RHS, _trustRegionFirstRow, maxDistance) );
+        _trustRegionMaxDistance = maxDistance;
+      }
+      return;
+    }
+
+    if (_trustRegionCenter)
+    {
+      // Shift face row if necessary.
+      std::size_t numTrustRegionRows = _trustRegionBeyondRow - _trustRegionFirstRow;
+      if (_currentFaceRow >= _trustRegionBeyondRow)
+        _currentFaceRow -= numTrustRegionRows;
+
+      // Remove trust region rows.
+      std::vector<int> range(numTrustRegionRows);
+      for (std::size_t i = 0; i < numTrustRegionRows; ++i)
+        range[i] = _trustRegionFirstRow + i;
+      GRBdelconstrs(_model, numTrustRegionRows, &range[0]);
+
+      // Remove trust region columns.
+      range.clear();
+      for (std::size_t i = _trustRegionFirstColumn; i < _trustRegionBeyondColumn; ++i)
+        range.push_back(i);
+      GRBdelvars(_model, range.size(), &range[0]);
+    }
+
+    if (trustRegionCenter)
+    {
+      int n;
+      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
+      _trustRegionFirstColumn = n;
+
+      // #vars many extra variables.
+      std::vector<double> lb(_numModelVariables, 0.0);
+      std::vector<double> ub(_numModelVariables, GRB_INFINITY);
+      std::vector<int> begin(_numModelVariables, 0);
+      std::vector<char> vtypes(_numModelVariables, 'c');
+      GRBaddvars(_model, _numModelVariables, 0, &begin[0], nullptr, nullptr, &lb[0], &lb[0], &ub[0],
+        &vtypes[0], nullptr);
+
+      GUROBI_CALL_EXC( GRBupdatemodel(_model) );
+      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
+      _trustRegionBeyondColumn = n;
+
+      // Constraints (original variables are x_i; extra variables are y_i; target solution is t):
+      // y_1 + y_2 + ... + y_n <= k.
+      //
+      // |x_i - t_i| <= y_i
+      // x_i - t_i <= y_i   <=> x_i - y_i <= t_i
+      // t_i - x_i <= y_i   <=> x_i + y_i >= t_i
+
+      begin.clear();
+      std::vector<int> indices;
+      std::vector<double> coefs;
+      std::vector<char> senses;
+      std::vector<double> rhs;
+      begin.push_back(0);
+      rhs.push_back(maxDistance);
+      senses.push_back('<');
+      for (size_t v = 0; v < _numModelVariables; ++v)
+      {
+        indices.push_back(_trustRegionFirstColumn + v);
+        coefs.push_back(1.0);
+      }
+      auto iter = trustRegionCenter->begin();
+      auto end = trustRegionCenter->end();
+      for (size_t v = 0; v < _numModelVariables; ++v)
+      {
+        if (iter == end || iter->first != v)
+        {
+          rhs.push_back(0.0);
+          rhs.push_back(0.0);
+        }
+        else
+        {
+          rhs.push_back(iter->second);
+          rhs.push_back(iter->second);
+          ++iter;
+        }
+        begin.push_back(indices.size());
+        indices.push_back(v);
+        coefs.push_back(1.0);
+        indices.push_back(_trustRegionFirstColumn + v);
+        coefs.push_back(-1.0);
+        senses.push_back('<');
+
+        begin.push_back(indices.size());
+        indices.push_back(v);
+        coefs.push_back(1.0);
+        indices.push_back(_trustRegionFirstColumn + v);
+        coefs.push_back(1.0);
+        senses.push_back('>');
+      }
+
+      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
+      _trustRegionFirstRow = n;
+
+      GUROBI_CALL_EXC( GRBaddconstrs(_model, 2 * _numModelVariables + 1, indices.size(), &begin[0], &indices[0],
+        &coefs[0], &senses[0], &rhs[0], nullptr) );
+
+      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
+      _trustRegionBeyondRow = n;
+      _trustRegionMaxDistance = maxDistance;
+    }
+
+    _trustRegionCenter = trustRegionCenter;
   }
 
   /**
@@ -396,9 +509,11 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<GurobiOptimizationOracle<double>> GurobiSolver::getOptimizationOracle<double>(
-    const Constraint<double>& face)
+    const Constraint<double>& face, double trustRegionDistance,
+    std::shared_ptr<sparse_vector<double>> trustRegionCenter)
   {
-    return std::make_shared<GurobiOptimizationOracle<double>>(shared_from_this(), face);
+    return std::make_shared<GurobiOptimizationOracle<double>>(shared_from_this(), face, trustRegionDistance,
+      trustRegionCenter);
   }
 
 #if defined(IPO_RATIONAL_LP)
@@ -410,18 +525,29 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<GurobiOptimizationOracle<rational>> GurobiSolver::getOptimizationOracle<rational>(
-    const Constraint<rational>& face)
+    const Constraint<rational>& face, double trustRegionDistance,
+    std::shared_ptr<sparse_vector<rational>> trustRegionCenter)
   {
     auto approximateFace = convertConstraint<double>(face);
-    auto approximateOracle = getOptimizationOracle<double>(approximateFace);
-    return std::make_shared<GurobiOptimizationOracle<rational>>(_extender, approximateOracle, face);
+    std::vector<std::pair<std::size_t, double>> approximateTrustRegionCenterCoefficients;
+    for (auto& iter : *trustRegionCenter)
+      approximateTrustRegionCenterCoefficients.push_back(std::make_pair(iter.first, convertNumber<double>(iter.second)));
+    auto approximateTrustRegionDistance = convertNumber<double>(trustRegionDistance);
+    auto approximateTrustRegionCenter = std::make_shared<sparse_vector<double>>(
+      std::move(approximateTrustRegionCenterCoefficients), false);
+    auto approximateOracle = getOptimizationOracle<double>(approximateFace, approximateTrustRegionDistance,
+      approximateTrustRegionCenter);
+    return std::make_shared<GurobiOptimizationOracle<rational>>(_extender, approximateOracle, face, trustRegionDistance,
+      trustRegionCenter);
   }
 
 #endif /* IPO_RATIONAL_LP */
 
   GurobiOptimizationOracle<double>::GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
-    const Constraint<double>& face)
-    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
+    const Constraint<double>& face, double trustRegionDistance,
+    std::shared_ptr<sparse_vector<double>> trustRegionCenter)
+    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face), _trustRegionCenter(trustRegionCenter),
+    _trustRegionDistance(trustRegionDistance)
   {
     _space = solver->space();
     _name = solver->name() + " with Gurobi";
@@ -555,6 +681,19 @@ namespace ipo
     }
 #endif /* IPO_DEBUG */
 
+    // Set trust region.
+    _solver->selectTrustRegion(_trustRegionCenter, _trustRegionDistance);
+    double trustRegionObjectiveValue = -std::numeric_limits<double>::infinity();
+    if (_trustRegionCenter)
+    {
+      trustRegionObjectiveValue = 0.0;
+      for (auto iter : *_trustRegionCenter)
+        trustRegionObjectiveValue += objectiveVector[iter.first] * iter.second;
+#if defined(IPO_DEBUG)
+      std::cout << "Trust region center's objective value: " << trustRegionObjectiveValue << std::endl;
+#endif /* IPO_DEBUG */
+    }
+
     _solver->selectFace(&_face);
 
     // Gurobi settings.
@@ -565,7 +704,7 @@ namespace ipo
       std::min(query.maxNumSolutions, 2000000000UL)) );
     GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_INFUNBDINFO, 1) );
 
-    // Scale the objective vector down before passing it to SCIP.
+    // Scale the objective vector down before passing it to Gurobi.
     double objectiveScalingFactor = 1.0 / std::max(1.0, maxAbsoluteValue(objectiveVector, n) / 1.0e5 );
 #if defined(IPO_DEBUG)
     std::cout << "Scaling objective vector by " << objectiveScalingFactor << "." << std::endl;
@@ -600,251 +739,284 @@ namespace ipo
       GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTBDSTOP, query.maxDualBound()) );
     }
 
-    // First call to Gurobi with dual reductions.
+    // Loop over trust region settings.
+    while (true)
+    {
+      // First call to Gurobi with dual reductions.
 #if defined(IPO_DEBUG)
-    std::cout << "Calling Gurobi";
-    double timeLimit;
-    GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, &timeLimit) );
-    if (timeLimit < std::numeric_limits<double>::infinity())
-      std::cout << " using a time limit of " << timeLimit << "s";
-    std::cout << "." << std::endl;
-    GRBwrite(_solver->_model, "GurobiOptimizationOracle.lp");
-    GRBwriteparams(GRBgetenv(_solver->_model), "GurobiOptimizationOracle.prm");
+      std::cout << "Calling Gurobi";
+      double timeLimit;
+      GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, &timeLimit) );
+      if (timeLimit < std::numeric_limits<double>::infinity())
+        std::cout << " using a time limit of " << timeLimit << "s";
+      std::cout << "." << std::endl;
+      GRBwrite(_solver->_model, "GurobiOptimizationOracle.lp");
+      GRBwriteparams(GRBgetenv(_solver->_model), "GurobiOptimizationOracle.prm");
 #endif /* IPO_DEBUG */
 
-    int retcode = GRBoptimize(_solver->_model);
-    if (retcode)
-    {
-      std::stringstream message;
-      message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
-      throw std::runtime_error(message.str());
-    }
-    double runtime, primalBound, dualBound;
-    int status;
-    GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
-    remainingTime -= runtime;
-    GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
-    GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
-#if defined(IPO_DEBUG)
-    std::cout << "Gurobi returned with status " << status << " and dual bound " << dualBound << "." << std::endl;
-#endif /* IPO_DEBUG */
-
-    // Case distinction depending on status.
-    if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT || status == GRB_NODE_LIMIT || status == GRB_USER_OBJ_LIMIT)
-    {
-      GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJVAL, &primalBound) );
-      extractPoints(_solver->_model, _space, objectiveVector, response);
-      response.setPrimalBound(primalBound / objectiveScalingFactor);
-      response.dualBound = dualBound / objectiveScalingFactor;
-      response.hasDualBound = true;
-      response.outcome = OptimizationOutcome::FEASIBLE;
-      response.hitTimeLimit = status == GRB_TIME_LIMIT;
-      if (response.points.empty())
+      int retcode = GRBoptimize(_solver->_model);
+      if (retcode)
       {
-        GUROBI_CALL_EXC( GRBwrite(_solver->_model, "GurobiOptimizationOracle-all-sols-infinite.lp") );
-        throw std::runtime_error("GurobiOptimizationOracle<double>: All Gurobi solutions had an infinite entry."
-          " Wrote instance to file <GurobiOptimizationOracle-all-sols-infinite.lp>.");
+        std::stringstream message;
+        message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
+        throw std::runtime_error(message.str());
       }
-    }
-    else if (status == GRB_INFEASIBLE)
-    {
-      response.outcome = OptimizationOutcome::INFEASIBLE;
-    }
-    else
-    {
-      if (status == GRB_INF_OR_UNBD)
-      {
-        // For the second call we disable dual reductions.
-        GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, 0) );
-        GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
-
-        // Second call to Gurobi, without dual reductions.
+      double runtime, primalBound, dualBound;
+      int status;
+      GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
+      remainingTime -= runtime;
+      GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
+      GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
 #if defined(IPO_DEBUG)
-        std::cout << "Calling Gurobi without dual reductions";
-        if (remainingTime < std::numeric_limits<double>::infinity())
-          std::cout << " with time limit " << remainingTime << "s";
-        std::cout << "." << std::endl;
+      std::cout << "Gurobi returned with status " << status << " and dual bound " << dualBound << "." << std::endl;
 #endif /* IPO_DEBUG */
 
-        int retcode = GRBoptimize(_solver->_model);
-        if (retcode)
+      // Case distinction depending on status.
+      if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT || status == GRB_NODE_LIMIT || status == GRB_USER_OBJ_LIMIT)
+      {
+        if (_trustRegionCenter == nullptr || !std::isfinite(_trustRegionDistance))
         {
-          std::stringstream message;
-          message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
-          throw std::runtime_error(message.str());
+          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJVAL, &primalBound) );
+          extractPoints(_solver->_model, _space, objectiveVector, response);
+          response.setPrimalBound(primalBound / objectiveScalingFactor);
+          response.dualBound = dualBound / objectiveScalingFactor;
+          response.hasDualBound = true;
+          response.outcome = OptimizationOutcome::FEASIBLE;
+          response.hitTimeLimit = status == GRB_TIME_LIMIT;
+          if (response.points.empty())
+          {
+            GUROBI_CALL_EXC( GRBwrite(_solver->_model, "GurobiOptimizationOracle-all-sols-infinite.lp") );
+            throw std::runtime_error("GurobiOptimizationOracle<double>: All Gurobi solutions had an infinite entry."
+              " Wrote instance to file <GurobiOptimizationOracle-all-sols-infinite.lp>.");
+          }
+          break;
         }
-
-        GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
-        remainingTime -= runtime;
-        GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
-        GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
-#if defined(IPO_DEBUG)
-        std::cout << "Gurobi without dual reductions returned with status " << status << " and dual bound "
-          << dualBound << "." << std::endl;
-#endif /* IPO_DEBUG */
+        else
+        {
+          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJVAL, &primalBound) );
+          extractPoints(_solver->_model, _space, objectiveVector, response);
+          response.setPrimalBound(primalBound / objectiveScalingFactor);
+          response.hasDualBound = false;
+          response.outcome = OptimizationOutcome::FEASIBLE;
+          response.hitTimeLimit = status == GRB_TIME_LIMIT;
+          if (response.primalBound() > trustRegionObjectiveValue + 1.0e-5 * fabs(trustRegionObjectiveValue))
+            break;
+          else
+          {
+            _trustRegionDistance *= 1.5;
+            if (_trustRegionDistance > 1000)
+              _trustRegionDistance = std::numeric_limits<double>::infinity();
+// #if defined(IPO_DEBUG)
+            std::cout << "Adapting trust region distance to " << _trustRegionDistance << "." << std::endl;
+// #endif /* IPO_DEBUG */
+            _solver->selectTrustRegion(_trustRegionCenter, _trustRegionDistance);
+            continue;
+          }
+        }
       }
-
-      // Case distinction of status if first call was neither optimal, time limit nor infeasible.
-      if (status == GRB_INFEASIBLE)
+      else if (status == GRB_INFEASIBLE)
       {
         response.outcome = OptimizationOutcome::INFEASIBLE;
-      }
-      else if (status == GRB_UNBOUNDED)
-      {
-        extractPoints(_solver->_model, _space, objectiveVector, response);
-        response.outcome = OptimizationOutcome::UNBOUNDED;
-
-        // We're unbounded but but don't have a point, so we solve a feasibility problem.
-        if (response.points.empty())
-        {
-          GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
-          GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
-          if (query.hasMinPrimalBound())
-            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, oldBestObjStop) );
-
-          // Update objective vector.
-          for (std::size_t i = 0; i < n; ++i)
-            GUROBI_CALL_EXC( GRBsetdblattrelement(_solver->_model, GRB_DBL_ATTR_OBJ, i, 0.0) );
-
-          // Remove limits on primal and dual bounds.
-          // _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
-          // _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
-
-          // Third call to Gurobi, for feasibility.
-#if defined(IPO_DEBUG)
-          std::cout << "Calling Gurobi for feasibility.";
-          if (remainingTime < std::numeric_limits<double>::infinity())
-            std::cout << " with time limit " << timeLimit << "s";
-          std::cout << "." << std::endl;
-#endif /* IPO_DEBUG */
-
-          int retcode = GRBoptimize(_solver->_model);
-          if (retcode)
-          {
-            std::stringstream message;
-            message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
-            throw std::runtime_error(message.str());
-          }
-
-          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
-          remainingTime -= runtime;
-          GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
-          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
-          if (query.hasMinPrimalBound())
-            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, query.minPrimalBound()) );
-#if defined(IPO_DEBUG)
-          std::cout << "Gurobi for feasibility returned with status " << status << " and dual bound " << dualBound
-            << "." << std::endl;
-#endif /* IPO_DEBUG */
-
-          if (status == GRB_INFEASIBLE)
-          {
-            response.rays.clear();
-            response.outcome = OptimizationOutcome::INFEASIBLE;
-          }
-          else if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT)
-          {
-            extractPoints(_solver->_model, _space, objectiveVector, response);
-            response.hitTimeLimit = status == GRB_TIME_LIMIT;
-            if (response.points.empty())
-            {
-              std::stringstream message;
-              message << "GurobiOptimizationOracle<double>: "
-                "Feasbility model has found points all of which have extremely large entries.";
-              throw std::runtime_error(message.str());
-            }
-          }
-          else
-          {
-            std::stringstream message;
-            message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status
-              << " in feasibility call.";
-            throw std::runtime_error(message.str());
-          }
-        }
-
-        // Solve the LP relaxation to get an unbounded ray.
-        {
-          GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, 0) );
-          GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
-
-          // Update objective vector.
-          for (std::size_t i = 0; i < n; ++i)
-          {
-            GUROBI_CALL_EXC( GRBsetdblattrelement(_solver->_model, GRB_DBL_ATTR_OBJ, i,
-              objectiveVector[i] * objectiveScalingFactor) );
-          }
-
-          // Remove limits on primal and dual bounds.
-          // _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
-          // _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
-
-          std::vector<char> vtypesOriginal(n);
-          GUROBI_CALL_EXC( GRBgetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesOriginal[0]) );
-          std::vector<char> vtypesRelaxed(n, 'C');
-          GUROBI_CALL_EXC( GRBsetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesRelaxed[0]) );
-
-          // Fourth call to Gurobi, for unbounded ray.
-#if defined(IPO_DEBUG)
-          std::cout << "Calling Gurobi for unbounded ray.";
-          if (remainingTime < std::numeric_limits<double>::infinity())
-            std::cout << " with time limit " << timeLimit << "s";
-          std::cout << "." << std::endl;
-#endif /* IPO_DEBUG */
-
-          int retcode = GRBoptimize(_solver->_model);
-          if (retcode)
-          {
-            std::stringstream message;
-            message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
-            throw std::runtime_error(message.str());
-          }
-
-          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
-          remainingTime -= runtime;
-          GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
-          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
-#if defined(IPO_DEBUG)
-          std::cout << "Gurobi for unbounded ray returned with status " << status << " and dual bound " << dualBound
-            << "." << std::endl;
-#endif /* IPO_DEBUG */
-
-          GUROBI_CALL_EXC( GRBsetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesOriginal[0]) );
-          GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
-
-          if (status == GRB_UNBOUNDED)
-          {
-            extractRays(_solver->_model, _space, response);
-          }
-          else
-          {
-            std::stringstream message;
-            message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status
-              << " in unbounded ray call.";
-            throw std::runtime_error(message.str());
-          }
-        }
+        break;
       }
       else
       {
-        std::stringstream message;
-        message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status;
-        if (status == GRB_OPTIMAL)
-          message << " (optimal) after a previous status " << GRB_INF_OR_UNBD << " (infeasible/unbounded).";
-        else if (status == GRB_INF_OR_UNBD)
-          message << " (infeasible/unbounded) even after disabling dual reductions.";
-        else if (status == GRB_NODE_LIMIT)
+        if (status == GRB_INF_OR_UNBD)
         {
-          double nodeLimit;
-          GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_NODELIMIT, &nodeLimit) );
-          message << " (total node limit was " << nodeLimit << ").";
+          // For the second call we disable dual reductions.
+          GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, 0) );
+          GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
+
+          // Second call to Gurobi, without dual reductions.
+#if defined(IPO_DEBUG)
+          std::cout << "Calling Gurobi without dual reductions";
+          if (remainingTime < std::numeric_limits<double>::infinity())
+            std::cout << " with time limit " << remainingTime << "s";
+          std::cout << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+          int retcode = GRBoptimize(_solver->_model);
+          if (retcode)
+          {
+            std::stringstream message;
+            message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
+            throw std::runtime_error(message.str());
+          }
+
+          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
+          remainingTime -= runtime;
+          GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
+          GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
+#if defined(IPO_DEBUG)
+          std::cout << "Gurobi without dual reductions returned with status " << status << " and dual bound "
+            << dualBound << "." << std::endl;
+#endif /* IPO_DEBUG */
+        }
+
+        // Case distinction of status if first call was neither optimal, time limit nor infeasible.
+        if (status == GRB_INFEASIBLE)
+        {
+          response.outcome = OptimizationOutcome::INFEASIBLE;
+        }
+        else if (status == GRB_UNBOUNDED)
+        {
+          extractPoints(_solver->_model, _space, objectiveVector, response);
+          response.outcome = OptimizationOutcome::UNBOUNDED;
+
+          // We're unbounded but but don't have a point, so we solve a feasibility problem.
+          if (response.points.empty())
+          {
+            GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
+            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
+            if (query.hasMinPrimalBound())
+              GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, oldBestObjStop) );
+
+            // Update objective vector.
+            for (std::size_t i = 0; i < n; ++i)
+              GUROBI_CALL_EXC( GRBsetdblattrelement(_solver->_model, GRB_DBL_ATTR_OBJ, i, 0.0) );
+
+            // Remove limits on primal and dual bounds.
+            // _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
+            // _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
+
+            // Third call to Gurobi, for feasibility.
+#if defined(IPO_DEBUG)
+            std::cout << "Calling Gurobi for feasibility.";
+            if (remainingTime < std::numeric_limits<double>::infinity())
+              std::cout << " with time limit " << timeLimit << "s";
+            std::cout << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+            int retcode = GRBoptimize(_solver->_model);
+            if (retcode)
+            {
+              std::stringstream message;
+              message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
+              throw std::runtime_error(message.str());
+            }
+
+            GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
+            remainingTime -= runtime;
+            GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
+            GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
+            if (query.hasMinPrimalBound())
+              GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, query.minPrimalBound()) );
+#if defined(IPO_DEBUG)
+            std::cout << "Gurobi for feasibility returned with status " << status << " and dual bound " << dualBound
+              << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+            if (status == GRB_INFEASIBLE)
+            {
+              response.rays.clear();
+              response.outcome = OptimizationOutcome::INFEASIBLE;
+            }
+            else if (status == GRB_OPTIMAL || status == GRB_TIME_LIMIT)
+            {
+              extractPoints(_solver->_model, _space, objectiveVector, response);
+              response.hitTimeLimit = status == GRB_TIME_LIMIT;
+              if (response.points.empty())
+              {
+                std::stringstream message;
+                message << "GurobiOptimizationOracle<double>: "
+                  "Feasbility model has found points all of which have extremely large entries.";
+                throw std::runtime_error(message.str());
+              }
+            }
+            else
+            {
+              std::stringstream message;
+              message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status
+                << " in feasibility call.";
+              throw std::runtime_error(message.str());
+            }
+          }
+
+          // Solve the LP relaxation to get an unbounded ray.
+          {
+            GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, 0) );
+            GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_TIMELIMIT, remainingTime) );
+
+            // Update objective vector.
+            for (std::size_t i = 0; i < n; ++i)
+            {
+              GUROBI_CALL_EXC( GRBsetdblattrelement(_solver->_model, GRB_DBL_ATTR_OBJ, i,
+                objectiveVector[i] * objectiveScalingFactor) );
+            }
+
+            // Remove limits on primal and dual bounds.
+            // _solver->_boundLimits.maxDualBound = std::numeric_limits<double>::infinity();
+            // _solver->_boundLimits.minPrimalBound = -std::numeric_limits<double>::infinity();
+
+            std::vector<char> vtypesOriginal(n);
+            GUROBI_CALL_EXC( GRBgetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesOriginal[0]) );
+            std::vector<char> vtypesRelaxed(n, 'C');
+            GUROBI_CALL_EXC( GRBsetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesRelaxed[0]) );
+
+            // Fourth call to Gurobi, for unbounded ray.
+#if defined(IPO_DEBUG)
+            std::cout << "Calling Gurobi for unbounded ray.";
+            if (remainingTime < std::numeric_limits<double>::infinity())
+              std::cout << " with time limit " << timeLimit << "s";
+            std::cout << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+            int retcode = GRBoptimize(_solver->_model);
+            if (retcode)
+            {
+              std::stringstream message;
+              message << "GurobiOptimizationOracle<double>: received return code " << retcode << " from GRBoptimize() call.";
+              throw std::runtime_error(message.str());
+            }
+
+            GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_RUNTIME, &runtime) );
+            remainingTime -= runtime;
+            GUROBI_CALL_EXC( GRBgetintattr(_solver->_model, GRB_INT_ATTR_STATUS, &status) );
+            GUROBI_CALL_EXC( GRBgetdblattr(_solver->_model, GRB_DBL_ATTR_OBJBOUND, &dualBound) );
+#if defined(IPO_DEBUG)
+            std::cout << "Gurobi for unbounded ray returned with status " << status << " and dual bound " << dualBound
+              << "." << std::endl;
+#endif /* IPO_DEBUG */
+
+            GUROBI_CALL_EXC( GRBsetcharattrarray(_solver->_model, GRB_CHAR_ATTR_VTYPE, 0, n, &vtypesOriginal[0]) );
+            GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
+
+            if (status == GRB_UNBOUNDED)
+            {
+              extractRays(_solver->_model, _space, response);
+            }
+            else
+            {
+              std::stringstream message;
+              message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status
+                << " in unbounded ray call.";
+              throw std::runtime_error(message.str());
+            }
+          }
         }
         else
-          message << ".";
-        throw std::runtime_error(message.str());
+        {
+          std::stringstream message;
+          message << "GurobiOptimizationOracle<double>: Unhandled Gurobi status " << status;
+          if (status == GRB_OPTIMAL)
+            message << " (optimal) after a previous status " << GRB_INF_OR_UNBD << " (infeasible/unbounded).";
+          else if (status == GRB_INF_OR_UNBD)
+            message << " (infeasible/unbounded) even after disabling dual reductions.";
+          else if (status == GRB_NODE_LIMIT)
+          {
+            double nodeLimit;
+            GUROBI_CALL_EXC( GRBgetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_NODELIMIT, &nodeLimit) );
+            message << " (total node limit was " << nodeLimit << ").";
+          }
+          else
+            message << ".";
+          throw std::runtime_error(message.str());
+        }
+        break;
       }
     }
 
+    // Restore old parameters.
     GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(_solver->_model), GRB_INT_PAR_DUALREDUCTIONS, oldDualReductions) );
     if (query.hasMinPrimalBound())
       GUROBI_CALL_EXC( GRBsetdblparam(GRBgetenv(_solver->_model), GRB_DBL_PAR_BESTOBJSTOP, oldBestObjStop) );
@@ -933,7 +1105,7 @@ namespace ipo
     Visitor visitor = { _solver, query, result, 0, std::chrono::system_clock::now() };
 
     GRBiterateBounds(_solver->_model, space(), visitor, true);
-    GRBiterateRows(_solver->_model, space(), visitor, true);
+    GRBiterateRows(_solver->_model, _solver->_numModelConstraints, space(), visitor, true);
 
     return result;
   }
@@ -1001,7 +1173,7 @@ namespace ipo
       std::chrono::system_clock::now() };
 
     GRBiterateBounds(_solver->_model, space(), visitor, false);
-    GRBiterateRows(_solver->_model, space(), visitor, false);
+    GRBiterateRows(_solver->_model, _solver->_numModelConstraints, space(), visitor, false);
 
     return result;
   }
@@ -1072,7 +1244,7 @@ namespace ipo
     Visitor visitor = { _solver, query, result, 0, std::chrono::system_clock::now() };
 
     GRBiterateBounds(_solver->_model, space(), visitor, true);
-    GRBiterateRows(_solver->_model, space(), visitor, true);
+    GRBiterateRows(_solver->_model, _solver->_numModelConstraints, space(), visitor, true);
 
     return result;
   }
@@ -1142,7 +1314,7 @@ namespace ipo
         std::chrono::system_clock::now() };
 
     GRBiterateBounds(_solver->_model, space(), visitor, false);
-    GRBiterateRows(_solver->_model, space(), visitor, false);
+    GRBiterateRows(_solver->_model, _solver->_numModelConstraints, space(), visitor, false);
 
     return result;
   }
@@ -1212,7 +1384,7 @@ namespace ipo
         std::chrono::system_clock::now() };
 
     GRBiterateBounds(_solver->_model, space(), visitor, false);
-    GRBiterateRows(_solver->_model, space(), visitor, false);
+    GRBiterateRows(_solver->_model, _solver->_numModelConstraints, space(), visitor, false);
 
     return result;
   }

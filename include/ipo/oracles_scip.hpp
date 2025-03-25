@@ -110,12 +110,31 @@ namespace ipo
     }
 
     /**
-     * \brief Returns an optimization oracle for the requested \p face.
+     * \brief Returns an optimization oracle for the requested \p face and the given trust region center.
+     *
+     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
+     * to find an improving solution, enlarging it if not successful.
      */
 
     template <typename NumberType>
     std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle(
-      const Constraint<NumberType>& face);
+      const Constraint<NumberType>& face, double trustRegionDistance = std::numeric_limits<double>::infinity(),
+      std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter = nullptr);
+
+    /**
+     * \brief Returns an optimization oracle for the polyhedron for the given trust region center.
+     *
+     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
+     * to find an improving solution, enlarging it if not successful.
+     */
+
+    template <typename NumberType>
+    inline std::shared_ptr<SCIPOptimizationOracle<NumberType>> getOptimizationOracle(
+      double trustRegionDistance, std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter)
+    {
+      return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>(), trustRegionDistance,
+        trustRegionCenter);
+    }
 
     /**
      * \brief Returns a separation oracle for the polyhedron.

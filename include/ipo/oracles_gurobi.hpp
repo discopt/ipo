@@ -101,12 +101,31 @@ namespace ipo
     }
 
     /**
-     * \brief Returns an optimization oracle for the requested \p face.
+     * \brief Returns an optimization oracle for the requested \p face and a trust region center.
+     *
+     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
+     * to find an improving solution, enlarging it if not successful.
      */
 
     template <typename NumberType>
     std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
-      const Constraint<NumberType>& face);
+      const Constraint<NumberType>& face, double trustRegionDistance = std::numeric_limits<double>::infinity(),
+      std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter = nullptr);
+
+    /**
+     * \brief Returns an optimization oracle for the polyhedron for the given trust region center.
+     *
+     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
+     * to find an improving solution, enlarging it if not successful.
+     */
+
+    template <typename NumberType>
+    inline std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
+      double trustRegionDistance, std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter)
+    {
+      return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>(), trustRegionDistance,
+        trustRegionCenter);
+    }
 
     /**
      * \brief Returns a separation oracle for the polyhedron.
@@ -160,12 +179,18 @@ namespace ipo
      */
 
     void deleteFace(Constraint<double>* face);
+
     /**
      * \brief Makes the given \p face the current one.
      */
 
     void selectFace(Constraint<double>* face);
 
+    /**
+     * \brief Select a trust region by adding it to the model.
+     */
+
+    void selectTrustRegion(std::shared_ptr<sparse_vector<double>> trustRegionCenter, double maxDistance);
 
   protected:
     /// Gurobi environment (might be \c NULL).
@@ -174,10 +199,32 @@ namespace ipo
     GRBmodel* _model;
     /// Maps Gurobi variables to coordinates.
     std::unordered_map<std::size_t, std::size_t> _variablesToCoordinates;
+    /// Dense maximization objective of the instance.
     double* _instanceObjective;
+    /// Instance name.
     std::string _name;
+    /// Ambient space.
     std::shared_ptr<Space> _space;
-    Constraint<double>* _currentFace;
+    /// First trust region column.
+    std::size_t _numModelVariables;
+    /// First trust region row.
+    std::size_t _numModelConstraints;
+    /// Current face.
+    Constraint<double>* _currentFaceConstraint;
+    /// Face row.
+    std::size_t _currentFaceRow;
+    /// Current trust region.
+    std::shared_ptr<sparse_vector<double>> _trustRegionCenter;
+    /// First trust region row.
+    std::size_t _trustRegionFirstRow;
+    /// Beyond trust region row.
+    std::size_t _trustRegionBeyondRow;
+    /// First trust region column.
+    std::size_t _trustRegionFirstColumn;
+    /// Beyond trust region column.
+    std::size_t _trustRegionBeyondColumn;
+    /// Maximum distance to target solution.
+    double _trustRegionMaxDistance;
 
 #if defined(IPO_RATIONAL_MIP_GUROBI)
     RationalMIPExtender* _extender;
@@ -203,7 +250,8 @@ namespace ipo
      */
 
     GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
-      const Constraint<double>& face);
+      const Constraint<double>& face, double trustRegionDistance = std::numeric_limits<double>::infinity(),
+      std::shared_ptr<sparse_vector<double>> trustRegionCenter = nullptr);
 
     /**
      * \brief Destructor.
@@ -227,8 +275,12 @@ namespace ipo
 
     /// The solver instance
     std::shared_ptr<GurobiSolver> _solver;
-    /// The index of the face we are optimizing over.
+    /// The face we are optimizing over.
     Constraint<double> _face;
+    /// Current trust region.
+    std::shared_ptr<sparse_vector<double>> _trustRegionCenter;
+    /// Current trust region distance.
+    double _trustRegionDistance;
   };
 
 #endif /* IPO_DOUBLE_MIP_GUROBI */
@@ -239,11 +291,13 @@ namespace ipo
   class GurobiOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
   {
   public:
-    GurobiOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
-      const Constraint<rational>& face)
+    GurobiOptimizationOracle(RationalMIPExtender* extender,
+      std::shared_ptr<OptimizationOracle<double>> approximateOracle,
+      const Constraint<rational>& face, double trustRegionDistance,
+      std::shared_ptr<sparse_vector<rational>> trustRegionCenter)
       : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
-      
+
     }
   };
 
