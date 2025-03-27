@@ -335,8 +335,7 @@ namespace ipo
       delete[] _hashVector;
     }
 
-    typename OptOracle::Response maximize(const Number* objectiveVector,
-      const typename OptOracle::Query& query)
+    typename OptOracle::Response maximize(const Number* objectiveVector, const typename OptOracle::Query& query)
     {
       // TODO: collect returned dual bounds and consider minimum among them.
       

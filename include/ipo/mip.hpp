@@ -9,6 +9,7 @@
 
 #include <ipo/space.hpp>
 #include <ipo/oracles.hpp>
+#include <ipo/trust_region.hpp>
 
 namespace ipo
 {
@@ -55,7 +56,7 @@ namespace ipo
     void* _implementation;
   };
 
-  class RationalMIPExtendedOptimizationOracle: public OptimizationOracle<rational>
+  class RationalMIPExtendedOptimizationOracle: public TrustRegionOptimizationOracle<rational>
   {
   public:
     RationalMIPExtendedOptimizationOracle(RationalMIPExtender* extender,
@@ -68,6 +69,14 @@ namespace ipo
       const OptimizationOracle<rational>::Query& query) override;
 
     OptimizationOracle<rational>::Response maximizeDouble(const double* objectiveVector,
+      const OptimizationOracle<rational>::Query& query) override;
+
+    OptimizationOracle<rational>::Response maximizeTrustRegion(
+      const ManhattanTrustRegion<rational>& trustRegion, const rational* objectiveVector,
+      const OptimizationOracle<rational>::Query& query) override;
+
+    OptimizationOracle<rational>::Response maximizeTrustRegionDouble(
+      const ManhattanTrustRegion<rational>& trustRegion, const double* objectiveVector,
       const OptimizationOracle<rational>::Query& query) override;
 
   protected:

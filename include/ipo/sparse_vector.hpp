@@ -158,7 +158,7 @@ public:
     for (std::size_t i = 1; i < _data.size(); ++i)
       assert(_data[i-1].first < _data[i].first);
 #endif /* !NDEBUG */
-    
+
     std::size_t left = 0;
     std::size_t right = _data.size();
     while (left < right)
@@ -230,6 +230,10 @@ protected:
   std::vector<value_type> _data;
 };
 
+/**
+ * \brief Returns the dot product of \p a and \p b.
+ **/
+
 template <typename T,typename U>
 T operator*(const sparse_vector<T>& a, const sparse_vector<U>& b)
 {
@@ -269,6 +273,10 @@ T operator*(const sparse_vector<T>& a, const sparse_vector<U>& b)
   return result;
 }
 
+/**
+ * \brief Returns the dot product of \p a and \p b.
+ **/
+
 template <typename T, typename U>
 T operator*(const sparse_vector<T>& a, const U* b)
 {
@@ -277,6 +285,10 @@ T operator*(const sparse_vector<T>& a, const U* b)
     result += iter.second * ipo::convertNumber<T>(b[iter.first]);
   return result;
 }
+
+/**
+ * \brief Returns the dot product of \p a and \p b.
+ **/
 
 template <typename T, typename U>
 T operator*(const T* a, const sparse_vector<U>& b)
@@ -287,17 +299,121 @@ T operator*(const T* a, const sparse_vector<U>& b)
   return result;
 }
 
+/**
+ * \brief Returns the dot product of \p a and \p b.
+ **/
+
 template <typename T, typename U>
 T operator*(const sparse_vector<T>& a, const std::vector<U>& b)
 {
   return a * &b[0];
 }
 
+/**
+ * \brief Returns the dot product of \p a and \p b.
+ **/
+
 template <typename T, typename U>
 T operator*(const std::vector<T>& a, const sparse_vector<U>& b)
 {
   return &a[0] * b;
 }
+
+/**
+ * \brief Returns a shared pointer to the sum \p a + \p b of the vectors.
+ **/
+
+template <typename T>
+std::shared_ptr<sparse_vector<T>> operator+(const sparse_vector<T>& a, const sparse_vector<T>& b)
+{
+  std::vector<std::pair<std::size_t, T>> result;
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  typename sparse_vector<T>::const_iterator ib = b.begin();
+  if (ia != a.end() && ib != b.end())
+  {
+    while (true)
+    {
+      if (ia->first < ib->first)
+      {
+        result.push_back(std::make_pair(ia->first, ia->second));
+        ++ia;
+        if (ia == a.end())
+          break;
+      }
+      else if (ia->first > ib->first)
+      {
+        result.push_back(std::make_pair(ib->first, ib->second));
+        ++ib;
+        if (ib == b.end())
+          break;
+      }
+      else
+      {
+        result.push_back(std::make_pair(ia->first, ia->second + ib->second));
+        ++ia;
+        ++ib;
+        if (ia == a.end() || ib == b.end())
+          break;
+      }
+    }
+  }
+  for (; ia != a.end(); ++ia)
+    result.push_back(std::make_pair(ia->first, ia->second));
+  for (; ib != b.end(); ++ib)
+    result.push_back(std::make_pair(ib->first, ib->second));
+
+  return std::make_shared<sparse_vector<T>>(std::move(result), false);
+}
+
+/**
+ * \brief Returns a shared pointer to the difference \p a - \p b of the vectors.
+ **/
+
+template <typename T>
+std::shared_ptr<sparse_vector<T>> operator-(const sparse_vector<T>& a, const sparse_vector<T>& b)
+{
+  std::vector<std::pair<std::size_t, T>> result;
+  typename sparse_vector<T>::const_iterator ia = a.begin();
+  typename sparse_vector<T>::const_iterator ib = b.begin();
+  if (ia != a.end() && ib != b.end())
+  {
+    while (true)
+    {
+      if (ia->first < ib->first)
+      {
+        result.push_back(std::make_pair(ia->first, ia->second));
+        ++ia;
+        if (ia == a.end())
+          break;
+      }
+      else if (ia->first > ib->first)
+      {
+        result.push_back(std::make_pair(ib->first, -ib->second));
+        ++ib;
+        if (ib == b.end())
+          break;
+      }
+      else
+      {
+        result.push_back(std::make_pair(ia->first, ia->second - ib->second));
+        ++ia;
+        ++ib;
+        if (ia == a.end() || ib == b.end())
+          break;
+      }
+    }
+  }
+  for (; ia != a.end(); ++ia)
+    result.push_back(std::make_pair(ia->first, ia->second));
+  for (; ib != b.end(); ++ib)
+    result.push_back(std::make_pair(ib->first, -ib->second));
+
+  return std::make_shared<sparse_vector<T>>(std::move(result), false);
+}
+
+/**
+ * \brief Prints \p vector to \p stream.
+ **/
 
 template <typename T>
 std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
@@ -314,6 +430,10 @@ std::ostream& operator<<(std::ostream& stream, const sparse_vector<T>& vector)
   }
   return stream << ']';
 }
+
+/**
+ * \brief Returns the squared Euclidean distance between \p a and \p b.
+ **/
 
 template <typename T, typename U>
 double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U>& b)
@@ -364,6 +484,10 @@ double squaredEuclideanDistance(const sparse_vector<T>& a, const sparse_vector<U
   }
   return result;
 }
+
+/**
+ * \brief Returns the squared Euclidean distance between \p a and \p b as well as between \p a and \p -b.
+ **/
 
 template <typename T, typename U>
 std::pair<double, double> squaredEuclideanDistanceSigned(const sparse_vector<T>& a, const sparse_vector<U>& b)
@@ -425,11 +549,19 @@ std::pair<double, double> squaredEuclideanDistanceSigned(const sparse_vector<T>&
   return result;
 }
 
+/**
+ * \brief Returns the Euclidean distance between \p a and \p b.
+ **/
+
 template <typename T, typename U>
 double euclideanDistance(const sparse_vector<T>& a, const sparse_vector<U>& b)
 {
   return sqrt(squaredEuclideanDistance(a, b));
 }
+
+/**
+ * \brief Returns the squared Euclidean norm of \p vector.
+ **/
 
 template <typename T>
 double squaredEuclideanNorm(const sparse_vector<T>& vector)
@@ -443,11 +575,19 @@ double squaredEuclideanNorm(const sparse_vector<T>& vector)
   return result;
 }
 
+/**
+ * \brief Returns the Euclidean norm of \p vector.
+ **/
+
 template <typename T>
 double euclideanNorm(const sparse_vector<T>& vector)
 {
   return sqrt(squaredEuclideanNorm(vector));
 }
+
+/**
+ * \brief Converts sparse vector \p vector to another one of different number type.
+ **/
 
 template<typename To, typename From>
 inline sparse_vector<To> convertSparseVector(const sparse_vector<From>& vector)

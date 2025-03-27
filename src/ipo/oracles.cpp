@@ -61,6 +61,19 @@ namespace ipo
     return maximize(objectiveVector, query);
   }
 
+  template <typename Number>
+  TrustRegionOptimizationOracle<Number>::TrustRegionOptimizationOracle(const std::string& name)
+    : OptimizationOracle<Number>(name)
+  {
+
+  }
+
+  template <>
+  OptimizationResponse<double> TrustRegionOptimizationOracle<double>::maximizeTrustRegionDouble(
+    const ManhattanTrustRegion<double>& trustRegion, const double* objectiveVector, const OptimizationQuery<double>& query)
+  {
+    return maximizeTrustRegion(trustRegion, objectiveVector, query);
+  }
   
 #if defined(IPO_RATIONAL)
 
@@ -72,6 +85,17 @@ namespace ipo
     for (std::size_t v = 0; v < this->_space->dimension(); ++v)
       convertedObjectiveVector[v] = objectiveVector[v];
     return maximize(&convertedObjectiveVector[0], query);
+  }
+
+  template <>
+  OptimizationResponse<rational> TrustRegionOptimizationOracle<rational>::maximizeTrustRegionDouble(
+    const ManhattanTrustRegion<rational>& trustRegion, const double* objectiveVector,
+    const OptimizationQuery<rational>& query)
+  {
+    std::vector<rational> convertedObjectiveVector(this->_space->dimension());
+    for (std::size_t v = 0; v < this->_space->dimension(); ++v)
+      convertedObjectiveVector[v] = objectiveVector[v];
+    return maximizeTrustRegion(trustRegion, &convertedObjectiveVector[0], query);
   }
 
 #endif /* IPO_RATIONAL */
@@ -159,11 +183,13 @@ namespace ipo
 #endif /* IPO_RATIONAL */
 
   template class OptimizationOracle<double>;
+  template class TrustRegionOptimizationOracle<double>;
   template class SeparationOracle<double>;
 
 #if defined(IPO_RATIONAL)
 
   template class OptimizationOracle<rational>;
+  template class TrustRegionOptimizationOracle<rational>;
   template class SeparationOracle<rational>;
 
 #endif /* IPO_RATIONAL */

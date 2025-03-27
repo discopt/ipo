@@ -19,6 +19,7 @@
 #include <ipo/oracles.hpp>
 #include <ipo/affine_hull.hpp>
 #include <ipo/lp.hpp>
+#include <ipo/oracles_radialcone.hpp>
 
 namespace inverse
 {
@@ -161,8 +162,10 @@ namespace inverse
     std::shared_ptr<ipo::Space> space;
     for (std::size_t i = 0; i < instance.solvers.size(); ++i)
     {
-      auto oracle = instance.solvers[i]->template getOptimizationOracle<Number>(10, instance.targetSolutions[i]);
-      polyhedra.push_back( std::make_shared<ipo::Polyhedron<Number>>(oracle));
+      auto oracle = instance.solvers[i]->template getOptimizationOracle<Number>();
+      auto radialConeOracle = std::make_shared<ipo::RadialConeOptimizationOracle<Number>>(oracle,
+        instance.targetSolutions[i]);
+      polyhedra.push_back( std::make_shared<ipo::Polyhedron<Number>>(radialConeOracle));
       space = oracle->space();
     }
 
@@ -287,27 +290,8 @@ namespace inverse
             if (point.objectiveValue <= targetSolutionValue)
               continue;
 
-            std::size_t differenceVectorSize = targetSolutionSize + point.vector->size();
-            for (auto iter : *point.vector)
-            {
-              if (targetSolutionDense[iter.first] == iter.second)
-                differenceVectorSize -= 2;
-            }
-            nonzeroColumns.clear();
-            nonzeroCoefficients.clear();
-
-            // TODO: if (differenceVectorSize < point.vector->size()) then use that.
-
-            for (const auto& iter : *point.vector)
-            {
-              nonzeroColumns.push_back(iter.first);
-              nonzeroCoefficients.push_back(iter.second);
-            }
-            nonzeroColumns.push_back(firstTargetSolutionValueColumn + p);
-            nonzeroCoefficients.push_back(-1);
-
-            lp.addRow(lp.minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0], &nonzeroCoefficients[0], 0);
-            ++numAddedCuts;
+            if (point.objectiveValue > targetSolutionValue)
+              throw std::runtime_error("RadialConeOptimizationOracle returned point better than apex.");
           }
           for (const auto& ray : optResponse.rays)
           {

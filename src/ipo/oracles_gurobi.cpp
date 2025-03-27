@@ -388,118 +388,118 @@ namespace ipo
     _currentFaceConstraint = face;
   }
 
-  void GurobiSolver::selectTrustRegion(std::shared_ptr<sparse_vector<double>> trustRegionCenter, double maxDistance)
+  void GurobiSolver::enableTrustRegion(const ManhattanTrustRegion<double>& trustRegion)
   {
-    if (_trustRegionCenter == trustRegionCenter)
-    {
-      if (_trustRegionCenter && (maxDistance != _trustRegionMaxDistance))
-      {
-        GUROBI_CALL_EXC( GRBsetdblattrelement(_model, GRB_DBL_ATTR_RHS, _trustRegionFirstRow, maxDistance) );
-        _trustRegionMaxDistance = maxDistance;
-      }
-      return;
-    }
-
-    if (_trustRegionCenter)
-    {
-      // Shift face row if necessary.
-      std::size_t numTrustRegionRows = _trustRegionBeyondRow - _trustRegionFirstRow;
-      if (_currentFaceRow >= _trustRegionBeyondRow)
-        _currentFaceRow -= numTrustRegionRows;
-
-      // Remove trust region rows.
-      std::vector<int> range(numTrustRegionRows);
-      for (std::size_t i = 0; i < numTrustRegionRows; ++i)
-        range[i] = _trustRegionFirstRow + i;
-      GRBdelconstrs(_model, numTrustRegionRows, &range[0]);
-
-      // Remove trust region columns.
-      range.clear();
-      for (std::size_t i = _trustRegionFirstColumn; i < _trustRegionBeyondColumn; ++i)
-        range.push_back(i);
-      GRBdelvars(_model, range.size(), &range[0]);
-    }
-
-    if (trustRegionCenter)
-    {
-      int n;
-      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
-      _trustRegionFirstColumn = n;
-
-      // #vars many extra variables.
-      std::vector<double> lb(_numModelVariables, 0.0);
-      std::vector<double> ub(_numModelVariables, GRB_INFINITY);
-      std::vector<int> begin(_numModelVariables, 0);
-      std::vector<char> vtypes(_numModelVariables, 'c');
-      GRBaddvars(_model, _numModelVariables, 0, &begin[0], nullptr, nullptr, &lb[0], &lb[0], &ub[0],
-        &vtypes[0], nullptr);
-
-      GUROBI_CALL_EXC( GRBupdatemodel(_model) );
-      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
-      _trustRegionBeyondColumn = n;
-
-      // Constraints (original variables are x_i; extra variables are y_i; target solution is t):
-      // y_1 + y_2 + ... + y_n <= k.
-      //
-      // |x_i - t_i| <= y_i
-      // x_i - t_i <= y_i   <=> x_i - y_i <= t_i
-      // t_i - x_i <= y_i   <=> x_i + y_i >= t_i
-
-      begin.clear();
-      std::vector<int> indices;
-      std::vector<double> coefs;
-      std::vector<char> senses;
-      std::vector<double> rhs;
-      begin.push_back(0);
-      rhs.push_back(maxDistance);
-      senses.push_back('<');
-      for (size_t v = 0; v < _numModelVariables; ++v)
-      {
-        indices.push_back(_trustRegionFirstColumn + v);
-        coefs.push_back(1.0);
-      }
-      auto iter = trustRegionCenter->begin();
-      auto end = trustRegionCenter->end();
-      for (size_t v = 0; v < _numModelVariables; ++v)
-      {
-        if (iter == end || iter->first != v)
-        {
-          rhs.push_back(0.0);
-          rhs.push_back(0.0);
-        }
-        else
-        {
-          rhs.push_back(iter->second);
-          rhs.push_back(iter->second);
-          ++iter;
-        }
-        begin.push_back(indices.size());
-        indices.push_back(v);
-        coefs.push_back(1.0);
-        indices.push_back(_trustRegionFirstColumn + v);
-        coefs.push_back(-1.0);
-        senses.push_back('<');
-
-        begin.push_back(indices.size());
-        indices.push_back(v);
-        coefs.push_back(1.0);
-        indices.push_back(_trustRegionFirstColumn + v);
-        coefs.push_back(1.0);
-        senses.push_back('>');
-      }
-
-      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
-      _trustRegionFirstRow = n;
-
-      GUROBI_CALL_EXC( GRBaddconstrs(_model, 2 * _numModelVariables + 1, indices.size(), &begin[0], &indices[0],
-        &coefs[0], &senses[0], &rhs[0], nullptr) );
-
-      GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
-      _trustRegionBeyondRow = n;
-      _trustRegionMaxDistance = maxDistance;
-    }
-
-    _trustRegionCenter = trustRegionCenter;
+    // if (_trustRegionCenter == trustRegionCenter)
+    // {
+    //   if (_trustRegionCenter && (maxDistance != _trustRegionMaxDistance))
+    //   {
+    //     GUROBI_CALL_EXC( GRBsetdblattrelement(_model, GRB_DBL_ATTR_RHS, _trustRegionFirstRow, maxDistance) );
+    //     _trustRegionMaxDistance = maxDistance;
+    //   }
+    //   return;
+    // }
+    //
+    // if (_trustRegionCenter)
+    // {
+    //   // Shift face row if necessary.
+    //   std::size_t numTrustRegionRows = _trustRegionBeyondRow - _trustRegionFirstRow;
+    //   if (_currentFaceRow >= _trustRegionBeyondRow)
+    //     _currentFaceRow -= numTrustRegionRows;
+    //
+    //   // Remove trust region rows.
+    //   std::vector<int> range(numTrustRegionRows);
+    //   for (std::size_t i = 0; i < numTrustRegionRows; ++i)
+    //     range[i] = _trustRegionFirstRow + i;
+    //   GRBdelconstrs(_model, numTrustRegionRows, &range[0]);
+    //
+    //   // Remove trust region columns.
+    //   range.clear();
+    //   for (std::size_t i = _trustRegionFirstColumn; i < _trustRegionBeyondColumn; ++i)
+    //     range.push_back(i);
+    //   GRBdelvars(_model, range.size(), &range[0]);
+    // }
+    //
+    // if (trustRegionCenter)
+    // {
+    //   int n;
+    //   GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
+    //   _trustRegionFirstColumn = n;
+    //
+    //   // #vars many extra variables.
+    //   std::vector<double> lb(_numModelVariables, 0.0);
+    //   std::vector<double> ub(_numModelVariables, GRB_INFINITY);
+    //   std::vector<int> begin(_numModelVariables, 0);
+    //   std::vector<char> vtypes(_numModelVariables, 'c');
+    //   GRBaddvars(_model, _numModelVariables, 0, &begin[0], nullptr, nullptr, &lb[0], &lb[0], &ub[0],
+    //     &vtypes[0], nullptr);
+    //
+    //   GUROBI_CALL_EXC( GRBupdatemodel(_model) );
+    //   GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMVARS, &n) );
+    //   _trustRegionBeyondColumn = n;
+    //
+    //   // Constraints (original variables are x_i; extra variables are y_i; target solution is t):
+    //   // y_1 + y_2 + ... + y_n <= k.
+    //   //
+    //   // |x_i - t_i| <= y_i
+    //   // x_i - t_i <= y_i   <=> x_i - y_i <= t_i
+    //   // t_i - x_i <= y_i   <=> x_i + y_i >= t_i
+    //
+    //   begin.clear();
+    //   std::vector<int> indices;
+    //   std::vector<double> coefs;
+    //   std::vector<char> senses;
+    //   std::vector<double> rhs;
+    //   begin.push_back(0);
+    //   rhs.push_back(maxDistance);
+    //   senses.push_back('<');
+    //   for (size_t v = 0; v < _numModelVariables; ++v)
+    //   {
+    //     indices.push_back(_trustRegionFirstColumn + v);
+    //     coefs.push_back(1.0);
+    //   }
+    //   auto iter = trustRegionCenter->begin();
+    //   auto end = trustRegionCenter->end();
+    //   for (size_t v = 0; v < _numModelVariables; ++v)
+    //   {
+    //     if (iter == end || iter->first != v)
+    //     {
+    //       rhs.push_back(0.0);
+    //       rhs.push_back(0.0);
+    //     }
+    //     else
+    //     {
+    //       rhs.push_back(iter->second);
+    //       rhs.push_back(iter->second);
+    //       ++iter;
+    //     }
+    //     begin.push_back(indices.size());
+    //     indices.push_back(v);
+    //     coefs.push_back(1.0);
+    //     indices.push_back(_trustRegionFirstColumn + v);
+    //     coefs.push_back(-1.0);
+    //     senses.push_back('<');
+    //
+    //     begin.push_back(indices.size());
+    //     indices.push_back(v);
+    //     coefs.push_back(1.0);
+    //     indices.push_back(_trustRegionFirstColumn + v);
+    //     coefs.push_back(1.0);
+    //     senses.push_back('>');
+    //   }
+    //
+    //   GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
+    //   _trustRegionFirstRow = n;
+    //
+    //   GUROBI_CALL_EXC( GRBaddconstrs(_model, 2 * _numModelVariables + 1, indices.size(), &begin[0], &indices[0],
+    //     &coefs[0], &senses[0], &rhs[0], nullptr) );
+    //
+    //   GUROBI_CALL_EXC( GRBgetintattr(_model, GRB_INT_ATTR_NUMCONSTRS, &n) );
+    //   _trustRegionBeyondRow = n;
+    //   _trustRegionMaxDistance = maxDistance;
+    // }
+    //
+    // _trustRegionCenter = trustRegionCenter;
   }
 
   /**
@@ -509,11 +509,9 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<GurobiOptimizationOracle<double>> GurobiSolver::getOptimizationOracle<double>(
-    const Constraint<double>& face, double trustRegionDistance,
-    std::shared_ptr<sparse_vector<double>> trustRegionCenter)
+    const Constraint<double>& face)
   {
-    return std::make_shared<GurobiOptimizationOracle<double>>(shared_from_this(), face, trustRegionDistance,
-      trustRegionCenter);
+    return std::make_shared<GurobiOptimizationOracle<double>>(shared_from_this(), face);
   }
 
 #if defined(IPO_RATIONAL_LP)
@@ -525,29 +523,24 @@ namespace ipo
   template <>
   IPO_EXPORT
   std::shared_ptr<GurobiOptimizationOracle<rational>> GurobiSolver::getOptimizationOracle<rational>(
-    const Constraint<rational>& face, double trustRegionDistance,
-    std::shared_ptr<sparse_vector<rational>> trustRegionCenter)
+    const Constraint<rational>& face)
   {
     auto approximateFace = convertConstraint<double>(face);
     std::vector<std::pair<std::size_t, double>> approximateTrustRegionCenterCoefficients;
-    for (auto& iter : *trustRegionCenter)
-      approximateTrustRegionCenterCoefficients.push_back(std::make_pair(iter.first, convertNumber<double>(iter.second)));
-    auto approximateTrustRegionDistance = convertNumber<double>(trustRegionDistance);
-    auto approximateTrustRegionCenter = std::make_shared<sparse_vector<double>>(
-      std::move(approximateTrustRegionCenterCoefficients), false);
-    auto approximateOracle = getOptimizationOracle<double>(approximateFace, approximateTrustRegionDistance,
-      approximateTrustRegionCenter);
-    return std::make_shared<GurobiOptimizationOracle<rational>>(_extender, approximateOracle, face, trustRegionDistance,
-      trustRegionCenter);
+    // for (auto& iter : *trustRegionCenter)
+      // approximateTrustRegionCenterCoefficients.push_back(std::make_pair(iter.first, convertNumber<double>(iter.second)));
+    // auto approximateTrustRegionDistance = convertNumber<double>(trustRegionDistance);
+    // auto approximateTrustRegionCenter = std::make_shared<sparse_vector<double>>(
+      // std::move(approximateTrustRegionCenterCoefficients), false);
+    std::shared_ptr<OptimizationOracle<double>> approximateOracle = std::static_pointer_cast<OptimizationOracle<double>>(getOptimizationOracle<double>(approximateFace));
+    return std::make_shared<GurobiOptimizationOracle<rational>>(_extender, approximateOracle, face);
   }
 
 #endif /* IPO_RATIONAL_LP */
 
   GurobiOptimizationOracle<double>::GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
-    const Constraint<double>& face, double trustRegionDistance,
-    std::shared_ptr<sparse_vector<double>> trustRegionCenter)
-    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face), _trustRegionCenter(trustRegionCenter),
-    _trustRegionDistance(trustRegionDistance)
+    const Constraint<double>& face)
+    : TrustRegionOptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
     _name = solver->name() + " with Gurobi";
@@ -682,7 +675,7 @@ namespace ipo
 #endif /* IPO_DEBUG */
 
     // Set trust region.
-    _solver->selectTrustRegion(_trustRegionCenter, _trustRegionDistance);
+    // _solver->enableTrustRegion(_trustRegionCenter, _trustRegionDistance);
     double trustRegionObjectiveValue = -std::numeric_limits<double>::infinity();
     if (_trustRegionCenter)
     {
@@ -809,7 +802,7 @@ namespace ipo
 // #if defined(IPO_DEBUG)
             std::cout << "Adapting trust region distance to " << _trustRegionDistance << "." << std::endl;
 // #endif /* IPO_DEBUG */
-            _solver->selectTrustRegion(_trustRegionCenter, _trustRegionDistance);
+            // _solver->selectTrustRegion(_trustRegionCenter, _trustRegionDistance);
             continue;
           }
         }
@@ -1047,6 +1040,12 @@ namespace ipo
     return response;
   }
 
+  OptimizationOracle<double>::Response GurobiOptimizationOracle<double>::maximizeTrustRegion(
+    const ManhattanTrustRegion<double>& trustRegion, const double* objectiveVector,
+    const OptimizationOracle<double>::Query& query)
+  {
+
+  }
   
   template <>
   GurobiSeparationOracle<double>::GurobiSeparationOracle(std::shared_ptr<GurobiSolver> solver,

@@ -442,7 +442,7 @@ namespace ipo
     RationalMIPExtender* extender,
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const Constraint<rational>& face)
-    : OptimizationOracle<rational>("Rational " + approximateOracle->name()), _extender(extender),
+    : TrustRegionOptimizationOracle<rational>("Rational " + approximateOracle->name()), _extender(extender),
     _approximateOracle(approximateOracle), _face(face)
   {
     assert(_extender);
@@ -470,6 +470,20 @@ namespace ipo
   {
     _extender->setFace(&_face);
     return _extender->maximize(_approximateOracle, objectiveVector, query);
+  }
+
+  OptimizationOracle<rational>::Response RationalMIPExtendedOptimizationOracle::maximizeTrustRegion(
+    const ManhattanTrustRegion<rational>& trustRegion, const rational* objectiveVector,
+    const OptimizationOracle<rational>::Query& query)
+  {
+
+  }
+
+  OptimizationOracle<rational>::Response RationalMIPExtendedOptimizationOracle::maximizeTrustRegionDouble(
+    const ManhattanTrustRegion<rational>& trustRegion, const double* objectiveVector,
+    const OptimizationOracle<rational>::Query& query)
+  {
+
   }
 
   RationalMIPExtendedSeparationOracle::RationalMIPExtendedSeparationOracle(

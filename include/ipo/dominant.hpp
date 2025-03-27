@@ -28,7 +28,7 @@ namespace ipo
      * \param name       Name of the new oracle.
      */
 
-    DominantOptimizationOracle(std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
+    DominantOptimizationOracle(std::shared_ptr<OptimizationOracle<Number>> sourceOracle,
       const std::string& name = "");
 
     /**
@@ -46,7 +46,7 @@ namespace ipo
      **/
 
     virtual OptimizationResponse<Number> maximize(const Number* objectiveVector,
-      const OptimizationQuery<NumberType>& query);
+      const OptimizationQuery<Number>& query);
 
   protected:
 

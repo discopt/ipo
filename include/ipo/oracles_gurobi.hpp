@@ -8,6 +8,7 @@
 #include <ipo/oracles.hpp>
 #include <ipo/mip.hpp>
 #include <ipo/constraint.hpp>
+#include <ipo/trust_region.hpp>
 #include <unordered_map>
 #include <gurobi_c.h>
 
@@ -91,6 +92,14 @@ namespace ipo
     }
 
     /**
+     * \brief Returns an optimization oracle for the given \p face.
+     */
+
+    template <typename NumberType>
+    std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
+      const Constraint<NumberType>& face);
+
+    /**
      * \brief Returns an optimization oracle for the polyhedron.
      */
 
@@ -98,33 +107,6 @@ namespace ipo
     inline std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle()
     {
       return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>());
-    }
-
-    /**
-     * \brief Returns an optimization oracle for the requested \p face and a trust region center.
-     *
-     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
-     * to find an improving solution, enlarging it if not successful.
-     */
-
-    template <typename NumberType>
-    std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
-      const Constraint<NumberType>& face, double trustRegionDistance = std::numeric_limits<double>::infinity(),
-      std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter = nullptr);
-
-    /**
-     * \brief Returns an optimization oracle for the polyhedron for the given trust region center.
-     *
-     * If \p trustRegionCenter is not \c nullptr then the oracle maintains a 1-norm based trust region in which it tries
-     * to find an improving solution, enlarging it if not successful.
-     */
-
-    template <typename NumberType>
-    inline std::shared_ptr<GurobiOptimizationOracle<NumberType>> getOptimizationOracle(
-      double trustRegionDistance, std::shared_ptr<sparse_vector<NumberType>> trustRegionCenter)
-    {
-      return getOptimizationOracle<NumberType>(alwaysSatisfiedConstraint<NumberType>(), trustRegionDistance,
-        trustRegionCenter);
     }
 
     /**
@@ -190,7 +172,7 @@ namespace ipo
      * \brief Select a trust region by adding it to the model.
      */
 
-    void selectTrustRegion(std::shared_ptr<sparse_vector<double>> trustRegionCenter, double maxDistance);
+    void enableTrustRegion(const ManhattanTrustRegion<double>& trustRegion);
 
   protected:
     /// Gurobi environment (might be \c NULL).
@@ -214,7 +196,7 @@ namespace ipo
     /// Face row.
     std::size_t _currentFaceRow;
     /// Current trust region.
-    std::shared_ptr<sparse_vector<double>> _trustRegionCenter;
+    const ManhattanTrustRegion<double>* _trustRegion;
     /// First trust region row.
     std::size_t _trustRegionFirstRow;
     /// Beyond trust region row.
@@ -223,8 +205,6 @@ namespace ipo
     std::size_t _trustRegionFirstColumn;
     /// Beyond trust region column.
     std::size_t _trustRegionBeyondColumn;
-    /// Maximum distance to target solution.
-    double _trustRegionMaxDistance;
 
 #if defined(IPO_RATIONAL_MIP_GUROBI)
     RationalMIPExtender* _extender;
@@ -238,7 +218,7 @@ namespace ipo
    */
 
   template <>
-  class GurobiOptimizationOracle<double>: public OptimizationOracle<double>
+  class GurobiOptimizationOracle<double>: public TrustRegionOptimizationOracle<double>
   {
   public:
 
@@ -249,9 +229,7 @@ namespace ipo
      * \param face The face we are optimizing over.
      */
 
-    GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
-      const Constraint<double>& face, double trustRegionDistance = std::numeric_limits<double>::infinity(),
-      std::shared_ptr<sparse_vector<double>> trustRegionCenter = nullptr);
+    GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver, const Constraint<double>& face);
 
     /**
      * \brief Destructor.
@@ -269,6 +247,18 @@ namespace ipo
 
     virtual OptimizationOracle<double>::Response maximize(const double* objectiveVector,
       const OptimizationOracle<double>::Query& query) override;
+
+    /**
+     * \brief Maximize an objective vector of type double, allowing only points in \p trustRegion.
+     *
+     * \param trustRegion Trust region to limit search space.
+     * \param objectiveVector Array that maps coordinates to objective value coefficients.
+     * \param query Parameters of query.
+     * \return Optimization result.
+     **/
+
+    virtual OptimizationOracle<double>::Response maximizeTrustRegion(const ManhattanTrustRegion<double>& trustRegion,
+      const double* objectiveVector, const OptimizationOracle<double>::Query& query) override;
 
   protected:
     friend GurobiSolver;
@@ -293,8 +283,7 @@ namespace ipo
   public:
     GurobiOptimizationOracle(RationalMIPExtender* extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
-      const Constraint<rational>& face, double trustRegionDistance,
-      std::shared_ptr<sparse_vector<rational>> trustRegionCenter)
+      const Constraint<rational>& face)
       : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
 

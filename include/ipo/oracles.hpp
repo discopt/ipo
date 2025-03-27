@@ -5,6 +5,7 @@
 #include <ipo/space.hpp>
 #include <ipo/sparse_vector.hpp>
 #include <ipo/constraint.hpp>
+#include <ipo/trust_region.hpp>
 
 #include <memory>
 
@@ -474,7 +475,7 @@ namespace ipo
   };
 
   /**
-   * \brief Base class for optimization oracles in double arithmetic.
+   * \brief Base class for optimization oracles.
    */
 
   template <typename NumberType>
@@ -496,7 +497,7 @@ namespace ipo
      * \param name Name of the oracle.
      */
 
-    OptimizationOracle(const std::string& name = "");
+    OptimizationOracle(const std::string& name);
 
     /**
      * \brief Maximize an objective vector.
@@ -506,7 +507,7 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    virtual Response maximize(const Number* objectiveVector, const Query& query) = 0;
+    virtual OptimizationOracle<NumberType>::Response maximize(const Number* objectiveVector, const Query& query) = 0;
 
     /**
      * \brief Maximize a double objective vector.
@@ -516,7 +517,52 @@ namespace ipo
      * \return Optimization response.
      **/
 
-    virtual Response maximizeDouble(const double* objectiveVector, const Query& query);
+    virtual OptimizationOracle<NumberType>::Response maximizeDouble(const double* objectiveVector, const Query& query);
+  };
+
+  /**
+   * \brief Base class for optimization oracles that are capable of dealing with trust regions.
+   */
+
+  template <typename NumberType>
+  class TrustRegionOptimizationOracle : public OptimizationOracle<NumberType>
+  {
+  public:
+    typedef NumberType Number;
+    typedef typename OptimizationOracle<NumberType>::Query Query;
+    typedef typename OptimizationOracle<NumberType>::Response Response;
+
+    /**
+     * \brief Constructs the oracle.
+     *
+     * Constructs the oracle. The parent constructor must set CommonOracle::_space properly.
+     *
+     * \param name Name of the oracle.
+     */
+
+    TrustRegionOptimizationOracle(const std::string& name);
+
+    /**
+     * \brief Maximize an objective vector, allowing only points in \p trustRegion.
+     *
+     * \param objectiveVector Objective vector.
+     * \param query Additional query information.
+     * \return Optimization response.
+     **/
+
+    virtual Response maximizeTrustRegion(const ManhattanTrustRegion<NumberType>& trustRegion,
+      const Number* objectiveVector, const Query& query) = 0;
+
+    /**
+     * \brief Maximize a double objective vector, allowing only points in \p trustRegion.
+     *
+     * \param objectiveVector Objective vector.
+     * \param query Additional query information.
+     * \return Optimization response.
+     **/
+
+    virtual Response maximizeTrustRegionDouble(const ManhattanTrustRegion<NumberType>& trustRegion,
+      const double* objectiveVector, const Query& query);
   };
 
   /**

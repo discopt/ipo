@@ -133,10 +133,12 @@ add_library(ipo
   src/ipo/oracles.cpp
   src/ipo/oracles_forest.cpp
   src/ipo/oracles_polar.cpp
+  src/ipo/oracles_radialcone.cpp
   src/ipo/polyhedron.cpp
   src/ipo/projection.cpp
   src/ipo/space.cpp
   src/ipo/submissive.cpp
+  src/ipo/trust_region.cpp
 )
 
 # Link to/include SoPlex.
