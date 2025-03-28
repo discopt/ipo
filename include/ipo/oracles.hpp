@@ -442,11 +442,13 @@ namespace ipo
      * \param name Name of the oracle.
      */
 
-    Oracle(const std::string& name = "")
-      : _name(name), _space(nullptr)
-    {
+    Oracle(const std::string& name);
 
-    }
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~Oracle();
 
     /**
      * \brief Returns the oracle's name.
@@ -492,12 +494,16 @@ namespace ipo
     /**
      * \brief Constructs the oracle.
      * 
-     * Constructs the oracle. The parent constructor must set CommonOracle::_space properly.
-     * 
-     * \param name Name of the oracle.
+     * Constructs the oracle. The parent constructor must call \ref Oracle::Oracle and set \ref _space properly.
      */
 
-    OptimizationOracle(const std::string& name);
+    OptimizationOracle();
+
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~OptimizationOracle();
 
     /**
      * \brief Maximize an objective vector.
@@ -540,7 +546,13 @@ namespace ipo
      * \param name Name of the oracle.
      */
 
-    TrustRegionOptimizationOracle(const std::string& name);
+    TrustRegionOptimizationOracle();
+
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~TrustRegionOptimizationOracle();
 
     /**
      * \brief Maximize an objective vector, allowing only points in \p trustRegion.
@@ -677,7 +689,13 @@ namespace ipo
      * \brief Constructs the oracle.
      */
 
-    SeparationOracle(const std::string& name);
+    SeparationOracle();
+
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~SeparationOracle();
 
     /**
      * \brief Returns initially known inequalities.

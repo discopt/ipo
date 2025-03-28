@@ -207,7 +207,7 @@ namespace ipo
   */
 
   template <>
-  class SCIPOptimizationOracle<double>: public OptimizationOracle<double>
+  class SCIPOptimizationOracle<double>: virtual public OptimizationOracle<double>
   {
   public:
 
@@ -257,7 +257,8 @@ namespace ipo
   public:
     SCIPOptimizationOracle(RationalMIPExtender* extender, std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<rational>& face)
-      : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
+      : Oracle<rational>(approximateOracle->name()),
+      RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
       
     }

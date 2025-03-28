@@ -163,8 +163,16 @@ namespace inverse
     for (std::size_t i = 0; i < instance.solvers.size(); ++i)
     {
       auto oracle = instance.solvers[i]->template getOptimizationOracle<Number>();
+      std::cout << "Creating RadialConeOptimizationOracle..." << std::endl;
       auto radialConeOracle = std::make_shared<ipo::RadialConeOptimizationOracle<Number>>(oracle,
         instance.targetSolutions[i]);
+
+      if (radialConeOracle->isTrustRegionCapable())
+      {
+        std::cout << "Activating trust region for <" << oracle->name() << ">." << std::endl;
+        radialConeOracle->enableManhattanTrustRegion(16, oracle->space()->dimension(), 2);
+      }
+
       polyhedra.push_back( std::make_shared<ipo::Polyhedron<Number>>(radialConeOracle));
       space = oracle->space();
     }

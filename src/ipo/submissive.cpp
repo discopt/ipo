@@ -10,7 +10,7 @@ namespace ipo
   template <typename Number>
   SubmissiveOptimizationOracle<Number>::SubmissiveOptimizationOracle(
     std::shared_ptr<OptimizationOracle<Number>> sourceOracle, const std::string& name)
-    : OptimizationOracle<Number>(name.empty() ? ("Submissive(" + sourceOracle->name() + ")") : name),
+    : Oracle<Number>(name.empty() ? ("Submissive(" + sourceOracle->name() + ")") : name),
     _sourceOracle(sourceOracle)
   {
     this->_space = sourceOracle->space();

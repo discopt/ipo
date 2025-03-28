@@ -442,7 +442,7 @@ namespace ipo
     RationalMIPExtender* extender,
     std::shared_ptr<OptimizationOracle<double>> approximateOracle,
     const Constraint<rational>& face)
-    : TrustRegionOptimizationOracle<rational>("Rational " + approximateOracle->name()), _extender(extender),
+    : Oracle<rational>("Abstract RationalMIPExtendedOptimizationOracle"), _extender(extender),
     _approximateOracle(approximateOracle), _face(face)
   {
     assert(_extender);
@@ -488,7 +488,7 @@ namespace ipo
 
   RationalMIPExtendedSeparationOracle::RationalMIPExtendedSeparationOracle(
     std::shared_ptr<SeparationOracle<double>> approximateOracle, const Constraint<rational>& face)
-    : SeparationOracle<rational>("Rational " + approximateOracle->name()),
+    : Oracle<rational>("Rational " + approximateOracle->name()),
     _approximateOracle(approximateOracle), _face(face)
   {
     _space = approximateOracle->space();

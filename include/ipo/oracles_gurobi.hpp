@@ -172,7 +172,7 @@ namespace ipo
      * \brief Select a trust region by adding it to the model.
      */
 
-    void enableTrustRegion(const ManhattanTrustRegion<double>& trustRegion);
+    void setTrustRegion(const ManhattanTrustRegion<double>& trustRegion);
 
   protected:
     /// Gurobi environment (might be \c NULL).
@@ -196,7 +196,7 @@ namespace ipo
     /// Face row.
     std::size_t _currentFaceRow;
     /// Current trust region.
-    const ManhattanTrustRegion<double>* _trustRegion;
+    ManhattanTrustRegion<double> _trustRegion;
     /// First trust region row.
     std::size_t _trustRegionFirstRow;
     /// Beyond trust region row.
@@ -284,7 +284,8 @@ namespace ipo
     GurobiOptimizationOracle(RationalMIPExtender* extender,
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<rational>& face)
-      : RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
+      : Oracle<rational>(approximateOracle->name()),
+      RationalMIPExtendedOptimizationOracle(extender, approximateOracle, face)
     {
 
     }

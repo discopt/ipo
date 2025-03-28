@@ -32,7 +32,7 @@ namespace ipo
   ForestOptimizationOracle<NumberType>::ForestOptimizationOracle(std::size_t numNodes,
     std::pair<std::size_t, std::size_t>* edgesFirst, std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning,
     const std::string& name)
-    : OptimizationOracle<NumberType>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
+    : Oracle<NumberType>(name), _spanning(spanning), _edges(edgesBeyond - edgesFirst)
   {
     _numNodes = numNodes;
     std::vector<std::string> variableNames(edgesBeyond - edgesFirst);

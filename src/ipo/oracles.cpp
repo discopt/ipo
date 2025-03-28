@@ -3,6 +3,19 @@
 namespace ipo
 {
 
+  template <typename Number>
+  Oracle<Number>::Oracle(const std::string& name)
+    : _name(name), _space(nullptr)
+  {
+
+  }
+
+  template <typename Number>
+  Oracle<Number>::~Oracle()
+  {
+
+  }
+
   template <typename R>
   static std::ostream& printOptimizationQuery(std::ostream& stream,
     const OptimizationQuery<R>& query)
@@ -48,8 +61,14 @@ namespace ipo
 #endif /* IPO_RATIONAL */
   
   template <typename Number>
-  OptimizationOracle<Number>::OptimizationOracle(const std::string& name)
-    : Oracle<Number>(name)
+  OptimizationOracle<Number>::OptimizationOracle()
+    : Oracle<Number>("abstract OptimizationOracle")
+  {
+
+  }
+
+  template <typename Number>
+  OptimizationOracle<Number>::~OptimizationOracle()
   {
 
   }
@@ -62,8 +81,14 @@ namespace ipo
   }
 
   template <typename Number>
-  TrustRegionOptimizationOracle<Number>::TrustRegionOptimizationOracle(const std::string& name)
-    : OptimizationOracle<Number>(name)
+  TrustRegionOptimizationOracle<Number>::TrustRegionOptimizationOracle()
+    : Oracle<Number>("abstract TrustRegionOptimizationOracle")
+  {
+
+  }
+
+  template <typename Number>
+  TrustRegionOptimizationOracle<Number>::~TrustRegionOptimizationOracle()
   {
 
   }
@@ -148,8 +173,14 @@ namespace ipo
 #endif /* IPO_RATIONAL */
 
   template <typename Number>
-  SeparationOracle<Number>::SeparationOracle(const std::string& name)
-    : Oracle<Number>(name)
+  SeparationOracle<Number>::SeparationOracle()
+    : Oracle<Number>("abstract SeparationOracle")
+  {
+
+  }
+
+  template <typename Number>
+  SeparationOracle<Number>::~SeparationOracle()
   {
 
   }
@@ -182,12 +213,14 @@ namespace ipo
 
 #endif /* IPO_RATIONAL */
 
+  template class Oracle<double>;
   template class OptimizationOracle<double>;
   template class TrustRegionOptimizationOracle<double>;
   template class SeparationOracle<double>;
 
 #if defined(IPO_RATIONAL)
 
+  template class Oracle<rational>;
   template class OptimizationOracle<rational>;
   template class TrustRegionOptimizationOracle<rational>;
   template class SeparationOracle<rational>;

@@ -11,8 +11,7 @@ namespace ipo
   DominantOptimizationOracle<NumberType>::DominantOptimizationOracle(
     std::shared_ptr<OptimizationOracle<NumberType>> sourceOracle,
     const std::string& name)
-    : OptimizationOracle<NumberType>(name.empty() ? ("Dominant(" + sourceOracle->name() + ")") : name),
-    _sourceOracle(sourceOracle)
+    : Oracle<NumberType>(name.empty() ? ("Dominant(" + sourceOracle->name() + ")") : name), _sourceOracle(sourceOracle)
   {
     this->_space = sourceOracle->space();
   }

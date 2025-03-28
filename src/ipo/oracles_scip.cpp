@@ -606,7 +606,7 @@ namespace ipo
 
   SCIPOptimizationOracle<double>::SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
-    : OptimizationOracle<double>(solver->name()), _solver(solver), _face(face)
+    : Oracle<double>(solver->name()), _solver(solver), _face(face)
   {
     _space = solver->space();
     _solver->addFace(&_face);
@@ -988,7 +988,7 @@ namespace ipo
   template <>
   SCIPSeparationOracle<double>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
-    : SeparationOracle<double>(solver->name()), _solver(solver), _face(face),
+    : Oracle<double>(solver->name()), _solver(solver), _face(face),
     _approximateFace(face)
   {
     _space = solver->space();
@@ -1130,7 +1130,7 @@ namespace ipo
   template <>
   SCIPSeparationOracle<rational>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<rational>& face)
-    : SeparationOracle<rational>(solver->name()), _solver(solver), _face(face),
+    : Oracle<rational>(solver->name()), _solver(solver), _face(face),
     _approximateFace(convertConstraint<double>(face))
   {
     _space = solver->space();

@@ -272,7 +272,7 @@ namespace ipo
   template <typename Number>
   PolarSeparationOracle<Number>::PolarSeparationOracle(std::shared_ptr<OptimizationOracle<Number>> optOracle,
     std::shared_ptr<SeparationOracle<Number>> sepaRelaxationOracle, const std::string& name)
-    : SeparationOracle<Number>(name.empty() ? ("Polar separation for " + name) : name)
+    : Oracle<Number>(name.empty() ? ("PolarSeparation(" + optOracle->name() + ")") : name)
   {
     _implementation = new PolarSeparationOracleImplementation<Number>(optOracle, sepaRelaxationOracle);
   }

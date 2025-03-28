@@ -12,8 +12,8 @@ namespace ipo
 {
   template <typename NumberType>
   class Polyhedron: public std::enable_shared_from_this<Polyhedron<NumberType>>,
-    virtual public OptimizationOracle<NumberType>,
-    virtual public SeparationOracle<NumberType>
+    public OptimizationOracle<NumberType>,
+    public SeparationOracle<NumberType>
   {
   public:
     typedef NumberType Number;

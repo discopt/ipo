@@ -63,6 +63,10 @@ namespace ipo
       std::shared_ptr<OptimizationOracle<double>> approximateOracle,
       const Constraint<rational>& face);
 
+    /**
+     * \brief Destructor.
+     */
+
     virtual ~RationalMIPExtendedOptimizationOracle();
 
     OptimizationOracle<rational>::Response maximize(const rational* objectiveVector,
@@ -90,6 +94,10 @@ namespace ipo
   public:
     RationalMIPExtendedSeparationOracle(std::shared_ptr<SeparationOracle<double>> approximateOracle,
       const Constraint<rational>& face);
+
+    /**
+     * \brief Destructor.
+     */
 
     virtual ~RationalMIPExtendedSeparationOracle();
 

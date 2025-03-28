@@ -14,7 +14,11 @@ namespace ipo
     ForestOptimizationOracle(std::size_t numNodes, std::pair<std::size_t, std::size_t>* edgesFirst,
       std::pair<std::size_t, std::size_t>* edgesBeyond, bool spanning, const std::string& name = "forest");
 
-    ~ForestOptimizationOracle();
+    /**
+     * \brief Destructor.
+     */
+
+    virtual ~ForestOptimizationOracle();
 
     /**
      * \brief Maximize an objective vector of type double.

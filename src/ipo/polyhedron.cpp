@@ -18,7 +18,7 @@ namespace ipo
     typedef NumberType Number;
 
     CacheOptimizationOracle(PolyhedronImplementation<Number>* implementation)
-      : OptimizationOracle<NumberType>("cache"), _implementation(implementation), _queryCount(0)
+      : Oracle<NumberType>("CacheOptimizationOracle"), _implementation(implementation), _queryCount(0)
     {
       this->_space = implementation->space();
     }
@@ -763,7 +763,7 @@ namespace ipo
 
   template<typename Number>
   Polyhedron<Number>::Polyhedron(std::shared_ptr<Space> space, const std::string& name)
-    : OptimizationOracle<Number>(name), SeparationOracle<Number>(name)
+    : Oracle<Number>(name)
   {
     Oracle<Number>::_space = space;
     std::vector<std::shared_ptr<OptimizationOracle<Number>>> optOracles;
@@ -773,8 +773,7 @@ namespace ipo
   
   template <typename Number>
   Polyhedron<Number>::Polyhedron(std::shared_ptr<OptimizationOracle<Number>> optOracle)
-    : OptimizationOracle<Number>("Polyhedron for " + optOracle->name()),
-    SeparationOracle<Number>("Polyhedron for " + optOracle->name())
+    : Oracle<Number>("Polyhedron(" + optOracle->name() + ")")
   {
     Oracle<Number>::_space = optOracle->space();
     std::vector<std::shared_ptr<OptimizationOracle<Number>>> optOracles;

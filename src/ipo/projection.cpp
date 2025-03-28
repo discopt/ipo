@@ -140,7 +140,7 @@ namespace ipo
     std::shared_ptr<OptimizationOracle<Number>> sourceOracle,
     std::shared_ptr<Projection<Number>> projection,
     const std::string& name)
-    : OptimizationOracle<Number>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
+    : Oracle<Number>(name.empty() ? ("Projection(" + sourceOracle->name() + ")") : name),
     _projection(projection), _sourceOracle(sourceOracle)
   {
     this->_space = _projection->space();
