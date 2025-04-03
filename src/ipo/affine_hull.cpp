@@ -553,7 +553,7 @@ namespace ipo
     }
   };
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   struct KernelVectorRational
   {
@@ -674,7 +674,7 @@ namespace ipo
     }
   };
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   template <typename P, typename T, typename U>
   static void findLastPoint(std::shared_ptr<P> polyhedron, U* objective,
@@ -1627,7 +1627,7 @@ namespace ipo
     const AffineHullQuery& query,
     const std::vector<Constraint<double>>& knownEquations);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class AffineHull<rational>;
 
@@ -1906,6 +1906,6 @@ namespace ipo
     const AffineHullQuery& query,
     const std::vector<Constraint<rational>>& knownEquations);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

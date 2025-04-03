@@ -138,7 +138,7 @@ TEST(SCIP, SeparateDouble)
   ASSERT_NEAR(response.constraints[0].rhs(), 1.2, 1.0e-9);
 }
 
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 TEST(SCIP, UnboundedRational)
 {
@@ -271,4 +271,4 @@ TEST(SCIP, SeparateRational)
   ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 }
 
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_WITH_RATIONAL_LP */

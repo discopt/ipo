@@ -72,7 +72,7 @@ namespace ipo
     return result;
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   std::string formatNumberApprox(const rational& x)
   {
@@ -193,7 +193,7 @@ namespace ipo
     return _factor;
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */
 

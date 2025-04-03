@@ -76,7 +76,7 @@ namespace ipo
     return rank;
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<rational>>& matrix,
@@ -151,6 +151,6 @@ namespace ipo
     return rank;
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 }

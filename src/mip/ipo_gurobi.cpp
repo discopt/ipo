@@ -6,9 +6,9 @@
 
 int main(int argc, char** argv)
 {
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   bool exact = false;
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
   double timeLimit = std::numeric_limits<double>::infinity();
   std::string fileName;
   std::string projectionRegex = "";
@@ -28,10 +28,10 @@ int main(int argc, char** argv)
       ipo::printUsage(argv[0]);
       return EXIT_SUCCESS;
     }
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
     else if (arg == "-x")
       exact = true;
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
     else if (arg == "-t" && a+1 < argc)
     {
       std::stringstream ss(argv[a+1]);
@@ -90,26 +90,24 @@ int main(int argc, char** argv)
   }
 
   auto gurobi = std::make_shared<ipo::GurobiSolver>(fileName);
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   if (exact)
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
   {
-#if defined(IPO_RATIONAL) && defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_GUROBI) && defined(IPO_WITH_RATIONAL_LP)
     ipo::run<ipo::rational>(gurobi->getOptimizationOracle<ipo::rational>(),
       gurobi->getSeparationOracle<ipo::rational>(), gurobi->instanceObjective(), true, timeLimit, randomSeed,
       projectionRegex, useDominant, useSubmissive, outputDimension, outputEquations, outputInterior,
       outputInstanceFacets, outputRandomFacets);
-#endif /* IPO_RATIONAL && IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_GUROBI && IPO_WITH_RATIONAL_LP */
   }
-#if defined(IPO_DOUBLE) && defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   else
-#endif /* IPO_DOUBLE && IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
   {
-#if defined(IPO_DOUBLE)
     ipo::run<double>(gurobi->getOptimizationOracle<double>(), gurobi->getSeparationOracle<double>(),
       gurobi->instanceObjective(), false, timeLimit, randomSeed, projectionRegex, useDominant, useSubmissive,
       outputDimension, outputEquations, outputInterior, outputInstanceFacets, outputRandomFacets);
-#endif /* IPO_DOUBLE */
   }
 
   return 0;

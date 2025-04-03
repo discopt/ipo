@@ -9,7 +9,7 @@
 #include <vector>
 #include <ostream>
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(WITH_WITH_RATIONAL_LP)
 
 namespace ipo
 {
@@ -105,4 +105,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */

@@ -3,7 +3,7 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#if defined(IPO_DOUBLE_MIP_GUROBI) || defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_GUROBI)
 
 #include <ipo/oracles.hpp>
 #include <ipo/mip.hpp>
@@ -129,19 +129,15 @@ namespace ipo
 
   protected:
 
-#if defined(IPO_DOUBLE_MIP_GUROBI)
-
     friend GurobiOptimizationOracle<double>;
     friend GurobiSeparationOracle<double>;
-
-#endif /* IPO_DOUBLE_MIP_GUROBI */
     
-#if defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_RATIONAL_LP)
 
     friend GurobiOptimizationOracle<rational>;
     friend GurobiSeparationOracle<rational>;
 
-#endif /* IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_RATIONAL_LP */
 
     /**
      * \brief Initializes the solver data.
@@ -206,12 +202,10 @@ namespace ipo
     /// Beyond trust region column.
     std::size_t _trustRegionBeyondColumn;
 
-#if defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_RATIONAL_LP)
     RationalMIPExtender* _extender;
-#endif /* IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_RATIONAL_LP */
   };
-
-#if defined(IPO_DOUBLE_MIP_GUROBI)
 
   /**
    * \brief OptimizationOracle based on the Gurobi solver.
@@ -273,9 +267,7 @@ namespace ipo
     double _trustRegionDistance;
   };
 
-#endif /* IPO_DOUBLE_MIP_GUROBI */
-
-#if defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   template <>
   class GurobiOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
@@ -291,7 +283,7 @@ namespace ipo
     }
   };
 
-#endif /* IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   /**
   * \brief SeparationOracle for the LP relaxation based on the Gurobi solver.
@@ -366,4 +358,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_DOUBLE_MIP_GUROBI || IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_GUROBI */

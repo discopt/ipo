@@ -40,10 +40,12 @@ namespace ipo
      * \brief Enables usage of a trust region.
      *
      * The trust region's size will be \p initialSize. Upon each failure, its size it increased by a factor of
-     * \p growthRate. If its size reaches \p maximumSize then it is disabled.
+     * \p growthRate. If its size reaches \p maximumSize then it is disabled. Every \p resetIteratons iterations (if
+     * nonzero) the size is reset to \p initialSize.
      */
 
-    void enableManhattanTrustRegion(const Number& initialSize, const Number& maximumSize, const Number& growthRate);
+    void enableManhattanTrustRegion(const Number& initialSize, const Number& maximumSize, const Number& growthRate,
+      size_t resetIterations);
 
     /**
      * \brief Disables usage of a trust region.
@@ -73,6 +75,11 @@ namespace ipo
     bool _trustRegionEnabled;
     /// Current trust region.
     ManhattanTrustRegion<Number> _trustRegion;
+    std::size_t _iteration;
+    /// Number of iterations for resetting.
+    std::size_t _trustRegionResetIterations;
+    /// Initial size of the trust region.
+    Number _trustRegionInitialSize;
     /// Maximum size of the trust region.
     Number _trustRegionMaximumSize;
     /// Grwoth rate for trust region size.

@@ -3,7 +3,7 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#if defined(IPO_DOUBLE_MIP_SCIP) || defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_WITH_SCIP)
 
 #include <ipo/oracles.hpp>
 #include <ipo/mip.hpp>
@@ -136,19 +136,15 @@ namespace ipo
 
   protected:
 
-#if defined(IPO_DOUBLE_MIP_SCIP)
-
     friend SCIPOptimizationOracle<double>;
     friend SCIPSeparationOracle<double>;
-
-#endif /* IPO_DOUBLE_MIP_SCIP */
     
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
     friend SCIPOptimizationOracle<rational>;
     friend SCIPSeparationOracle<rational>;
 
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
     /**
      * \brief Initializes the solver data.
@@ -195,12 +191,10 @@ namespace ipo
     std::unordered_map<Constraint<double>*, SCIP_CONS*> _faceConstraints;
     BoundLimits _boundLimits;
 
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_WITH_RATIONAL_LP)
     RationalMIPExtender* _extender;
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_WITH_RATIONAL_LP */
   };
-
-#if defined(IPO_DOUBLE_MIP_SCIP)
 
   /**
   * \brief OptimizationOracle based on the SCIP solver.
@@ -247,9 +241,7 @@ namespace ipo
     Constraint<double> _face;
   };
 
-#endif /* IPO_DOUBLE_MIP_SCIP */
-
-#if defined(IPO_RATIONAL_MIP_SCIP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   template <>
   class SCIPOptimizationOracle<rational>: public RationalMIPExtendedOptimizationOracle
@@ -264,7 +256,7 @@ namespace ipo
     }
   };
 
-#endif /* IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   /**
   * \brief SeparationOracle for the LP relaxation based on the SCIP solver.
@@ -339,4 +331,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_DOUBLE_MIP_SCIP || IPO_RATIONAL_MIP_SCIP */
+#endif /* IPO_WITH_SCIP */

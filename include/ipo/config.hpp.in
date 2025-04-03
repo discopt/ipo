@@ -4,17 +4,15 @@
 #define IPO_VERSION_MINOR @IPO_VERSION_MINOR@
 #define IPO_VERSION_PATCH @IPO_VERSION_PATCH@
 
-#cmakedefine IPO_DOUBLE
-#cmakedefine IPO_DOUBLE_LP
-#cmakedefine IPO_DOUBLE_LP_SOPLEX
-#cmakedefine IPO_DOUBLE_LP_GUROBI
-#cmakedefine IPO_DOUBLE_MIP
-#cmakedefine IPO_DOUBLE_MIP_SCIP
-#cmakedefine IPO_DOUBLE_MIP_GUROBI
+#cmakedefine IPO_WITH_SCIP /* IPO supports SCIP oracles. */
+#cmakedefine IPO_WITH_GUROBI /* IPO supports Gurobi oracles and Gurobi as a float-point LP solver. */
+#cmakedefine IPO_WITH_SOPLEX /* IPO supports SoPlex as a float-point LP solver. */
 
-#cmakedefine IPO_RATIONAL
-#cmakedefine IPO_RATIONAL_LP
-#cmakedefine IPO_RATIONAL_LP_SOPLEX
-#cmakedefine IPO_RATIONAL_MIP
-#cmakedefine IPO_RATIONAL_MIP_SCIP
-#cmakedefine IPO_RATIONAL_MIP_GUROBI
+#cmakedefine IPO_WITH_DOUBLE_LP /* IPO supports floating-point LPs. */
+#cmakedefine IPO_WITH_DOUBLE_LP_GUROBI /* Default floating-point LP solver is Gurobi. */
+#cmakedefine IPO_WITH_DOUBLE_LP_SOPLEX /* Default floating-point LP solver is SoPlex. */
+
+#cmakedefine IPO_WITH_RATIONAL /* IPO supports rational arithmetic via type `ipo::rational'. */
+#cmakedefine IPO_WITH_RATIONAL_LP /* IPO supports rational LPs. */
+#cmakedefine IPO_WITH_RATIONAL_LP_SOPLEX /* Default rational LP solver is SoPlex. */
+

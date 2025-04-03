@@ -24,7 +24,7 @@ TEST(Forest, SpanningTreeDouble)
   ASSERT_EQ(result.dimension, 7);
 }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
 TEST(Forest, SpanningTreeRational)
 {
@@ -47,4 +47,4 @@ TEST(Forest, SpanningTreeRational)
   ASSERT_EQ(result.dimension, 7);
 }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */

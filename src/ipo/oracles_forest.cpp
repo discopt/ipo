@@ -110,10 +110,10 @@ namespace ipo
 
   template class ForestOptimizationOracle<double>;
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class ForestOptimizationOracle<rational>;
 
-#endif /* IPO_RATIONAL */  
+#endif /* IPO_WITH_RATIONAL */
   
 } /* namespace ipo */

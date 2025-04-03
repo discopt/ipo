@@ -130,7 +130,7 @@ namespace ipo
     return str.str();
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   void Space::printVector(std::ostream& str, const sparse_vector<rational>& vector,
     bool rounded) const
@@ -266,6 +266,6 @@ namespace ipo
     return str.str();
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 }

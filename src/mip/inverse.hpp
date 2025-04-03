@@ -169,8 +169,8 @@ namespace inverse
 
       if (radialConeOracle->isTrustRegionCapable())
       {
-        std::cout << "Activating trust region for <" << oracle->name() << ">." << std::endl;
-        radialConeOracle->enableManhattanTrustRegion(16, oracle->space()->dimension(), 2);
+        std::cout << "Activating trust region for " << oracle->name() << "." << std::endl;
+        radialConeOracle->enableManhattanTrustRegion(16, oracle->space()->dimension(), 2, 0);
       }
 
       polyhedra.push_back( std::make_shared<ipo::Polyhedron<Number>>(radialConeOracle));
@@ -343,9 +343,9 @@ namespace inverse
     std::cout << "General options:\n";
     std::cout << " -h       Show this help and exit.\n";
     std::cout << "Oracle/polyhedron options:\n";
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
     std::cout << " -x       Use exact arithmetic oracles instead of double precision.\n";
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
     std::cout << std::flush;
 
     return EXIT_FAILURE;

@@ -5,6 +5,7 @@
 #include <cassert>
 #include <algorithm>
 #include <cmath>
+#include <memory>
 
 #include <ipo/arithmetic.hpp>
 

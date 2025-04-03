@@ -20,13 +20,13 @@ namespace ipo
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<double>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   IPO_NO_EXPORT
   std::size_t rowEchelon(std::size_t numColumns, std::vector<std::vector<rational>>& matrix,
     std::size_t* rowPermutation = 0, std::size_t* columnPermutation = 0);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   /**
    * \brief Class for an LU factorization.

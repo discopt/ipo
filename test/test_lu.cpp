@@ -54,7 +54,7 @@ TEST(LinearAlgebra, LU)
     ASSERT_NEAR(column[2], -1.0/9, 1.0e-9);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   std::cout << "===== LinearAlgebra::IncrementalLUFactorization::Rational ===== " << std::endl;
   {
     auto lu = ipo::IncrementalLUFactorization<ipo::rational>();
@@ -103,6 +103,6 @@ TEST(LinearAlgebra, LU)
     ASSERT_EQ(column[2], ipo::rational(-1,9));
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 }

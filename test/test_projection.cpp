@@ -23,7 +23,7 @@ TEST(Projection, OptimizationDouble)
   ASSERT_EQ(result.dimension, 6);
 }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
 TEST(Projection, OptimizationRational)
 {
@@ -45,4 +45,4 @@ TEST(Projection, OptimizationRational)
   ASSERT_EQ(result.dimension, 6);
 }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */

@@ -424,7 +424,7 @@ namespace ipo
         bounds[i].second = std::numeric_limits<double>::infinity();
     }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
     _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
@@ -439,7 +439,7 @@ namespace ipo
 
     Visitor visitor = { _extender };
     SCIPiterateRows(_scip, _variablesToCoordinates, visitor, true);
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
     
     SCIP_EVENTHDLR* eventhdlr = nullptr;
     SCIP_CALL_EXC( SCIPincludeEventhdlrBasic(_scip, &eventhdlr, EVENTHDLR_NAME, EVENTHDLR_DESC,
@@ -455,9 +455,9 @@ namespace ipo
   {
     delete[] _instanceObjective;
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
     delete _extender;
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
     for (auto& iter : _faceConstraints)
     {
@@ -586,7 +586,7 @@ namespace ipo
     return std::make_shared<SCIPOptimizationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   /**
    * \brief Returns a rational optimization oracle for the requested \p face.
@@ -602,7 +602,7 @@ namespace ipo
     return std::make_shared<SCIPOptimizationOracle<rational>>(_extender, approximateOracle, face);
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   SCIPOptimizationOracle<double>::SCIPOptimizationOracle(std::shared_ptr<SCIPSolver> solver,
     const Constraint<double>& face)
@@ -629,7 +629,7 @@ namespace ipo
     return std::make_shared<SCIPSeparationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   /**
    * \brief Returns a rational arithmetic separation oracle for the \p face.
@@ -643,7 +643,7 @@ namespace ipo
     return std::make_shared<SCIPSeparationOracle<rational>>(shared_from_this(), face);
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   static
   void extractPoints(SCIP* scip, std::vector<SCIP_VAR*>& variables, const double* objectiveVector,
@@ -1125,7 +1125,7 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   template <>
   SCIPSeparationOracle<rational>::SCIPSeparationOracle(std::shared_ptr<SCIPSolver> solver,
@@ -1331,6 +1331,6 @@ namespace ipo
     return result;
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
   
 } /* namespace ipo */

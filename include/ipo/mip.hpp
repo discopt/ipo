@@ -3,7 +3,7 @@
 #include <ipo/config.hpp>
 #include <ipo/export.hpp>
 
-#if defined(IPO_RATIONAL_MIP) && defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 #include <memory>
 
@@ -148,4 +148,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_RATIONAL_MIP && IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */

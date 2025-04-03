@@ -4,10 +4,28 @@ project(IPO VERSION 2.0 LANGUAGES CXX)
    
 add_definitions(-D_GLIBCXX_USE_CXX11_ABI=1)
 
-option(DOUBLE "Compile algorithms with double arithmetic." ON)
-option(RATIONAL "Compile algorithms with rational arithmetic; requires at least GMP and Boost 1.65" ON)
-option(SCIP "Support SCIP as a MIP solver." ON)
-option(GUROBI "Support Gurobi as a MIP solver." ON)
+set(RATIONAL AUTO CACHE STRING "Support rational arithmetic algorithms; requires at least GMP and Boost 1.65.")
+set_property(CACHE RATIONAL PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${RATIONAL} RATIONAL_UPPER) # Also allow "auto"
+
+set(SCIP AUTO CACHE STRING "Support SCIP as a MIP solver.")
+set_property(CACHE SCIP PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${SCIP} SCIP_UPPER) # Also allow "auto"
+
+set(SOPLEX AUTO CACHE STRING "Support SoPlex as an LP solver.")
+set_property(CACHE SOPLEX PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${SOPLEX} SOPLEX_UPPER) # Also allow "auto"
+
+set(GUROBI AUTO CACHE STRING "Support Gurobi as a MIP and LP solver.")
+set_property(CACHE GUROBI PROPERTY STRINGS AUTO ON OFF)
+string(TOUPPER ${GUROBI} GUROBI_UPPER) # Also allow "auto"
+
+
+option(SOPLEX "Support SoPlex as an LP solver." ON)
+option(GUROBI "Support Gurobi as MIP and LP solver." ON)
+set(LP AUTO CACHE STRING "Default floating-point LP solver")
+set_property(CACHE LP PROPERTY STRINGS AUTO GUROBI SOPLEX OFF)
+
 option(SHARED "Build shared libraries" ON)
 set(BUILD_SHARED_LIBS ${SHARED})
 message(STATUS "Build shared libraries: " ${SHARED})
@@ -24,92 +42,97 @@ message(STATUS "Build type: ${CMAKE_BUILD_TYPE}")
 
 # Find dependencies.
 
-if(DOUBLE)
-  set(IPO_DOUBLE TRUE)
-else()
-  set(IPO_DOUBLE FALSE)
-endif()
-
-set(IPO_DOUBLE_LP FALSE)
-set(IPO_DOUBLE_LP_SOPLEX FALSE)
-set(IPO_DOUBLE_LP_GUROBI FALSE)
-set(IPO_DOUBLE_MIP FALSE)
-set(IPO_DOUBLE_MIP_SCIP FALSE)
-set(IPO_DOUBLE_MIP_GUROBI FALSE)
-set(IPO_RATIONAL FALSE)
-set(IPO_RATIONAL_LP FALSE)
-set(IPO_RATIONAL_LP_SOPLEX FALSE)
-set(IPO_RATIONAL_MIP FALSE)
-set(IPO_RATIONAL_MIP_SCIP FALSE)
-set(IPO_RATIONAL_MIP_GUROBI FALSE)
-
-if(RATIONAL)
+if(RATIONAL_UPPER)
   find_package(GMP)
-  if(${GMP_FOUND})
+  if(GMP_FOUND)
     find_package(Boost 1.65.0)
-    if (${Boost_FOUND})
-      set(IPO_RATIONAL TRUE)
+    if (Boost_FOUND)
+      set(IPO_WITH_RATIONAL ON)
+    elseif(RATIONAL_UPPER STREQUAL "AUTO")
+      message(STATUS "Boost >= 1.65 not found. Disabling rational arithmetic.")
+      set(IPO_WITH_RATIONAL OFF)
     else()
-      message(SEND_ERROR "ERROR: Option RATIONAL requires Boost library version 1.65.0 or greater.")
-      set(IPO_RATIONAL FALSE)
+      message(FATAL_ERROR "Boost >= 1.65 not found, but required for rational arithmetic.")
     endif()
+  elseif(RATIONAL_UPPER STREQUAL "AUTO")
+    message(STATUS "GMP not found. Disabling rational arithmetic.")
   else()
-    message(SEND_ERROR "ERROR: Option RATIONAL requires GMP library.")
-    set(IPO_RATIONAL FALSE)
+    message(FATAL_ERROR "GMP not found, but required for rational arithmetic.")
+    set(IPO_WITH_RATIONAL OFF)
   endif()
 else()
-  set(IPO_RATIONAL FALSE)
+  set(IPO_WITH_RATIONAL OFF)
 endif()
 
-if(IPO_DOUBLE OR IPO_RATIONAL) # Search for SoPlex if requested.
-  find_package(SOPLEX QUIET)
-  if(SOPLEX_FOUND)
-    message(STATUS "Found SoPlex version ${SOPLEX_VERSION} with include dir ${SOPLEX_INCLUDE_DIRS}.")
-    if(IPO_DOUBLE)
-      set(IPO_DOUBLE_LP TRUE)
-      set(IPO_DOUBLE_LP_SOPLEX TRUE)
-    endif()
-    if(IPO_RATIONAL)
-      set(IPO_RATIONAL_LP TRUE)
-      set(IPO_RATIONAL_LP_SOPLEX TRUE)
-    endif()
-  else()
-    message(STATUS "Could NOT find SoPlex. Please set SOPLEX_DIR to point to build or installation directory.")
-  endif()
-endif()
-
-if(SCIP AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for SCIP if requested.
-  find_package(SCIP QUIET)
+if(SCIP_UPPER)
+  find_package(SCIP CONFIG HINTS ${SCIP_DIR})
   if(SCIP_FOUND)
-    message(STATUS "Found SCIP version ${SCIP_VERSION} with include dir ${SCIP_INCLUDE_DIRS}.")
-    if(IPO_DOUBLE)
-      set(IPO_DOUBLE_MIP TRUE)
-      set(IPO_DOUBLE_MIP_SCIP TRUE)
-    endif()
-    if(IPO_RATIONAL_LP)
-      set(IPO_RATIONAL_MIP TRUE)
-      set(IPO_RATIONAL_MIP_SCIP TRUE)
-    endif()
+    message(STATUS "Found SCIP: ${SCIP_INCLUDE_DIRS} / ${SCIP_LIBRARIES}.")
+  elseif(SCIP_UPPER STREQUAL "AUTO")
+    message(STATUS "SCIP not found.")
   else()
-    message(STATUS "Could NOT find SCIP. Please set SCIP_DIR to point to build or installation directory.")
+    message(FATAL_ERROR "SCIP not found.")
   endif()
 endif()
 
-if(GUROBI AND (IPO_DOUBLE OR IPO_RATIONAL_LP)) # Search for Gurobi if requested.
-  find_package(GUROBI QUIET)
-  if(GUROBI_FOUND)
-    message(STATUS "Found Gurobi version ${GUROBI_VERSION} with include dir ${GUROBI_INCLUDE_DIRS} and libraries ${GUROBI_LIBRARIES}.")
-    if(IPO_DOUBLE)
-      set(IPO_DOUBLE_MIP TRUE)
-      set(IPO_DOUBLE_MIP_GUROBI TRUE)
-    endif()
-    if(IPO_RATIONAL_LP)
-      set(IPO_RATIONAL_MIP TRUE)
-      set(IPO_RATIONAL_MIP_GUROBI TRUE)
-    endif()
-  else()
-    message(STATUS "Could NOT find Gurobi. Please set GUROBI_DIR to point to build or installation directory.")
+if(SOPLEX_UPPER)
+  if(NOT SOPLEX_FOUND)
+    find_package(SOPLEX HINTS ${SOPLEX_DIR})
   endif()
+  if(SOPLEX_FOUND)
+    message(STATUS "Found SoPlex: ${SOPLEX_INCLUDE_DIRS} / ${SOPLEX_LIBRARIES}.")
+  elseif(SOPLEX_UPPER STREQUAL "AUTO")
+    message(STATUS "SoPlex not found.")
+  else()
+    message(FATAL_ERROR "SoPlex not found.")
+  endif()
+endif()
+
+if(GUROBI_UPPER)
+  find_package(GUROBI)
+  if(GUROBI_FOUND)
+    message(STATUS "Found Gurobi: ${GUROBI_INCLUDE_DIRS} / ${GUROBI_LIBRARIES}.")
+  elseif(GUROBI_UPPER STREQUAL "AUTO")
+    message(STATUS "Gurobi not found.")
+  else()
+    message(FATAL_ERROR "Gurobi not found.")
+  endif()
+endif()
+
+if(GUROBI_UPPER AND GUROBI_FOUND)
+  set(IPO_WITH_GUROBI ON)
+else()
+  set(IPO_WITH_GUROBI OFF)
+endif()
+
+if(SCIP_UPPER AND SCIP_FOUND)
+  set(IPO_WITH_SCIP ON)
+else()
+  set(IPO_WITH_SCIP OFF)
+endif()
+
+if(SOPLEX_UPPER AND SOPLEX_FOUND)
+  set(IPO_WITH_SOPLEX ON)
+else()
+  set(IPO_WITH_SOPLEX OFF)
+endif()
+
+set(IPO_WITH_DOUBLE_LP OFF)
+set(IPO_WITH_DOUBLE_LP_GUROBI OFF)
+set(IPO_WITH_DOUBLE_LP_SOPLEX OFF)
+if(IPO_WITH_SOPLEX)
+  set(IPO_WITH_DOUBLE_LP_SOPLEX ON)
+  set(IPO_WITH_DOUBLE_LP ON)
+elseif(IPO_WITH_GUROBI)
+  set(IPO_WITH_DOUBLE_LP_GUROBI ON)
+  set(IPO_WITH_DOUBLE_LP ON)
+endif()
+
+set(IPO_WITH_RATIONAL_LP OFF)
+set(IPO_WITH_RATIONAL_LP_SOPLEX OFF)
+if(IPO_WITH_SOPLEX)
+  set(IPO_WITH_RATIONAL_LP_SOPLEX ON)
+  set(IPO_WITH_RATIONAL_LP ON)
 endif()
 
 # RapidXML
@@ -118,8 +141,11 @@ if(RapidXML_FOUND)
   message(STATUS "Found RapidXML ${RapidXML_VERSION}")
 endif()
 
-# Boost
-find_package(Boost COMPONENTS iostreams)
+# Boost iostreams
+find_package(Boost COMPONENTS iostreams HINTS ${BOOST_DIR})
+if(Boost_IOSTREAMS_FOUND)
+  message(STATUS "Found Boost iostreams ${Boost_VERSION}")
+endif()
 
 # Target for the IPO library.
 add_library(ipo
@@ -142,14 +168,14 @@ add_library(ipo
 )
 
 # Link to/include SoPlex.
-if(IPO_DOUBLE_LP_SOPLEX OR IPO_RATIONAL_LP_SOPLEX)
+if(IPO_WITH_SOPLEX)
   target_link_libraries(ipo PRIVATE libsoplex-pic)
   # TODO: target_include_directories(ipo ... did not work here.
   include_directories(${SOPLEX_INCLUDE_DIRS})
 endif()
 
 # Whether to build the SCIP oracles.
-if (SCIP AND (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP))
+if (IPO_WITH_SCIP)
   target_sources(ipo
     PRIVATE src/ipo/oracles_scip.cpp
   )
@@ -163,7 +189,7 @@ if (SCIP AND (IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP))
 endif()
 
 # Whether to build the Gurobi oracles.
-if (GUROBI AND (IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI))
+if (IPO_WITH_GUROBI)
   target_sources(ipo
     PRIVATE src/ipo/oracles_gurobi.cpp
   )
@@ -177,14 +203,14 @@ if (GUROBI AND (IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI))
 endif()
 
 # The ipo-scip binary.
-if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+if(IPO_WITH_SCIP)
   add_executable(ipo_scip src/mip/ipo_scip.cpp)
   target_link_libraries(ipo_scip PRIVATE IPO::IPO)
   set_target_properties(ipo_scip PROPERTIES OUTPUT_NAME ipo-scip)
 endif()
 
 # The ipo-gurobi binary.
-if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+if(IPO_WITH_GUROBI)
   add_executable(ipo_gurobi src/mip/ipo_gurobi.cpp)
   target_link_libraries(ipo_gurobi PRIVATE IPO::IPO)
   set_target_properties(ipo_gurobi PROPERTIES OUTPUT_NAME ipo-gurobi)
@@ -192,7 +218,7 @@ endif()
 
 if(RapidXML_FOUND AND Boost_IOSTREAMS_FOUND)
   # The inverse-scip binary.
-  if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+  if(IPO_WITH_SCIP)
     add_executable(inverse_scip src/mip/inverse_scip.cpp)
     target_link_libraries(inverse_scip PRIVATE RapidXML::RapidXML)
     target_link_libraries(inverse_scip PRIVATE Boost::iostreams)
@@ -201,7 +227,7 @@ if(RapidXML_FOUND AND Boost_IOSTREAMS_FOUND)
   endif()
 
   # The inverse-gurobi binary.
-  if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+  if(IPO_WITH_GUROBI)
     add_executable(inverse_gurobi src/mip/inverse_gurobi.cpp)
     target_link_libraries(inverse_gurobi PRIVATE RapidXML::RapidXML)
     target_link_libraries(inverse_gurobi PRIVATE Boost::iostreams)
@@ -237,23 +263,23 @@ target_include_directories(ipo
 target_compile_features(ipo PRIVATE cxx_auto_type)
 target_compile_options(ipo PRIVATE $<$<CXX_COMPILER_ID:GNU>:-Wall>)
 
-if(IPO_RATIONAL)
+if(IPO_WITH_RATIONAL)
   target_link_libraries(ipo
     INTERFACE
       GMP::GMP
   )
 endif()
 
-### Installation ###
+# Installation
 include(GNUInstallDirs)
 
-if(IPO_DOUBLE_MIP_SCIP OR IPO_RATIONAL_MIP_SCIP)
+if(IPO_WITH_SCIP)
   install(TARGETS ipo_scip RUNTIME DESTINATION bin)
   if(TARGET inverse_scip)
     install(TARGETS inverse_scip RUNTIME DESTINATION bin)
   endif()
 endif()
-if(IPO_DOUBLE_MIP_GUROBI OR IPO_RATIONAL_MIP_GUROBI)
+if(IPO_WITH_GUROBI)
   install(TARGETS ipo_gurobi RUNTIME DESTINATION bin)
   if(TARGET inverse_gurobi)
     install(TARGETS inverse_gurobi RUNTIME DESTINATION bin)

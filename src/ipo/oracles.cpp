@@ -51,14 +51,14 @@ namespace ipo
     return printOptimizationQuery(stream, query);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<rational>& query)
   {
     return printOptimizationQuery(stream, query);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
   
   template <typename Number>
   OptimizationOracle<Number>::OptimizationOracle()
@@ -100,7 +100,7 @@ namespace ipo
     return maximizeTrustRegion(trustRegion, objectiveVector, query);
   }
   
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template <>
   OptimizationResponse<rational> OptimizationOracle<rational>::maximizeDouble(
@@ -123,7 +123,7 @@ namespace ipo
     return maximizeTrustRegion(trustRegion, &convertedObjectiveVector[0], query);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   template <typename R>
   static std::ostream& printOptimizationResponse(std::ostream& stream,
@@ -163,14 +163,14 @@ namespace ipo
     return printOptimizationResponse(stream, response);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response)
   {
     return printOptimizationResponse(stream, response);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   template <typename Number>
   SeparationOracle<Number>::SeparationOracle()
@@ -199,7 +199,7 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template <>
   SeparationResponse<rational> SeparationOracle<rational>::separateDouble(const double* vector,
@@ -211,20 +211,20 @@ namespace ipo
     return separate(&rationalVector[0], isPoint, query);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   template class Oracle<double>;
   template class OptimizationOracle<double>;
   template class TrustRegionOptimizationOracle<double>;
   template class SeparationOracle<double>;
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class Oracle<rational>;
   template class OptimizationOracle<rational>;
   template class TrustRegionOptimizationOracle<rational>;
   template class SeparationOracle<rational>;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

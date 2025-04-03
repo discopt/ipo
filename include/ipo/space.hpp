@@ -125,7 +125,7 @@ namespace ipo
 
     std::string printConstraint(const Constraint<double>& constraint, bool rounded = false) const;
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
     
     void printVector(std::ostream& str, const sparse_vector<rational>& vector,
       bool rounded = false) const;
@@ -167,7 +167,7 @@ namespace ipo
     std::string printConstraint(const Constraint<rational>& constraint,
       bool rounded = false) const;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   private:
     std::vector<std::string> _variableNames;

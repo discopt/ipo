@@ -166,7 +166,7 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<double>& query);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   /**
    * \brief Prints the query details of a rational optimization oracle.
@@ -174,7 +174,7 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationQuery<rational>& query);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   /**
    * \brief Structure for storing the response of an optimization oracle.
@@ -415,7 +415,7 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<double>& response);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   /**
    * \brief Prints the response of a rational optimization oracle.
@@ -423,7 +423,7 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const OptimizationResponse<rational>& response);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
   /**
    * \brief Base class for all IPO oracles.
    */
@@ -742,7 +742,7 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<double>& response);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   /**
    * \brief Prints the response of a rational separation oracle.
@@ -750,6 +750,6 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const SeparationResponse<rational>& response);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

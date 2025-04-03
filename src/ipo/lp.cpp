@@ -10,14 +10,14 @@
 #include <ostream>
 #include <random>
 
-#if defined(IPO_DOUBLE_LP_SOPLEX) || defined(IPO_RATIONAL_LP_SOPLEX)
+#if defined(IPO_WITH_DOUBLE_LP_SOPLEX) || defined(IPO_WITH_RATIONAL_LP_SOPLEX)
 #include <soplex.h>
-#endif /* IPO_DOUBLE_LP_SOPLEX || IPO_RATIONAL_LP_SOPLEX */
+#endif /* IPO_WITH_DOUBLE_LP_SOPLEX || IPO_WITH_RATIONAL_LP_SOPLEX */
 
 namespace ipo
 {
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
 
   std::ostream& operator<<(std::ostream& stream, LPStatus status)
   {
@@ -42,9 +42,43 @@ namespace ipo
     }
   }
 
-#endif /* IPO_DOUBLE_LP */
+  LPKey::LPKey()
+    : _id(-1)
+  {
 
-#if defined(IPO_DOUBLE_LP_SOPLEX) || defined(IPO_RATIONAL_LP_SOPLEX)
+  }
+
+  LPKey::LPKey(const LPKey& other)
+    : _id(other._id)
+  {
+
+  }
+
+  LPKey& LPKey::operator=(const LPKey& other)
+  {
+    _id = other._id;
+    return *this;
+  }
+
+  bool LPKey::isValid() const
+  {
+    return _id >= 0;
+  }
+
+  LPKey::LPKey(long id)
+    : _id(id)
+  {
+
+  }
+
+  long LPKey::id() const
+  {
+    return _id;
+  }
+
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */
+
+#if defined(IPO_WITH_DOUBLE_LP_SOPLEX) || defined(IPO_WITH_RATIONAL_LP_SOPLEX)
 
   static
   bool createNameSet(soplex::NameSet& nameSet, const std::vector<std::string>& internalNames)
@@ -59,17 +93,17 @@ namespace ipo
     return true;
   }
 
-#endif /* IPO_DOUBLE_LP_SOPLEX || IPO_RATIONAL_LP_SOPLEX */
+#endif /* IPO_WITH_DOUBLE_LP_SOPLEX || IPO_WITH_RATIONAL_LP_SOPLEX */
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
 
   template <typename Number>
   class LPImplementation;
 
-#endif /* IPO_DOUBLE_LP */
-  
-#if defined(IPO_DOUBLE_LP_SOPLEX)
-  
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */
+
+#if defined(IPO_WITH_DOUBLE_LP_SOPLEX)
+
   template <>
   class LPImplementation<double>
   {
@@ -246,7 +280,7 @@ namespace ipo
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
         _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
-      std::size_t row = _rowMap[rowKey.id];
+      std::size_t row = _rowMap[rowKey.id()];
       _spx.changeRowReal(row, soplex::LPRowReal(lhs, _sparse, rhs));
     }
 
@@ -367,9 +401,9 @@ namespace ipo
     double _lastSolveTime;
   };
 
-#endif /* IPO_DOUBLE_LP_SOPLEX */
+#endif /* IPO_WITH_DOUBLE_LP_SOPLEX */
 
-#if defined(IPO_RATIONAL_LP_SOPLEX)
+#if defined(IPO_WITH_RATIONAL_LP_SOPLEX)
   
   template <>
   class LPImplementation<rational>
@@ -553,7 +587,7 @@ namespace ipo
       _sparse.clear();
       for (size_t i = 0; i < numNonzeros; ++i)
         _sparse.add(nonzeroColumns[i], nonzeroCoefficients[i]);
-      std::size_t row = _rowMap[rowKey.id];
+      std::size_t row = _rowMap[rowKey.id()];
       _spx.changeRowRational(row, soplex::LPRowRational(lhs, _sparse, rhs));
     }
 
@@ -693,9 +727,9 @@ namespace ipo
     double _lastSolveTime;
   };
 
-#endif /* IPO_RATIONAL_LP_SOPLEX */
+#endif /* IPO_WITH_RATIONAL_LP_SOPLEX */
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
 
   template <typename Number>
   LP<Number>::LP()
@@ -855,9 +889,9 @@ namespace ipo
 
   template class LP<double>;
 
-#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */
 
-#if defined(IPO_DOUBLE_LP)
+#if defined(IPO_WITH_DOUBLE_LP)
 
   static double plusInfinityDouble = soplex::infinity;
   static double minusInfinityDouble = -soplex::infinity;
@@ -874,9 +908,9 @@ namespace ipo
     return minusInfinityDouble;
   };
   
-#endif /* IPO_DOUBLE_LP */
+#endif /* IPO_WITH_DOUBLE_LP */
 
-#if defined(IPO_RATIONAL_LP_SOPLEX)
+#if defined(IPO_WITH_RATIONAL_LP_SOPLEX)
   
   static rational plusInfinityRational = soplex::infinity;
   static rational minusInfinityRational = -soplex::infinity;
@@ -895,6 +929,6 @@ namespace ipo
 
   template class LP<rational>;
 
-#endif /* IPO_RATIONAL_LP_SOPLEX */
+#endif /* IPO_WITH_RATIONAL_LP_SOPLEX */
   
 } /* namespace ipo */

@@ -2,20 +2,20 @@
 
 #include <ipo/lp.hpp>
 
-#if defined(IPO_DOUBLE_LP)
+#if defined(IPO_WITH_DOUBLE_LP)
 
 TEST(LP, OptimizationDouble)
 {
   ipo::LP<double> lp;
 }
 
-#endif /* IPO_DOUBLE_LP */
+#endif /* IPO_WITH_DOUBLE_LP */
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 TEST(LP, OptimizationRational)
 {
   ipo::LP<ipo::rational> lp;
 }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */

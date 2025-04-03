@@ -105,7 +105,7 @@ namespace ipo
     std::normal_distribution<double> normal_distribution;
     if (outputInstanceFacets || outputRandomFacets)
     {
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
       ipo::LP<Number> lp;
       lp.setSense(ipo::LPSense::MAXIMIZE);
       std::size_t solverVar = 0;
@@ -298,11 +298,11 @@ namespace ipo
         }
       }
 
-#else /* of (IPO_DOUBLE_LP || IPO_RATIONAL_LP) */
+#else /* of (IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP) */
 
       std::cerr << "Option instance-facets requires an LP solver such as SoPlex." << std::endl;
 
-#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */
     }
   }
 
@@ -315,9 +315,9 @@ namespace ipo
     std::cout << " -t TIME  Abort computations after TIME seconds.\n";
     std::cout << " -S SEED  Use SEED to initialize the random number generator.\n";
     std::cout << "Oracle/polyhedron options:\n";
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
     std::cout << " -x       Use exact arithmetic oracles instead of double precision.\n";
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
     std::cout << " -p REGEX Project the polyhedron on all variables matching REGEX.\n";
     std::cout << " -d       Consider the dominant polyhedron.\n";
     std::cout << " -s       Consider the submissive polyhedron.\n";

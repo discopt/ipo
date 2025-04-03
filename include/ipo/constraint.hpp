@@ -146,7 +146,7 @@ namespace ipo
 
     friend void scaleIntegral(Constraint<double>&);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
     friend void scaleIntegral(Constraint<rational>&);
 
@@ -175,19 +175,19 @@ namespace ipo
 
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   void scaleIntegral(Constraint<double>& constraint);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   void scaleIntegral(Constraint<rational>& constraint);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 
   template <typename To, typename From>

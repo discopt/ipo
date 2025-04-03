@@ -29,7 +29,7 @@ TEST(AffineHull, AffineComplement)
     ASSERT_EQ(ac.rank(), 3);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   std::cout << "===== AffineHull::AffineComplement::Rational ===== " << std::endl;
   {
     auto ac = ipo::AffineComplement<ipo::rational>(4);
@@ -52,5 +52,5 @@ TEST(AffineHull, AffineComplement)
     ASSERT_EQ(ac.rank(), 3);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 }

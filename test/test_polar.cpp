@@ -4,7 +4,7 @@
 #include <ipo/affine_hull.hpp>
 #include <ipo/lp.hpp>
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 TEST(Polar, OptimizationRational)
 {
@@ -80,4 +80,4 @@ TEST(Polar, OptimizationRational)
   }
 }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */

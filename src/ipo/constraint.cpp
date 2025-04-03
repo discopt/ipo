@@ -5,8 +5,6 @@
 namespace ipo
 {
 
-#if defined(IPO_DOUBLE)
-
   std::ostream& operator<<(std::ostream& stream, const Constraint<double>& constraint)
   {
     switch (constraint.type())
@@ -25,9 +23,7 @@ namespace ipo
     }
   }
 
-#endif /* IPO_DOUBLE */
-
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   std::ostream& operator<<(std::ostream& stream, const Constraint<rational>& constraint)
   {
@@ -47,7 +43,7 @@ namespace ipo
     }
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   void scaleIntegral(Constraint<double>& constraint)
   {
@@ -91,7 +87,7 @@ namespace ipo
     constraint._vector = std::make_shared<sparse_vector<double>>(std::move(vector));
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   void scaleIntegral(Constraint<rational>& constraint)
   {
@@ -132,7 +128,7 @@ namespace ipo
     constraint._vector = std::make_shared<sparse_vector<rational>>(std::move(vector));
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 
   template <typename Number>
@@ -221,8 +217,9 @@ namespace ipo
   template
   bool ConstraintSet<double>::exists(const Constraint<double>& constraint, double hashProduct);
   
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   template
   bool ConstraintSet<rational>::exists(const Constraint<rational>& constraint, double hashProduct);
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
+
 }

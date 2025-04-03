@@ -122,7 +122,7 @@ TEST(Gurobi, SeparateDouble)
 }
 
 
-#if defined(IPO_RATIONAL_MIP_GUROBI)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 TEST(Gurobi, UnboundedRational)
 {
@@ -239,4 +239,4 @@ TEST(Gurobi, SeparateRational)
   ASSERT_EQ(response.constraints[0].rhs(), ipo::rational(2));
 }
 
-#endif /* IPO_RATIONAL_MIP_GUROBI */
+#endif /* IPO_WITH_RATIONAL_LP */

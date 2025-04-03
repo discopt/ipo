@@ -2,12 +2,11 @@
 
 #include <ipo/mip.hpp>
 
-#if defined(IPO_RATIONAL_MIP_SCIP) && defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
 #include <ipo/arithmetic.hpp>
 
 #include <soplex.h>
-
 
 namespace ipo
 {
@@ -179,10 +178,10 @@ namespace ipo
       OptimizationOracle<double>::Response approximateResponse = approximateOracle->maximizeDouble(
         &approximateObjectiveVector[0], approximateQuery);
 
-  #if defined(IPO_DEBUG)
+#if defined(IPO_DEBUG)
       std::cout << "RationalMIPExtender::maximize. Approx. response: " << approximateResponse
         << std::endl;
-  #endif /* IPO_DEBUG */
+#endif /* IPO_DEBUG */
 
       OptimizationOracle<rational>::Response response;
       response.hitTimeLimit = approximateResponse.hitTimeLimit;
@@ -301,9 +300,9 @@ namespace ipo
         }
       }
 
-  #if defined(IPO_DEBUG)
+#if defined(IPO_DEBUG)
       std::cout << "RationalMIPExtender::maximize. Exact response: " << response << std::endl;
-  #endif /* IPO_DEBUG */
+#endif /* IPO_DEBUG */
 
       return response;
     }
@@ -543,4 +542,4 @@ namespace ipo
 
 }
 
-#endif /* IPO_RATIONAL_MIP_SCIP && IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */

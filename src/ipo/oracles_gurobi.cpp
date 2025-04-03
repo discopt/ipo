@@ -280,7 +280,7 @@ namespace ipo
 #endif /* IPO_DEBUG */
     }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
     _extender = new RationalMIPExtender(integrality, bounds);
 
     struct Visitor
@@ -295,16 +295,16 @@ namespace ipo
 
     Visitor visitor = { _extender };
     GRBiterateRows(_model, _numModelConstraints, space(), visitor, true);
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
   }
 
   GurobiSolver::~GurobiSolver()
   {
     delete[] _instanceObjective;
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
     delete _extender;
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
     GRBfreemodel(_model);
     if (_env)
@@ -530,7 +530,7 @@ namespace ipo
     return std::make_shared<GurobiOptimizationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   /**
    * \brief Returns a rational optimization oracle for the requested \p face.
@@ -552,7 +552,7 @@ namespace ipo
     return std::make_shared<GurobiOptimizationOracle<rational>>(_extender, approximateOracle, face);
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   GurobiOptimizationOracle<double>::GurobiOptimizationOracle(std::shared_ptr<GurobiSolver> solver,
     const Constraint<double>& face)
@@ -579,7 +579,7 @@ namespace ipo
     return std::make_shared<GurobiSeparationOracle<double>>(shared_from_this(), face);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   /**
    * \brief Returns a rational arithmetic separation oracle for the \p face.
@@ -593,7 +593,7 @@ namespace ipo
     return std::make_shared<GurobiSeparationOracle<rational>>(shared_from_this(), face);
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
   static
   void extractPoints(GRBmodel* model, std::shared_ptr<Space> space, const double* objectiveVector, OptimizationOracle<double>::Response& response)
@@ -1160,7 +1160,7 @@ namespace ipo
     return separate(vector, isPoint, query);
   }
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   template <>
   GurobiSeparationOracle<rational>::GurobiSeparationOracle(std::shared_ptr<GurobiSolver> solver,
@@ -1364,6 +1364,6 @@ namespace ipo
     return result;
   }
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
   
 } /* namespace ipo */

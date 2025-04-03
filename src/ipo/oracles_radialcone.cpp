@@ -1,4 +1,4 @@
-// #define IPO_DEBUG /* Uncomment to debug this file. */
+#define IPO_DEBUG /* Uncomment to debug this file. */
 
 #include <ipo/oracles_radialcone.hpp>
 
@@ -14,7 +14,8 @@ namespace ipo
     : Oracle<Number>(name.empty() ? ("RadialCone(" + sourceOracle->name() + ")") : name),
     _sourceOracle(sourceOracle),
     _trustRegionOracle(dynamic_cast<TrustRegionOptimizationOracle<Number>*>(sourceOracle.get())), _apex(apex),
-    _trustRegion(), _trustRegionMaximumSize(0), _trustRegionGrowthRate(2)
+    _trustRegion(), _iteration(0), _trustRegionResetIterations(0), _trustRegionInitialSize(16),
+    _trustRegionMaximumSize(0), _trustRegionGrowthRate(2)
   {
     this->_space = sourceOracle->space();
   }
@@ -33,15 +34,18 @@ namespace ipo
 
   template <typename Number>
   void RadialConeOptimizationOracle<Number>::enableManhattanTrustRegion(const Number& initialSize,
-    const Number& maximumSize, const Number& growthRate)
+    const Number& maximumSize, const Number& growthRate, std::size_t resetIterations)
   {
     if (!isTrustRegionCapable())
       throw std::runtime_error("Source oracle of RadialConeOptimizationOracle is not a TrustRegionOptimizationOracle.");
     if (growthRate <= 1)
       throw std::runtime_error("Growth rate of trust region must be greater than 1.");
 
+    _iteration = 0;
+    _trustRegionInitialSize = initialSize;
     _trustRegionMaximumSize = maximumSize;
     _trustRegionGrowthRate = growthRate;
+    _trustRegionResetIterations = resetIterations;
 
     if ((_trustRegionEnabled = (initialSize <= maximumSize)))
       _trustRegion = ManhattanTrustRegion<Number>(_apex, initialSize);
@@ -62,6 +66,17 @@ namespace ipo
     OptimizationResponse<Number> response;
     Number apexObjective = objectiveVector * *_apex;
     std::chrono::time_point<std::chrono::system_clock> started = std::chrono::high_resolution_clock::now();
+    if (_trustRegionResetIterations && (((_iteration + 1) % _trustRegionResetIterations) == 0))
+    {
+#if defined(IPO_DEBUG)
+      std::cout << this->name() << ": resetting trust region size to " << _trustRegionInitialSize << std::endl;
+#endif /* IPO_DEBUG */
+      Number newSize = _trustRegionInitialSize;
+      if (newSize > _trustRegionMaximumSize)
+        _trustRegion = ManhattanTrustRegion<Number>();
+      else
+        _trustRegion.updateSize(newSize);
+    }
 
     while (true)
     {
@@ -74,8 +89,8 @@ namespace ipo
       if (_trustRegionEnabled)
       {
 #if defined(IPO_DEBUG)
-        std::cout << "RadialConeOptimizationOracle <" << this->name() << "> calling TrustRegionOptimizationOracle <"
-          << _sourceOracle->name() << ">." << std::endl;
+        std::cout << this->name() << ": calling "<< _sourceOracle->name() << " with trust region size "
+          << _trustRegion.size() << "." << std::endl;
 #endif /* IPO_DEBUG */
 
         sourceResponse = _trustRegionOracle->maximizeTrustRegion(_trustRegion, objectiveVector, sourceQuery);
@@ -83,15 +98,14 @@ namespace ipo
       else
       {
 #if defined(IPO_DEBUG)
-        std::cout << "RadialConeOptimizationOracle <" << this->name() << "> calling OptimizationOracle <"
-          << _sourceOracle->name() << ">." << std::endl;
+        std::cout << this->name() << ": calling " << _sourceOracle->name() << "." << std::endl;
 #endif /* IPO_DEBUG */
 
         sourceResponse = _sourceOracle->maximize(objectiveVector, sourceQuery);
       }
 
 #if defined(IPO_DEBUG)
-      std::cout << "RadialConeOptimizationOracle <" << this->name() << "> received response: " << sourceResponse
+      std::cout << this->name() << ": received response " << sourceResponse
         << std::endl;
 #endif /* IPO_DEBUG */
 
@@ -120,6 +134,7 @@ namespace ipo
         else
           response.hasDualBound = false;
 
+        _iteration++;
         return response;
       }
       else
@@ -133,7 +148,7 @@ namespace ipo
           _trustRegion.updateSize(newSize);
 
 #if defined(IPO_DEBUG)
-        std::cout << "-> Updating trust region";
+        std::cout << this->name() << ": updating trust region";
         if (_trustRegion.isBounded())
           std::cout << " size to " << _trustRegion.size() << "." << std::endl;
         else
@@ -141,20 +156,14 @@ namespace ipo
 #endif /* IPO_DEBUG */
       }
     }
-
-    return response;
   }
-
-#if defined(IPO_DOUBLE)
 
   template class RadialConeOptimizationOracle<double>;
 
-#endif /* IPO_DOUBLE */
-
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class RadialConeOptimizationOracle<rational>;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

@@ -21,7 +21,7 @@ TEST(Dominant, OptimizationDouble)
   ASSERT_EQ(result.dimension, 10);
 }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
 TEST(Dominant, OptimizationRational)
 {
@@ -41,4 +41,4 @@ TEST(Dominant, OptimizationRational)
   ASSERT_EQ(result.dimension, 10);
 }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */

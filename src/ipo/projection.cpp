@@ -123,17 +123,13 @@ namespace ipo
     return result;
   }
 
-#if defined(IPO_DOUBLE)
-
   template class Projection<double>;
 
-#endif /* IPO_DOUBLE */
-
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class Projection<rational>;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
   template <typename Number>
   ProjectionOptimizationOracle<Number>::ProjectionOptimizationOracle(
@@ -171,12 +167,12 @@ namespace ipo
   template std::vector<Constraint<double>> projectionEquations(std::shared_ptr<Projection<double>> projection,
     const std::vector<Constraint<double>>& equations);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template std::vector<Constraint<rational>> projectionEquations(std::shared_ptr<Projection<rational>> projection,
     const std::vector<Constraint<rational>>& equations);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 
 
@@ -234,9 +230,9 @@ namespace ipo
       }
     }
 
-#if defined(IPO_DEBUG)
+#if defined(IPO_WITH_DEBUG)
     // TODO: Implement.
-#endif /* IPO_DEBUG */
+#endif /* IPO_WITH_DEBUG */
 
     return result;
   }
@@ -253,12 +249,12 @@ namespace ipo
   template std::vector<Constraint<double>> projectionCompact(std::shared_ptr<Projection<double>> projection,
     const std::vector<Constraint<double>>& constraints, bool onlyEquations);
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template std::vector<Constraint<rational>> projectionCompact(std::shared_ptr<Projection<rational>> projection,
     const std::vector<Constraint<rational>>& constraints, bool onlyEquations);
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 
 
@@ -329,10 +325,10 @@ namespace ipo
 
   template class ProjectionOptimizationOracle<double>;
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class ProjectionOptimizationOracle<rational>;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

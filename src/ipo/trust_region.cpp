@@ -37,16 +37,12 @@ namespace ipo
 
   }
 
-#if defined(IPO_DOUBLE)
-
   template class ManhattanTrustRegion<double>;
 
-#endif /* IPO_DOUBLE */
-
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
   template class ManhattanTrustRegion<rational>;
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 } /* namespace ipo */

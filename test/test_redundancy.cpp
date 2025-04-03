@@ -61,7 +61,7 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     ASSERT_EQ(red.rank(), 3);
   }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
   std::cout << "===== LinearAlgebra::EquationRedundancyCheck::Rational ===== " << std::endl;
   {
     auto red = ipo::EquationRedundancyCheck<ipo::rational>(3);
@@ -118,6 +118,6 @@ TEST(LinearAlgebra, EquationRedundancyCheck)
     ASSERT_EQ(red.rank(), 3);
   }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
 
 }

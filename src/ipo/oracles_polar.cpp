@@ -7,7 +7,7 @@
 namespace ipo
 {
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
   
   template <typename NumberType>
   class PolarSeparationOracleImplementation
@@ -298,18 +298,18 @@ namespace ipo
 
 #endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
 
-#if defined(IPO_DOUBLE_LP)
+#if defined(IPO_WITH_DOUBLE_LP)
 
   template class PolarSeparationOracleImplementation<double>;
   template class PolarSeparationOracle<double>;
 
-#endif /* IPO_DOUBLE_LP */
+#endif /* IPO_WITH_DOUBLE_LP */
 
-#if defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_RATIONAL_LP)
 
   template class PolarSeparationOracleImplementation<rational>;
   template class PolarSeparationOracle<rational>;
 
-#endif /* IPO_RATIONAL_LP */
+#endif /* IPO_WITH_RATIONAL_LP */
 
 } /* namespace ipo */

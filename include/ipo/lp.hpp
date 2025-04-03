@@ -7,7 +7,7 @@
 #include <vector>
 #include <iostream>
 
-#if defined(IPO_DOUBLE_LP) || defined(IPO_RATIONAL_LP)
+#if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
 
 namespace ipo
 {
@@ -37,27 +37,72 @@ namespace ipo
     NONBASIC_ZERO = 3
   };
 
+  /**
+   * \brief Writes LP status to \p stream.
+   */
+
   std::ostream& operator<<(std::ostream& stream, LPStatus status);
 
-  struct LPKey
+  template <typename NumberType>
+  class LP;
+
+  template <typename NumberType>
+  class LPImplementation;
+
+  /**
+   * \brief Unique identifier for a row or a column.
+   */
+
+  class LPKey
   {
-    int id;
+  public:
+    /**
+     * \brief Creates an invalid key.
+     */
 
-    LPKey()
-      : id(-1)
-    {
+    LPKey();
 
-    }
+    /**
+     * \brief Copy constructor.
+     */
 
-    LPKey(int id)
-    {
-      this->id = id;
-    }
+    LPKey(const LPKey& other);
 
-    bool isValid() const
-    {
-      return id;
-    }
+    /**
+     * \brief Assignment operator.
+     */
+
+    LPKey& operator=(const LPKey& other);
+
+    /**
+     * \brief Returns whether this key is valid.
+     */
+
+    bool isValid() const;
+
+  private:
+    /**
+     * \brief Creates a key with a specific internal id.
+     */
+
+    LPKey(long id);
+
+    /**
+     * \brief Retrieves the internal id.
+     */
+
+    long id() const;
+
+    friend class LP<double>;
+    friend class LPImplementation<double>;
+
+#if defined(IPO_WITH_RATIONAL_LP)
+    friend class LP<rational>;
+    friend class LPImplementation<rational>;
+#endif /* IPO_WITH_RATIONAL_LP */
+
+    /// Internal id.
+    long _id;
   };
 
   template <typename NumberType>
@@ -133,4 +178,4 @@ namespace ipo
 
 } /* namespace ipo */
 
-#endif /* IPO_DOUBLE_LP || IPO_RATIONAL_LP */
+#endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */

@@ -23,7 +23,7 @@ TEST(Submissive, OptimizationDouble)
   ASSERT_EQ(result.dimension, 6);
 }
 
-#if defined(IPO_RATIONAL)
+#if defined(IPO_WITH_RATIONAL)
 
 TEST(Submissive, OptimizationRational)
 {
@@ -45,4 +45,4 @@ TEST(Submissive, OptimizationRational)
   ASSERT_EQ(result.dimension, 6);
 }
 
-#endif /* IPO_RATIONAL */
+#endif /* IPO_WITH_RATIONAL */
