@@ -43,7 +43,8 @@ namespace ipo
 
     std::cerr << "Initialized oracle with ambient dimension " << poly->space()-> dimension() << std::endl;
 
-    bool needAffineHull = outputDimension || outputEquations || outputInterior || outputInstanceFacets;
+    bool needAffineHull = outputDimension || outputEquations || outputInterior || outputInstanceFacets
+      || outputRandomFacets;
 
     ipo::SeparationResponse<Number> sepaResponse;
     if (needAffineHull)
