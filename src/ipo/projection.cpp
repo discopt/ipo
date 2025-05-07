@@ -229,8 +229,8 @@ namespace ipo
       }
       if (projectable)
       {
-        result.emplace_back(Constraint<Number>(std::move(lhs),
-          std::make_shared<sparse_vector<Number>>(nonzeros, true), std::move(rhs), constraint.type()));
+        result.emplace_back(Constraint<Number>(lhs, std::make_shared<sparse_vector<Number>>(nonzeros, true), rhs,
+          constraint.type()));
       }
     }
 
