@@ -1,4 +1,5 @@
 // #define IPO_DEBUG // Uncomment to debug this file.
+// #define IPO_DEBUG_SOLUTIONS // Uncomment to print solution vectors.
 
 #include <ipo/constraint.hpp>
 #include <ipo/oracles_gurobi.hpp>
@@ -15,11 +16,11 @@
  **/
 
 #define GUROBI_CALL_EXC(x) \
-{ \
+do { \
   int _retcode; \
   if ((_retcode = (x)) != 0) \
     throw ipo::GurobiException(_retcode, __FILE__, __LINE__); \
-}
+} while(0)
 
 static const int GUROBI_SEPARATION_CHECK_TIMELIMIT_FREQUENCY = 1000;
 
@@ -52,6 +53,9 @@ namespace ipo
       break;
       case GRB_ERROR_NO_LICENSE:
         snprintf(_message, 256, "Insufficient memory error");
+      break;
+      case GRB_ERROR_DATA_NOT_AVAILABLE:
+        snprintf(_message, 256, "Attempted to query or set an attribute that could not be accessed at that time");
       break;
       case GRB_ERROR_SIZE_LIMIT_EXCEEDED:
         snprintf(_message, 256, "Attempted to solve a model that is larger than the limit for a demo license");
@@ -470,7 +474,10 @@ namespace ipo
     for (int solIndex = 0; solIndex < numSolutions; ++solIndex)
     {
       GUROBI_CALL_EXC( GRBsetintparam(GRBgetenv(model), GRB_INT_PAR_SOLUTIONNUMBER, solIndex) );
-      GUROBI_CALL_EXC( GRBgetdblattrarray(model, GRB_DBL_ATTR_Xn, 0, space->dimension(), &dense[0]) );
+      if (solIndex == 0)
+        GUROBI_CALL_EXC( GRBgetdblattrarray(model, GRB_DBL_ATTR_X, 0, space->dimension(), &dense[0]) );
+      else
+        GUROBI_CALL_EXC( GRBgetdblattrarray(model, GRB_DBL_ATTR_Xn, 0, space->dimension(), &dense[0]) );
       auto vector = std::make_shared<sparse_vector<double>>();
 #if defined(IPO_DEBUG)
       double maxAbsValue = 0.0;
@@ -501,6 +508,9 @@ namespace ipo
           "absolute maximum entry " << maxAbsValue << "." << std::endl;
 #endif /* IPO_DEBUG */
         response.points.push_back(OptimizationOracle<double>::Response::Point(vector, objectiveVector * *vector));
+#if defined(IPO_DEBUG_SOLUTIONS)
+        std::cout << "Extracted solution: " << space->printVector(vector) << std::endl;
+#endif /* IPO_DEBUG_SOLUTIONS */
       }
     }
   }

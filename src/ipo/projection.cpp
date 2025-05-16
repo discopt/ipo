@@ -1,4 +1,5 @@
 // #define IPO_DEBUG /* Uncomment to debug this file. */
+// #define IPO_DEBUG_SOLUTIONS /* Uncomment to print solutions. */
 
 #include <regex>
 #include <unordered_map>
@@ -275,7 +276,11 @@ namespace ipo
     const OptimizationQuery<Number>& query)
   {
 #if defined(IPO_DEBUG)
-      std::cout << "ProjectionOptimizationOracle::maximize() called." << std::endl;
+    std::cout << "ProjectionOptimizationOracle::maximize() called." << std::endl;
+    std::cout << "  Maximization objective = ";
+    for (std::size_t i = 0; i < this->space()->dimension(); ++i)
+      std::cout << " " << objectiveVector[i] << "*" << this->space()->variable(i);
+    std::cout << std::endl;
 #endif // IPO_DEBUG
 
     // Compute objective vector in space of source oracle.
@@ -306,8 +311,14 @@ namespace ipo
     {
       for (auto point : liftedResponse.points)
       {
+#ifdef IPO_DEBUG_SOLUTIONS
+        std::cout << "  " << this->_sourceOracle->space()->printVector(point.vector);
+#endif /* IPO_DEBUG_SOLUTIONS */
         response.points.push_back(typename OptimizationResponse<Number>::Point(
           _projection->projectPoint(point.vector), point.objectiveValue + offset));
+#ifdef IPO_DEBUG_SOLUTIONS
+        std::cout << "  -> " << this->space()->printVector(response.points.back().vector) << std::endl;
+#endif /* IPO_DEBUG_SOLUTIONS */
       }
       response.setPrimalBound(response.points.front().objectiveValue);
     }

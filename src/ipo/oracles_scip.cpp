@@ -32,11 +32,11 @@
  **/
 
 #define SCIP_CALL_EXC(x) \
-{ \
+do { \
   SCIP_RETCODE _retcode; \
   if ((_retcode = (x)) != SCIP_OKAY) \
     throw ipo::SCIPException(_retcode); \
-}
+} while(0)
 
 static const int SCIP_SEPARATION_CHECK_TIMELIMIT_FREQUENCY = 1000;
 
