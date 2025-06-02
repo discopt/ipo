@@ -106,7 +106,7 @@ namespace ipo
   };
 
   template <typename NumberType>
-  class LP
+  class DefaultLP
   {
   public:
     typedef NumberType Number;
@@ -115,9 +115,9 @@ namespace ipo
 
     static const Number& minusInfinity();
 
-    LP();
+    DefaultLP();
 
-    ~LP();
+    ~DefaultLP();
 
     std::size_t numRows() const;
 

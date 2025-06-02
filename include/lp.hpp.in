@@ -1,0 +1,34 @@
+
+namespace lp
+{
+
+  enum class ObjectiveSense { MINIMIZE, MAXIMIZE };
+
+  enum class Status { OPTIMAL, UNBOUNDED, INFEASIBLE, TIME_LIMIT, CYCLING, ITERATION_LIMIT, NUMERICS };
+
+  enum class BasisStatus { BASIC, NONBASIC_LOWER, NONBASIC_UPPER, NONBASIC_ZERO };
+
+  template<typename Constraint, typename Variable>
+  class
+
+  class DoubleSolver
+  {
+  };
+
+  class RationalSolver
+  {
+  };
+
+  class GurobiDoubleSolver : public DoubleSolver
+  {
+  };
+
+  class SoPlexDoubleSolver : public DoubleSolver
+  {
+  };
+
+  class SoPlexRationalSolver : public RationalSolver
+  {
+  };
+
+} // namespace lp

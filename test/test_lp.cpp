@@ -6,7 +6,7 @@
 
 TEST(LP, OptimizationDouble)
 {
-  ipo::LP<double> lp;
+  ipo::DefaultLP<double> lp;
 }
 
 #endif /* IPO_WITH_DOUBLE_LP */
@@ -15,7 +15,7 @@ TEST(LP, OptimizationDouble)
 
 TEST(LP, OptimizationRational)
 {
-  ipo::LP<ipo::rational> lp;
+  ipo::DefaultLP<ipo::rational> lp;
 }
 
 #endif /* IPO_WITH_RATIONAL_LP */

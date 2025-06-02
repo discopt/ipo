@@ -179,7 +179,7 @@ namespace inverse
 
     std::size_t n = space->dimension();
 
-    ipo::LP<Number> lp;
+    ipo::DefaultLP<Number> lp;
     lp.setSense(ipo::LPSense::MINIMIZE);
     for (std::size_t v = 0; v < n; ++v)
       lp.addColumn(lp.minusInfinity(), lp.plusInfinity(), 0, space->variable(v));

@@ -135,7 +135,7 @@ namespace ipo
           nonzeroCoefficients.push_back(coefficient);
         }
       }
-      _lp.changeRow(_normalizationRow, LP<Number>::minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
+      _lp.changeRow(_normalizationRow, DefaultLP<Number>::minusInfinity(), nonzeroColumns.size(), &nonzeroColumns[0],
         &nonzeroCoefficients[0], 1);
 
       while (true)
@@ -264,7 +264,7 @@ namespace ipo
     std::shared_ptr<OptimizationOracle<Number>> _optOracle;
     std::shared_ptr<SeparationOracle<Number>> _sepaRelaxationOracle;
     std::vector<Number> _interior;
-    LP<Number> _lp;
+    DefaultLP<Number> _lp;
     LPKey _normalizationRow;
     size_t _minBasisSize;
   };

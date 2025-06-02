@@ -732,91 +732,91 @@ namespace ipo
 #if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
 
   template <typename Number>
-  LP<Number>::LP()
+  DefaultLP<Number>::DefaultLP()
   {
     _implementation = new LPImplementation<Number>();
   }
 
   template <typename Number>
-  LP<Number>::~LP()
+  DefaultLP<Number>::~DefaultLP()
   {
     delete static_cast<LPImplementation<Number>*>(_implementation);
   }
 
   template <typename Number>
-  std::size_t LP<Number>::numRows() const
+  std::size_t DefaultLP<Number>::numRows() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->numRows();
   }
 
   template <typename Number>
-  std::size_t LP<Number>::numColumns() const
+  std::size_t DefaultLP<Number>::numColumns() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->numColumns();
   }
 
   template <typename Number>
-  LPStatus LP<Number>::status() const
+  LPStatus DefaultLP<Number>::status() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->status();
   }
 
   template <typename Number>
-  Number LP<Number>::getObjectiveValue() const
+  Number DefaultLP<Number>::getObjectiveValue() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getObjectiveValue();
   }
 
   template <typename Number>
-  bool LP<Number>::hasPrimalSolution() const
+  bool DefaultLP<Number>::hasPrimalSolution() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->hasPrimalSolution();
   }
 
   template <typename Number>
-  bool LP<Number>::hasPrimalRay() const
+  bool DefaultLP<Number>::hasPrimalRay() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->hasPrimalRay();
   }
 
   template <typename Number>
-  Number LP<Number>::getPrimalValue(int column) const
+  Number DefaultLP<Number>::getPrimalValue(int column) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalValue(column);
   }
 
   template <typename Number>
-  std::vector<Number> LP<Number>::getPrimalSolution(const std::vector<int>& columns) const
+  std::vector<Number> DefaultLP<Number>::getPrimalSolution(const std::vector<int>& columns) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalSolution(columns);
   }
 
   template <typename Number>
-  std::vector<Number> LP<Number>::getPrimalRay(const std::vector<int>& columns) const
+  std::vector<Number> DefaultLP<Number>::getPrimalRay(const std::vector<int>& columns) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getPrimalRay(columns);
   }
 
   template <typename Number>
-  bool LP<Number>::hasDualSolution() const
+  bool DefaultLP<Number>::hasDualSolution() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->hasDualSolution();
   }
 
   template <typename Number>
-  Number LP<Number>::getDualValue(int row) const
+  Number DefaultLP<Number>::getDualValue(int row) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getDualValue(row);
   }
 
   template <typename Number>
-  void LP<Number>::setSense(LPSense newSense)
+  void DefaultLP<Number>::setSense(LPSense newSense)
   {
     static_cast<LPImplementation<Number>*>(_implementation)->setSense(newSense);
   }
 
   template <typename Number>
-  LPKey LP<Number>::addColumn(const Number& lowerBound, const Number& upperBound, const Number& objectiveCoefficient,
+  LPKey DefaultLP<Number>::addColumn(const Number& lowerBound, const Number& upperBound, const Number& objectiveCoefficient,
     const std::string& name)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->addColumn(lowerBound, upperBound,
@@ -824,7 +824,7 @@ namespace ipo
   }
 
   template <typename Number>
-  LPKey LP<Number>::addRow(const Number& lhs, std::size_t numNonzeros, const std::size_t* nonzeroColumns,
+  LPKey DefaultLP<Number>::addRow(const Number& lhs, std::size_t numNonzeros, const std::size_t* nonzeroColumns,
     const Number* nonzeroCoefficients, const Number& rhs, const std::string& name)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->addRow(lhs, numNonzeros, nonzeroColumns,
@@ -832,37 +832,37 @@ namespace ipo
   }
 
   template <typename Number>
-  void LP<Number>::update()
+  void DefaultLP<Number>::update()
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->update();
   }
 
   template <typename Number>
-  void LP<Number>::changeUpper(int column, const Number& newUpperBound)
+  void DefaultLP<Number>::changeUpper(int column, const Number& newUpperBound)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->changeUpper(column, newUpperBound);
   }
 
   template <typename Number>
-  void LP<Number>::changeLower(int column, const Number& newLowerBound)
+  void DefaultLP<Number>::changeLower(int column, const Number& newLowerBound)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->changeLower(column, newLowerBound);
   }
 
   template <typename Number>
-  void LP<Number>::changeBounds(int column, const Number& newLowerBound, const Number& newUpperBound)
+  void DefaultLP<Number>::changeBounds(int column, const Number& newLowerBound, const Number& newUpperBound)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->changeBounds(column, newLowerBound, newUpperBound);
   }
 
   template <typename Number>
-  void LP<Number>::changeObjective(int column, const Number& newObjectiveCoefficient)
+  void DefaultLP<Number>::changeObjective(int column, const Number& newObjectiveCoefficient)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->changeObjective(column, newObjectiveCoefficient);
   }
 
   template <typename Number>
-  void LP<Number>::changeRow(LPKey rowKey, const Number& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
+  void DefaultLP<Number>::changeRow(LPKey rowKey, const Number& lhs, std::size_t numNonzeros, const int* nonzeroColumns,
     const Number* nonzeroCoefficients, const Number& rhs)
   {
     static_cast<LPImplementation<Number>*>(_implementation)->changeRow(rowKey, lhs, numNonzeros, nonzeroColumns,
@@ -870,24 +870,24 @@ namespace ipo
   }
 
   template <typename Number>
-  void LP<Number>::write(const std::string& fileName) const
+  void DefaultLP<Number>::write(const std::string& fileName) const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->write(fileName);
   }
 
   template <typename Number>
-  LPStatus LP<Number>::solve(bool extreme)
+  LPStatus DefaultLP<Number>::solve(bool extreme)
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->solve(extreme);
   }
 
   template <typename Number>
-  double LP<Number>::getSolveTime() const
+  double DefaultLP<Number>::getSolveTime() const
   {
     return static_cast<LPImplementation<Number>*>(_implementation)->getSolveTime();
   }
 
-  template class LP<double>;
+  template class DefaultLP<double>;
 
 #endif /* IPO_WITH_DOUBLE_LP || IPO_WITH_RATIONAL_LP */
 
@@ -897,13 +897,13 @@ namespace ipo
   static double minusInfinityDouble = -soplex::infinity;
 
   template <>
-  const double& LP<double>::plusInfinity()
+  const double& DefaultLP<double>::plusInfinity()
   {
     return plusInfinityDouble;
   };
 
   template <>
-  const double& LP<double>::minusInfinity()
+  const double& DefaultLP<double>::minusInfinity()
   {
     return minusInfinityDouble;
   };
@@ -916,18 +916,18 @@ namespace ipo
   static rational minusInfinityRational = -soplex::infinity;
 
   template <>
-  const rational& LP<rational>::plusInfinity()
+  const rational& DefaultLP<rational>::plusInfinity()
   {
     return plusInfinityRational;
   };
 
   template <>
-  const rational& LP<rational>::minusInfinity()
+  const rational& DefaultLP<rational>::minusInfinity()
   {
     return minusInfinityRational;
   };
 
-  template class LP<rational>;
+  template class DefaultLP<rational>;
 
 #endif /* IPO_WITH_RATIONAL_LP_SOPLEX */
   

@@ -22,7 +22,7 @@ TEST(Polar, OptimizationRational)
   auto affineHull = ipo::affineHull(forestPolyhedron);
   ASSERT_EQ(affineHull.dimension, 6);
 
-  ipo::LP<ipo::rational> lp;
+  ipo::DefaultLP<ipo::rational> lp;
   lp.setSense(ipo::LPSense::MAXIMIZE);
   int obj = 1;
   for (std::size_t c = 0; c < forestPolyhedron->space()->dimension(); ++c)

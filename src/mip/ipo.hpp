@@ -106,7 +106,7 @@ namespace ipo
     if (outputInstanceFacets || outputRandomFacets)
     {
 #if defined(IPO_WITH_DOUBLE_LP) || defined(IPO_WITH_RATIONAL_LP)
-      ipo::LP<Number> lp;
+      ipo::DefaultLP<Number> lp;
       lp.setSense(ipo::LPSense::MAXIMIZE);
       std::size_t solverVar = 0;
       bool first = true;
