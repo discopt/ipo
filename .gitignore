@@ -4,4 +4,6 @@ build*
 *.kdev4
 Makefile
 
+*.xml.gz
+
 tools/Wrapper/*.cpp
